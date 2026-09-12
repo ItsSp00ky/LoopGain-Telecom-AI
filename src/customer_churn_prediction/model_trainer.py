@@ -1,10 +1,13 @@
 import os
 import joblib
 import json
+import warnings
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple
 from pathlib import Path
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -12,8 +15,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
     roc_auc_score, average_precision_score, accuracy_score,
-    precision_score, recall_score, f1_score, brier_score_loss,
-    classification_report, confusion_matrix
+    precision_score, recall_score, f1_score, brier_score_loss
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -61,12 +63,12 @@ def get_candidate_models(use_cuda: bool = True) -> Dict[str, Any]:
     """
     cuda_active = use_cuda and detect_cuda()
     xgb_params = {
-        "n_estimators": 250,
+        "n_estimators": 300,
         "learning_rate": 0.03,
         "max_depth": 5,
         "subsample": 0.8,
         "colsample_bytree": 0.8,
-        "scale_pos_weight": 2.0,
+        "scale_pos_weight": 2.2,
         "eval_metric": "logloss",
         "random_state": 42
     }
@@ -88,22 +90,23 @@ def get_candidate_models(use_cuda: bool = True) -> Dict[str, Any]:
         ),
         "Random Forest": RandomForestClassifier(
             n_estimators=300,
-            max_depth=8,
+            max_depth=10,
             min_samples_split=10,
             class_weight="balanced",
             random_state=42,
-            n_jobs=-1
+            n_jobs=4
         ),
         "LightGBM": lgb.LGBMClassifier(
-            n_estimators=200,
+            n_estimators=250,
             learning_rate=0.03,
             max_depth=5,
             num_leaves=31,
             subsample=0.8,
             colsample_bytree=0.8,
-            scale_pos_weight=2.0,
+            scale_pos_weight=2.2,
             random_state=42,
-            verbose=-1
+            verbose=-1,
+            n_jobs=4
         ),
         "XGBoost": xgb.XGBClassifier(**xgb_params)
     }
@@ -116,15 +119,15 @@ def train_and_benchmark(
 ) -> Dict[str, Any]:
     """
     Executes full data loading, feature engineering, 5-fold cross-validation,
-    test evaluation, and selects the champion model.
+    test evaluation, and selects the champion model on the Maven Telecom dataset.
     """
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Loading and cleaning dataset...")
+    print(f"Loading and cleaning Maven Telecom dataset from {data_path.name}...")
     X_raw, y, metadata = load_and_clean_data(data_path)
 
-    print("Splitting train and test sets (stratified)...")
+    print("Splitting train and test sets (stratified 80/20)...")
     X_train_raw, X_test_raw, y_train, y_test, meta_train, meta_test = train_test_split(
         X_raw, y, metadata, test_size=test_size, random_state=random_state, stratify=y
     )
@@ -150,7 +153,8 @@ def train_and_benchmark(
         ])
 
         # 5-fold CV on train set
-        cv_scores = cross_val_score(pipe, X_train_fe, y_train, cv=cv, scoring="roc_auc", n_jobs=1 if "cuda" in str(getattr(clf, "device", "")) else -1)
+        n_jobs_cv = 1 if "cuda" in str(getattr(clf, "device", "")) else 4
+        cv_scores = cross_val_score(pipe, X_train_fe, y_train, cv=cv, scoring="roc_auc", n_jobs=n_jobs_cv)
         mean_cv_auc = float(np.mean(cv_scores))
         std_cv_auc = float(np.std(cv_scores))
 
@@ -181,7 +185,7 @@ def train_and_benchmark(
             "test_f1": round(test_f1, 4),
             "test_brier_score": round(test_brier, 4)
         }
-        print(f" -> {name:20s} | CV ROC-AUC: {mean_cv_auc:.4f} (±{std_cv_auc:.4f}) | Test ROC-AUC: {test_roc_auc:.4f} | PR-AUC: {test_pr_auc:.4f} | Recall: {test_rec:.4f}")
+        print(f" -> {name:20s} | CV ROC-AUC: {mean_cv_auc:.4f} (±{std_cv_auc:.4f}) | Test ROC-AUC: {test_roc_auc:.4f} | PR-AUC: {test_pr_auc:.4f} | Recall: {test_rec:.4f} | F1: {test_f1:.4f}")
 
     # Determine champion model by test ROC-AUC
     champion_name = max(results, key=lambda k: results[k]["test_roc_auc"])
@@ -189,7 +193,7 @@ def train_and_benchmark(
 
     print(f"\nChampion Model Selected: {champion_name} (ROC-AUC: {results[champion_name]['test_roc_auc']:.4f})")
 
-    # Set inference device to cpu on champion classifier to avoid host-device memory mismatch warnings during inference
+    # Set inference device to CPU for fast zero-overhead deployment without memory transfer warnings
     champion_clf = champion_pipeline.named_steps["classifier"]
     if hasattr(champion_clf, "set_params"):
         try:
@@ -212,6 +216,7 @@ def train_and_benchmark(
     benchmark_save_path = REPORTS_DIR / "model_benchmark.json"
     with open(benchmark_save_path, "w") as f:
         json.dump({
+            "dataset": "Maven Telecom Customer Churn",
             "champion": champion_name,
             "cuda_enabled": use_cuda and detect_cuda(),
             "metrics": results
