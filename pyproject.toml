@@ -1,0 +1,28 @@
+[project]
+name = "customer-churn-prediction"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "spooky", email = "ahmedgli2522003@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "joblib>=1.6.0",
+    "lightgbm>=4.7.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.5",
+    "rich>=15.0.0",
+    "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
+    "xgboost>=3.4.1",
+]
+
+[project.scripts]
+customer-churn-prediction = "customer_churn_prediction:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"

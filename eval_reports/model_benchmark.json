@@ -1,0 +1,50 @@
+{
+  "champion": "XGBoost",
+  "cuda_enabled": true,
+  "metrics": {
+    "Logistic Regression": {
+      "cv_roc_auc_mean": 0.8607,
+      "cv_roc_auc_std": 0.0104,
+      "test_roc_auc": 0.8509,
+      "test_pr_auc": 0.6414,
+      "test_accuracy": 0.7495,
+      "test_precision": 0.5184,
+      "test_recall": 0.7914,
+      "test_f1": 0.6265,
+      "test_brier_score": 0.1619
+    },
+    "Random Forest": {
+      "cv_roc_auc_mean": 0.8615,
+      "cv_roc_auc_std": 0.0088,
+      "test_roc_auc": 0.851,
+      "test_pr_auc": 0.6535,
+      "test_accuracy": 0.7637,
+      "test_precision": 0.5372,
+      "test_recall": 0.7914,
+      "test_f1": 0.64,
+      "test_brier_score": 0.1577
+    },
+    "LightGBM": {
+      "cv_roc_auc_mean": 0.8595,
+      "cv_roc_auc_std": 0.009,
+      "test_roc_auc": 0.8522,
+      "test_pr_auc": 0.6635,
+      "test_accuracy": 0.7835,
+      "test_precision": 0.5717,
+      "test_recall": 0.7353,
+      "test_f1": 0.6433,
+      "test_brier_score": 0.1444
+    },
+    "XGBoost": {
+      "cv_roc_auc_mean": 0.86,
+      "cv_roc_auc_std": 0.0094,
+      "test_roc_auc": 0.8526,
+      "test_pr_auc": 0.6654,
+      "test_accuracy": 0.7835,
+      "test_precision": 0.5726,
+      "test_recall": 0.7273,
+      "test_f1": 0.6408,
+      "test_brier_score": 0.1435
+    }
+  }
+}

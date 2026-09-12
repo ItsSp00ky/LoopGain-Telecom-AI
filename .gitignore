@@ -1,0 +1,40 @@
+# Python cache and build
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Linting
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter & IDEs
+.ipynb_checkpoints
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS & System artifacts
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+
+# Scratch profiling logs
+*.log
+dataset_profiles.txt
