@@ -25,8 +25,9 @@ Three candidate datasets were profiled in `churn_datasets`:
 
 | Dataset | Shape | Domain Specificity | Telecom Package Granularity | Selected |
 | :--- | :--- | :--- | :--- | :--- |
-| **IBM Telco Customer Churn** (`Telco_customer_churn.xlsx`) | **7,043 × 33** | **Telecom & Broadband** | **Full Package Breakdown** (Fiber, DSL, Streaming, Security, Phone lines, Contract terms, CLTV) | **Yes (Champion)** |
-| **Cell2Cell** (`cell2celltrain.csv`) | 51,047 × 58 | Mobile Carrier (2001-2002) | Telephony minutes, roaming, equipment; lacks modern broadband and service bundles | No |
+| **IBM Telco Customer Churn** (`Telco_customer_churn.xlsx`) | **7,043 × 33** | **Telecom & Broadband** | **Full Package Breakdown** (Fiber, DSL, Streaming, Security, Phone lines, Contract terms, CLTV) | **Yes (Champion for Package Discounts)** |
+| **Telecom_data (New)** (`Client.csv` + `Record.csv`) | 100,000 × 100 | Wireless Mobile Carrier | High telemetry (minutes, overages, equipment days, handset price); lacks broadband/package bundles | Evaluated (Hardware / Handset Benchmark) |
+| **Cell2Cell** (`cell2celltrain.csv`) | 51,047 × 58 | Mobile Carrier (2001-2002) | 50% subset of Telecom_data | No |
 | **Generic Subscription** (`customer_churn_dataset.csv`) | 440,833 × 12 | Generic SaaS App | Basic high-level tiers (Basic/Standard/Premium); no telecom infrastructure features | No |
 
 ### Why IBM Telco Churn is Optimal:
