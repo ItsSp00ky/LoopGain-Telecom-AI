@@ -9,6 +9,8 @@ An end-to-end Machine Learning and Business Decisioning system built for telecom
 
 The primary pipeline uses the **Maven Analytics Telecom Customer Churn Dataset**, achieving a **0.9280 Test ROC-AUC** and **0.8561 PR-AUC** with CUDA acceleration on an NVIDIA GPU.
 
+> 📖 **Comprehensive Documentation**: For full mathematical formulations, algorithmic decision trees, and financial ROI derivations, see the [Technical Report](TECHNICAL_REPORT.md).
+
 ---
 
 ## Key Features

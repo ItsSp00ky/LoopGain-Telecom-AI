@@ -46,7 +46,7 @@ The repository is organized into three modular AI subsystems:
 - **Status**: **Operational & Production Ready**
 - **Objective**: Predicts customer churn risk with **0.9280 Test ROC-AUC** and **0.8561 PR-AUC** using CUDA-accelerated gradient boosting on NVIDIA GPUs.
 - **Business Retention Engine**: Translates churn risk and account telemetry into margin-preserving marketing offers (`Offer A` through `Offer E`), contract lock-in agreements, and overage fee waivers, projecting **+$917,265.70** in net saved revenue.
-- **Details**: See [`customer_churn_prediction/README.md`](customer_churn_prediction/README.md).
+- **Documentation**: See [`customer_churn_prediction/README.md`](customer_churn_prediction/README.md) and the comprehensive [`Technical Report`](customer_churn_prediction/TECHNICAL_REPORT.md).
 
 ### 2. [Telecom Customer Support AI Chatbot](customer_support_chatbot/)
 - **Status**: **Planned / In Development**
