@@ -46,7 +46,7 @@ def train_telecom_gpu():
         X, y, test_size=0.20, random_state=42, stratify=y
     )
 
-    print("\nTraining XGBoost on NVIDIA GeForce RTX 4070 (CUDA)...")
+    print("\nTraining XGBoost with CUDA GPU acceleration...")
     start = time.time()
     clf = xgb.XGBClassifier(
         n_estimators=400,
@@ -76,7 +76,7 @@ def train_telecom_gpu():
     table = Table(title="Telecom_data (100k) Evaluation Results")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="green")
-    table.add_row("Training Time (RTX 4070 GPU)", f"{train_time:.2f} seconds")
+    table.add_row("Training Time (CUDA GPU)", f"{train_time:.2f} seconds")
     table.add_row("Test ROC-AUC", f"{roc_auc:.4f}")
     table.add_row("Test PR-AUC", f"{pr_auc:.4f}")
     table.add_row("Accuracy", f"{report['accuracy']:.4f}")

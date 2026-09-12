@@ -1,10 +1,15 @@
 [project]
 name = "customer-churn-prediction"
 version = "0.1.0"
-description = "Add your description here"
+description = "Customer Churn Prediction & Retention Discount Engine - Team Loop Gain (Samsung Innovation Campus Capstone)"
 readme = "README.md"
 authors = [
-    { name = "spooky", email = "ahmedgli2522003@gmail.com" }
+    { name = "Ahmed Gali", email = "ahmed.gali.info@gmail.com" },
+    { name = "Taha Elkhazmi", email = "Elkhazmittt@gmail.com" },
+    { name = "Mahmoud Almabrouk", email = "mahmab90@gmail.com" },
+    { name = "Maher Alqadhi", email = "maher9maher9@gmail.com" },
+    { name = "Mohamed Khalaf", email = "moha.khalaf@uot.edu.ly" },
+    { name = "Ali Marghem", email = "al.marghem@uot.edu.ly" }
 ]
 requires-python = ">=3.12"
 dependencies = [
