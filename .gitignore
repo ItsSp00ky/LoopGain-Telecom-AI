@@ -38,3 +38,4 @@ Thumbs.db
 # Scratch profiling logs
 *.log
 dataset_profiles.txt
+*.zip

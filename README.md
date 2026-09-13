@@ -34,7 +34,7 @@ The repository is organized into three modular AI subsystems:
 ├── 2. customer_support_chatbot/       [⏳ PLANNED]
 │   └── Intelligent AI Customer Support Chatbot for Telecom Users
 │
-└── 3. antenna_cell_placement/         [⏳ PLANNED]
+└── 3. antenna_cell_placement/         [✅ OPERATIONAL]
     └── Geospatial AI for Optimal Cellular Antenna Site Placement
 ```
 
@@ -53,8 +53,11 @@ The repository is organized into three modular AI subsystems:
 - **Objective**: A conversational AI assistant designed for telecommunications subscribers to query package details, troubleshoot connectivity, resolve billing questions, and receive personalized promotional offers.
 
 ### 3. [AI Antenna Cell Site Placement Optimization](antenna_cell_placement/)
-- **Status**: **Planned / In Development**
-- **Objective**: Geospatial machine learning system predicting the optimal geographical locations for placing new cellular antenna towers based on population density, traffic demand, elevation, and network coverage gaps.
+- **Status**: **Operational & Production Ready**
+- **Objective**: Geospatial machine learning system predicting optimal geographic locations for deploying new cellular antenna towers across Libya with **0.9862 ROC-AUC** and **0.9794 PR-AUC**.
+- **Geospatial & Demographic Intelligence**: Fuses crowdsourced cellular radio telemetry with WorldPop 1km gridded population density, SRTM 250m Digital Elevation Model (topography/prominence), UN OCHA road transportation networks, and Libyan administrative boundaries.
+- **Optimization Engine**: Identifies unserved coverage gaps, ranks the Top 50 prioritized new site deployments, and recommends equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
+- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md).
 
 ---
 
@@ -107,6 +110,26 @@ uv run customer-churn-prediction recommend --customer-id 0004-TLHLJ
 
 # Export full batch retention campaign targets to CSV:
 uv run customer-churn-prediction batch-recommend --output retention_campaign_targets.csv
+```
+
+---
+
+## 📡 Quick Start: Antenna Cell Placement AI
+
+To run the geospatial cell placement optimization engine:
+
+```bash
+# Navigate to the antenna placement module
+cd antenna_cell_placement
+
+# Sync dependencies using uv
+uv sync
+
+# Run the end-to-end data cleaning, feature engineering, and model training:
+uv run antenna-placement all
+
+# Predict placement suitability and recommended equipment for any custom coordinate:
+uv run antenna-placement predict --lat 32.88 --lon 13.18
 ```
 
 ---

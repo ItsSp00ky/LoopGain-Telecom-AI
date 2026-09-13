@@ -1,0 +1,28 @@
+{
+  "model": "LightGBM Classifier",
+  "roc_auc": 0.9862,
+  "pr_auc": 0.9794,
+  "accuracy": 0.9519,
+  "f1_score": 0.9481,
+  "precision": 0.9372,
+  "recall": 0.9593,
+  "brier_score": 0.0379,
+  "training_samples": 4615,
+  "positive_sites": 2115,
+  "negative_candidates": 2500,
+  "feature_count": 12,
+  "features": [
+    "population_density_1km",
+    "population_sum_3km",
+    "population_sum_5km",
+    "elevation_m",
+    "elevation_prominence_3km",
+    "terrain_slope_deg",
+    "dist_to_nearest_road_m",
+    "dist_to_nearest_settlement_m",
+    "dist_to_nearest_site_m",
+    "site_density_3km",
+    "site_density_5km",
+    "site_density_10km"
+  ]
+}
