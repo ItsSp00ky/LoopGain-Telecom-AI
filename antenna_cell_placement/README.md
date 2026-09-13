@@ -39,6 +39,7 @@ An intelligent geospatial Machine Learning and network planning system engineere
   - **Equipment Recommender**: Random Forest multi-tier classifier achieving **89.55% Accuracy** in recommending equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
 - **Placement Recommendations**:
   - Evaluated **22,605** candidate locations across Libya, identifying **4,467** unserved coverage gaps and ranking the **Top 50 High-Priority New Cell Placements**.
+  - Added Cloudflare Radar's 52-week regional HTTP traffic share as a conservative digital-demand prior for final ranking (bounded to ±10%); the trained suitability model remains purely geospatial after leakage-aware testing rejected direct inclusion.
 - **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md).
 
 ---
@@ -64,12 +65,13 @@ antenna_cell_placement/
 │   │   ├── dem/DEM/lyb_strm_250m      # SRTM 250m Digital Elevation Model
 │   │   ├── roads/LYB_Roads.shp        # UN OCHA Libya Highway & Road Network
 │   │   └── admin_boundaries/         # Libya Admin 0, Admin 1, Admin 2 & Settlements
+│   ├── cloudflare_radar_libya/        # 52-week regional Internet demand context
 │   │
 │   └── cleaned/                       # Processed, Enriched & Parquet Datasets
 │       ├── cleaned_radio_towers.csv   # 2,338 deduplicated antennas with RF attributes
 │       ├── cleaned_physical_sites.csv # 2,115 physical mast sites
 │       ├── cleaned_physical_sites.geojson
-│       ├── cleaned_cells_combined.parquet  # 52-feature master ML dataset
+│       ├── cleaned_cells_combined.parquet  # 59-attribute enriched site dataset
 │       └── cleaned_cells_map.html     # Interactive Leaflet map
 │
 ├── models/                            # Serialized Champion AI Models
@@ -78,6 +80,8 @@ antenna_cell_placement/
 │
 ├── eval_reports/                      # Evaluation Reports, Benchmark Metrics & Maps
 │   ├── model_benchmark.json           # Model validation metrics
+│   ├── cloudflare_radar_assessment.json # Radar ablation and integration decision
+│   ├── opencellid_quality.json         # Observation quality report
 │   ├── suitability_roc_curve.png      # ROC curve visualization
 │   ├── suitability_feature_importance.png # Split gain feature importance chart
 │   ├── suitability_confusion_matrix.png   # Classification confusion matrix
@@ -85,16 +89,20 @@ antenna_cell_placement/
 │   ├── recommended_cell_placements.geojson
 │   └── libya_cell_coverage_map.html   # Master coverage & recommendation map
 │
-└── src/antenna_cell_placement/        # Python Package Source
+├── src/antenna_cell_placement/        # Python Package Source
     ├── __init__.py                    # Package exports
     ├── config.py                      # Paths, CRS constants, and parameters
     ├── data_cleaning.py               # Parsing, deduplication & mast clustering
     ├── feature_engineering.py         # Multi-layer raster & vector extraction
+    ├── cloudflare_radar.py            # Regional traffic mapping and demand prior
+    ├── opencellid.py                  # Optional observation import/review layer
     ├── placement_model.py             # LightGBM & XGBoost training & cross-validation
     ├── site_optimizer.py              # Coverage gap optimizer & ranking engine
     ├── map_visualizer.py              # Folium / Leaflet map generator
     ├── placement.py                   # Programmatic Python API
     └── cli.py                         # Rich CLI command-line interface
+
+└── tests/                             # Radar and OpenCellID regression tests
 ```
 
 ---
@@ -136,6 +144,9 @@ uv sync
 # 1. Clean raw SQLite/JSON data and consolidate physical mast sites
 uv run antenna-placement clean
 
+# Optional: refresh the OpenCellID quality/proximity reports explicitly
+uv run antenna-placement opencellid
+
 # 2. Extract multi-layer geospatial features (WorldPop, SRTM DEM, OCHA roads)
 uv run antenna-placement features
 
@@ -170,8 +181,99 @@ uv run antenna-placement predict --lat 24.00 --lon 18.00
 
 | Rank | Municipality | Nearest Settlement | Suitability | Priority Score | Recommended Equipment Tier | 5km Population | Nearest Cell Gap |
 | :---: | :--- | :--- | :---: | :---: | :--- | :---: | :---: |
-| **#1** | **Zwara** | Aljmail | **0.847** | **7.43** | Suburban Standard Macro (B3 + B20) | 24,521 | 10.74 km |
-| **#2** | **Zwara** | Al Ajaylat | **0.843** | **7.38** | Suburban Standard Macro (B3 + B20) | 24,013 | 14.83 km |
-| **#3** | **Derna** | Alqubba | **0.927** | **7.37** | Suburban Standard Macro (B3 + B20) | 9,463 | 10.01 km |
-| **#4** | **Benghazi** | Suloug | **0.896** | **7.17** | Suburban Standard Macro (B3 + B20) | 9,987 | 13.28 km |
-| **#5** | **Benghazi** | Toukra | **0.791** | **7.01** | Urban High-Capacity Macro (B3+B1+B20) | 26,704 | 24.69 km |
+| **#1** | **Benghazi** | Suloug | **0.896** | **7.82** | Suburban Standard Macro (B3 + B20) | 9,987 | 13.28 km |
+| **#2** | **Benghazi** | Toukra | **0.791** | **7.65** | Urban High-Capacity Macro (B3+B1+B20) | 26,704 | 24.69 km |
+| **#3** | **Zwara** | Aljmail | **0.847** | **7.63** | Suburban Standard Macro (B3 + B20) | 24,521 | 10.74 km |
+| **#4** | **Zwara** | Al Ajaylat | **0.843** | **7.58** | Suburban Standard Macro (B3 + B20) | 24,013 | 14.83 km |
+| **#5** | **Derna** | Alqubba | **0.927** | **7.50** | Suburban Standard Macro (B3 + B20) | 9,463 | 10.01 km |
+
+## Cloudflare Radar regional demand integration
+
+The 22-row regional feature table is useful for prioritization, but most files in
+`data/cloudflare_radar_libya` contain national or ISP-level values that are equal
+for every candidate coordinate and therefore cannot improve spatial prediction.
+All 22 Radar place labels are explicitly mapped to the project's OCHA admin-2
+municipalities.
+
+A controlled ablation tested three regional inputs against the same 4,615 training
+examples. Random stratified ROC-AUC moved only from **0.98625 to 0.98642**, while
+municipality-held-out ROC-AUC declined from **0.98331 to 0.98184**. The regional
+features were therefore rejected as classifier inputs, avoiding geographic leakage
+and leaving the saved suitability model and its benchmark unchanged.
+
+The 52-week HTTP request share is instead converted to a regional percentile and
+applied to the final deployment priority with a bounded factor of `0.9 + 0.2 ×
+percentile`. This adds at most ±10% influence and keeps the original geospatial
+priority, model probability, raw Radar share, growth, and factor in the exported
+CSV/GeoJSON for audit. Missing Radar data uses a neutral factor of 1.0. The full
+assessment is stored in
+[`eval_reports/cloudflare_radar_assessment.json`](eval_reports/cloudflare_radar_assessment.json).
+
+## OpenCellID observations (`data/606.csv`)
+
+The optional OpenCellID export adds supplementary network evidence to placement
+review. Its third column, `net`, maps `0` to **Libyana** and `1` to **Al-Madar**;
+other codes remain **Unknown**. Both headerless and named 14-column exports are
+supported, following the [OpenCellID database format](https://docs.opencellid.org/docs/downloads/database-format).
+Timestamps are Unix seconds. `unit` is PSC/PCI, not a tower identifier, and the
+deprecated `averageSignal` is not signal-strength evidence.
+
+```bash
+uv run antenna-placement opencellid
+# Optional alternative input for import/report generation:
+uv run antenna-placement opencellid --path /path/to/cells.csv
+uv run antenna-placement map
+```
+
+`clean` also imports `data/606.csv` when present. `recommend` adds observation
+proximity and a review flag to its CSV/GeoJSON output. The map reads the default
+raw export and displays optional operator layers plus proximity notes on proposed
+sites. An alternative `--path` only changes the import/report input; copy an export
+to `data/606.csv` to use it throughout the pipeline.
+
+The initial September 13, 2026 assessment found:
+
+| Measure | Count |
+| --- | ---: |
+| Unique cell identities | 1,406 |
+| Libyana / Al-Madar / unknown | 905 / 498 / 3 |
+| GSM / UMTS / LTE | 262 / 722 / 422 |
+| Cells over 3 km from an existing project site | 337 |
+| Existing top-50 recommendations near eligible observations | 11 |
+
+Outputs are [`data/cleaned/opencellid_cells.csv`](data/cleaned/opencellid_cells.csv),
+`opencellid_rejected.csv`, [`eval_reports/opencellid_quality.json`](eval_reports/opencellid_quality.json),
+and [`eval_reports/opencellid_recommendation_review.csv`](eval_reports/opencellid_recommendation_review.csv). Run `opencellid` again after
+changing recommendations to refresh the standalone review report.
+
+Validation quarantines invalid identifiers, non-Libyan MCCs and coordinates outside
+the project bounding box (not a national boundary polygon). Deduplication uses
+`radio,mcc,net,area,cell`, preferring valid timestamps and the latest observation.
+All retained cells have source attribution, sample counts and UTC dates. Review
+flags use cells with valid dates, at least two samples and an update within 730
+days, within 3 km of a candidate. These thresholds are review heuristics, not
+calibrated confidence or coverage estimates. Distances use the project's UTM 33N
+projection. Missing operator evidence is represented by blank distance values.
+
+OpenCellID coordinates are estimated **cell locations**, not verified physical
+masts. The source `range` is retained as metadata and is not used as a coverage
+footprint or location-accuracy bound. Cell observations are therefore kept separate
+from mast counts, RF capacity, training labels and model inputs. Current model
+scores/ranks and the historical benchmarks above remain unchanged; this integration
+improves evidence available for review, without claiming measured predictive gains.
+No nearby observation does not establish an unserved area.
+
+Data attribution: [OpenCellID](https://opencellid.org/).
+
+Validation: `uv run python -m unittest discover -s tests -v`.
+
+### Map background without public tile servers
+
+The generated maps embed UN OCHA Libya boundaries, roads and settlement labels
+from `data/external`. They make no OpenStreetMap tile requests, avoiding the
+blocked-tile background when opening the HTML locally. Use the layer selector to
+show or hide roads, labels, sites and OpenCellID observations. Regenerate both
+HTML outputs with `uv run antenna-placement map`.
+
+This background provides geographic context, not street-level imagery. Folium's
+JavaScript and CSS still load from CDNs, so the HTML is not fully offline.

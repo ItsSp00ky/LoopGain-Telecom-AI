@@ -18,6 +18,14 @@ RAW_DATA_DIR = MODULE_DIR / "Libyan_cells_dataset"
 RAW_SQLITE_PATH = RAW_DATA_DIR / "cells.sqlite3"
 RAW_JSON_PATH = RAW_DATA_DIR / "cells.json"
 RAW_GEOJSON_PATH = RAW_DATA_DIR / "cells.geojson"
+OPENCELLID_RAW_PATH = DATA_DIR / "606.csv"
+OPENCELLID_CLEANED_PATH = CLEANED_DATA_DIR / "opencellid_cells.csv"
+OPENCELLID_REPORT_PATH = REPORTS_DIR / "opencellid_quality.json"
+CLOUDFLARE_RADAR_DIR = DATA_DIR / "cloudflare_radar_libya"
+CLOUDFLARE_REGIONAL_FEATURES_PATH = (
+    CLOUDFLARE_RADAR_DIR / "libya_best_places_features_dataset.csv"
+)
+CLOUDFLARE_ASSESSMENT_PATH = REPORTS_DIR / "cloudflare_radar_assessment.json"
 
 # External Data Paths
 WORLDPOP_TIF_PATH = EXTERNAL_DATA_DIR / "lby_pd_2020_1km.tif"

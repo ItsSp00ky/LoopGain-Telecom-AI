@@ -307,7 +307,11 @@ class GeospatialFeatureExtractor:
             "is_coverage_isolated": (dist_to_nearest_site_m > 5000.0).astype(int),
         })
 
-        return df_features
+        # Add optional regional Internet-demand context. These columns are not
+        # classifier inputs; the optimizer uses a bounded factor for final ranking.
+        from antenna_cell_placement.cloudflare_radar import add_regional_features
+
+        return add_regional_features(df_features)
 
 
 def enrich_physical_sites_pipeline() -> pd.DataFrame:

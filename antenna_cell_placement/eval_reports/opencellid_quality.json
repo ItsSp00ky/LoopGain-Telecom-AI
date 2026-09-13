@@ -1,0 +1,27 @@
+{
+  "source": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/606.csv",
+  "as_of_utc": "2026-09-13T12:24:16.529223+00:00",
+  "input_rows": 1406,
+  "rejected_rows": 0,
+  "duplicate_identity_rows": 0,
+  "retained_cells": 1406,
+  "operator_counts": {
+    "Libyana": 905,
+    "Al-Madar": 498,
+    "Unknown": 3
+  },
+  "radio_counts": {
+    "UMTS": 722,
+    "LTE": 422,
+    "GSM": 262
+  },
+  "invalid_timestamp_cells": 0,
+  "review_eligible_cells": 1223,
+  "review_policy": "At least 2 samples, valid timestamps, updated within 730 days; proximity is not proof of coverage.",
+  "spatial_scope": "Libya bounding box; not a national boundary polygon.",
+  "attribution": "OpenCellID https://opencellid.org/; https://docs.opencellid.org/docs/downloads/database-format",
+  "cells_within_50m_of_existing_site": 37,
+  "cells_over_3km_from_existing_site": 337,
+  "recommendations_reviewed": 50,
+  "recommendations_near_recent_cells": 11
+}

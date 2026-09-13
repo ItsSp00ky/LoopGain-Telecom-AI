@@ -37,8 +37,9 @@ Historically, telecom site selection has suffered from severe structural ineffic
 ### The Loop Gain Solution
 This subsystem delivers an **End-to-End Geospatial Machine Learning & Automated Optimization System** for cellular infrastructure planning across Libya:
 - **Forensic Data Cleansing & Deduplication**: Repaired a critical regional scoping bug in crowdsourced telemetry that collapsed distant towers up to **812 km apart**, consolidating **4,258** raw observations into **2,338** unique antennas and **2,115** physical cellular mast sites with sub-10cm coordinate consistency.
-- **Multi-Source Geospatial Fusion**: Integrated **WorldPop 2020 1km gridded population density**, **SRTM 250m Digital Elevation Model (DEM)**, **UN OCHA 4,141 road line vectors**, and all **22 Libyan Municipalities (Baladiyat)** into a unified 52-feature matrix.
+- **Multi-Source Geospatial Fusion**: Integrated **WorldPop 2020 1km gridded population density**, **SRTM 250m Digital Elevation Model (DEM)**, **UN OCHA 4,141 road line vectors**, all **22 Libyan Municipalities (Baladiyat)**, and regional Cloudflare Radar context into a unified 59-attribute matrix.
 - **Gradient-Boosted Suitability Prediction**: Engineered a champion LightGBM classifier achieving **0.9862 ROC-AUC**, **0.9794 PR-AUC**, and **95.19% Accuracy** across 5-fold stratified cross-validation.
+- **Regional Digital Demand Prior**: Integrated 52-week Cloudflare Radar HTTP traffic shares for all 22 Libyan admin-2 municipalities as a bounded (±10%) recommendation-ranking factor. Direct classifier inclusion was rejected because municipality-held-out ROC-AUC declined from 0.98331 to 0.98184.
 - **Automated Equipment Recommendation**: Implemented a multi-tier classifier (**89.55% Accuracy**) recommending exact equipment configurations (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`, or `Micro_Cell_Hotspot`).
 - **Coverage Gap Optimizer & Strategic Roadmap**: Scanned **22,605** candidate points across Libya, discovered **4,467** unserved population pockets, and produced an actionable prioritized roadmap for the **Top 50 New Cell Placements**.
 
@@ -54,6 +55,7 @@ flowchart TD
         A1["Raw Telemetry SQLite<br><code>cells.sqlite3</code> (4,258 obs)"]
         A2["LTE Observations<br><code>cells.json</code> (1,318 records)"]
         A3["External Libya GIS<br>WorldPop + SRTM DEM + UN OCHA"]
+        A4["Regional Internet Demand<br>Cloudflare Radar (22 municipalities)"]
     end
 
     subgraph S2["2. Data Cleansing & Mast Consolidation"]
@@ -67,7 +69,7 @@ flowchart TD
         C2["Topographic Extraction<br>SRTM DEM elevation, slope, 3km prominence"]
         C3["Infrastructure Extraction<br>OCHA road distance, settlement proximity, 22 Baladiyat"]
         C4["Spatial Network Topology<br>Inter-site distances, local 1k/3k/5k/10k densities"]
-        C5["Master Feature Matrix<br><code>cleaned_cells_combined.parquet</code> (52 cols)"]
+        C5["Master Enriched Matrix<br><code>cleaned_cells_combined.parquet</code> (59 attributes)"]
     end
 
     subgraph S4["4. Dual Machine Learning Pipelines"]
@@ -84,6 +86,7 @@ flowchart TD
 
     A1 & A2 --> B1 --> B2 --> B3
     B3 & A3 --> C1 & C2 & C3 & C4 --> C5
+    A4 --> C5
     C5 --> D1 & D2
     D1 & D2 --> E1 --> E2 --> E3 & E4
 ```
@@ -92,7 +95,7 @@ flowchart TD
 
 # Part I: Data Forensics, Cleaning & Mast Consolidation
 
-The primary raw dataset provided was a crowdsourced telecommunications snapshot of Libyan cellular towers ([`cells.sqlite3`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3)) accompanied by raw LTE API extracts ([`cells.json`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.json)).
+The primary raw dataset provided was a crowdsourced telecommunications snapshot of Libyan cellular towers ([`cells.sqlite3`](Libyan_cells_dataset/cells.sqlite3)) accompanied by raw LTE API extracts ([`cells.json`](Libyan_cells_dataset/cells.json)).
 
 ### 1.1 Discovery of the 812 km Regional Scoping Bug
 
@@ -140,7 +143,7 @@ Using spatial nearest-neighbor clustering in projected UTM Zone 33N coordinates 
 - **2,338 Radio Antennas** $\rightarrow$ **2,115 Physical Cellular Sites**.
 - **Multi-Technology Sites**: **109 sites** host collocated 2G, 3G, and 4G equipment.
 - **Multi-Operator Infrastructure Sharing**: **45 sites** host equipment for both Libyana and Al-Madar on the same tower structure.
-- Exported cleaned files: [`cleaned_radio_towers.csv`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/cleaned/cleaned_radio_towers.csv), [`cleaned_physical_sites.csv`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/cleaned/cleaned_physical_sites.csv), and [`cleaned_physical_sites.geojson`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/cleaned/cleaned_physical_sites.geojson).
+- Exported cleaned files: [`cleaned_radio_towers.csv`](data/cleaned/cleaned_radio_towers.csv), [`cleaned_physical_sites.csv`](data/cleaned/cleaned_physical_sites.csv), and [`cleaned_physical_sites.geojson`](data/cleaned/cleaned_physical_sites.geojson).
 
 ---
 
@@ -188,11 +191,32 @@ Top Municipalities by Existing Cell Site Count:
  8. Ejdabia:               60 sites  (2.8%)
 ```
 
+### 2.4 Cloudflare Radar regional demand context
+
+The supplied [Cloudflare Radar Libya snapshot](https://radar.cloudflare.com/traffic/ly)
+contains national, ISP, protocol, routing, and municipality-level Internet traffic
+measurements across horizons up to 52 weeks. Only the 22-row regional table varies
+at the spatial resolution needed by the optimizer. All 22 source place names are
+explicitly mapped to their OCHA admin-2 municipality names.
+
+Three regional fields—annual HTTP request share, annual stability, and annual
+growth—were tested as classifier inputs. They produced a negligible random-fold
+ROC-AUC increase of **0.00018**, but reduced municipality-held-out ROC-AUC by
+**0.00147**. This indicates weak geographic generalization and a risk that the
+classifier would learn current network concentration instead of transferable site
+suitability. The fields are therefore excluded from the 12-feature classifier.
+
+Annual HTTP request share remains useful as an independent demand signal for final
+ranking. Its percentile multiplier is bounded to ±10%, and both the original
+geospatial score and adjusted deployment score are exported for audit. See
+[`cloudflare_radar_assessment.json`](eval_reports/cloudflare_radar_assessment.json)
+for the complete ablation result.
+
 ---
 
 # Part III: Mathematical Formulation & Feature Engineering
 
-The feature engineering pipeline in [`feature_engineering.py`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/src/antenna_cell_placement/feature_engineering.py) constructs a **52-dimensional master feature space** stored in [`cleaned_cells_combined.parquet`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/cleaned/cleaned_cells_combined.parquet).
+The feature engineering pipeline in [`feature_engineering.py`](src/antenna_cell_placement/feature_engineering.py) constructs a **59-attribute enriched dataset** stored in [`cleaned_cells_combined.parquet`](data/cleaned/cleaned_cells_combined.parquet). The suitability classifier deliberately uses only its 12 validated geospatial features; the Cloudflare fields remain independent ranking context.
 
 ### 3.1 Feature Catalog
 
@@ -221,6 +245,10 @@ The feature engineering pipeline in [`feature_engineering.py`](file:///home/spoo
 | | `band_count` | Integer | Frequency diversity (multi-band aggregation) |
 | | `max_generation` | Integer | Peak technological generation (4 = LTE, 3 = UMTS, 2 = GSM) |
 | | `bandwidth_per_1k_pop_3km`| Continuous | Spectral efficiency per 1,000 population served |
+| **Digital demand** | `cloudflare_http_requests_share_52w_pct` | Continuous | Municipality share of Libya's observed Cloudflare HTTP requests over 52 weeks |
+| | `cloudflare_regional_demand_score` | Continuous | Percentile-scaled regional demand prior in $[0,1]$ |
+| | `cloudflare_priority_factor` | Continuous | Bounded ranking multiplier in $[0.9,1.1]$; neutral value is 1.0 |
+| | `cloudflare_data_available` | Boolean | Indicates whether the municipality has matched Radar data |
 
 ---
 
@@ -255,7 +283,7 @@ Models were evaluated using **5-Fold Stratified Cross-Validation** with fixed ra
 > **Champion Model Choice**:  
 > While XGBoost and LightGBM performed within $0.05\%$ of each other on ROC-AUC, **LightGBM** was selected as the operational champion due to its significantly lower inference latency ($<15\text{ms}$ per batch) and superior handling of continuous geographic features without requiring explicit normalization scaling.
 
-All benchmark results and metrics are persisted in [`model_benchmark.json`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/eval_reports/model_benchmark.json).
+All benchmark results and metrics are persisted in [`model_benchmark.json`](eval_reports/model_benchmark.json).
 
 ---
 
@@ -282,9 +310,10 @@ Top Geospatial Feature Importances:
 - **`elevation_prominence_3km`**: Quantifies RF line-of-sight; antennas situated on local topographic crests maximize geographic coverage.
 
 Evaluation charts:
-- ROC Curve: [`suitability_roc_curve.png`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/eval_reports/suitability_roc_curve.png)
-- Feature Importance: [`suitability_feature_importance.png`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/eval_reports/suitability_feature_importance.png)
-- Confusion Matrix: [`suitability_confusion_matrix.png`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/eval_reports/suitability_confusion_matrix.png)
+- ROC Curve: [`suitability_roc_curve.png`](eval_reports/suitability_roc_curve.png)
+- Feature Importance: [`suitability_feature_importance.png`](eval_reports/suitability_feature_importance.png)
+- Confusion Matrix: [`suitability_confusion_matrix.png`](eval_reports/suitability_confusion_matrix.png)
+- Cloudflare ablation and integration decision: [`cloudflare_radar_assessment.json`](eval_reports/cloudflare_radar_assessment.json)
 
 ---
 
@@ -303,7 +332,7 @@ Once a candidate site location is verified as viable, the equipment recommendati
 
 # Part V: Coverage Gap Optimization & Deployment Roadmap
 
-The optimization engine in [`site_optimizer.py`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/src/antenna_cell_placement/site_optimizer.py) executes a systematic geospatial scan across Libya:
+The optimization engine in [`site_optimizer.py`](src/antenna_cell_placement/site_optimizer.py) executes a systematic geospatial scan across Libya:
 
 ```
 Total Candidate Search Points: 22,605
@@ -320,9 +349,22 @@ Points are filtered to isolate **genuine unserved coverage blackouts**:
 **Result**: **4,467 candidate locations** met all three demographic and coverage deficit criteria.
 
 ### 5.2 Prioritized Deployment Index & Non-Maximum Suppression
-Each candidate point was evaluated through both AI models to compute a **Deployment Priority Score**:
+Each candidate point is first assigned an auditable **Geospatial Priority Score**:
 
-$$\text{Priority Score} = P_{\text{suitability}} \times \log_{10}(\text{pop}_{5\text{km}}) \times \min\left(2.0, \frac{\text{dist}_{\text{site}}}{5000\text{m}}\right)$$
+$$G = P_{\text{suitability}} \times \log_{10}(\max(10,\text{pop}_{5\text{km}})) \times \operatorname{clip}\left(\frac{\text{dist}_{\text{site}}}{5000\text{m}}, 0.5, 2.0\right)$$
+
+Cloudflare's 52-week HTTP request share is percentile-scaled within the 22
+municipalities. It adjusts only the final ordering and cannot change the model's
+suitability probability:
+
+$$F_{\text{Radar}} = 0.9 + 0.2 \times \operatorname{percentile}(\text{HTTP share}_{52w})$$
+
+$$\text{Deployment Priority Score} = G \times F_{\text{Radar}}$$
+
+This bounds the external demand signal to ±10%. If Radar data is missing, the
+factor is 1.0. Direct classifier inclusion was rejected after an ablation reduced
+municipality-held-out ROC-AUC from **0.98331** to **0.98184**, despite a negligible
+random-fold increase from **0.98625** to **0.98642**.
 
 To ensure recommended sites provide non-overlapping coverage, **Spatial Non-Maximum Suppression (NMS)** with a **2.5 km minimum inter-site separation** was applied, yielding the **Top 50 High-Priority New Cell Placements**.
 
@@ -330,26 +372,26 @@ To ensure recommended sites provide non-overlapping coverage, **Spatial Non-Maxi
 
 ### 5.3 Top 10 High-Priority Recommended Deployments
 
-Extracted from [`recommended_cell_placements.csv`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/eval_reports/recommended_cell_placements.csv):
+Extracted from [`recommended_cell_placements.csv`](eval_reports/recommended_cell_placements.csv):
 
 | Rank | Municipality | Nearest Settlement | Coordinates | Suitability | Priority | Recommended Equipment Tier | 5km Population | Gap to Nearest Cell |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- | :---: | :---: |
-| **#1** | **Zwara** | Aljmail | `32.747, 12.062` | **0.8469** | **7.43** | Suburban Standard Macro (B3 + B20) | 24,521 | 10.74 km |
-| **#2** | **Zwara** | Al Ajaylat | `32.766, 12.227` | **0.8428** | **7.38** | Suburban Standard Macro (B3 + B20) | 24,013 | 14.83 km |
-| **#3** | **Derna** | Alqubba | `32.759, 21.968` | **0.9274** | **7.37** | Suburban Standard Macro (B3 + B20) | 9,463 | 10.01 km |
-| **#4** | **Benghazi** | Suloug | `31.785, 20.245` | **0.8958** | **7.17** | Suburban Standard Macro (B3 + B20) | 9,987 | 13.28 km |
-| **#5** | **Benghazi** | Toukra | `32.531, 20.825` | **0.7914** | **7.01** | Urban High-Capacity Macro (B3+B1+B20) | 26,704 | 24.69 km |
-| **#6** | **Zwara** | Aljmail | `32.709, 12.062` | **0.8103** | **6.95** | Suburban Standard Macro (B3 + B20) | 19,298 | 10.16 km |
-| **#7** | **Benghazi** | Suloug | `31.711, 20.306` | **0.7964** | **6.54** | Suburban Standard Macro (B3 + B20) | 12,733 | 14.15 km |
-| **#8** | **Zwara** | Aljmail | `32.793, 12.062` | **0.7864** | **6.46** | Urban High-Capacity Macro (B3+B1+B20) | 50,723 | 8.73 km |
-| **#9** | **Al Jabal Al Akhdar** | Labriq | `32.766, 21.905` | **0.9110** | **6.40** | Suburban Standard Macro (B3 + B20) | 13,051 | 8.53 km |
-| **#10** | **Derna** | Umm Arrazam | `32.502, 23.115` | **0.7643** | **6.16** | Suburban Standard Macro (B3 + B20) | 10,785 | 19.90 km |
+| **#1** | **Benghazi** | Suloug | `31.8685, 20.3207` | **0.8958** | **7.82** | Suburban Standard Macro (B3 + B20) | 9,987 | 13.28 km |
+| **#2** | **Benghazi** | Toukra | `32.5356, 20.5688` | **0.7914** | **7.65** | Urban High-Capacity Macro (B3+B1+B20) | 26,704 | 24.69 km |
+| **#3** | **Zwara** | Aljmail | `32.8634, 12.2025` | **0.8469** | **7.63** | Suburban Standard Macro (B3 + B20) | 24,521 | 10.74 km |
+| **#4** | **Zwara** | Al Ajaylat | `32.8456, 12.2409` | **0.8428** | **7.58** | Suburban Standard Macro (B3 + B20) | 24,013 | 14.83 km |
+| **#5** | **Derna** | Alqubba | `32.7976, 22.5221` | **0.9274** | **7.50** | Suburban Standard Macro (B3 + B20) | 9,463 | 10.01 km |
+| **#6** | **Zwara** | Aljmail | `32.8011, 12.2115` | **0.8103** | **7.14** | Suburban Standard Macro (B3 + B20) | 19,298 | 10.16 km |
+| **#7** | **Benghazi** | Suloug | `31.9636, 20.3291` | **0.7964** | **7.13** | Suburban Standard Macro (B3 + B20) | 12,733 | 14.15 km |
+| **#8** | **Al Jabal Al Akhdar** | Labriq | `32.8956, 21.9620` | **0.9110** | **6.75** | Suburban Standard Macro (B3 + B20) | 13,051 | 8.53 km |
+| **#9** | **Zwara** | Aljmail | `32.8493, 12.0682` | **0.7864** | **6.64** | Urban High-Capacity Macro (B3+B1+B20) | 50,723 | 8.73 km |
+| **#10** | **Derna** | Umm Arrazam | `32.6083, 22.7649` | **0.7643** | **6.27** | Suburban Standard Macro (B3 + B20) | 10,785 | 19.90 km |
 
 ---
 
 # Part VI: CLI Execution and Production Verification
 
-The platform provides a comprehensive Command Line Interface (CLI) implemented in [`cli.py`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/src/antenna_cell_placement/cli.py).
+The platform provides a comprehensive Command Line Interface (CLI) implemented in [`cli.py`](src/antenna_cell_placement/cli.py).
 
 ### 6.1 Running the End-to-End Pipeline
 
@@ -365,6 +407,9 @@ uv run antenna-placement all
 ```bash
 # 1. Clean raw SQLite/JSON records and consolidate physical masts
 uv run antenna-placement clean
+
+# Optional: rebuild OpenCellID quality and proximity reports
+uv run antenna-placement opencellid
 
 # 2. Extract multi-layer geospatial features from WorldPop & DEM
 uv run antenna-placement features
@@ -403,6 +448,8 @@ Output:
 │ Distance to Nearest Road       │ 260.7 meters             │
 │ Ground Elevation               │ 14.0 m ASL               │
 │ Elevation Prominence (3km)     │ 0.1 m                    │
+│ Regional HTTP Traffic Share    │ 53.952%                  │
+│ Regional Digital Demand Score  │ 1.000                    │
 └────────────────────────────────┴──────────────────────────┘
 ```
 
@@ -431,16 +478,29 @@ Output:
 ## 🗺️ Interactive Maps & Visual Artifacts
 
 The system automatically generates standalone, interactive Leaflet/Folium web applications:
-- **Master Coverage & Recommendation Map**: [`libya_cell_coverage_map.html`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/eval_reports/libya_cell_coverage_map.html)
+- **Master Coverage & Recommendation Map**: [`libya_cell_coverage_map.html`](eval_reports/libya_cell_coverage_map.html)
   - Color-coded layers for existing 4G LTE, 3G UMTS, 2G GSM, and collocated multi-technology masts.
-  - Pulsing red markers for the **Top 50 AI Recommended Placements**, complete with rich popups showing municipal district, suitability score, population catchment, nearest cell gap, and suggested multi-band equipment configuration.
-- **Cleaned Existing Sites Map**: [`cleaned_cells_map.html`](file:///home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/cleaned/cleaned_cells_map.html)
+  - Pulsing red markers for the **Top 50 AI Recommended Placements**, with municipal district, suitability score, population catchment, nearest cell gap, Radar demand context, OpenCellID review evidence, and suggested multi-band equipment configuration.
+- **Cleaned Existing Sites Map**: [`cleaned_cells_map.html`](data/cleaned/cleaned_cells_map.html)
 
 ---
 
 ## Conclusion & Business Impact
 
-By combining crowdsourced cellular telemetry with high-resolution satellite population grids, digital elevation models, and road networks, the Loop Gain Antenna Placement AI shifts telecom planning from expensive reactive drive-testing to **proactive, algorithmic optimization**:
+By combining crowdsourced cellular telemetry with high-resolution satellite population grids, digital elevation models, road networks, and bounded regional Internet-demand context, the Loop Gain Antenna Placement AI shifts telecom planning from expensive reactive drive-testing to **proactive, algorithmic optimization**:
 1. **Capital Efficiency**: Directs multi-million dollar CAPEX budgets exclusively to verified coverage deficits with substantial population demand.
 2. **Optimized Infrastructure Sizing**: Prevents over-provisioning and under-provisioning through empirical equipment tier classification (89.55% accuracy).
 3. **Infrastructure Sharing Catalyst**: Discovered 45 existing collocated sites and systematically recommends shared deployments for Libyana and Al-Madar along remote highway corridors to cut deployment costs in half.
+
+## OpenCellID supplement — September 13, 2026
+
+`data/606.csv` is now integrated as a separately attributed observation layer.
+The current modeling results were regenerated after this supplement was added, but
+OpenCellID was intentionally excluded from training labels and features because it
+does not provide independently verified mast or coverage ground truth. See the README's
+OpenCellID section for ingestion, validation, review thresholds and limitations.
+The reproducible assessment is in `eval_reports/opencellid_quality.json` and the
+candidate-level evidence is in `eval_reports/opencellid_recommendation_review.csv`.
+The initial assessment identifies 337 cells over 3 km from existing inferred sites
+and 11 of 50 proposed sites near recent observations with multiple samples.
+These are investigation targets, not confirmed additional towers or covered areas.

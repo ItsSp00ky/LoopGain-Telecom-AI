@@ -3,16 +3,73 @@ Interactive Leaflet/Folium geospatial visualization for Libyan cell sites and AI
 """
 
 from pathlib import Path
+from html import escape
 import folium
 from folium.plugins import MarkerCluster, FeatureGroupSubGroup
 import pandas as pd
+import geopandas as gpd
 
 from antenna_cell_placement.config import (
     CLEANED_PHYSICAL_SITES_CSV,
     RECOMMENDATIONS_CSV,
     CLEANED_MAP_HTML,
     REPORTS_DIR,
+    ADMIN1_GEOJSON_PATH,
+    ROADS_SHP_PATH,
+    POP_PLACES_GEOJSON_PATH,
+    CRS_PROJECTED_LIBYA,
 )
+
+
+def add_local_basemap(m: folium.Map):
+    """Embed geographic context without requests to a public tile server."""
+    boundaries = gpd.read_file(ADMIN1_GEOJSON_PATH)[["adm1_name", "geometry"]]
+    boundaries = boundaries.to_crs(CRS_PROJECTED_LIBYA)
+    boundaries.geometry = boundaries.geometry.simplify(150, preserve_topology=True)
+    base = folium.FeatureGroup(name="Libya boundaries (embedded)", overlay=False)
+    folium.GeoJson(
+        boundaries.to_crs("EPSG:4326").to_json(),
+        style_function=lambda _: {
+            "color": "#94a3b8", "weight": 1.5,
+            "fillColor": "#f5f1e7", "fillOpacity": 1,
+        },
+        interactive=False,
+    ).add_to(base)
+    base.add_to(m)
+
+    roads = gpd.read_file(ROADS_SHP_PATH)[["geometry"]].to_crs(CRS_PROJECTED_LIBYA)
+    roads.geometry = roads.geometry.simplify(100, preserve_topology=True)
+    road_layer = folium.FeatureGroup(name="Road network (embedded)")
+    folium.GeoJson(
+        roads.to_crs("EPSG:4326").to_json(),
+        style_function=lambda _: {"color": "#c49553", "weight": 1.2, "opacity": 0.7},
+        interactive=False,
+    ).add_to(road_layer)
+    road_layer.add_to(m)
+
+    places = gpd.read_file(POP_PLACES_GEOJSON_PATH).to_crs("EPSG:4326")
+    settlements = folium.FeatureGroup(name="Settlement labels (embedded)")
+    for _, place in places.iterrows():
+        name = escape(str(place["featurename_en"]))
+        folium.Marker(
+            [place.geometry.y, place.geometry.x],
+            icon=folium.DivIcon(
+                html=f'<span class="settlement-label">{name}</span>',
+                icon_size=(150, 16), icon_anchor=(-5, 8),
+            ),
+        ).add_to(settlements)
+    settlements.add_to(m)
+    m.get_root().header.add_child(folium.Element('''<style>
+        .leaflet-container { background: #dcecf2 !important; }
+        .settlement-label { font: 11px Arial, sans-serif; color: #334155;
+            white-space: nowrap; text-shadow: 1px 1px white, -1px -1px white,
+            1px -1px white, -1px 1px white; }
+    </style>'''))
+    m.get_root().html.add_child(folium.Element('''
+        <div style="position:fixed;bottom:5px;left:10px;z-index:9999;
+                    background:white;padding:4px;font:11px Arial,sans-serif">
+        Embedded basemap: UN OCHA boundaries, roads and settlements.
+        No map tile service required.</div>'''))
 
 
 def generate_interactive_map(
@@ -30,15 +87,24 @@ def generate_interactive_map(
     df_sites = pd.read_csv(sites_csv)
     df_recs = pd.read_csv(recommendations_csv) if recommendations_csv.exists() else None
 
+    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
+    from antenna_cell_placement.opencellid import load_cells, annotate_candidates
+    cells = None
+    if OPENCELLID_RAW_PATH.exists():
+        cells, _, _ = load_cells(OPENCELLID_RAW_PATH)
+        if df_recs is not None:
+            df_recs = annotate_candidates(df_recs, cells)
+
     # Center map on Libya
     center_lat = 30.5
     center_lon = 17.5
     m = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=6,
-        tiles="OpenStreetMap",
+        tiles=None,
         control_scale=True
     )
+    add_local_basemap(m)
 
     # 1. Feature Groups for Existing Sites
     fg_lte = folium.FeatureGroup(name="4G LTE Sites (Existing)")
@@ -100,6 +166,26 @@ def generate_interactive_map(
     fg_umts.add_to(m)
     fg_gsm.add_to(m)
 
+    if cells is not None:
+        for operator, subset in cells.groupby("operator"):
+            layer = folium.FeatureGroup(name=f"OpenCellID estimates: {operator}", show=False)
+            cluster = MarkerCluster().add_to(layer)
+            for _, cell in subset.iterrows():
+                popup = (
+                    f"<b>OpenCellID estimated cell — {escape(operator)}</b><br>"
+                    f"{escape(cell['radio'])}; area {cell['area']}; cell {cell['cell']}<br>"
+                    f"Measurements: {cell['samples']}<br>Last observed: {cell['updated_utc']}<br>"
+                    f"Source estimated range: {cell['range']} m<br>"
+                    "Estimated cell location; not a verified mast or coverage footprint."
+                )
+                folium.Marker([cell['lat'], cell['lon']], popup=folium.Popup(popup, max_width=320),
+                              tooltip=f"OpenCellID: {operator} {cell['radio']}").add_to(cluster)
+            layer.add_to(m)
+        m.get_root().html.add_child(folium.Element(
+            '<div style="position:fixed;bottom:25px;left:10px;z-index:9999;background:white;padding:5px">'
+            'Cell observations: <a href="https://opencellid.org/">OpenCellID</a></div>'
+        ))
+
     # 2. Feature Group for AI Placement Recommendations
     if df_recs is not None and not df_recs.empty:
         fg_recs = folium.FeatureGroup(name="⭐ AI Recommended Placements (Top 50)")
@@ -117,6 +203,19 @@ def generate_interactive_map(
             gap_m = row["dist_to_nearest_site_m"]
             p_score = row["deployment_priority_score"]
 
+            review_text = ""
+            if "opencellid_review_required" in row:
+                distance = row.get("opencellid_recent_distance_m")
+                proximity = f"{distance / 1000:.2f} km" if pd.notna(distance) else "No eligible observations"
+                status = "Review nearby cell evidence" if row['opencellid_review_required'] else "No recent cell within 3 km; coverage unverified"
+                review_text = f"<p><b>OpenCellID:</b> {proximity}. {status}.</p>"
+            radar_text = ""
+            if row.get("cloudflare_data_available", False):
+                radar_text = (
+                    "<p><b>Cloudflare regional demand:</b> "
+                    f"{row['cloudflare_http_requests_share_52w_pct']:.3f}% of 52-week "
+                    f"HTTP requests (priority factor {row['cloudflare_priority_factor']:.3f}).</p>"
+                )
             rec_popup = f"""
             <div style="font-family: Arial, sans-serif; min-width: 250px;">
                 <div style="background: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
@@ -129,6 +228,8 @@ def generate_interactive_map(
                 <p style="margin: 3px 0;"><b>Recommended Bands:</b> {bands}</p>
                 <p style="margin: 3px 0;"><b>5km Population Served:</b> {int(pop_5k):,} people</p>
                 <p style="margin: 3px 0;"><b>Nearest Tower Gap:</b> {gap_m / 1000.0:.2f} km</p>
+                {radar_text}
+                {review_text}
                 <p style="margin: 3px 0;"><b>Coordinates:</b> {lat:.4f}, {lon:.4f}</p>
             </div>
             """

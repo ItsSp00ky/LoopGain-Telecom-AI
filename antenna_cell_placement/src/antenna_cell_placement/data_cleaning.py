@@ -392,6 +392,11 @@ def clean_pipeline() -> Tuple[pd.DataFrame, pd.DataFrame]:
     for k, p in exported.items():
         print(f"  - {k}: {p}")
 
+    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
+    if OPENCELLID_RAW_PATH.exists():
+        from antenna_cell_placement.opencellid import import_pipeline
+        import_pipeline()
+
     return df_towers, df_sites
 
 

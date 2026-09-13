@@ -176,12 +176,19 @@ class CellSiteOptimizer:
         df_gaps["recommended_bandwidth"] = rec_bandwidth
         df_gaps["recommended_operator_strategy"] = rec_operators
 
-        # Compute Prioritized Deployment Index
-        # Balanced score: Suitability * Log10(Population) * Min(1.0, Gap_Distance / 5km)
+        # Compute the geospatial score first, keeping the model output auditable.
+        # Cloudflare Radar is a regional HTTP-demand prior rather than coverage
+        # ground truth, so its influence is deliberately bounded to +/- 10%.
         pop_weight = np.log10(np.maximum(10.0, df_gaps["population_sum_5km"]))
         gap_weight = np.clip(df_gaps["dist_to_nearest_site_m"] / 5000.0, 0.5, 2.0)
+        df_gaps["geospatial_priority_score"] = np.round(
+            df_gaps["placement_suitability_score"] * pop_weight * gap_weight,
+            2,
+        )
         df_gaps["deployment_priority_score"] = np.round(
-            df_gaps["placement_suitability_score"] * pop_weight * gap_weight, 2
+            df_gaps["geospatial_priority_score"]
+            * df_gaps["cloudflare_priority_factor"],
+            2,
         )
 
         # Sort and deduplicate spatially so recommendations aren't clustered together
@@ -215,7 +222,13 @@ class CellSiteOptimizer:
             "municipality_name",
             "nearest_settlement_name",
             "deployment_priority_score",
+            "geospatial_priority_score",
             "placement_suitability_score",
+            "cloudflare_regional_demand_score",
+            "cloudflare_priority_factor",
+            "cloudflare_http_requests_share_52w_pct",
+            "cloudflare_annual_traffic_growth_52w_pct",
+            "cloudflare_data_available",
             "recommended_equipment_tier",
             "recommended_rf_bands",
             "recommended_bandwidth",
@@ -227,6 +240,10 @@ class CellSiteOptimizer:
             "elevation_m",
         ]
         df_recommendations = df_recommendations[display_cols]
+
+        # Supplementary cell evidence is for review, not confirmed mast coverage.
+        from antenna_cell_placement.opencellid import annotate_candidates
+        df_recommendations = annotate_candidates(df_recommendations)
 
         # Export CSV
         RECOMMENDATIONS_CSV.parent.mkdir(parents=True, exist_ok=True)

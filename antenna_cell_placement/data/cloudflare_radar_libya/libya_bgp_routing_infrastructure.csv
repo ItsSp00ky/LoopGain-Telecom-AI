@@ -1,0 +1,64 @@
+category,metric_name,value
+BGP General Stats,distinct_origins,35
+BGP General Stats,distinct_origins_ipv4,25
+BGP General Stats,distinct_origins_ipv6,10
+BGP General Stats,distinct_prefixes,702
+BGP General Stats,distinct_prefixes_ipv4,593
+BGP General Stats,distinct_prefixes_ipv6,109
+BGP General Stats,routes_invalid,1
+BGP General Stats,routes_invalid_ipv4,1
+BGP General Stats,routes_invalid_ipv6,0
+BGP General Stats,routes_total,702
+BGP General Stats,routes_total_ipv4,593
+BGP General Stats,routes_total_ipv6,109
+BGP General Stats,routes_unknown,258
+BGP General Stats,routes_unknown_ipv4,247
+BGP General Stats,routes_unknown_ipv6,11
+BGP General Stats,routes_valid,443
+BGP General Stats,routes_valid_ipv4,345
+BGP General Stats,routes_valid_ipv6,98
+BGP General Stats,rpki_valid_ratio,0.6310541310541311
+BGP General Stats,total_ipv4_count,462592
+BGP General Stats,total_ipv6_count,6.9324642199981295394350956544e29
+BGP RPKI Validation,distinct_origins,35
+BGP RPKI Validation,distinct_origins_ipv4,25
+BGP RPKI Validation,distinct_origins_ipv6,10
+BGP RPKI Validation,distinct_prefixes,702
+BGP RPKI Validation,distinct_prefixes_ipv4,593
+BGP RPKI Validation,distinct_prefixes_ipv6,109
+BGP RPKI Validation,routes_invalid,1
+BGP RPKI Validation,routes_invalid_ipv4,1
+BGP RPKI Validation,routes_invalid_ipv6,0
+BGP RPKI Validation,routes_total,702
+BGP RPKI Validation,routes_total_ipv4,593
+BGP RPKI Validation,routes_total_ipv6,109
+BGP RPKI Validation,routes_unknown,258
+BGP RPKI Validation,routes_unknown_ipv4,247
+BGP RPKI Validation,routes_unknown_ipv6,11
+BGP RPKI Validation,routes_valid,443
+BGP RPKI Validation,routes_valid_ipv4,345
+BGP RPKI Validation,routes_valid_ipv6,98
+BGP RPKI Validation,rpki_valid_ratio,0.6310541310541311
+BGP RPKI Validation,total_ipv4_count,462592
+BGP RPKI Validation,total_ipv6_count,6.9324642199981295394350956544e29
+BGP IP Version Routes,distinct_origins,35
+BGP IP Version Routes,distinct_origins_ipv4,25
+BGP IP Version Routes,distinct_origins_ipv6,10
+BGP IP Version Routes,distinct_prefixes,702
+BGP IP Version Routes,distinct_prefixes_ipv4,593
+BGP IP Version Routes,distinct_prefixes_ipv6,109
+BGP IP Version Routes,routes_invalid,1
+BGP IP Version Routes,routes_invalid_ipv4,1
+BGP IP Version Routes,routes_invalid_ipv6,0
+BGP IP Version Routes,routes_total,702
+BGP IP Version Routes,routes_total_ipv4,593
+BGP IP Version Routes,routes_total_ipv6,109
+BGP IP Version Routes,routes_unknown,258
+BGP IP Version Routes,routes_unknown_ipv4,247
+BGP IP Version Routes,routes_unknown_ipv6,11
+BGP IP Version Routes,routes_valid,443
+BGP IP Version Routes,routes_valid_ipv4,345
+BGP IP Version Routes,routes_valid_ipv6,98
+BGP IP Version Routes,rpki_valid_ratio,0.6310541310541311
+BGP IP Version Routes,total_ipv4_count,462592
+BGP IP Version Routes,total_ipv6_count,6.9324642199981295394350956544e29

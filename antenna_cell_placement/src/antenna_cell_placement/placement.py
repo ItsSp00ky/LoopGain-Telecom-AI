@@ -59,6 +59,15 @@ def predict_site_suitability(latitude: float, longitude: float) -> Dict[str, Any
         "distance_to_nearest_cell_km": round(features["dist_to_nearest_site_m"].iloc[0] / 1000.0, 2),
         "distance_to_nearest_road_m": round(features["dist_to_nearest_road_m"].iloc[0], 1),
         "elevation_m": float(features["elevation_m"].iloc[0]),
+        "cloudflare_http_requests_share_52w_pct": float(
+            features["cloudflare_http_requests_share_52w_pct"].iloc[0]
+        ),
+        "cloudflare_regional_demand_score": float(
+            features["cloudflare_regional_demand_score"].iloc[0]
+        ),
+        "cloudflare_data_available": bool(
+            features["cloudflare_data_available"].iloc[0]
+        ),
     }
 
 

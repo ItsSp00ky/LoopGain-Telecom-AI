@@ -32,12 +32,22 @@ def cmd_clean(args):
     console.print(f"[bold cyan]✓ Processed {len(df_towers)} radio antennas into {len(df_sites)} physical mast sites.[/bold cyan]")
 
 
+def cmd_opencellid(args):
+    """Import and assess supplementary OpenCellID observations."""
+    from antenna_cell_placement.opencellid import import_pipeline
+    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
+    import_pipeline(getattr(args, "path", OPENCELLID_RAW_PATH))
+
+
 def cmd_features(args):
     """Run geospatial feature engineering with WorldPop, SRTM DEM, and OCHA roads."""
     from antenna_cell_placement.feature_engineering import enrich_physical_sites_pipeline
     console.print(Panel("[bold green]Running Geospatial Feature Engineering Pipeline[/bold green]"))
     df_enriched = enrich_physical_sites_pipeline()
-    console.print(f"[bold cyan]✓ Enriched {len(df_enriched)} sites with 52 multi-layer geospatial features.[/bold cyan]")
+    console.print(
+        f"[bold cyan]✓ Enriched {len(df_enriched)} sites with "
+        f"{len(df_enriched.columns)} multi-source attributes.[/bold cyan]"
+    )
 
 
 def cmd_train(args):
@@ -151,6 +161,15 @@ def cmd_predict(args):
     table.add_row("Distance to Nearest Road", f"{features['dist_to_nearest_road_m'].iloc[0]:.1f} meters")
     table.add_row("Ground Elevation", f"{features['elevation_m'].iloc[0]:.1f} m ASL")
     table.add_row("Elevation Prominence (3km)", f"{features['elevation_prominence_3km'].iloc[0]:.1f} m")
+    if features["cloudflare_data_available"].iloc[0]:
+        table.add_row(
+            "Regional HTTP Traffic Share (52w)",
+            f"{features['cloudflare_http_requests_share_52w_pct'].iloc[0]:.3f}%",
+        )
+        table.add_row(
+            "Regional Digital Demand Score",
+            f"{features['cloudflare_regional_demand_score'].iloc[0]:.3f}",
+        )
 
     console.print(table)
 
@@ -173,6 +192,9 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     subparsers.add_parser("clean", help="Clean raw SQLite/JSON and consolidate physical cell sites")
+    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
+    oc_parser = subparsers.add_parser("opencellid", help="Import OpenCellID cells and review recommendation proximity")
+    oc_parser.add_argument("--path", type=Path, default=OPENCELLID_RAW_PATH)
     subparsers.add_parser("features", help="Engineer geospatial, demographic, and topography features")
     subparsers.add_parser("train", help="Train placement suitability and equipment recommendation models")
     subparsers.add_parser("recommend", help="Find coverage gaps and output prioritized new site recommendations")
@@ -191,6 +213,7 @@ def main():
 
     commands = {
         "clean": cmd_clean,
+        "opencellid": cmd_opencellid,
         "features": cmd_features,
         "train": cmd_train,
         "recommend": cmd_recommend,
