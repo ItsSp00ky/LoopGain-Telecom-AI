@@ -57,7 +57,7 @@ The repository is organized into three modular AI subsystems:
 - **Objective**: Geospatial machine learning system predicting optimal geographic locations for deploying new cellular antenna towers across Libya with **0.9862 ROC-AUC** and **0.9794 PR-AUC**.
 - **Geospatial & Demographic Intelligence**: Fuses crowdsourced cellular radio telemetry with WorldPop 1km gridded population density, SRTM 250m Digital Elevation Model (topography/prominence), UN OCHA road transportation networks, and Libyan administrative boundaries.
 - **Optimization Engine**: Identifies unserved coverage gaps, ranks the Top 50 prioritized new site deployments, and recommends equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
-- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md).
+- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md) and the comprehensive [`Technical Report`](antenna_cell_placement/TECHNICAL_REPORT.md).
 
 ---
 

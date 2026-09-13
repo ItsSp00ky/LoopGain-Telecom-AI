@@ -39,6 +39,7 @@ An intelligent geospatial Machine Learning and network planning system engineere
   - **Equipment Recommender**: Random Forest multi-tier classifier achieving **89.55% Accuracy** in recommending equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
 - **Placement Recommendations**:
   - Evaluated **22,605** candidate locations across Libya, identifying **4,467** unserved coverage gaps and ranking the **Top 50 High-Priority New Cell Placements**.
+- **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md).
 
 ---
 
@@ -49,6 +50,7 @@ antenna_cell_placement/
 ├── pyproject.toml                     # uv package configuration & CLI entry points
 ├── uv.lock                            # Deterministic dependency lockfile
 ├── README.md                          # Module documentation & benchmark report
+├── TECHNICAL_REPORT.md                # Comprehensive Engineering & Decisioning Report
 │
 ├── Libyan_cells_dataset/              # Raw crowdsourced telecom datasets
 │   ├── cells.sqlite3                  # Relational database (2,291 raw towers)
