@@ -23,7 +23,7 @@ def load_and_clean_data(file_path: Path = DEFAULT_DATASET_PATH) -> Tuple[pd.Data
     # Filter to customers with established status (Stayed or Churned)
     # 'Joined' represents 454 new onboardings without a complete billing cycle
     if "Customer Status" in df.columns:
-        df = df[df["Customer Status"].isin(["Stayed", "Churned"])].copy()
+        df = df[df["Customer Status"].isin(["Stayed", "Churned"])].reset_index(drop=True)
         y = (df["Customer Status"] == "Churned").astype(int)
     elif "Churn" in df.columns:
         y = df["Churn"].astype(int)
