@@ -40,7 +40,7 @@ An intelligent geospatial Machine Learning and network planning system engineere
 - **Placement Recommendations**:
   - Evaluated **22,605** candidate locations across Libya, identifying **4,467** unserved coverage gaps and ranking the **Top 50 High-Priority New Cell Placements**.
   - Added Cloudflare Radar's 52-week regional HTTP traffic share as a conservative digital-demand prior for final ranking (bounded to ±10%); the trained suitability model remains purely geospatial after leakage-aware testing rejected direct inclusion.
-- **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md).
+- **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md) and the strategic system expansion in [`TELECOM_GIS_RF_AI_ROADMAP.md`](TELECOM_GIS_RF_AI_ROADMAP.md).
 
 ---
 
@@ -52,6 +52,7 @@ antenna_cell_placement/
 ├── uv.lock                            # Deterministic dependency lockfile
 ├── README.md                          # Module documentation & benchmark report
 ├── TECHNICAL_REPORT.md                # Comprehensive Engineering & Decisioning Report
+├── TELECOM_GIS_RF_AI_ROADMAP.md       # Telecom GIS, RF & AI Planning Roadmap
 │
 ├── Libyan_cells_dataset/              # Raw crowdsourced telecom datasets
 │   ├── cells.sqlite3                  # Relational database (2,291 raw towers)
