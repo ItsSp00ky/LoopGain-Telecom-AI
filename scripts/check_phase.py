@@ -261,7 +261,117 @@ def check_no_raw_identifiers() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 2-10 -- declared now, so the check exists before the code does
+# Phase 2 -- synthesis
+# ---------------------------------------------------------------------------
+
+
+def _population():
+    import pandas as pd
+
+    from cvm.config import settings
+
+    path = settings.synthetic_dir / "population.parquet"
+    if not path.exists():
+        raise Pending(f"{path} not written; run `python -m cvm.synthesis.run` (see phase 2)")
+    return pd.read_parquet(path)
+
+
+def check_population_written() -> str:
+    df = _population()
+    from cvm.config import load_conf
+
+    expected = load_conf("data")["synthesis"]["n_subscribers"]
+    if len(df) != expected:
+        raise AssertionError(f"{len(df):,} rows, config says {expected:,}")
+    return f"{len(df):,} x {df.shape[1]} columns"
+
+
+def check_generated_churn_rate() -> str:
+    from cvm.config import load_conf
+
+    df = _population()
+    target = load_conf("market")["base"]["monthly_silent_churn_rate"]
+    rate = float(df["silent_churn_30d"].mean())
+    if abs(rate - target) > 0.005:
+        raise AssertionError(f"{rate:.4f} against a {target:.4f} target")
+    return f"{rate:.4f} (target {target:.4f})"
+
+
+def check_recharge_ladder() -> str:
+    from cvm.synthesis.quantile_map import assert_on_ladder, recharge_ladder
+
+    df = _population()
+    assert_on_ladder(df["modal_recharge_amount_lyd"].dropna())
+    return f"every amount on {recharge_ladder()}"
+
+
+def check_no_raw_identifiers_in_population() -> str:
+    from cvm.ingest.hashing import assert_no_raw_identifiers
+
+    df = _population()
+    assert_no_raw_identifiers(df)
+    if not df["subscriber_id_hashed"].is_unique:
+        raise AssertionError("hashed ids are not unique")
+    return f"{len(df):,} ids, unique, no MSISDN pattern"
+
+
+def check_label_drivers_present() -> str:
+    from cvm.synthesis.hazard import LABEL_DRIVER_FIELDS
+
+    df = _population()
+    missing = [f for f in LABEL_DRIVER_FIELDS if f not in df.columns]
+    if missing:
+        raise AssertionError(f"hazard drivers absent from the population: {missing}")
+    return f"all {len(LABEL_DRIVER_FIELDS)} present"
+
+
+def check_label_is_learnable() -> str:
+    from cvm.synthesis.hazard import LABEL_DRIVER_FIELDS, assert_label_is_learnable
+
+    df = _population()
+    assert_label_is_learnable(df)
+    strongest = max(
+        (abs(float(df[f].corr(df["silent_churn_30d"]))), f)
+        for f in LABEL_DRIVER_FIELDS
+        if f in df.columns
+    )
+    return f"strongest driver {strongest[1]} at |r| {strongest[0]:.3f}"
+
+
+def check_churn_window() -> str:
+    """The 15-day gap: no churn date may fall inside it."""
+    from cvm.config import load_conf
+
+    df = _population()
+    windows = load_conf("features")["windows"]
+    start = windows["observation_days"] + windows["gap_days"]
+    end = start + windows["outcome_days"]
+
+    churned = df[df["silent_churn_30d"] == 1]["days_to_churn"]
+    if not churned.between(start, end - 1).all():
+        raise AssertionError(f"churn dates outside days {start}-{end - 1}")
+    return f"all inside days {start}-{end - 1}, after a {windows['gap_days']}-day gap"
+
+
+def check_reproducible() -> str:
+    """The same seed must give the same population. Reproducibility is a
+    stated deliverable, and a population that differs between runs makes every
+    metric in the report unverifiable."""
+
+    from cvm.synthesis.ctgan_engine import fit_and_sample
+    from cvm.synthesis.run import build_real_backbone
+
+    backbone = build_real_backbone().sample(3000, random_state=606).reset_index(drop=True)
+    first, _ = fit_and_sample(backbone, kind="gaussian_copula", n=500)
+    second, _ = fit_and_sample(backbone, kind="gaussian_copula", n=500)
+    if not first.equals(second):
+        differing = [c for c in first.columns if not first[c].equals(second[c])]
+        raise AssertionError(f"two seeded runs differ on {differing}")
+    return f"two seeded samples identical over {first.shape[1]} columns"
+
+
+# ---------------------------------------------------------------------------
+# Phases 3-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -294,9 +404,14 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("no raw identifiers landed", check_no_raw_identifiers),
     ],
     "2": [
-        ("quality gate passes", _pending("synthesis not built", "2")),
-        ("generated churn rate ~3.5%", _pending("synthesis not built", "2")),
-        ("recharge ladder respected", _pending("synthesis not built", "2")),
+        ("population written", check_population_written),
+        ("generated churn rate ~3.5%", check_generated_churn_rate),
+        ("recharge ladder respected", check_recharge_ladder),
+        ("no raw identifiers", check_no_raw_identifiers_in_population),
+        ("hazard drivers present", check_label_drivers_present),
+        ("label is learnable", check_label_is_learnable),
+        ("churn dates respect the gap", check_churn_window),
+        ("generator is reproducible", check_reproducible),
     ],
     "3": [
         ("leakage suite fully green", _pending("feature store not built", "3")),
