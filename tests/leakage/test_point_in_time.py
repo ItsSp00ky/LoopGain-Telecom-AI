@@ -118,11 +118,55 @@ def test_train_and_test_are_disjoint_in_time():
     raise NotImplementedError("TODO(E1)")
 
 
-@pytest.mark.xfail(reason="ingestion not implemented yet", strict=False)
+@pytest.mark.slow
 def test_uci_duplicate_rows_are_dropped():
     """~300 exact duplicates, ~9.5% of the dataset. Leaving them in is half the
-    reason the published figures are inflated."""
-    raise NotImplementedError("TODO(E1)")
+    reason the published figures are inflated.
+
+    A duplicate row that survives into a random split puts the same subscriber
+    on both sides of it, so the model is scored partly on rows it trained on.
+    That is why this is a leakage test and not a data-quality one.
+    """
+    from cvm.ingest.uci_iranian import duplicate_audit, load
+
+    conf = load_conf("data")["sources"]["uci_iranian"]["quality"]
+    audit = duplicate_audit()
+
+    expected = conf["expected_duplicate_rows"]
+    tolerance = conf["duplicate_row_tolerance"]
+    assert abs(audit["duplicates_dropped"] - expected) <= tolerance, (
+        f"dropped {audit['duplicates_dropped']:.0f} duplicates, config expects "
+        f"{expected} +/-{tolerance}. If the source changed, update conf/data.yaml "
+        "AND the figure quoted in the proposal."
+    )
+
+    # The landed frame must actually be free of them, not merely audited.
+    df = load()
+    feature_columns = [
+        c for c in df.columns if c not in {"subscriber_id_hashed", "snapshot_date", "source"}
+    ]
+    assert not df.duplicated(subset=feature_columns).any(), "duplicates survived load()"
+    assert len(df) == audit["rows_clean"]
+
+
+@pytest.mark.slow
+def test_uci_leaky_field_is_dropped_by_default():
+    """`Customer Value` is a pre-computed score that partially encodes the
+    outcome. It is the other half of why the published figures are inflated.
+
+    ``drop_leaky=False`` must still work: reproducing the inflated number is
+    how we show it is wrong, so the naive path is a deliberate feature.
+    """
+    from cvm.ingest.uci_iranian import load
+
+    leaky = load_conf("data")["sources"]["uci_iranian"]["leaky_columns"]
+    assert leaky, "no leaky columns configured -- the audit claim has no basis"
+
+    honest = load()
+    naive = load(drop_leaky=False)
+    for column in leaky:
+        assert column not in honest.columns, f"{column} reached the honest feature matrix"
+        assert column in naive.columns, f"{column} missing from the naive reproduction"
 
 
 @pytest.mark.xfail(reason="M1 not trained yet", strict=False)

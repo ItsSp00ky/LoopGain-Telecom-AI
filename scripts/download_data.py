@@ -11,9 +11,9 @@ Credentials needed (see .env.example):
     A  UCI 563     none
     B  Cell2Cell   none -- supplied locally at data/raw/telecom/telecom
     C  IBM Telco   KAGGLE_USERNAME + KAGGLE_KEY, or ~/.kaggle/kaggle.json
-    F  Criteo      none -- HuggingFace, public
+    F  Criteo      none -- HuggingFace, public (311 MB, once)
     G  Hillstrom   none -- fetched by scikit-uplift
-    J  Retail II   none -- fetched via ucimlrepo
+    J  Retail II   none -- UCI static archive, NOT the ucimlrepo API
 
 A source is listed here only when `cvm.ingest.<name>` exists to receive it.
 Listing a dataset we cannot load is worse than not listing it: it reads as
@@ -84,11 +84,14 @@ def check_credentials(ids: list[str]) -> list[str]:
             f"Kaggle credentials missing (datasets {sorted(kaggle_ids & set(ids))}). Set "
             "KAGGLE_USERNAME and KAGGLE_KEY in .env, or place kaggle.json in ~/.kaggle/."
         )
-    if "G" in ids:
-        problems.append(
-            "Dataset G (Hillstrom) is fetched through scikit-uplift, which is not yet "
-            'installed: pip install -e ".[ml]" or pip install scikit-uplift.'
-        )
+    try:
+        import sklift  # noqa: F401
+    except ImportError:
+        if "G" in ids:
+            problems.append(
+                "Dataset G (Hillstrom) is fetched through scikit-uplift, which is not "
+                'installed: pip install -e ".[ml]" or pip install scikit-uplift.'
+            )
     return problems
 
 

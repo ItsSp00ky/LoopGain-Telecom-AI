@@ -113,6 +113,56 @@ class Settings(BaseSettings):
             )
         return self.hash_salt
 
+    # --- Derived directories ---------------------------------------------
+    # Derived from data_dir / artifact_dir rather than read from
+    # conf/config.yaml#paths, so that overriding CVM_DATA_DIR in a container
+    # moves all of them together. The YAML block is the human-readable map;
+    # these are what code uses.
+
+    @property
+    def raw_dir(self) -> Path:
+        return self.data_dir / "raw"
+
+    @property
+    def external_dir(self) -> Path:
+        return self.data_dir / "external"
+
+    @property
+    def interim_dir(self) -> Path:
+        return self.data_dir / "interim"
+
+    @property
+    def processed_dir(self) -> Path:
+        return self.data_dir / "processed"
+
+    @property
+    def synthetic_dir(self) -> Path:
+        return self.data_dir / "synthetic"
+
+    @property
+    def models_dir(self) -> Path:
+        return self.artifact_dir / "models"
+
+    @property
+    def reports_dir(self) -> Path:
+        return self.artifact_dir / "reports"
+
+    @property
+    def feature_store_offline(self) -> Path:
+        return self.processed_dir / "features_offline.parquet"
+
+    def ensure_dirs(self) -> None:
+        """Create every output directory. Idempotent; safe to call per run."""
+        for d in (
+            self.interim_dir,
+            self.processed_dir,
+            self.synthetic_dir,
+            self.external_dir,
+            self.models_dir,
+            self.reports_dir,
+        ):
+            d.mkdir(parents=True, exist_ok=True)
+
 
 settings = Settings()
 

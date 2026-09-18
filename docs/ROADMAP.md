@@ -1,9 +1,12 @@
 # Roadmap
 
-**121 functions left, in a chain that cannot be reordered.** This document is
+**108 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
+
+**Phase 1 is done.** Layer 1 is at 100%, the whole project at 41%. Next is
+phase 2, synthesis.
 
 Where you are, at any moment:
 
@@ -48,19 +51,26 @@ left the placeholder in.
 
 ### 0.2 Prove the skeleton still runs
 
-**Check** — expect `113 passed, 10 xfailed`, then `All checks passed!`:
+**Check** — expect `131 passed, 9 xfailed`, then `All checks passed!`:
 
 ```bash
 pytest -q && ruff check src tests apps scripts && black --check src tests apps scripts
 ```
 
-The 10 `xfail`s are not failures. Each one marks something in this roadmap that
+The 9 `xfail`s are not failures. Each one marks something in this roadmap that
 is not built yet, and you will turn them green as you go. They are your
 progress bar; `python scripts/progress.py` is the other one.
 
+### 0.1 is DONE — `.env` exists with a real 64-char salt
+
+Local only, and gitignored. Generate a **different** one for CI and for the demo
+host: a salt shared across environments is a salt that only has to leak once.
+Losing this one means every hash already landed in `data/interim` stops
+reconciling, so do not regenerate it casually mid-project.
+
 ### 0.3 Push to GitHub
 
-Eight commits, no remote. Getting this in front of your team was the point.
+Nine commits, no remote. Getting this in front of your team was the point.
 
 ```bash
 gh repo create ai-cvm-suite --private --source=. --remote=origin
@@ -79,64 +89,124 @@ time the pipeline has ever run end to end.
 
 ---
 
-## Phase 1 · Ingestion — 13 functions, 2–3 days
+## Phase 1 · Ingestion — **DONE** (13 functions + 3 new loaders)
 
-**Build this first because the privacy commitment is enforced here**, and
-because every later layer reads what it writes.
+**Built first because the privacy commitment is enforced here**, and because
+every later layer reads what it writes. All six sources load; five land or
+cache, and the results are below.
 
-Order inside the phase:
+| Source | Result |
+|---|---|
+| A UCI Iranian | 2,850 rows after dropping **exactly 300** exact duplicates (9.52%) |
+| B Cell2Cell | 100,000 rows joined 1:1, **22** protected/marketing columns dropped at the boundary |
+| C IBM Telco | 7,043 rows, **12** protected/geographic columns dropped, 11 blank `Total Charges` kept as null |
+| F Criteo | 311 MB archive cached, seeded 10% sample |
+| G Hillstrom | 64,000 rows, naive lift **6.09 pp** (7.66 pp on the men's arm alone) |
+| J Online Retail II | 805,549 of 1,067,371 lines kept, 5,878 customers, 71.3% repeat buyers |
 
-| | File | Functions | Note |
-|---|---|---|---|
-| 1 | `ingest/hashing.py` | 2 | Everything else depends on it |
-| 2 | `ingest/uci_iranian.py` | 3 | Primary dataset; the dedup audit is pitch material |
-| 3 | `ingest/cell2cell.py` | 4 | Already on disk, two-file join |
-| 4 | `ingest/ibm_telco.py` | 3 | Needs Kaggle credentials |
-| 5 | **three new loaders** | ~9 | `criteo_uplift.py`, `hillstrom.py`, `online_retail.py` |
-| 6 | `ingest/run.py` | 1 | Orchestration |
+**The proposal's two headline data claims are confirmed against the files.**
+The UCI duplicate count is 300 on the nose, and Cell2Cell's measured medians
+are 0.280 for `incoming_outgoing_ratio` and 0.424 for `offpeak_data_ratio` —
+both exactly as quoted.
 
-**Write the three validation loaders in this phase, not later.** They are
-about 20 lines each — Criteo from HuggingFace, Hillstrom via
-`sklift.datasets.fetch_hillstrom`, Online Retail II via
-`ucimlrepo.fetch_ucirepo(id=502)`. They gate deliverable D4, and deferring them
-is the single most likely way this project ends up with a claim it cannot
-support.
+### One finding that changed a document
 
-**Check 1** — the UCI dedup audit. Delete the `xfail` marker on
-`test_uci_duplicate_rows_are_dropped` first:
+Cell2Cell's decay figure — median 1.012, 46.8% declining — was quoted against a
+feature named `revenue_decay_ratio`, but it comes from `avg3mou / avg6mou`:
+**minutes, not revenue.** Computed properly they disagree, and the disagreement
+is the point:
+
+| | median | declining |
+|---|---|---|
+| `usage_decay_ratio` (minutes) | 1.012 | **46.8%** |
+| `revenue_decay_ratio` (spend) | 1.000 | 42.2% |
+
+Usage turns down before spend does, which is the entire reason a decay ratio is
+an early warning. Generating one and labelling it the other would have flattened
+the signal the feature exists to carry. Both are now measured and named
+separately in `conf/data.yaml`, the data dictionary and the proposal.
+
+Also worth knowing for phase 2: the source *columns* are 0% null, but the
+derived *ratios* are undefined for 3–8% of subscribers, because someone who
+placed no calls has no incoming/outgoing ratio. Those rows are excluded from the
+fitted quantiles rather than coerced to zero, which would drag the very
+distribution the generator is trying to reproduce.
+
+### Six traps this phase hit
+
+Worth reading before you touch phase 2, because four of them will bite again.
+
+**0. Criteo ships two post-treatment columns next to its features, and the
+first version of the loader passed both straight into the feature matrix.**
+`conversion` is strictly downstream of `visit` — a user who converted visited —
+so it is the label in a thin disguise. `exposure` is whether a treated user was
+actually shown the ad, decided *after* assignment, so conditioning on it breaks
+the randomisation that makes the dataset worth using at all.
+
+Both are now dropped and an assertion refuses to return a frame containing
+either. This is the same driver/artefact distinction the synthesis layer makes,
+met in real data rather than generated data — and it was caught by printing the
+feature list rather than by any test, which is the argument for printing the
+feature list.
+
+**1. `sklift.datasets.fetch_criteo` is dead.** It points at a hardcoded S3
+bucket that returns **403**, and Criteo's own `go.criteo.net` link returns
+**404**. The library everyone reaches for cannot fetch the data this project's
+strongest claim depends on. The dataset is still on HuggingFace, so
+`cvm.ingest.criteo_uplift` downloads from there directly — no credential, no
+`datasets` dependency, 311 MB cached once, then a seeded 10% Parquet sample
+taken *during* a chunked read rather than after loading 14M rows.
+
+**2. `ucimlrepo` cannot fetch dataset 502.** Online Retail II exists in the UCI
+repository but is published as a two-sheet Excel workbook, so
+`fetch_ucirepo(id=502)` raises `DatasetNotFoundError`. The loader pulls the
+static archive and reads **both** sheets — one sheet is half the period, which
+halves every observed inter-purchase time and biases BG/NBD toward short
+lifetimes.
+
+**3. The conda env is not writable by your user.** `pip install` silently falls
+back to the user site (`%APPDATA%\Python\Python311\site-packages`), and a
+cross-drive metadata rename then fails with `WinError 17` *after* the package
+is already in place — so it looks broken but works. `scikit-uplift` and
+`openpyxl` both live there now. Worth fixing properly before a teammate clones
+this.
+
+**4. `openpyxl` was undeclared.** Dataset C ships as `.xlsx`; `read_excel`
+raised. Now in the core dependencies.
+
+**5. The MSISDN scanner had two real gaps and one false positive.** It missed
+the international spelling (`+218` drops the trunk zero) and grouped digits
+(`091 234 5678`), and it matched *inside its own SHA-256 digests* — a 64-char
+hex string frequently contains `094` followed by seven numeric characters, so
+whether the scan passed depended on the salt. All three are fixed, the pattern
+is now imported rather than re-spelled in the test, and 10,000 digests across
+50 salts come back clean.
+
+### How it was verified
 
 ```bash
-pytest tests/leakage/test_point_in_time.py::test_uci_duplicate_rows_are_dropped -q
+python -m cvm.ingest.run          # lands A, B, C; probes F, G, J
+pytest tests/leakage -q           # 9 passed, 3 xfailed
+python scripts/progress.py        # L1 ingest burn-down
 ```
 
-Record the actual duplicate count. The proposal says ~300 of 3,150 (~9.5%); if
-your number differs, the proposal is what changes.
+`cvm.ingest.run` prints a table of every source with its row and column counts
+and exits non-zero if any source fails, so a broken loader cannot pass quietly.
+Two previously-`xfail`ed tests are now green and marked `slow`:
+`test_uci_duplicate_rows_are_dropped` asserts the count against
+`conf/data.yaml` *and* that no duplicate survived `load()`, and
+`test_uci_leaky_field_is_dropped_by_default` asserts `Customer Value` is absent
+from the honest path and present in the naive one — the naive reproduction is a
+deliberate feature, not a bug.
 
-**Check 2** — Cell2Cell joins cleanly and drops the protected columns:
+To re-measure Cell2Cell's grounding figures at any time:
 
 ```bash
 python -c "
-from cvm.ingest.cell2cell import load, FORBIDDEN_COLUMNS
-df = load()
-print('rows:', len(df))
-print('forbidden present:', sorted(set(FORBIDDEN_COLUMNS) & set(df.columns)) or 'none')
-print('nulls in the two signature features:',
-      df[['recv_vce_Mean','plcd_vce_Mean']].isna().sum().to_dict())
+from cvm.ingest.cell2cell import measured_distributions
+for k, v in measured_distributions().items():
+    print(f'{k:<26} median {v[\"median\"]:.3f}  p10 {v[\"p10\"]:.3f}  p90 {v[\"p90\"]:.3f}')
 "
-```
-
-Expect 100,000 rows, **no** forbidden columns, and zero nulls.
-
-**Check 3** — no raw identifier survived, and the pipeline runs:
-
-```bash
-cvm ingest && pytest tests/unit/test_privacy.py -q
-```
-
-**Check 4** — all six sources land:
-
-```bash
-python scripts/download_data.py --only A,B,C,F,G,J
 ```
 
 ---

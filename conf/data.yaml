@@ -54,7 +54,12 @@ sources:
     grounds_features:
       incoming_outgoing_ratio: [recv_vce_Mean, plcd_vce_Mean]
       offpeak_usage_share: [mou_opkv_Mean, mou_peav_Mean, opk_vce_Mean, peak_vce_Mean]
-      revenue_decay_ratio: [avg3mou, avg6mou, avg3rev, avg6rev, change_mou, change_rev]
+      # TWO decay ratios, not one. Minutes and revenue disagree -- 46.8% of
+      # subscribers declining on usage against 42.2% on spend -- because usage
+      # turns down first. Generating one and labelling it the other flattens
+      # the early-warning signal the feature exists to carry.
+      usage_decay_ratio: [avg3mou, avg6mou, change_mou]
+      revenue_decay_ratio: [avg3rev, avg6rev, change_rev]
       short_call_share: [inonemin_Mean]     # matters under a 3-minute block tariff
       service_quality: [drop_vce_Mean, blck_vce_Mean, unan_vce_Mean,
                         drop_dat_Mean, blck_dat_Mean, drop_blk_Mean]
@@ -119,7 +124,12 @@ sources:
   # section 6. No cells are modelled, so there is nothing to join to, and
   # dropping it also sheds an API key and a CC BY-SA attribution obligation.
 
-  # --- Recommended additions. Off by default; turn on as you need them.
+  # --- VALIDATION SOURCES. Enabled, and not optional in any meaningful
+  # sense: each one turns a claim about a METHOD into a measurement of it, on
+  # real data, before that method is pointed at a generated population.
+  #
+  # These were once `enabled: false` while the proposal's strongest claim
+  # rested on them. That is the failure mode they are now enabled to prevent.
   # Rationale and download links: data/README.md#recommended-additions
 
   # F: the only REAL treatment/control data in the project. The uplift method
@@ -127,12 +137,23 @@ sources:
   # we answer "your data is generated, how do we know it works?" for M3.
   criteo_uplift:
     id: F
-    enabled: false
-    loader: huggingface
-    dataset: criteo/criteo-uplift
+    enabled: true
+    # NOT sklift, and not Criteo's own link. Both are dead as of 2026-09-18:
+    #   sklift.datasets.fetch_criteo  -> 403 (hardcoded S3 bucket)
+    #   go.criteo.net/...csv.gz       -> 404 (retired by Criteo)
+    # The dataset is still published on HuggingFace, so the loader downloads
+    # from there directly: no credential, no `datasets` dependency, one 311 MB
+    # file cached on first use, then a seeded 10% Parquet sample.
+    loader: http               # cvm.ingest.criteo_uplift.SOURCE_URL
+    source_url: https://huggingface.co/datasets/criteo/criteo-uplift/resolve/main/criteo-research-uplift-v2.1.csv.gz
+    archive_mb: 311
     licence: academic-research-use
     expected_rows: 13979592
-    columns: {treatment: treatment, outcome: conversion, secondary_outcome: visit}
+    sample_10pct_default: true
+    # `visit` rather than `conversion` as the outcome: ~4.7% against ~0.3%.
+    # A 0.3% base rate needs far more rows to resolve an uplift, and the method
+    # is what is being validated, not Criteo's conversion funnel.
+    columns: {treatment: treatment, outcome: visit, secondary_outcome: conversion}
     role: validate_uplift_method
     note: >
       Sub-sampled non-uniformly by Criteo so the true incrementality level
@@ -143,12 +164,16 @@ sources:
   # before scaling to Criteo. Also the clearest demonstration of sleeping dogs.
   hillstrom:
     id: G
-    enabled: false
+    enabled: true
     loader: sklift          # from sklift.datasets import fetch_hillstrom
     licence: public
     expected_rows: 64000
     arms: [mens_email, womens_email, no_email]
     role: uplift_warmup
+    # Measured on load: 6.09 pp naive lift across both email arms, 7.66 pp for
+    # the men's arm alone. Large and balanced, which is why the four quadrants
+    # separate visibly here and why it is the right data for the quadrant chart.
+    measured_naive_lift_pp: {both_arms: 6.09, mens_email: 7.66}
 
   # H: churn as an ABSENCE (no renewal within 30 days of expiry) plus genuine
   # DAILY user logs -- the closest public analogue to prepaid silent churn.
@@ -170,14 +195,37 @@ sources:
 
   # J: the canonical BG/NBD + Gamma-Gamma validation set. Prove the CLV
   # implementation is correct here before pointing it at recharges.
-  online_retail_ii:
+  online_retail:
     id: J
-    enabled: false
+    enabled: true
     loader: ucimlrepo
     uci_id: 502
     licence: CC-BY-4.0
     expected_rows: 1067371
     role: validate_clv_implementation
+    # BG/NBD is a repeat-purchase model. M2 asks it to treat a recharge as a
+    # transaction, which is a defensible reading -- prepaid is non-contractual
+    # and alive-or-dead-unobserved, exactly BG/NBD's regime -- but a defensible
+    # reading is not a validated model. Fit here first, against a real holdout.
+    holdout:
+      calibration_period_end: "2011-06-01"
+    # NOT reachable through ucimlrepo: id 502 exists in the repository but is
+    # published as a two-sheet Excel workbook, so fetch_ucirepo raises
+    # DatasetNotFoundError. The loader pulls the static archive instead and
+    # reads BOTH sheets -- one sheet is half the period, which halves every
+    # observed inter-purchase time and biases BG/NBD toward short lifetimes.
+    archive_url: https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip
+    exclusions:
+      # Each of these would otherwise corrupt a lifetime value.
+      - no_customer_id            # ~25% of lines; attributable to nobody
+      - credit_notes              # a return is not a negative purchase
+      - non_positive_price        # adjustments and samples, not revenue
+    # Measured 2026-09-18: 805,549 of 1,067,371 lines kept (24.5% dropped),
+    # 5,878 customers, 2009-12-01 to 2011-12-09, 71.3% repeat buyers.
+    measured:
+      clean_lines: 805549
+      customers: 5878
+      repeat_buyer_share: 0.713
 
 # ---------------------------------------------------------------------------
 # Layer 2 — CTGAN synthesis

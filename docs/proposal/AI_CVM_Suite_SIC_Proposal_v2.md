@@ -365,9 +365,18 @@ separate columns:
 |---|---|
 | `incoming_outgoing_ratio` | median 0.280, p10 0.052, p90 0.681 |
 | `offpeak_data_ratio` | median off-peak share 0.424 |
-| `revenue_decay_ratio` | median 1.012, **46.8% declining** |
+| `usage_decay_ratio` (minutes) | median 1.012, **46.8% declining** |
+| `revenue_decay_ratio` (spend) | median 1.000, 42.2% declining |
 
-Both leakage columns are 0% null across all 100,000 rows.
+**Usage turns down before spend does** — 46.8% against 42.2% — which is why a
+decay ratio is an early warning at all, and why the generator fits both rather
+than one standing in for the other.
+
+The source columns are 0% null across all 100,000 rows. The *derived ratios*
+are undefined for 3–8% of subscribers, because a subscriber who placed no calls
+has no incoming/outgoing ratio. Those rows are excluded from the fitted
+quantiles rather than coerced to zero, which would drag the distribution the
+synthesis engine is trying to reproduce.
 
 > **Three caveats travel with it.** The label is balanced at ~49.6% churn, so
 > the prevalence is unusable — calibrating on it would calibrate to a 50% prior

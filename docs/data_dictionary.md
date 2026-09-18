@@ -89,9 +89,18 @@ differentiation and would otherwise have had no empirical reference at all:
 |---|---|---|
 | `incoming_outgoing_ratio` | `recv_vce_Mean` / `plcd_vce_Mean` | median 0.280, p10 0.052, p90 0.681 |
 | `data_mb_offpeak` | `mou_opkv_Mean` / total | median off-peak share 0.424 |
-| `revenue_decay_ratio` | `avg3mou` / `avg6mou` | median 1.012, p10 0.663, p90 1.314 |
+| `usage_decay_ratio` | `avg3mou` / `avg6mou` | median 1.012, p10 0.663, p90 1.314, 46.8% declining |
+| `revenue_decay_ratio` | `avg3rev` / `avg6rev` | median 1.000, p10 0.778, p90 1.231, 42.2% declining |
 
-All three columns are 0% null across 100,000 rows.
+All source columns are 0% null across 100,000 rows. The derived *ratios* are
+undefined for 3–8% of rows, where the denominator is zero — a subscriber who
+placed no calls has no ratio. `cvm.ingest.cell2cell.measured_distributions()`
+recomputes every figure in this table from the file, and reports that
+undefined share alongside each one.
+
+**The two decay ratios are different features, measured separately.** Minutes
+decline for 46.8% of subscribers and spend for 42.2%: usage turns down before
+spend does, which is the entire reason a decay ratio is an early warning.
 
 **Two caveats that must travel with these numbers.**
 

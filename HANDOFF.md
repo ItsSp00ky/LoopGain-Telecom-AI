@@ -183,7 +183,8 @@ Grep for `TODO(` to find them all.
 | **`gh auth login`** | Done (`ali-margem`, keyring) |
 | **Commits** | 8 on `ali_branch` |
 | **Docker daemon** | **Not running** — Docker Desktop is installed but not started. D1 (`docker compose up` from a clean clone) is unverified. |
-| **`.env`** | **Not created** ← the one blocker left. Copy `.env.example`, then generate a real salt: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| **`.env`** | **Created**, with a real 64-char salt. Local only and gitignored — generate a *different* one for CI and the demo host. Do not regenerate casually: every hash already in `data/interim` stops reconciling. |
+| **conda env writability** | ⚠ **`D:\Anaconda\envs\cvm` is NOT writable by this user.** `pip install` falls back to the user site and then fails a cross-drive metadata rename with `WinError 17` *after* the package is in place — so it looks broken but works. `scikit-uplift` and `openpyxl` live in `%APPDATA%\Python\Python311\site-packages`. Fix before a teammate clones this. |
 | **git remote** | **None** — nothing has been pushed anywhere |
 | Free disk | ~20 GB on C:, ~20 GB on D: — **tight**, see `data/README.md#disk-budget` |
 
@@ -743,6 +744,52 @@ with the single-anchor model it belonged to.
 through the real config loader and the real guardrail functions — every ROI
 cell, every break-even share, and every exemption branch computed rather than
 asserted. YAML parses, Python compiles, CI scan simulated clean.
+
+---
+
+### 2026-09-18 · Session 4 — phase 1 complete, ingestion runs
+
+Layer 1 is at **100%** and the project at **41%** (108 stub functions left, from
+121). `python scripts/progress.py` prints the burn-down.
+
+**Built:** `hashing.py`, `uci_iranian.py`, `cell2cell.py`, `ibm_telco.py`,
+`run.py`, plus three new loaders the repo previously only *named* —
+`criteo_uplift.py`, `hillstrom.py`, `online_retail.py`. `python -m
+cvm.ingest.run` lands A/B/C as Parquet and probes F/G/J, printing a table and
+exiting non-zero if any source fails.
+
+**Two proposal claims verified against the actual files.** UCI has *exactly*
+300 duplicates (9.52%), and Cell2Cell's medians are 0.280 and 0.424 — as
+quoted, to three decimals.
+
+**One claim was mislabelled.** The decay figure (median 1.012, 46.8% declining)
+comes from `avg3mou / avg6mou` — minutes — but was attached to a feature named
+`revenue_decay_ratio`. Measured separately they disagree: minutes 1.012/46.8%,
+revenue 1.000/42.2%. Usage turns down before spend does, which is the whole
+reason a decay ratio is an early warning, so generating one and labelling it the
+other would have flattened the signal. Both now exist and are named correctly.
+
+**Six things bit, and four will bite again:**
+
+| | |
+|---|---|
+| `sklift.datasets.fetch_criteo` | **Dead — 403.** Criteo's own `go.criteo.net` link 404s too. Fetches from HuggingFace directly now: 311 MB once, then a seeded 10% sample taken *during* a chunked read. |
+| `ucimlrepo` for dataset 502 | **Cannot fetch it** — it is a two-sheet Excel workbook. Static archive instead, and **both** sheets: one sheet is half the period and biases BG/NBD toward short lifetimes. |
+| Criteo's `conversion` + `exposure` | **Post-treatment, and the first loader passed both in as features.** `conversion` is downstream of `visit`; `exposure` is decided after assignment and conditioning on it breaks the randomisation. Both dropped, with an assertion. |
+| `openpyxl` | Undeclared. Dataset C is `.xlsx`. Now a core dependency. |
+| IBM Telco's columns | Carries Gender, Senior Citizen, Partner, Dependents **and** street-level lat/long. 12 columns dropped at the boundary, same treatment as Cell2Cell's 22. |
+| The MSISDN scanner | Two real gaps and one false positive — see below. |
+
+**The privacy scanner was weaker than it looked.** It missed the international
+spelling (`+218` drops the trunk zero) and grouped digits (`091 234 5678`), and
+it matched *inside its own SHA-256 digests*, because a 64-char hex string often
+contains `094` followed by seven numeric characters — so whether the scan passed
+depended on the salt. All three fixed. `tests/unit/test_privacy.py` now imports
+the pattern instead of re-spelling it, and locks in 8 real formats, 7
+non-numbers and 1,200 digests.
+
+**Verified:** 131 tests pass (9 xfail, from 10 — `test_uci_duplicate_rows_are_dropped`
+is green, and a second leaky-field test joined it), ruff and black clean.
 
 ---
 
