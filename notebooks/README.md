@@ -11,8 +11,8 @@ accumulate logic become a second, untested codebase that the API cannot reach.
 01_synthesis/         CTGAN vs TVAE vs Copula, SDMetrics gate tuning           E1
 02_churn/             M1 tuning, benchmark table, calibration curves           E2
 03_value/             M2 clustering, k selection, PCA, CLV benchmarking        E3
-04_pricing_advance/   M3 elasticity, M4 PD, guardrail sensitivity              E4
-07_integration/       API contract checks, cohort query shaping                Ali
+04_uplift_decision/   M3 uplift + Qini, decision engine, guardrail sensitivity E4
+05_integration/       API contract checks, cohort query shaping                Ali
 ```
 
 ## Rules

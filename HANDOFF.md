@@ -176,14 +176,19 @@ Grep for `TODO(` to find them all.
 | GitHub CLI 2.101.0 | Installed at `D:\GITHUB_CLI` |
 | Docker 29.8.0 | Installed under `%LOCALAPPDATA%\Programs\DockerDesktop` |
 | conda 26.5.3 | Installed at `D:\Anaconda` |
-| Python | base is **3.14.6** — wrong version; also 3.10 present |
+| Python | base is **3.14.6** — wrong version; the project env is separate |
 | Node 26.8.2, VS Code 1.137.0 | Present, not needed for this branch |
-| **conda `cvm` env** | **Not created yet** ← first thing to do |
-| **git identity** | **Not configured** (`user.name`, `user.email` empty) |
-| **`gh auth login`** | **Not done** |
-| **Docker daemon** | **Not running** (Docker Desktop not started) |
-| **`.env`** | **Not created** (copy from `.env.example`, generate a real salt) |
+| **conda `cvm` env** | **Created and working** — Python 3.11.16 at `D:\Anaconda\envs\cvm`, 39 of the 40 packages the stack needs |
+| **git identity** | Configured (`ali-margem`) |
+| **`gh auth login`** | Done (`ali-margem`, keyring) |
+| **Commits** | 8 on `ali_branch` |
+| **Docker daemon** | **Not running** — Docker Desktop is installed but not started. D1 (`docker compose up` from a clean clone) is unverified. |
+| **`.env`** | **Not created** ← the one blocker left. Copy `.env.example`, then generate a real salt: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| **git remote** | **None** — nothing has been pushed anywhere |
 | Free disk | ~20 GB on C:, ~20 GB on D: — **tight**, see `data/README.md#disk-budget` |
+
+Run anything in the project env with `D:\Anaconda\envs\cvm\python.exe`, or
+`conda activate cvm` first. The 94-test suite passes there in about 5 seconds.
 
 ---
 
@@ -196,14 +201,14 @@ In order. Do not skip step 1.
    `conf/market.yaml`. The synthesis engine is blocked on this — everything
    after step 4 consumes it, so getting it wrong means regenerating the
    population and retraining.
-1. **Set up the environment and prove the skeleton works** — follow
-   [`docs/TESTING.md`](docs/TESTING.md) end to end. It is a numbered walkthrough
-   with a checkpoint after every step. Budget one to two hours.
-2. **Make the first commit.** Nothing is committed yet.
-3. **Download the core datasets** (A, C first — they are small and unblock the
-   baseline), then run the EDA: the UCI dedup audit (~300 duplicate rows) and
-   the `Customer Value` leakage audit. These two findings are pitch material,
-   so record the numbers.
+1. **Create `.env`** with a real salt. It is the only thing standing between
+   the current state and a runnable ingest layer, and the code refuses to hash
+   without it — deliberately.
+2. **Download the core datasets** (A, C — B is already on disk), then run the
+   EDA: the UCI dedup audit (~300 duplicate rows) and the `Customer Value`
+   leakage audit. These two findings are pitch material, so record the numbers.
+   Note that `scripts/download_data.py` dispatches to loaders that are still
+   stubs, so this step is blocked on step 4.
 4. **Build Layer 1 (`ingest/`)** — the schema contracts and the hashing. Every
    later layer depends on it, and the privacy commitment is enforced here.
 5. **Build Layer 3 features + splits before any model.** Point-in-time

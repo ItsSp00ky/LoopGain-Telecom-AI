@@ -43,6 +43,9 @@ ml = [
     "lifelines>=0.28",
     "scikit-survival>=0.23",
     "lifetimes>=0.11.3",
+    # M3 is the centre of the pipeline; its library belongs in the core ML
+    # extra, not in a comment in the proposal.
+    "scikit-uplift>=0.5.1",
     "shap>=0.45",
     "optuna>=3.6",
     "pulp>=2.8",

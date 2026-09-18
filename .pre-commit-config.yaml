@@ -28,7 +28,10 @@ repos:
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-      - id: ruff-format
+      # NOT ruff-format. It and black are two formatters with different
+      # opinions, and running both means each undoes part of the other's work
+      # on every commit. CI runs `black --check`, so black is the one that
+      # decides, and ruff is restricted to linting here.
 
   - repo: https://github.com/psf/black
     rev: 24.8.0

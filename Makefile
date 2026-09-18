@@ -27,10 +27,10 @@ fmt:  ## ruff --fix + black
 	black src tests apps scripts
 
 test:  ## pytest, fast subset
-	pytest -m "not slow and not gpu"
+	pytest -m "not slow"
 
-test-all:  ## pytest, everything except GPU
-	pytest -m "not gpu"
+test-all:  ## pytest, everything
+	pytest
 
 guardrails:  ## Commercial + credit-safety invariants only
 	pytest tests/guardrails -m guardrail -v --no-cov

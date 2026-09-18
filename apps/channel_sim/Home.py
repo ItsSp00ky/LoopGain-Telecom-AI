@@ -31,7 +31,11 @@ with tab_ussd:
 with tab_sms:
     st.warning("Not implemented yet -- E5, sprint day 12.", icon=":material/construction:")
 
-# TODO(E5): render through preprocess_ar.render_rtl. The LLM writes the copy
-# from the reason codes the decision engine returned; it must not invent a
-# price, a bonus or a limit. If the engine returned no offer, the simulator
-# shows no offer.
+# TODO(E5): render Arabic through arabic-reshaper + python-bidi (the `rtl`
+# extra) directly -- there is no shared preprocessing module in this branch,
+# because Arabic text handling left with M6.
+#
+# The LLM writes the copy from the reason codes the decision engine already
+# returned; it must not invent a price, a bonus or a limit, and it sits here in
+# the demo surface rather than anywhere near the decision path. If the engine
+# returned no offer, the simulator shows no offer.

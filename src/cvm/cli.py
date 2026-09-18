@@ -30,7 +30,7 @@ def synthesise() -> None:
 
 @app.command()
 def features() -> None:
-    """Build the feature store and the sequence tensors."""
+    """Build the point-in-time feature store, offline and online."""
     from cvm.features.run import main
 
     main()

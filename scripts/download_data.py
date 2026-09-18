@@ -11,6 +11,12 @@ Credentials needed (see .env.example):
     A  UCI 563     none
     B  Cell2Cell   none -- supplied locally at data/raw/telecom/telecom
     C  IBM Telco   KAGGLE_USERNAME + KAGGLE_KEY, or ~/.kaggle/kaggle.json
+    F  Criteo      none -- HuggingFace, public
+    G  Hillstrom   none -- fetched by scikit-uplift
+
+A source is listed here only when `cvm.ingest.<name>` exists to receive it.
+Listing a dataset we cannot load is worse than not listing it: it reads as
+capability and delivers a stack trace.
 """
 
 from __future__ import annotations
@@ -31,49 +37,54 @@ SOURCES = {
     "C": ("IBM Telco Customer Churn", "cvm.ingest.ibm_telco"),
 }
 
-# Recommended additions. Opt in with --only, because several are large and
-# you have limited disk. See data/README.md#recommended-additions.
-OPTIONAL_SOURCES = {
-    "F": ("Criteo Uplift (real treatment/control)", "cvm.ingest.criteo_uplift"),
+# M3 validation. NOT optional in any meaningful sense -- the proposal's
+# strongest claim is that the uplift method is validated on real randomised
+# treatment and control before it touches generated data, and these are that
+# data. Separated from SOURCES only because they are a later sprint step and
+# Criteo is a 300 MB download.
+UPLIFT_SOURCES = {
+    "F": ("Criteo Uplift (25M rows, real treatment/control)", "cvm.ingest.criteo_uplift"),
     "G": ("Hillstrom MineThatData (uplift warm-up)", "cvm.ingest.hillstrom"),
-    "H": ("KKBox WSDM (real daily sequences)", "cvm.ingest.kkbox"),
-    "J": ("UCI Online Retail II (502, CLV validation)", "cvm.ingest.online_retail"),
 }
 
-ALL_SOURCES = {**SOURCES, **OPTIONAL_SOURCES}
+# Deliberately NOT listed: KKBox (H) and Online Retail II (J). KKBox went out
+# of scope with the sequence arm; Online Retail II is a BG/NBD sanity check we
+# can run on Cell2Cell recharge behaviour instead. Neither has a loader, and a
+# source without a loader does not belong in this menu.
+
+ALL_SOURCES = {**SOURCES, **UPLIFT_SOURCES}
 
 # Rough download sizes, so --only can be chosen against available disk.
 APPROX_MB = {
     "A": 1,
-    "B": 0,
-    "C": 5,  # B is already on disk
+    "B": 0,  # already on disk
+    "C": 5,
     "F": 300,
     "G": 5,
-    "H": 30_000,
-    "J": 45,
 }
 
 
 def check_credentials(ids: list[str]) -> list[str]:
     """Report missing credentials up front rather than failing three minutes in."""
     problems = []
-    kaggle_ids = {"C", "H"}  # B is supplied locally
+    # Only IBM Telco needs Kaggle. A and B need nothing (A is ucimlrepo, B is
+    # already on disk); F and G are public.
+    kaggle_ids = {"C"}
     if kaggle_ids & set(ids) and not (settings.kaggle_key or settings.kaggle_username):
         problems.append(
             f"Kaggle credentials missing (datasets {sorted(kaggle_ids & set(ids))}). Set "
             "KAGGLE_USERNAME and KAGGLE_KEY in .env, or place kaggle.json in ~/.kaggle/."
         )
-    if "H" in ids:
+    if "G" in ids:
         problems.append(
-            "Dataset H (KKBox) is a competition dataset -- you must accept the rules at "
-            "https://www.kaggle.com/c/kkbox-churn-prediction-challenge/rules first, "
-            "or the download returns 403."
+            "Dataset G (Hillstrom) is fetched through scikit-uplift, which is not yet "
+            'installed: pip install -e ".[ml]" or pip install scikit-uplift.'
         )
     return problems
 
 
 def check_disk(ids: list[str]) -> str | None:
-    """Warn before a 30 GB download fills the drive."""
+    """Warn before a large download fills the drive."""
     import shutil
 
     needed_mb = sum(APPROX_MB.get(i, 0) for i in ids)
@@ -94,8 +105,7 @@ def main() -> int:
         default="A,B,C",
         help=(
             "Comma-separated source ids. Default A,B,C (the core set). "
-            "Optional extras: F Criteo uplift, G Hillstrom, H KKBox, "
-            "J Online Retail II."
+            "Add F,G for the M3 uplift validation data."
         ),
     )
     parser.add_argument("--list", action="store_true", help="List every source and exit.")
@@ -106,7 +116,7 @@ def main() -> int:
 
     if args.list:
         for sid, (name, _) in ALL_SOURCES.items():
-            tag = "core" if sid in SOURCES else "optional"
+            tag = "core" if sid in SOURCES else "uplift"
             log.info("%s  %-8s %-45s ~%s MB", sid, tag, name, APPROX_MB.get(sid, "?"))
         return 0
 
