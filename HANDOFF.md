@@ -34,8 +34,8 @@ root commit), no remote yet. The config system, the API contracts, the FastAPI a
 complete pricing-guardrail engine are *written and working*. Everything else is
 a documented stub that raises `NotImplementedError` — each file carries its
 module number, its owner, and a docstring explaining what it must do and why.
-About 60 tests pass today; they cover config loading, privacy invariants, API
-contracts and all six pricing guardrails.
+78 tests pass today (5 xfail, 0 fail); they cover config loading, privacy
+invariants, API contracts and all six pricing guardrails.
 
 **Scope is one pipeline:** predict churn (M1) -> understand value (M2) ->
 estimate treatment effect (M3 uplift) -> decide whether to intervene (Decision
@@ -72,16 +72,19 @@ against measured distributions. Three caveats travel with it -- see session 3f.
 | # | Decision | Why |
 |---|---|---|
 | 1 | **Repo root is `D:\Sic`**, branch `ali_branch` | Working directory when the project started. The GitHub repo name does not have to match the folder. |
-| 2 | **Python 3.11, via conda** | TensorFlow, scikit-survival and SDV have no wheels for 3.12+. Machine has 3.14 and 3.10 in base — neither works. |
+| 2 | **Python 3.11, via conda** | scikit-survival and SDV have no wheels for 3.12+. Machine has 3.14 and 3.10 in base — neither works. |
 | 3 | **M7 Employee Copilot removed from this branch** | It is Component 5, owned by a teammate. Its scaffolding was written and moved to [`docs/integration/copilot_starter/`](docs/integration/copilot_starter/) as a handover, not deleted. |
 | 4 | **LangChain / Chroma / sentence-transformers dropped** | Consequence of #3. Saves ~2.5 GB of install on a machine with ~20 GB free. |
 | 5 | **M5 (network AutoEncoder) and M6 (Arabic care text) removed entirely** | Session 3. Network modelling is Component 2; care text is Component 4. Building either here would duplicate a teammate's work. M1 consumes subscriber-level quality signals — dropped-call rate, outage hours — as ordinary churn features instead. Contract in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) §6. |
 | 5a | **Geography removed entirely; network quality kept** | Session 3d. No districts, cells, coordinates or OpenCelliD — with M5 gone, geography had no consumer, and `district` survived only to be forbidden by the fairness guardrail. Network quality stays because it is *real measured signal* (UCI `Call Failures`, Cell2Cell `dropvce`), just subscriber-level rather than cell-level. The redlining audit was replaced by a value-decile / tenure-band distribution audit. |
-| 5b | **Weekend days kept, deliberately** | Session 3d. Friday–Saturday is a public fact, not an estimate, and it costs one derived boolean. Removing weekly rhythm from the daily sequences would handicap the M1 LSTM arm through a data-generation choice rather than on merit. No usage multiplier — that would be the guessed part. |
+| 5b | **Weekend days kept, deliberately** | Session 3d. Friday–Saturday is a public fact, not an estimate, and it costs one derived boolean. `weekend_usage_share_30d` is one of the few cheap signals of whether a subscriber's mornings are actually free, which is exactly what the morning pass turns on. No usage multiplier — that would be the guessed part. |
 | 6 | **All syllabus-chapter tracking removed** | Session 3. `docs/syllabus_coverage.md` deleted; chapter annotations stripped from every docstring, config comment, model card and template. Coverage is no longer a project constraint, so the annotations were noise that would drift. |
 | 7 | **Other components integrate over HTTP, never by import** | Four reasons in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) §1: the feature store will be replaced at scale, importers bypass guardrails, importers skip the audit log, independent deploys. |
 | 8 | **Guardrail thresholds live in `conf/*.yaml`, never in code** | An evaluator will ask to change one live during the demo. |
 | 9 | **Five recommended datasets added beyond the proposal** | Criteo Uplift in particular: it is the only real treatment/control data available, and without it the uplift model in M3 cannot be honestly validated. See `data/README.md`. |
+
+| 10 | **M1 is tabular only — no sequence arm** | Session 3h. 90 timesteps of mostly-zero prepaid activity is a weak sequence signal, the decay ratios already compress the predictive part of it, and it was the only GPU work in the branch. Every model is now CPU-trainable and exactly SHAP-explainable, which the guardrailed decision engine needs. We do **not** claim to have beaten a sequence model — we say we scoped it out. |
+| 11 | **Cannibalisation is keyed on the bundle held, not on risk × value** | Session 3h. نت 20 at 35 LYD is the *base* monthly; free mornings do not remove the need for all-day data, so the base is not substitutable and its holders have nowhere to fall. Exposure is confined to subscribers above it, and the loss is the gap between rungs. |
 
 Architecture decisions with fuller reasoning: [`docs/adr/`](docs/adr/).
 
@@ -115,7 +118,7 @@ arguably sharper — full detail in [`conf/advance.yaml`](conf/advance.yaml):
 | Both products gate on the subscriber being broke — the inverse of a risk filter | balance ≤ 0.5 / ≤ 1 LYD |
 | "According to consumption" is not a risk model, and its thresholds are unpublished | operator FAQ wording |
 | The data advance has **no tiering whatsoever** | flat 5 LYD for everyone |
-| **A 5 LYD debt exceeds the 3 LYD smallest recharge card** — a small-card recharger cannot clear it in one top-up, and unpaid debt blocks re-subscription, locking them out of the service they reached for | ladder + product price |
+| **A 5 LYD debt is exactly the 5 LYD smallest recharge card** — clearing it consumes the whole minimum top-up and returns the subscriber to a zero balance, so the minimum recharge buys nothing and the rational move is to defer it (session 3h; this replaced an earlier "cannot clear it at all" claim and is deliberately weaker) | ladder + product price |
 | The two products are mutually exclusive, so distressed subscribers alternate between them — unmonitored | both FAQs |
 
 **Two other changes from the real data:**
@@ -126,10 +129,10 @@ arguably sharper — full detail in [`conf/advance.yaml`](conf/advance.yaml):
   its spare capacity is. It also sharpens the cannibalisation guard, because
   06:00–11:00 is real usage time for commuters.
 - **ARPU was wrong and is now fixed.** The inherited 12 LYD/month was
-  inconsistent with a catalogue whose cheapest monthly bundle is 20 LYD.
-  Revised to **30 LYD**, which rescales the business case: revenue at risk
-  ~420k -> **~1.05M LYD/month**, CLV ceiling ~21 -> **~54 LYD** per subscriber.
-  Any figure carried over from the old proposal needs recomputing.
+  inconsistent with a catalogue whose *base* monthly bundle is 35 LYD. Now
+  **40 LYD** (session 3h), giving 480 LYD of 12-month value and a 72 LYD CLV
+  ceiling. Revenue at risk is **1.4M LYD/month**. Any figure carried over from
+  the old proposal needs recomputing.
 
 ---
 
@@ -206,11 +209,12 @@ In order. Do not skip step 1.
 5. **Build Layer 3 features + splits before any model.** Point-in-time
    correctness is the invariant that, if broken, silently invalidates every
    metric downstream. Un-`xfail` the tests in `tests/leakage/` as you go.
-6. **M1 Arm A (LightGBM) + calibration** — the first real model, and the one
+6. **M1 LightGBM + calibration** — the first real model, and the one
    everything else consumes.
 7. Then, roughly in parallel: M2 (value/CLV), M4 (repayment PD, shares M1's
-   pipeline), M3 (pricing — the guardrails are already written and tested).
-8. **M1 Arm B (LSTM) on Colab.** The only GPU work left in this branch.
+   pipeline), M3 (uplift — validate on Criteo before anything else).
+8. **The decision engine**, which is now the only thing standing between a
+   score and a recommendation. There is no GPU work left in this branch.
 
 ### Known gaps to close
 
@@ -250,13 +254,17 @@ Learned the hard way or designed in on purpose:
 - **`CVM_HASH_SALT` must be a real value.** The code refuses the `.env.example`
   placeholder and refuses to hash without a salt — deliberately. An unsalted
   hash of a 9-digit number space is trivially reversible.
-- **Anything used to generate the synthetic label must be excluded from
-  features.** `synthesis/hazard.py` exports `LABEL_GENERATING_FIELDS`, and a
-  leakage test cross-checks it against `conf/features.yaml`. This is the
-  subtlest failure mode in the whole project: a model that scores beautifully
-  by reading its own label back out.
-- **Colab cuts sessions without warning.** Checkpoint to Drive every epoch for
-  the three GPU modules.
+- **Know the difference between a label's drivers and its artefacts.**
+  `synthesis/hazard.py` exports both sets and a leakage test cross-checks them
+  against `conf/features.yaml`, in *both* directions. `LABEL_DRIVER_FIELDS` are
+  behavioural and deliberately **stay** available — a model that can see no
+  driver of its label has nothing to learn. `LABEL_ARTIFACT_FIELDS` — the
+  hazard score, the churn date, the label itself — must **never** reach the
+  feature matrix. Excluding the drivers too would look safe and would gut the
+  model; this is the subtlest failure mode in the whole project.
+- **The privacy scan can flag its own fixtures.** Negative tests need a string
+  that looks like a real MSISDN. Tag such a line `msisdn-fixture` and both the
+  pytest check and the CI job will skip it — per line, never per directory.
 
 ---
 
@@ -622,6 +630,111 @@ Added to the Q&A: *"Why does the catalogue matter if you could invent offers?"*
 **Verified:** Python compiles, YAML parses, all doc links resolve, no stale
 `m3_pricing` / `decision.uplift` references, and 22/22 checks pass through the
 real config loader and guardrail functions.
+
+### 2026-09-18 · Session 3h — 5 LYD floor, one arm, ARPU 40, ladder cannibalisation
+
+Four changes from the project owner, two of which moved load-bearing arguments.
+
+**1. The smallest recharge card is 5 LYD, not 3.** Ladder is now
+`[5, 10, 20, 40, 100]`; weights renormalised to `[0.54, 0.21, 0.13, 0.08, 0.04]`
+with the old 3 LYD share folded into the 5.
+
+This **invalidated the M4 headline finding** and replaced it with a different
+one. The old argument was arithmetic impossibility: a 3 LYD card cannot clear a
+5 LYD data advance, so the debt persists and the subscriber is locked out. With
+a 5 LYD floor the debt *is* clearable — exactly, to the dinar — so the new
+argument is a **zero residual**: clearing consumes the entire minimum top-up and
+hands the subscriber back a zero balance. They paid five dinars for nothing, so
+the rational move is not to pay it, and a deferred recharge on a prepaid line is
+where silent churn starts.
+
+**This is weaker evidence and the repo says so.** `conf/advance.yaml` carries an
+explicit honesty note; `debt_exceeds_smallest_card` is kept as `false` rather
+than deleted, so a reader who remembers the old claim sees it was retired.
+A new test asserts the equality *and* that the retired claim stays false.
+
+Secondary finding, now recorded: a 1 or 3 LYD **airtime** advance still leaves
+change off the smallest card, so only the 5 LYD data advance has the
+zero-residual problem. That is a reason to prefer the small rungs, and it is
+tested.
+
+**2. The sequence arm is gone.** M1 is one model family: LightGBM primary,
+XGBoost/CatBoost challengers, five classical baselines — eight algorithms, one
+temporal split, calibration curves for all of them. Deleted `arm_b_lstm.py`,
+`features/sequences.py`, the LSTM model card, the `dl` extra, the TensorFlow
+seeding branch, the whole Colab section of `docs/setup.md`, and the sequence
+tensors from the architecture diagram and feature store. `arm_a_lightgbm.py` →
+`gradient_boosting.py`, since "Arm A" means nothing without an Arm B.
+
+**API contract change, documented in INTEGRATION.md §"One contract change since
+the freeze":** `/v1/score/churn` no longer accepts `arm`, and
+`/v1/subscriber/{id}` no longer returns `lstm_churn_probability`. Both selected
+between options that no longer exist. `extra="forbid"` means a caller still
+sending `arm` gets a 422 naming the field, not silent acceptance.
+
+**3. ARPU 30 → 40, blended incentive 1.5 → 5 LYD.** The incentive change is the
+consequential one. Business case rebuilt:
+
+| | |
+|---|---|
+| 12-month value per subscriber | **480 LYD** |
+| CLV ceiling (15%) | **72 LYD** (was 54) |
+| Revenue at risk | **1.4M LYD/month** |
+| Campaign cost @ 5 LYD × 120k | **600,000 LYD** |
+| ROI at 2.5 pp uplift | **2.4×** (was 6.0×) |
+
+**The ROI table now has loss-making cells, which is the improvement.** At a
+5 LYD incentive against 480 LYD of annual value, break-even is
+`5 / 480 = 1.04 pp` of uplift — so the programme does not hinge on the churn
+model being excellent, it hinges on M3 clearing one percentage point of genuine
+uplift. That is a far more demanding claim and the holdout exists to measure it.
+The same number is now stated in §2.4 of the proposal, in `m3_uplift.yaml`'s
+expected-value formula, and in the README principles table.
+
+§6.3 was rewritten: the honest counterfactual is **targeting on churn score
+alone**, not a blanket campaign, and we deliberately refuse to quote a quadrant
+mix we have not measured.
+
+**4. Cannibalisation re-based on the ladder.** The owner's domain correction:
+نت 20 at 35 LYD is the *base* monthly — you need it for all-day data regardless
+of free mornings — so the 1 LYD pass cannot displace it. It displaces the
+bundles *above* it.
+
+This does not remove the risk, it relocates it, and the relocation makes the
+guard better. It is now **mechanistic rather than statistical**: it keys on
+`current_monthly_bundle_lyd`, the exposure itself, where risk × value was only
+ever a proxy for "probably on a big bundle". Subscribers on or below the base —
+and those with no monthly bundle — are structurally immune and now get offers
+the old guard withheld.
+
+Break-even moved from a single 2.2% to a range, because the loss is the gap
+between rungs rather than the whole bundle:
+
+| Downgrade path | Monthly loss | Break-even |
+|---|---|---|
+| نت 40 → نت 20 + pass | 14 LYD | 7.1% |
+| نت 80 → نت 20 + pass | 44 LYD | 2.3% |
+
+The 2% cap is unchanged — it sits below the **worst** case rather than being
+retuned to the best one. The ARPU-invariance proof from session 3f is retired
+with the single-anchor model it belonged to.
+
+**Fixed in passing (pre-existing, unrelated):**
+
+- `tests/unit/test_schemas.py` imported `TextClassifyRequest`, deleted with M6
+  in session 3. Collection error — the whole unit suite could not run.
+- **The MSISDN privacy scan was failing on its own fixtures.** Three test files
+  contain `0912345678` as the number we assert gets *rejected*, and both the
+  pytest check and the CI job flagged them. Added a per-**line** `msisdn-fixture`
+  marker rather than exempting `tests/`, so the scan stays repository-wide and
+  every exemption is visible where a reviewer reads it. Both checks now clean.
+
+**Verified:** 78 pytest tests pass (5 xfail, 0 fail), plus 64 standalone checks
+through the real config loader and the real guardrail functions — every ROI
+cell, every break-even share, and every exemption branch computed rather than
+asserted. YAML parses, Python compiles, CI scan simulated clean.
+
+---
 
 ## 9. How to update this file
 

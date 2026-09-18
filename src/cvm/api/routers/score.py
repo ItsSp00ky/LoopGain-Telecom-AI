@@ -10,7 +10,7 @@ from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, HTTPException, Request
 
-from cvm.api.schemas import ChurnArm, ChurnScore, ChurnScoreRequest, ChurnScoreResponse
+from cvm.api.schemas import ChurnScore, ChurnScoreRequest, ChurnScoreResponse
 
 router = APIRouter(tags=["score"])
 
@@ -36,11 +36,9 @@ async def score_churn(payload: ChurnScoreRequest, request: Request) -> ChurnScor
             ),
         )
 
-    arm = ChurnArm.LIGHTGBM if payload.arm == "both" else ChurnArm(payload.arm)
     scores = [
         ChurnScore(
             subscriber_id=sid,
-            arm=arm,
             churn_probability=0.0,
             decile=10,
             model_version="stub",

@@ -18,14 +18,23 @@ only ever a refinement of the window the operator already publishes. Using the
 real published hours is not a compromise -- it is the answer, and it is better
 evidence than a trough we detected ourselves.
 
-CANNIBALISATION GUARD. A 1 LYD unlimited morning pass is cheap enough to pull
-heavy users down off a 35-80 LYD monthly bundle -- and at 06:00-11:00 it covers
-the commute and the working morning, which is real usage for a lot of people.
-So eligibility excludes subscribers whose peak-hour usage would simply shift
-rather than grow, the pass is granted as ADDITIVE rather than substitutable,
-and a simulated margin check runs before any cohort is approved. This is the
-single most important commercial critique of the idea, and it is answered in
-code rather than in a footnote.
+CANNIBALISATION IS A LADDER PROBLEM, NOT A PRODUCT PROBLEM. The obvious
+objection -- "a 1 LYD pass will pull people off their monthly bundle" -- is
+half right, and the half it gets wrong matters. نت 20 at 35 LYD is the BASE
+monthly: what a subscriber needs to have data outside 06:00-11:00 at all. Free
+mornings do not remove that need, so the base is not substitutable and the
+subscribers sitting on it have nowhere to fall.
+
+The exposed population is only those ABOVE the base -- نت 40 at 50, نت 80 at
+80, the 5G monthlies, Elite, Family -- for whom the pass can justify stepping
+DOWN a rung. The loss is then the gap between rungs, not the whole bundle:
+14 LYD/month for one rung, 44 for two.
+
+So eligibility keys on the bundle actually held, excludes subscribers whose
+peak-hour usage would simply shift rather than grow, grants the pass as
+ADDITIVE rather than substitutable, and runs a simulated margin check before
+any cohort is approved. The guard is mechanistic rather than statistical,
+which is why it is answerable in code rather than in a footnote.
 """
 
 from __future__ import annotations
@@ -50,7 +59,10 @@ def would_shift_not_grow(peak_usage: float, offpeak_usage: float, headroom: floa
 def simulate_cohort_margin(cohort, offer_id: str) -> dict[str, float]:
     """Simulated margin check. Must run before any cohort is approved.
 
-    Compares expected revenue with and without the grant, including the ARPU
-    lost when a subscriber downgrades off a monthly bundle they no longer need.
+    Compares expected revenue with and without the grant. The downgrade term is
+    the gap between the bundle held and the next rung down, floored at the base
+    monthly -- NOT the full bundle price, because nobody drops below the base.
+    Must report the implied erosion so it can be checked against
+    ``max_simulated_arpu_erosion`` in conf/pricing.yaml.
     """
     raise NotImplementedError("TODO(E4)")

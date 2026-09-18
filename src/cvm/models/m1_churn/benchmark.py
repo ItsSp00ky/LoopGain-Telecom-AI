@@ -1,8 +1,8 @@
 """The head-to-head benchmark table. Deliverable D3.
 
 Produces the comparison that the pitch slide and the report are built on:
-LightGBM vs LSTM vs every classical baseline, on calibration curves, PR-AUC,
-lift at deciles 1-3, and Brier.
+LightGBM against XGBoost, CatBoost and every classical baseline, on
+calibration curves, PR-AUC, lift at deciles 1-3, and Brier.
 
 Two reporting rules, both non-negotiable:
 
@@ -20,7 +20,8 @@ from __future__ import annotations
 import pandas as pd
 
 
-def run_benchmark(arm_a, arm_b, X_test, y_test, sequences_test) -> pd.DataFrame:
+def run_benchmark(models: dict[str, object], X_test, y_test) -> pd.DataFrame:
+    """One row per model, one column per metric. Order the rows by PR-AUC."""
     raise NotImplementedError("TODO(E2)")
 
 
@@ -34,5 +35,8 @@ def naive_vs_honest(dataset: str = "uci_iranian") -> pd.DataFrame:
 
 
 def architecture_verdict(results: pd.DataFrame) -> str:
-    """Write the verdict paragraph. Whichever arm won, explain WHY."""
+    """Write the verdict paragraph. Whichever model won, explain WHY.
+
+    A table without this paragraph is a leaderboard, not a result.
+    """
     raise NotImplementedError("TODO(E2)")

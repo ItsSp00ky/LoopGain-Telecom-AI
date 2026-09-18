@@ -24,7 +24,6 @@ assignees: ''
 
 - [ ] Local (conda, Python 3.11)
 - [ ] Docker Compose
-- [ ] Colab
 
 ## Is a guardrail or leakage invariant involved?
 

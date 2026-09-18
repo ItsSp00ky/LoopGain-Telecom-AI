@@ -1,8 +1,7 @@
 # Architecture
 
-Nine layers, four containers, CPU-only at serving time, under 3 GB RAM.
-The LSTM benchmark arm trains separately on a free Colab T4 and ships as a
-saved artefact.
+Nine layers, four containers, CPU-only everywhere — training as well as
+serving — under 3 GB RAM. No GPU is required at any point.
 
 This is `ali_branch` — Component 3 of the platform. The Employee Copilot
 (Component 5) and Customer Chatbot (Component 4) sit *above* Layer 6 and
@@ -58,11 +57,10 @@ Layer 3   FEATURE STORE        rolling 7/30/90d | RFM-LE quintiles
                                subscriber-level network quality
                                ----------------------------------------
                                features_offline.parquet   (training, PIT-correct)
-                               sequences_offline.npz      (90 x k, for the LSTM)
                                features_online.duckdb     (serving)
                                              v
 Layer 4   MODELS
-            M1  Arm A LightGBM (engineered)  vs  Arm B LSTM (raw sequences)
+            M1  LightGBM vs XGBoost / CatBoost / classical baselines
                 + Cox PH survival -> time-to-churn window
             M2  RFM-LE rules || K-Means || Hierarchical || PCA  + BG/NBD CLV
             M4  repayment PD head (shares M1 features)

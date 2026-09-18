@@ -14,7 +14,6 @@ router = APIRouter(tags=["health"])
 # partial deploy is visible rather than silently degraded.
 EXPECTED_MODELS = (
     "m1_churn_lightgbm",
-    "m1_churn_lstm",
     "m1b_survival",
     "m2_clv",
     "m3_uplift",

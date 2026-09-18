@@ -10,7 +10,7 @@ modelled only as the competitor that dual-SIM leakage flows toward.
 | | Count | |
 |---|---|---|
 | **Confirmed** | 8 | Q1 recharge · Q2 tariffs · Q3 catalogue · Q3b volumes · Q4 off-peak · Q5 zero-rating · Q6 emergency credit · Q10 language |
-| **Decided estimate** | 1 | Q7 base and economics — ARPU 30 LYD, dual-SIM 85% |
+| **Decided estimate** | 1 | Q7 base and economics — ARPU 40 LYD, dual-SIM 85% |
 | **Scope decided** | 2 | Q8 weekend kept · Q9 geography dropped, network quality kept |
 | **Open** | 1 | Q6b partial-recharge settlement behaviour (minor) |
 
@@ -22,18 +22,19 @@ modelled only as the competitor that dual-SIM leakage flows toward.
 
 ### Q1 — Recharge denominations · **confirmed**
 
-**3 / 5 / 10 / 20 / 40 / 100 LYD.**
+**5 / 10 / 20 / 40 / 100 LYD.**
 
 In `conf/market.yaml#recharge`. Two consequences worth knowing:
 
-- The **3 LYD floor** is load-bearing for M4. The نت في وقته data advance costs
-  5 LYD, so a subscriber who habitually buys the smallest card *cannot clear
-  that debt in one top-up*. That is the structural finding the whole M4
-  argument now rests on.
+- The **5 LYD floor** is load-bearing for M4, because the نت في وقته data
+  advance also costs **exactly 5 LYD**. A subscriber whose modal top-up is the
+  smallest card can clear that debt and receives *nothing* for it: the whole
+  card goes to the debt and they are back at a zero balance. That equality is
+  the structural finding the M4 argument rests on.
 - The cheapest data bundle is **0.5 LYD** (نت 50MB), so monetary fields must
   not be rounded to whole dinars anywhere in the pipeline.
 
-*Still an assumption:* the **popularity split** across those six values. The
+*Still an assumption:* the **popularity split** across those five values. The
 ladder is confirmed; the weighting is our guess. Any recharge agent could
 answer this in thirty seconds — worth asking.
 
@@ -166,19 +167,30 @@ meaningful feature.
 
 | | Value | Note |
 |---|---|---|
-| Addressable prepaid subscribers | 1,000,000 | unchanged |
-| **Monthly ARPU** | **30 LYD** | revised from 12 |
-| Monthly silent churn | 3.5% | unchanged |
-| **Dual-SIM penetration** | **85%** | revised from 60% |
+| Addressable prepaid subscribers | 1,000,000 | |
+| **Monthly ARPU** | **40 LYD** | |
+| Monthly silent churn | 3.5% | |
+| **Dual-SIM penetration** | **85%** | |
+| **Blended incentive** | **5 LYD** | |
 
-The ARPU revision fixes a real inconsistency: at 12 LYD nobody could be buying
-a monthly bundle, since the cheapest is 20 LYD and the monthly ladder runs
-20–80 LYD.
+ARPU is anchored on the product structure rather than guessed. نت 20 at 35 LYD
+is the **base** monthly — what a subscriber needs for all-day data — and the
+ladder runs well above it. An ARPU below the base bundle would imply most of
+the base does not hold one, which the catalogue's shape contradicts.
 
-**It rescales the business case.** At 3.5% monthly churn on 1M subscribers,
-revenue at risk moves from ~420k to **~1.05M LYD/month**, and the CLV ceiling
-(15% of 12-month CLV) moves from ~21 to **~54 LYD** per subscriber — a much more
-generous discount budget, and a realistic one given bundle prices.
+**Two numbers follow and are used throughout:** 12-month value per subscriber
+**480 LYD**, CLV ceiling (15%) **72 LYD**. Revenue at risk is 35,000 × 40 =
+**1.4M LYD/month**.
+
+**The 5 LYD blended incentive is the consequential one.** It is a mix, not a
+single instrument: mostly 1 LYD morning passes, some bonus-MB grants, and a
+smaller number of percentage discounts on bundles at the top of the ladder. It
+sets a hard floor under M3, because expected value is positive only above
+
+    break-even uplift = 5 / 480 = **1.04 pp**
+
+Below that, treating loses money no matter how high the churn score is. The
+decision engine enforces exactly this, and the business case is built on it.
 
 **Dual-SIM at 85% changes the emphasis of the whole churn model.** At that level
 dual-SIM is the norm, not a segment: "active" tells you almost nothing, and
@@ -223,12 +235,11 @@ This is not the same kind of assumption as Ramadan, for three reasons:
    estimating. There is nothing to be wrong about.
 2. **It costs almost nothing.** One boolean derived from the date. No overlay,
    no multiplier to invent, no per-year maintenance.
-3. **Removing it quietly handicaps the M1 benchmark.** Arm B is an LSTM over 90
-   days of daily sequences. If the generated data has no weekly rhythm at all,
-   the sequences are unrealistically smooth and there is less temporal
-   structure for the network to find — so LightGBM wins partly because of a
-   data-generation choice rather than on the merits. That is a methodological
-   problem in the project's headline experiment, not a cosmetic one.
+3. **It earns its place in the feature set.** `weekend_usage_share_30d` is one
+   of the few cheap signals of whether a subscriber's mornings are actually
+   free — and generated data with no weekly rhythm at all would make that
+   feature constant, which is a data-generation choice quietly deciding a
+   modelling result.
 
 There is also a product reason: a 06:00–11:00 morning pass almost certainly
 sells differently on a work morning than on a Friday. If `offpeak_data_ratio`

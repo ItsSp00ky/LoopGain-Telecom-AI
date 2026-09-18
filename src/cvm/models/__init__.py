@@ -1,6 +1,6 @@
 """Layer 4 -- the model layer.
 
-    m1_churn    Silent churn: LightGBM vs LSTM benchmark, plus Cox survival
+    m1_churn    Silent churn: gradient-boosting benchmark, plus Cox survival
     m2_value    RFM-LE clustering, PCA, BG/NBD + Gamma-Gamma CLV
     m3_uplift   Treatment effect -- who can actually be influenced
     m4_advance  Repayment PD heads (share M1's feature pipeline)

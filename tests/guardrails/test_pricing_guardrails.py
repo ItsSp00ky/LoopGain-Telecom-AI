@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from cvm.config import load_conf
 from cvm.decision.guardrails import (
     GuardrailBreach,
     audit_distribution,
@@ -87,25 +88,80 @@ def test_budget_breach_detected():
 
 
 # --- 4. Cannibalisation ---------------------------------------------------
+#
+# The exposure is the LADDER, not the product: نت 20 at 35 LYD is the base
+# monthly, and free mornings do not remove the need for all-day data. Only
+# subscribers above the base have a rung to fall to.
+
+ABOVE_BASE_LYD = 80.0   # نت 80
+BASE_LYD = 35.0         # نت 20
 
 
-def test_low_risk_high_value_subscriber_is_excluded():
-    """They would have paid full price."""
+def test_base_monthly_price_matches_the_catalogue():
+    """Drift guard. The exemption is only sound while 35 LYD really is نت 20.
+
+    If the operator repositions the base bundle, the whole guard needs
+    rethinking -- which is why this is a test and not a comment.
+    """
+    conf = load_conf("pricing")["guardrails"]["cannibalisation"]
+    monthly = load_conf("catalogue")["families"]["monthly"]["items"]
+    base = next(i for i in monthly if i["id"] == conf["base_monthly_offer_id"])
+
+    assert base["price_lyd"] == conf["base_monthly_price_lyd"] == BASE_LYD
+    # And it must genuinely be mid-ladder: something cheaper and something
+    # dearer must exist, or "base" is the wrong word for it.
+    prices = [i["price_lyd"] for i in monthly]
+    assert min(prices) < BASE_LYD < max(prices)
+
+
+def test_subscriber_on_the_base_monthly_is_structurally_immune():
+    """Low risk AND high value, and still eligible -- because they cannot fall.
+
+    This is the case the old risk/value-only guard got wrong: it excluded the
+    largest, safest population on a statistical proxy for an exposure they do
+    not have.
+    """
+    v = check_cannibalisation(
+        churn_probability=0.05, value_decile=10, current_monthly_bundle_lyd=BASE_LYD
+    )
+    assert v.passed
+    assert "structurally immune" in v.detail
+
+
+def test_subscriber_with_no_monthly_bundle_is_structurally_immune():
+    """PAYG and daily-pack buyers have no bundle to downgrade from."""
     v = check_cannibalisation(churn_probability=0.05, value_decile=10)
+    assert v.passed
+    assert "no monthly bundle" in v.detail
+
+
+def test_low_risk_high_value_above_the_base_is_excluded():
+    """They would have paid full price, and they have two rungs to fall."""
+    v = check_cannibalisation(
+        churn_probability=0.05, value_decile=10, current_monthly_bundle_lyd=ABOVE_BASE_LYD
+    )
     assert not v.passed
 
 
-def test_low_risk_low_value_is_not_excluded():
-    assert check_cannibalisation(churn_probability=0.05, value_decile=3).passed
+def test_low_risk_low_value_above_the_base_is_not_excluded():
+    assert check_cannibalisation(
+        churn_probability=0.05, value_decile=3, current_monthly_bundle_lyd=ABOVE_BASE_LYD
+    ).passed
 
 
-def test_high_risk_high_value_is_not_excluded():
+def test_high_risk_high_value_above_the_base_is_not_excluded():
     """The At-Risk Valuable segment is exactly who we want to reach."""
-    assert check_cannibalisation(churn_probability=0.70, value_decile=10).passed
+    assert check_cannibalisation(
+        churn_probability=0.70, value_decile=10, current_monthly_bundle_lyd=ABOVE_BASE_LYD
+    ).passed
 
 
-def test_non_additive_night_pack_is_excluded():
-    v = check_cannibalisation(0.70, 5, peak_usage_would_shift=True)
+def test_non_additive_pass_is_excluded_even_on_the_base():
+    """Usage shifting within the day is a different mechanism from stepping
+    down the ladder, so the structural exemption must not swallow it."""
+    v = check_cannibalisation(
+        0.70, 5, peak_usage_would_shift=True, current_monthly_bundle_lyd=BASE_LYD
+    )
     assert not v.passed
     assert "additive" in v.detail
 

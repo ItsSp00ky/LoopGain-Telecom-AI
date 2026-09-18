@@ -86,17 +86,44 @@ guardrails:
     default_campaign_budget_lyd: 144000
     objective: maximise_expected_retained_margin
 
-  # 4. Cannibalisation guard — low churn risk AND high value are excluded.
-  #    They would have paid full price. This is the single most important
-  #    commercial critique of off-peak offers and it is answered here.
+  # 4. Cannibalisation guard — re-based on the SHAPE OF THE LADDER.
+  #
+  #    The naive version of this guard assumed a 1 LYD morning pass could pull
+  #    someone off any monthly bundle. It cannot, and the reason is structural:
+  #    نت 20 at 35 LYD is the BASE monthly, the bundle a subscriber needs to
+  #    have data outside 06:00-11:00 at all. Free morning data does not remove
+  #    that need, so the base is not substitutable and a subscriber sitting on
+  #    it has nowhere to fall.
+  #
+  #    The exposed population is only those ABOVE the base -- نت 40 at 50, نت 80
+  #    at 80, the 5G monthlies, Elite and Family. For them the pass can justify
+  #    stepping DOWN a rung, and the loss is the gap between rungs, not the
+  #    whole bundle.
+  #
+  #    This makes the guard mechanistic rather than statistical: current bundle
+  #    is the actual exposure, where value_decile was only ever a proxy for it.
   cannibalisation:
     enabled: true
+
+    # The structural exemption. On or below the base monthly -- or on no
+    # monthly bundle at all -- there is no rung to fall to.
+    base_monthly_offer_id: MO_20
+    base_monthly_price_lyd: 35
+    exempt_at_or_below_base_monthly: true
+
+    # Retained as a secondary filter for subscribers ABOVE the base, where the
+    # exposure is real: low churn risk AND high value would have paid anyway.
     exclude_if_churn_prob_below: 0.15
     exclude_if_value_decile_above: 8
+
     # The off-peak pass is additive, not substitutable: it must not simply
-    # shift usage that was already being paid for. At 1 LYD for unlimited
-    # 06:00-11:00, the downgrade risk against a 35-80 LYD monthly is real.
+    # shift usage that was already being paid for.
     require_additive_offpeak_pack: true
+
+    # Break-even depends on how far a downgrader falls: one rung (50 -> 35 + 1
+    # pass) costs 14 LYD/month and breaks even at ~7.1% of the treated cohort;
+    # two rungs (80 -> 35 + 1) costs 44 LYD/month and breaks even at ~2.3%.
+    # The cap is set below the WORST case, not tuned to the best one.
     max_simulated_arpu_erosion: 0.02
 
   # 5. Fairness — no pricing on protected or proxy-protected attributes.

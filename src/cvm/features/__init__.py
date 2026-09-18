@@ -1,9 +1,8 @@
 """Layer 3 -- transform and feature store.  Owner: E1
 
-Produces three artefacts:
+Produces two artefacts:
 
     features_offline.parquet   point-in-time correct, for training
-    sequences_offline.npz      90 x k daily tensors, for the M1 LSTM
     features_online.duckdb     serving + RAG retrieval, keyed by hash
 
 All features are computed over an observation window ending strictly before the

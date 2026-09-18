@@ -95,8 +95,8 @@ should end in `+cpu`.
 
 > **If a package fails to build on Windows**, install the narrower slice for
 > the work you are doing: `pip install -e ".[ml,ui,rtl,dev]"` covers the API,
-> the pricing engine and the dashboards. Add `dl` and `gan` when you reach
-> the LSTM arm and the synthesis engine.
+> the pricing engine and the dashboards. Add `gan` when you reach the
+> synthesis engine.
 
 ---
 
@@ -364,8 +364,8 @@ a discriminator can spot at 0.80 AUC, retrain it, do not lower the threshold.
 python -m cvm.features.run
 pytest tests/leakage -v --no-cov
 ```
-Checkpoint: `features_offline.parquet`, `sequences_offline.npz` and
-`features_online.duckdb` all exist, and the previously-`xfail`ed point-in-time
+Checkpoint: `features_offline.parquet` and `features_online.duckdb` both
+exist, and the previously-`xfail`ed point-in-time
 tests now pass for real. **Do not move on until they do** — every metric
 downstream is invalid if this layer leaks.
 

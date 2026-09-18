@@ -3,8 +3,9 @@
 Models are loaded once at API startup, never inside a request handler -- a cold
 load mid-request is the fastest way to blow the 200 ms p95 budget.
 
-The LSTM (M1 Arm B) trains on a free Colab T4 and arrives here as a saved
-artefact. This module does not train anything.
+Every model in this component trains on CPU, so artefacts are produced by the
+pipeline rather than shipped in from elsewhere. This module does not train
+anything -- it loads.
 """
 
 from __future__ import annotations

@@ -23,7 +23,7 @@ last week is integration rather than archaeology.
 ```
 <type>/<module>-<short-description>
 
-feat/m1-lstm-arm-b
+feat/m1-calibration
 feat/m3-offpeak-trough-detection
 fix/m4-cooling-off-boundary
 docs/model-card-m1
@@ -121,7 +121,7 @@ true in the code as well as the slides:
 - Report the **naive** number and the **honest** number side by side, with the gap explained.
 - State plainly, in every artefact, that generated-data metrics are not evidence of
   production performance.
-- If the LSTM loses to LightGBM, that is the result. Write it up. The benchmark is the
+- If a classical baseline beats LightGBM, that is the result. Write it up. The benchmark is the
   deliverable, not the winner.
 - If a module is descoped, say so in the report. Do not quietly drop it.
 

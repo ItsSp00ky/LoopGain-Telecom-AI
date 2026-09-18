@@ -33,7 +33,6 @@ paths:
 
 feature_store:
   offline_features:  ./data/processed/features_offline.parquet
-  offline_sequences: ./data/processed/sequences_offline.npz
   online:            ./data/processed/features_online.duckdb
   partition_by:      snapshot_date
 

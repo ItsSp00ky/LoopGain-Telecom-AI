@@ -43,14 +43,21 @@ recharge:
   status: confirmed
   source: "operator denominations supplied 2026-09-18"
 
-  denominations_lyd: [3, 5, 10, 20, 40, 100]
+  denominations_lyd: [5, 10, 20, 40, 100]
 
+  # FIVE DINARS IS THE FLOOR. There is no smaller card, so 5 LYD is the
+  # minimum price of getting back onto the network. That single fact does real
+  # work downstream: it is exactly the size of the نت في وقته data advance,
+  # which is why conf/advance.yaml treats the smallest card as the
+  # affordability unit rather than as a rounding detail.
+  #
   # Weighting is an ASSUMPTION -- the ladder is confirmed, the popularity split
-  # is not. Weighted low because prepaid top-ups cluster at the bottom, and
-  # because the cheapest bundles (0.5-3 LYD) are buyable off a 3 or 5 LYD card.
+  # is not. The bottom rung carries a large share because prepaid top-ups
+  # cluster there and because the cheapest bundles (0.5-3 LYD) are bought off
+  # the change from a 5 LYD card.
   denomination_weights:
     status: assumption
-    values: [0.26, 0.28, 0.21, 0.13, 0.08, 0.04]
+    values: [0.54, 0.21, 0.13, 0.08, 0.04]
 
   bonus_on_recharge:
     status: assumption
@@ -155,17 +162,18 @@ base:
   source: "team estimate, 2026-09-18; not operator-published"
   addressable_prepaid_subscribers: 1_000_000
 
-  # 30 LYD is set against the real price sheet rather than inherited. The
-  # cheapest MONTHLY data bundle is 20 LYD and the monthly ladder runs
-  # 20-80 LYD, so a figure much below 30 would imply almost nobody buys a
-  # monthly bundle at all.
+  # 40 LYD is set against the real price sheet rather than inherited. The
+  # BASE monthly bundle -- the one a subscriber needs for all-day data -- is
+  # نت 20 at 35 LYD, and the ladder runs 20-400 LYD above it. An ARPU below
+  # the base bundle would imply most of the base does not hold one, which the
+  # catalogue's shape contradicts. 40 LYD puts the average subscriber just
+  # above the base monthly, which is what the product structure implies.
   #
-  # This rescales the business case. At 3.5% monthly churn on 1M subscribers,
-  # revenue at risk moves from ~420k to ~1.05M LYD/month, and the CLV ceiling
-  # (15% of 12-month CLV) moves from ~21 to ~54 LYD per subscriber -- a
-  # materially more generous discount budget, which is realistic given what
-  # bundles actually cost.
-  monthly_arpu_lyd: 30.0
+  # Two numbers follow from this and are used throughout:
+  #   12-month value per subscriber ..... 480 LYD
+  #   CLV ceiling (15% of that) .......... 72 LYD
+  # Revenue at risk is 35,000 x 40 = 1.4M LYD/month.
+  monthly_arpu_lyd: 40.0
 
   monthly_silent_churn_rate: 0.035
   prepaid_share_of_base: 0.95
@@ -208,11 +216,11 @@ calendar:
   # usage multiplier, because that would be the guessed part. The weekly
   # rhythm comes from the flag alone.
   #
-  # Why it matters enough to keep: M1 Arm B is an LSTM over 90 days of daily
-  # sequences. Generated data with no weekly structure is unrealistically
-  # smooth, which would hand LightGBM the benchmark on a data-generation
-  # choice rather than on merit. It also lets M3 tell a commuter from someone
-  # who sleeps in, which is exactly who the 06:00-11:00 morning pass suits.
+  # Why it matters enough to keep: it lets the system tell a commuter from
+  # someone who sleeps in, which is exactly the distinction the 06:00-11:00
+  # morning pass turns on. `weekend_usage_share_30d` in conf/features.yaml is
+  # the feature that carries it, and it is one of the few cheap signals of
+  # whether a subscriber's mornings are actually free.
   weekend_days:
     status: confirmed
     source: "Libya's official weekend"

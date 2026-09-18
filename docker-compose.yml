@@ -10,7 +10,6 @@
 # See docs/INTEGRATION.md.
 #
 # Deliverable D1: this must reproduce the system from a clean clone.
-# The LSTM benchmark arm (M1 Arm B) trains on a free Colab T4 and ships here
 # as a saved artefact under ./artifacts/models.
 # ---------------------------------------------------------------------------
 

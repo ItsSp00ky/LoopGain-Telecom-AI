@@ -3,9 +3,12 @@
     revenue_decay_ratio = mean_7d / mean_30d
 
 Values well below 1.0 mean the subscriber is winding down. Equivalents are
-computed for data, voice and SMS. These are the hand-engineered features that
-Arm A gets and Arm B (the LSTM) deliberately does not -- the benchmark asks
-whether the network can learn them from raw daily sequences instead.
+computed for data, voice and SMS.
+
+These ratios are the reason M1 does not need a sequence model: they compress
+the part of a 90-day daily series that actually predicts churn into four
+numbers a tree can split on, and unlike a learned representation they can be
+read off a SHAP waterfall and explained to a marketing analyst.
 """
 
 from __future__ import annotations

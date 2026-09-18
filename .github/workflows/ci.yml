@@ -129,9 +129,17 @@ jobs:
           fi
       - name: Fail on Libyan MSISDN patterns in tracked files
         run: |
-          set -e
+          set -eo pipefail
           # Libyana 091/092, Almadar 094/095, with or without +218.
-          if git grep -nIE '(\+?218[ -]?)?(09[1245])[ -]?[0-9]{7}' -- ':!docs/**' ':!*.md'; then
+          #
+          # A line tagged `msisdn-fixture` is exempt. Negative tests need a
+          # number that LOOKS real -- it is the string we assert gets REJECTED
+          # -- and without the marker this scan flags its own fixtures. The
+          # exemption is per LINE, not per directory, so every one of them is
+          # visible in review. tests/unit/test_privacy.py runs the same check.
+          hits=$(git grep -nIE '(\+?218[ -]?)?(09[1245])[ -]?[0-9]{7}'                    -- ':!docs/**' ':!*.md' | grep -v 'msisdn-fixture' || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
             echo "::error::Possible raw MSISDN in tracked source. Hash at ingestion (SHA-256 + salt)."
             exit 1
           fi

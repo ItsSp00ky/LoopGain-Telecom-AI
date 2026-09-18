@@ -147,18 +147,60 @@ def check_cannibalisation(
     churn_probability: float,
     value_decile: int,
     peak_usage_would_shift: bool = False,
+    current_monthly_bundle_lyd: float | None = None,
 ) -> Verdict:
     """Exclude subscribers who would have paid full price.
 
-    A 1 LYD unlimited morning pass pulls heavy users down off a 35-80 LYD
-    monthly bundle, losing ARPU on subscribers who were never going to leave.
-    Low churn risk *and* high value is the exclusion: either alone is not
-    enough.
+    THE EXPOSURE IS THE LADDER, NOT THE PRODUCT. نت 20 at 35 LYD is the BASE
+    monthly bundle -- what a subscriber needs to have data outside 06:00-11:00
+    at all. A free morning does not remove that need, so the base is not
+    substitutable and someone sitting on it has nowhere to fall. The risk is
+    confined to subscribers ABOVE the base, who can use the pass to justify
+    stepping down a rung.
+
+    ``current_monthly_bundle_lyd`` is therefore the primary input:
+
+        None or <= base   structurally immune -- pass
+        > base            exposed -- apply the risk/value filter below
+
+    Passing None (no monthly bundle held) is the common case for a pure PAYG
+    or daily-pack subscriber, and it is a pass for the same reason: there is no
+    bundle to downgrade from.
 
     ``peak_usage_would_shift`` comes from the simulated margin check in
-    decision/offpeak.py -- the pass must be additive, not substitutable.
+    decision/offpeak.py -- the pass must be additive, not substitutable. It
+    applies regardless of bundle, because shifting paid usage within the day
+    is a different mechanism from stepping down the ladder.
     """
     conf = load_conf("pricing")["guardrails"]["cannibalisation"]
+
+    if peak_usage_would_shift and conf.get("require_additive_offpeak_pack", True):
+        return Verdict(
+            "cannibalisation",
+            passed=False,
+            binding=True,
+            detail="excluded: peak usage would shift rather than grow (not additive)",
+        )
+
+    base_lyd = float(conf["base_monthly_price_lyd"])
+    if conf.get("exempt_at_or_below_base_monthly", True) and (
+        current_monthly_bundle_lyd is None or current_monthly_bundle_lyd <= base_lyd
+    ):
+        held = (
+            "no monthly bundle"
+            if current_monthly_bundle_lyd is None
+            else f"{current_monthly_bundle_lyd:.0f} LYD monthly"
+        )
+        return Verdict(
+            "cannibalisation",
+            passed=True,
+            binding=False,
+            detail=(
+                f"structurally immune: {held} is at or below the "
+                f"{base_lyd:.0f} LYD base -- no rung to fall to"
+            ),
+        )
+
     low_risk = churn_probability < conf["exclude_if_churn_prob_below"]
     high_value = value_decile > conf["exclude_if_value_decile_above"]
 
@@ -171,17 +213,15 @@ def check_cannibalisation(
                 f"excluded: churn {churn_probability:.3f} below "
                 f"{conf['exclude_if_churn_prob_below']} and value decile "
                 f"{value_decile} above {conf['exclude_if_value_decile_above']} "
-                "-- would have paid full price"
+                f"-- above the {base_lyd:.0f} LYD base and would have paid full price"
             ),
         )
-    if peak_usage_would_shift and conf.get("require_additive_offpeak_pack", True):
-        return Verdict(
-            "cannibalisation",
-            passed=False,
-            binding=True,
-            detail="excluded: peak usage would shift rather than grow (not additive)",
-        )
-    return Verdict("cannibalisation", passed=True, binding=False, detail="eligible")
+    return Verdict(
+        "cannibalisation",
+        passed=True,
+        binding=False,
+        detail=f"eligible: above the {base_lyd:.0f} LYD base but exposure is acceptable",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -296,6 +336,7 @@ def evaluate_offer(
     cumulative_spend_lyd_12m: float = 0.0,
     pricing_features: list[str] | None = None,
     peak_usage_would_shift: bool = False,
+    current_monthly_bundle_lyd: float | None = None,
     raise_on_breach: bool = True,
 ) -> list[Verdict]:
     """Run all six guardrails over a candidate offer.
@@ -311,7 +352,12 @@ def evaluate_offer(
         check_margin_floor(price_lyd, variable_cost_lyd),
         check_tier_ceiling(discount_pct, tier),
         check_clv_ceiling(discount_cost, cumulative_spend_lyd_12m, predicted_clv_lyd),
-        check_cannibalisation(churn_probability, value_decile, peak_usage_would_shift),
+        check_cannibalisation(
+            churn_probability,
+            value_decile,
+            peak_usage_would_shift,
+            current_monthly_bundle_lyd,
+        ),
         check_fairness(pricing_features or []),
     ]
     if raise_on_breach:

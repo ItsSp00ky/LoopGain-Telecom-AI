@@ -1,24 +1,27 @@
 # ---------------------------------------------------------------------------
 # M1 — Silent Churn Engine                                  (Owner: E2)
 #
-# Structured as an experiment rather than a single model, because the
-# experiment is more informative than either arm alone. Either outcome is a
-# result: the BENCHMARK is the deliverable, not the winner.
+# Structured as a benchmark rather than a single model: eight algorithms on
+# one temporal split, reported with calibration curves rather than a single
+# headline number. The BENCHMARK is the deliverable, not the winner.
+#
+# ONE ARM, DELIBERATELY. This is a gradient-boosting module on engineered
+# features. A sequence arm was considered and dropped -- see the scope note in
+# the proposal. Everything below is tabular, CPU-trainable, and SHAP-explainable.
 # ---------------------------------------------------------------------------
 
 benchmark:
-  arms: [arm_a_lightgbm, arm_b_lstm]
-  # Shared framing, identical for both arms so the comparison is fair.
+  # Shared framing, identical for every model so the comparison is fair.
   observation_days: 90
   gap_days: 15
   outcome_days: 30
   split: temporal
 
-# --- Arm A: LightGBM on ~80 engineered features ----------------------------
-arm_a_lightgbm:
+# --- LightGBM on ~80 engineered features -----------------------------------
+gradient_boosting:
   primary: lightgbm
   challengers: [xgboost, catboost]
-  # Interpretable baselines. Reported beside the boosted arms, not discarded.
+  # Interpretable baselines. Reported beside the boosted models, not discarded.
   interpretable_baselines: [decision_tree, logistic_regression]
   # Also reported in the benchmark table.
   additional_baselines: [naive_bayes, knn, svm]
@@ -37,37 +40,9 @@ arm_a_lightgbm:
     direction: maximize
     metric: average_precision
 
-# --- Arm B: LSTM on raw daily sequences ------------------------------------
-arm_b_lstm:
-  framework: tensorflow_keras
-  input_shape: [90, 4]      # (timesteps, channels) — see features.yaml
-  architecture:
-    - { layer: Masking,  mask_value: 0.0 }
-    - { layer: LSTM,     units: 64, return_sequences: true }
-    - { layer: Dropout,  rate: 0.3 }
-    - { layer: LSTM,     units: 32 }
-    - { layer: Dense,    units: 16, activation: relu }
-    - { layer: Dense,    units: 1,  activation: sigmoid }
-  compile:
-    optimizer: adam
-    learning_rate: 0.001
-    loss: binary_crossentropy
-  training:
-    epochs: 100
-    batch_size: 256
-    # Overfitting control.
-    callbacks:
-      early_stopping:   { monitor: val_auc, patience: 10, restore_best_weights: true }
-      reduce_lr:        { monitor: val_loss, factor: 0.5, patience: 5 }
-      model_checkpoint: { save_best_only: true }
-      tensorboard:      { log_dir: ./artifacts/reports/tensorboard }
-  # Gating is what lets gradient survive 90 timesteps; a plain RNN would not.
-  runs_on: colab_t4
-  checkpoint_to_drive_every_epoch: true   # Colab sessions get cut
-
 # --- Calibration -----------------------------------------------------------
-# Both arms. Pricing consumes probabilities as monetary expectations, so a
-# 0.31 must actually mean 31%.
+# Every model in the benchmark table. The decision engine consumes these
+# probabilities as monetary expectations, so a 0.31 must actually mean 31%.
 calibration:
   method: isotonic
   cv: 5
@@ -84,16 +59,13 @@ metrics:
   report_naive_alongside_honest: true
 
 # --- Explainability --------------------------------------------------------
+# Tree models throughout, so exact SHAP is available for every score -- which
+# is part of why the scope is tabular. There is no model in this module whose
+# reasoning we cannot surface per subscriber.
 explainability:
-  arm_a:
-    method: shap_tree_explainer
-    surface_in_ui: per_subscriber_waterfall
-    plain_language: true
-  arm_b:
-    # Compared on calibration and lift, not interpretability. The gap is
-    # discussed in the report rather than papered over.
-    method: none
-    discuss_gap_in_report: true
+  method: shap_tree_explainer
+  surface_in_ui: per_subscriber_waterfall
+  plain_language: true
 
 # --- M1b: time-to-churn ----------------------------------------------------
 # Classification answers *if*; survival answers *when*. Retention economics

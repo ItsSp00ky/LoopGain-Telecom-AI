@@ -50,14 +50,6 @@ ml = [
     "statsmodels>=0.14",
 ]
 
-# --- Deep learning: the LSTM benchmark arm (M1 Arm B) ----------------------
-# Windows TensorFlow is CPU-only from 2.11 onward. That is fine: both models
-# train on Colab T4 and ship as saved artefacts. See docs/setup.md.
-dl = [
-    "tensorflow>=2.16,<2.18",
-    "tensorboard>=2.16",
-]
-
 # --- Synthesis: CTGAN / TVAE / Copula --------------------------------------
 # Pulls torch. Install the CPU wheel first or it drags ~2.5 GB of CUDA:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
@@ -111,7 +103,7 @@ dev = [
 
 # Everything this branch needs locally. CI installs narrower slices.
 all = [
-    "ai-cvm-suite[ml,dl,gan,rtl,ui,mlops,dev]",
+    "ai-cvm-suite[ml,gan,rtl,ui,mlops,dev]",
 ]
 
 [project.scripts]
@@ -157,7 +149,6 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers --cov=cvm --cov-report=term-missing"
 markers = [
     "slow: takes more than ~5s (excluded from the fast CI gate)",
-    "gpu: requires a GPU; skipped locally and in CI, run on Colab",
     "integration: needs the API or feature store running",
     "guardrail: asserts a commercial or credit-safety invariant. Never skip these.",
     "leakage: asserts point-in-time correctness. Never skip these either.",

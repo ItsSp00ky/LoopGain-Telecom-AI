@@ -187,13 +187,7 @@ def seed_everything(seed: int | None = None) -> int:
     np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
 
-    try:  # optional: only present in the dl extra
-        import tensorflow as tf
-
-        tf.random.set_seed(seed)
-    except ImportError:
-        pass
-    try:  # optional: pulled in by sdv / sentence-transformers
+    try:  # optional: pulled in by sdv
         import torch
 
         torch.manual_seed(seed)

@@ -67,7 +67,7 @@ docker compose up
 | Channel Simulator | http://localhost:8502 |
 | MLflow | http://localhost:5000 |
 
-Environment details, including the Colab path for the LSTM benchmark arm:
+Environment details, including the conda path and the Docker demo host:
 **[docs/setup.md](docs/setup.md)**.
 
 ---
@@ -107,7 +107,7 @@ predict churn ──► understand value ──► estimate treatment effect ─
 
 | | Module | Question | Code |
 |---|---|---|---|
-| **M1** | Silent Churn Engine — LightGBM vs LSTM benchmark | Who is leaving, and *when*? | [`models/m1_churn/`](src/cvm/models/m1_churn) |
+| **M1** | Silent Churn Engine — gradient-boosting benchmark + Cox | Who is leaving, and *when*? | [`models/m1_churn/`](src/cvm/models/m1_churn) |
 | **M2** | Value & Loyalty Tiering — RFM-LE, clustering, PCA, CLV | What are they worth? | [`models/m2_value/`](src/cvm/models/m2_value) |
 | **M3** | **Uplift Engine** — two-model, validated on Criteo | Who can actually be **influenced**? | [`models/m3_uplift/`](src/cvm/models/m3_uplift) |
 | — | **Decision Engine** | Is intervening **worthwhile**? Which action? | [`decision/`](src/cvm/decision) |
@@ -140,12 +140,12 @@ Full specification: **[docs/proposal/](docs/proposal/)**.
 ├── data/                    Gitignored. `python scripts/download_data.py` refills it.
 │   ├── raw/                 Untouched source downloads
 │   ├── interim/             Deduplicated, schema-validated, hashed
-│   ├── processed/           features_offline.parquet, sequences_offline.npz, features_online.duckdb
+│   ├── processed/           features_offline.parquet, features_online.duckdb
 │   └── synthetic/           CTGAN output — the generated Libyan population
 ├── docs/
 │   ├── TESTING.md           Step-by-step: empty clone -> working demo
 │   ├── INTEGRATION.md       The contract for Components 2, 4 and 5
-│   ├── setup.md             Local + Colab environment setup
+│   ├── setup.md             Local and Docker environment setup
 │   ├── architecture.md      Layer-by-layer data flow
 │   ├── data_dictionary.md   D11 — every field: type, source, generation logic
 │   ├── model_cards/         D10 — one per model
@@ -177,7 +177,8 @@ enforced somewhere in `tests/`.
 | **Calibrated, not ranked** | Pricing consumes probabilities as monetary expectations, so a 0.31 must mean 31%. Isotonic calibration; scored on Brier and PR-AUC, **never accuracy**. |
 | **Uplift, not propensity** | Budget goes only to *persuadables*. Never to sure things, never to lost causes. |
 | **Value-add before discount** | Loyalty is rewarded with the 06:00–11:00 morning pass — near-zero marginal cost on an idle sector — in preference to headline cuts that permanently erode ARPU. |
-| **Credit that protects, not traps** | The advance limit is capped by repayment probability, CLV, and what one typical top-up can actually clear. A 5 LYD debt against a 3 LYD card is a trap, not a service. |
+| **Treat only above break-even** | At a 5 LYD blended incentive against 480 LYD of 12-month value, `uplift × CLV − cost` turns positive only above **1.04 pp** of uplift. Below it the engine recommends no action, whatever the churn score says. |
+| **Credit that protects, not traps** | The advance limit is capped by repayment probability, CLV, and what one typical top-up can actually clear. A 5 LYD debt against a 5 LYD smallest card leaves nothing behind when it clears — that is a treadmill, not a service. |
 | **Localised by construction** | Target definition, features, geography, offer copy and UI language encode Libyan prepaid reality. |
 
 ---

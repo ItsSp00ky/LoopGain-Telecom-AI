@@ -8,7 +8,7 @@ pipeline` produces the rest.
 ```
 raw/         Source data. Downloads plus telecom/ (Cell2Cell, supplied locally)
 interim/     Deduplicated, schema-validated, identifiers hashed
-processed/   features_offline.parquet, sequences_offline.npz, features_online.duckdb
+processed/   features_offline.parquet, features_online.duckdb
 synthetic/   CTGAN output -- the generated Libyan subscriber population
 ```
 
@@ -200,12 +200,12 @@ the sleeping-dogs guard is a stated commitment.
 
 **The closest public analogue to prepaid silent churn.** Churn is defined as
 *no renewal within 30 days of expiry* — an absence, not a cancellation, which
-is exactly our target definition. And `user_logs` is genuinely daily
-per-user activity, which is what the M1 Arm B LSTM needs. Cell2Cell gives
-scale; KKBox gives real **sequences** and a real **no-renewal** label.
+is exactly our target definition.
 
-It is also large (the raw logs are several GB), so subsample before use — you
-have limited disk.
+Kept disabled, and the reason is worth stating: its distinctive asset is the
+daily `user_logs`, and with no sequence model in scope there is nothing here
+to spend several GB on that Cell2Cell does not already give us. If a future
+version reopens sequence modelling, this is the dataset to reach for first.
 
 ### I — Telecom Italia / Milan CDR · **no longer needed**
 
@@ -259,8 +259,7 @@ implementation is correct before you point it at recharges.
 2. **UCI Iranian** — the primary set; do the dedup and leakage audit here.
 3. **Hillstrom** → **Criteo** — get uplift validated early, since it gates M3.
 4. **Cell2Cell** — scale, and the trend features.
-5. **KKBox** — only if the LSTM arm needs more sequence signal than Cell2Cell gives.
-6. **Online Retail II** — when you start M2's CLV.
+5. **Online Retail II** — when you start M2's CLV.
 
 ### Disk budget
 

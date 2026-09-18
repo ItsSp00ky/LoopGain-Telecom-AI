@@ -1,19 +1,22 @@
 """M1 -- Silent Churn Engine.
 
-Deliberately structured as an EXPERIMENT rather than a single model, because
-the experiment is more informative than either arm alone.
+Step one of the pipeline: who is leaving, and when?
 
-    Arm A  LightGBM on ~80 engineered features
-    Arm B  LSTM on raw 90-day daily sequences
+Structured as a BENCHMARK rather than a single model -- LightGBM primary,
+XGBoost and CatBoost as challengers, and Decision Tree, Logistic Regression,
+Naive Bayes, KNN and SVM reported beside them rather than discarded. One
+temporal split, one set of metrics, calibration curves for all of them.
 
-Either outcome is a result. If the LSTM wins, sequential structure carries
-information our features discard, and we say so. If LightGBM wins -- the
-likelier outcome on short sparse prepaid histories -- we explain why: 90
-timesteps of mostly-zero daily activity is a weak sequence signal, gradient
-boosting is extremely strong on tabular data, and the engineered decay ratios
-already encode most of the temporal information.
+    gradient_boosting.py   LightGBM + challengers
+    benchmark.py           the comparison table (deliverable D3)
+    calibration.py         isotonic; a 0.31 must mean 31%
+    explain.py             exact SHAP, per subscriber
+    survival.py            M1b -- Cox, answering *when* rather than *if*
 
-Demonstrating an informed architecture choice is a stronger technical signal
-than defaulting to a neural network because it sounds advanced. The BENCHMARK
-is the deliverable, not the winner.
+TABULAR ON PURPOSE. A sequence arm over raw 90-day daily tensors was
+considered and dropped: 90 timesteps of mostly-zero prepaid activity is a weak
+sequence signal, the engineered decay ratios in features/velocity.py already
+encode most of the temporal information, and it would have been the only part
+of this component needing a GPU. Every model here is CPU-trainable and exactly
+SHAP-explainable, which is what the decision engine downstream requires.
 """

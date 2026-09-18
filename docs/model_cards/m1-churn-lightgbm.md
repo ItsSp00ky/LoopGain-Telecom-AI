@@ -1,4 +1,4 @@
-# Model Card -- M1 Arm A - Silent Churn (LightGBM)
+# Model Card -- M1 Silent Churn (LightGBM)
 
 > **Not written yet.** Copy [TEMPLATE.md](TEMPLATE.md) into this file and fill
 > it in. A model card is item 5 of the Definition of Done -- the module is not
@@ -8,7 +8,7 @@
 |---|---|
 | **Module** | M1 |
 | **Owner** | E2 |
-| **Code** | `src/cvm/models/m1_churn/arm_a_lightgbm.py` |
+| **Code** | `src/cvm/models/m1_churn/gradient_boosting.py` |
 | **Config** | `conf/models/m1_churn.yaml` |
 | **Version** | -- |
 | **MLflow run** | -- |

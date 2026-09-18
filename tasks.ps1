@@ -27,7 +27,7 @@ function Section($m) { Write-Host "`n>>> $m" -ForegroundColor Cyan }
 function Warn($m)    { Write-Host "!!! $m" -ForegroundColor Yellow }
 
 function Assert-Env {
-    # The stack pins 3.11. Anaconda base is usually newer, and TensorFlow,
+    # The stack pins 3.11. Anaconda base is usually newer, and
     # scikit-survival and SDV will not resolve on 3.12+.
     $v = (python -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null)
     if ($v -ne '3.11') {

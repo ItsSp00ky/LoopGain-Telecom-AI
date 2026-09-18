@@ -26,9 +26,10 @@ sources:
       - "Customer Value"
 
   # --- B: scale, and real distributions for our two signature features.
-  # An LSTM on 3,000 rows proves nothing; this is the volume source. It is the
-  # original two-file Duke distribution rather than a preprocessed single-table
-  # cut, which is why it carries columns the condensed versions drop.
+  # 3,000 rows cannot ground a distribution; this is the volume source. It is
+  # the original two-file Duke distribution rather than a preprocessed
+  # single-table cut, which is why it carries columns the condensed versions
+  # drop.
   cell2cell:
     id: B
     enabled: true
@@ -150,8 +151,9 @@ sources:
     role: uplift_warmup
 
   # H: churn as an ABSENCE (no renewal within 30 days of expiry) plus genuine
-  # DAILY user logs. The closest public analogue to prepaid silent churn, and
-  # the strongest real sequence signal available for M1 Arm B.
+  # DAILY user logs -- the closest public analogue to prepaid silent churn.
+  # Kept disabled: with the sequence arm out of scope, the daily logs are no
+  # longer worth the ingestion cost.
   kkbox:
     id: H
     enabled: false
@@ -211,7 +213,7 @@ synthesis:
     enabled: true
     # Almadar's confirmed ladder. Mirrors conf/market.yaml#recharge --
     # do not let these drift apart.
-    recharge_denominations_lyd: [3, 5, 10, 20, 40, 100]
+    recharge_denominations_lyd: [5, 10, 20, 40, 100]
     weight_toward_low_denominations: true
 
   # Constructs the real data cannot supply.

@@ -15,7 +15,7 @@ not finished, however good its metrics are.
 | **MLflow run** | |
 | **Code** | `src/cvm/models/…` |
 | **Config** | `conf/models/….yaml` |
-| **Trained on** | local CPU / Colab T4 |
+| **Trained on** | local CPU |
 | **Last updated** | |
 
 ## Intended use

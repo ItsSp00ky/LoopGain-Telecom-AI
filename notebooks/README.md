@@ -9,7 +9,7 @@ accumulate logic become a second, untested codebase that the API cannot reach.
 ```
 00_eda/               Dataset exploration, dedup audit, leakage audit          E1
 01_synthesis/         CTGAN vs TVAE vs Copula, SDMetrics gate tuning           E1
-02_churn/             M1 Arm A tuning, Arm B architecture search, calibration  E2
+02_churn/             M1 tuning, benchmark table, calibration curves           E2
 03_value/             M2 clustering, k selection, PCA, CLV benchmarking        E3
 04_pricing_advance/   M3 elasticity, M4 PD, guardrail sensitivity              E4
 07_integration/       API contract checks, cohort query shaping                Ali
@@ -24,5 +24,5 @@ accumulate logic become a second, untested codebase that the API cannot reach.
 - **Name them `NN_short_description.ipynb`** so the execution order is obvious.
 - **Seed everything** with `cvm.config.seed_everything()`. A notebook result
   nobody can reproduce is an anecdote.
-- **Colab notebooks** for the three GPU modules live here too, with a first
-  cell that clones the repo and mounts Drive. See `docs/setup.md`.
+- **Everything here runs on CPU.** No notebook in this component needs a GPU
+  runtime; if one starts to, that is a scope question, not a hardware one.

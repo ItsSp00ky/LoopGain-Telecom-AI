@@ -35,7 +35,7 @@ The `Status` column tracks implementation: `planned` → `generated` →
 
 | Field | Type | Source | Logic | Status |
 |---|---|---|---|---|
-| `recharge_amount_lyd` | float | mapped | Multinomial over the **confirmed** Almadar ladder {3, 5, 10, 20, 40, 100} LYD, weighted low, conditioned on value percentile. | planned |
+| `recharge_amount_lyd` | float | mapped | Multinomial over the **confirmed** Almadar ladder {5, 10, 20, 40, 100} LYD, weighted low, conditioned on value percentile. | planned |
 | `modal_recharge_amount_lyd` | float | derived | The subscriber's most common top-up. **Basis of the M4 affordability ceiling** — the mean is dragged up by one salary-week top-up they will not repeat. | planned |
 | `recharge_channel` | enum | gen | {scratch_card, agent_erecharge, almadar_app, bank_card, p2p_transfer}, weighted to scratch/agent given low banking penetration. | planned |
 | `recharge_count_30d` | int | gen | Poisson, λ from mapped spend percentile. | planned |
@@ -175,7 +175,6 @@ Computed in [`src/cvm/features/`](../src/cvm/features). Full definitions in
 | Leakage | `incoming_outgoing_ratio` trend, off-net share trend, distinct-called-numbers contraction. | `wallet_leakage.py` |
 | Credit | Advance frequency per product, settlement lag, unpaid days, alternation between the two emergency services, modal recharge. | `distress.py` |
 | Network quality | Outage-hours-weighted dropped-call rate over home cell and top-3 visited cells. Consumed as plain M1 features — no network model here. | `velocity.py` |
-| Sequence tensors | Per-subscriber 90 × k daily matrices. **Direct input to the M1 LSTM — no aggregation applied.** | `sequences.py` |
 
 ## RFM-LE
 

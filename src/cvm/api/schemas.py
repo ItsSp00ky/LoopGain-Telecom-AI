@@ -55,13 +55,6 @@ class RetentionStage(str, Enum):
     DORMANT = "dormant"
 
 
-class ChurnArm(str, Enum):
-    """Which arm of the M1 benchmark produced a score."""
-
-    LIGHTGBM = "arm_a_lightgbm"
-    LSTM = "arm_b_lstm"
-
-
 # ---------------------------------------------------------------------------
 # /v1/score/churn
 # ---------------------------------------------------------------------------
@@ -71,10 +64,6 @@ class ChurnScoreRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     subscriber_ids: list[SubscriberId] = Field(min_length=1, max_length=10_000)
-    arm: ChurnArm | Literal["both"] = Field(
-        default=ChurnArm.LIGHTGBM,
-        description="Which benchmark arm to score with. 'both' returns each separately.",
-    )
     include_survival: bool = Field(
         default=False, description="Also return the M1b time-to-churn window."
     )
@@ -98,7 +87,6 @@ class ShapContribution(BaseModel):
 
 class ChurnScore(BaseModel):
     subscriber_id: SubscriberId
-    arm: ChurnArm
     # Calibrated with isotonic regression: a 0.31 means 31%. The pricing
     # engine consumes this as a monetary expectation, so it must be honest.
     churn_probability: Probability
@@ -237,14 +225,15 @@ class AdvanceLimitResponse(BaseModel):
     # Learned, not allocated by "consumption".
     repayment_probability: Probability
     # The outcome the system exists to prevent: unpaid debt at day 14 blocks
-    # re-subscription, locking the subscriber out of the service they reached
-    # for. Flagged separately from approval so it is impossible to miss.
+    # re-subscription; and clearing a 5 LYD debt off the 5 LYD smallest card
+    # leaves a zero balance, so the top-up buys nothing and is likely deferred.
+    # Flagged separately from approval so it is impossible to miss.
     #
     # NOT Libyana's line-reset outcome, which is undocumented for Almadar.
     lockout_risk: Probability
     lockout_flagged: bool
-    # True when the requested debt exceeds one typical top-up. The 3 LYD card
-    # versus 5 LYD data advance trap, surfaced per subscriber.
+    # True when the requested debt would consume a whole typical top-up. The
+    # 5 LYD data advance against the 5 LYD smallest card, per subscriber.
     exceeds_modal_recharge: bool
     modal_recharge_lyd: float
     binding_constraint: str = Field(
@@ -294,9 +283,6 @@ class SubscriberProfile(BaseModel):
     tier: Tier
     clv_12m_lyd: float
     churn: ChurnScore
-    lstm_churn_probability: Probability | None = Field(
-        default=None, description="Arm B, shown beside Arm A on the 360 screen."
-    )
     retention_stage: RetentionStage
     # Dual-SIM share-of-wallet leakage. Rising incoming against flat outgoing
     # means this has quietly become their receiving SIM.

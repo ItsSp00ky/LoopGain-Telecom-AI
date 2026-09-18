@@ -8,8 +8,7 @@ finished, however good its metrics are.
 
 | Card | Module | Owner | Status |
 |---|---|---|---|
-| [m1-churn-lightgbm.md](m1-churn-lightgbm.md) | M1 Arm A | E2 | not started |
-| [m1-churn-lstm.md](m1-churn-lstm.md) | M1 Arm B | E2 | not started |
+| [m1-churn-lightgbm.md](m1-churn-lightgbm.md) | M1 | E2 | not started |
 | [m1b-survival.md](m1b-survival.md) | M1b time-to-churn | E2 | not started |
 | [m2-clv.md](m2-clv.md) | M2 CLV | E3 | not started |
 | [m4-repayment-pd.md](m4-repayment-pd.md) | M4 | E2 | not started |

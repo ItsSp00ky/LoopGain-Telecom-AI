@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -17,19 +18,25 @@ from cvm.ingest.hashing import hash_identifier
 # Libyana 091/092, Almadar 094/095, optionally prefixed +218.
 MSISDN = re.compile(rb"(\+?218[ -]?)?(09[1245])[ -]?[0-9]{7}")
 
+# The negative tests need a number that LOOKS real, so the scan would otherwise
+# flag its own fixtures. A line carrying this marker is exempt -- which keeps
+# the scan repository-wide instead of exempting a whole directory, and puts
+# every exemption where a reviewer reads it.
+FIXTURE_MARKER = b"msisdn-fixture"
+
 
 def test_hash_is_64_hex_chars():
-    digest = hash_identifier("0912345678")
+    digest = hash_identifier("0912345678")  # msisdn-fixture
     assert re.fullmatch(r"[0-9a-f]{64}", digest)
 
 
 def test_hash_is_deterministic_for_a_given_salt():
-    assert hash_identifier("0912345678") == hash_identifier("0912345678")
+    assert hash_identifier("0912345678") == hash_identifier("0912345678")  # msisdn-fixture
 
 
 def test_different_salts_give_different_hashes():
-    a = hash_identifier("0912345678", salt="a" * 64)
-    b = hash_identifier("0912345678", salt="b" * 64)
+    a = hash_identifier("0912345678", salt="a" * 64)  # msisdn-fixture
+    b = hash_identifier("0912345678", salt="b" * 64)  # msisdn-fixture
     assert a != b
 
 
@@ -60,9 +67,10 @@ def test_no_msisdn_pattern_in_tracked_python_sources():
     offenders = []
     for path in tracked:
         try:
-            with open(path, "rb") as fh:
-                if MSISDN.search(fh.read()):
-                    offenders.append(path)
+            lines = Path(path).read_bytes().splitlines()
         except OSError:
             continue
+        for lineno, line in enumerate(lines, start=1):
+            if MSISDN.search(line) and FIXTURE_MARKER not in line:
+                offenders.append(f"{path}:{lineno}")
     assert not offenders, f"Possible raw MSISDN in: {offenders}"

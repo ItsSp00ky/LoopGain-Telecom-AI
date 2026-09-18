@@ -97,12 +97,6 @@ def test_resampling_happens_inside_cv_folds_only(features_conf):
     assert features_conf["imbalance"]["resample_inside_cv_folds_only"] is True
 
 
-def test_sequences_are_not_pre_aggregated(features_conf):
-    """Aggregating before the LSTM would make the M1 benchmark meaningless:
-    both arms would be eating the same engineered features."""
-    assert features_conf["sequences"]["no_hand_aggregation"] is True
-
-
 def test_splits_module_exposes_no_random_split():
     """There is deliberately no random_split function. If one appears, this
     test is the conversation about why."""

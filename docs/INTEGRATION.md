@@ -51,7 +51,6 @@ curl http://localhost:8000/health
   "env": "dev",
   "models_loaded": {
     "m1_churn_lightgbm": true,
-    "m1_churn_lstm": false,
     "m1b_survival": true,
     "m2_clv": true,
     "m4_repayment_pd": true
@@ -101,6 +100,18 @@ resolve.
 **Everything is read-only.** No endpoint creates, alters or approves anything.
 `/v1/offer/next-best` *computes* an offer; it does not send it. Delivery is the
 Campaign Builder's job.
+
+### One contract change since the freeze
+
+`/v1/score/churn` previously accepted an optional `arm` field selecting an M1
+benchmark arm, and `/v1/subscriber/{id}` returned an `lstm_churn_probability`
+beside the main score. **Both are gone.** M1 is a single gradient-boosting
+model family now, so the knob selected between one option, and the second
+probability did not exist to return.
+
+`extra="forbid"` is set on every request model, so a caller still sending `arm`
+gets a **422 with the field named** rather than silent acceptance. Nothing else
+in the six endpoints changed.
 
 ---
 

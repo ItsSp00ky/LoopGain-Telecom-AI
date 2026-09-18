@@ -7,9 +7,10 @@ nearly out of money:
     نت في وقته    data, flat 5 LYD / 2 GB, balance <= 1 LYD and quota < 250 MB
 
 The objective function is SUBSCRIBER SOLVENCY, not recovery yield. These tests
-exist because a 5 LYD debt against a 3 LYD smallest recharge card cannot be
-cleared in one top-up, and unpaid debt blocks re-subscription -- locking the
-subscriber out of the service they reached for.
+exist because the 5 LYD data debt is exactly the size of the smallest recharge
+card: clearing it consumes the whole top-up and returns the subscriber to zero,
+so the minimum recharge buys nothing and the rational move is not to make it.
+A deferred recharge on a prepaid line is where silent churn starts.
 
 Config-level assertions run today. Behavioural tests are xfail until
 decision/advance_limit.py lands, so the gap is visible in CI rather than
@@ -43,27 +44,51 @@ def market() -> dict:
 # --- The structural finding, asserted so it cannot drift silently ----------
 
 
-def test_data_advance_exceeds_smallest_recharge_card(advance_conf, catalogue, market):
+def test_data_advance_consumes_the_entire_smallest_card(advance_conf, catalogue, market):
     """The whole M4 argument in one assertion.
 
-    Smallest card is 3 LYD. The نت في وقته data advance is 5 LYD. A subscriber
-    who habitually buys the smallest card cannot clear that debt in one top-up.
+    The smallest recharge card is 5 LYD and the نت في وقته data advance is
+    5 LYD. A subscriber whose modal top-up is the smallest card can clear the
+    debt -- and gets NOTHING for it. The whole card is consumed and they are
+    returned to a zero balance, immediately eligible to take the advance again.
 
-    If this test ever fails because the operator changed a price, the argument
-    needs rewriting -- which is exactly why it is a test and not a comment.
+    The harm is a disincentive to recharge, not a locked door, and the business
+    case is sized for a disincentive. If this test ever fails because the
+    operator changed a price, the argument needs rewriting -- which is exactly
+    why it is a test and not a comment.
     """
     smallest_card = min(market["recharge"]["denominations_lyd"])
     data_debt = catalogue["emergency_credit"]["net_fi_waqtuh"]["price_lyd"]
 
-    assert smallest_card == 3
+    assert smallest_card == 5
     assert data_debt == 5
-    assert data_debt > smallest_card
+    assert data_debt == smallest_card, "the argument rests on the EQUALITY"
 
     # And the critique block must agree with the source data.
     critique = advance_conf["incumbent_critique"]
     assert critique["smallest_card_lyd"] == smallest_card
     assert critique["data_advance_debt_lyd"] == data_debt
-    assert critique["debt_exceeds_smallest_card"] is True
+    assert critique["debt_consumes_entire_smallest_card"] is True
+    assert critique["residual_after_clearing_lyd"] == pytest.approx(0.0)
+    # The superseded claim must stay explicitly false rather than be deleted:
+    # a reader who remembers the old argument needs to see it was retired.
+    assert critique["debt_exceeds_smallest_card"] is False
+
+
+def test_small_airtime_advances_leave_change_off_the_smallest_card(catalogue, market):
+    """The asymmetry that makes small airtime rungs safer than the data advance.
+
+    A 1 or 3 LYD airtime advance leaves 4 or 2 LYD of usable balance after a
+    minimum top-up, so clearing it still buys the subscriber service. Only the
+    5 LYD rung reproduces the zero-residual problem, which is why the PD bands
+    in conf/advance.yaml reserve it for the highest-confidence repayers.
+    """
+    smallest_card = min(market["recharge"]["denominations_lyd"])
+    rungs = catalogue["emergency_credit"]["rasid_fi_waqtuh"]["denominations_lyd"]
+
+    leaves_change = [d for d in rungs if d < smallest_card]
+    assert leaves_change == [1, 3]
+    assert max(rungs) == smallest_card
 
 
 def test_eligibility_is_balance_based_not_tenure_based(catalogue):

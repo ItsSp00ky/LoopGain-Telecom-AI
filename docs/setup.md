@@ -1,13 +1,14 @@
 # Environment setup
 
-Three environments, in order of how often you will use them:
+Two environments:
 
-1. **Local (Windows / macOS / Linux)** — day-to-day development, CPU only.
+1. **Local (Windows / macOS / Linux)** — day-to-day development.
 2. **Docker Compose** — the reproducibility deliverable (D1) and the demo host.
-3. **Google Colab (free T4)** — one module only: the M1 LSTM benchmark arm.
 
-Serving is CPU-only everywhere. Nothing in this project requires a GPU you
-have to pay for.
+**Nothing in this component needs a GPU**, for training or for serving. That is
+a scope decision, not a limitation we are working around: every model here is a
+tree model or a classical estimator, which is also why every score is exactly
+SHAP-explainable.
 
 ---
 
@@ -16,7 +17,7 @@ have to pay for.
 | Tool | Version | Why |
 |---|---|---|
 | **Git** | 2.40+ | Version control. Install first — nothing else works without it. |
-| **Python** | **3.11 exactly** | TensorFlow, scikit-survival and SDV do not have wheels for 3.12+ yet. 3.10 is missing some typing syntax this codebase uses. |
+| **Python** | **3.11 exactly** | scikit-survival and SDV do not have wheels for 3.12+ yet. 3.10 is missing some typing syntax this codebase uses. |
 | **Conda** (Miniconda or Anaconda) | any recent | The reliable way to get 3.11 alongside whatever else is on your machine, and the scientific wheels build far better from conda-forge on Windows. |
 | **Docker Desktop** | 4.30+ | Deliverable D1: `docker compose up` from a clean clone. Needs WSL2 on Windows. |
 | **VS Code** | any recent | Not required, but the whole team uses it. |
@@ -35,9 +36,9 @@ Close and reopen your terminal afterwards so `PATH` picks them up.
 If you already have Anaconda you do **not** need to install Python separately —
 step 2 creates a 3.11 environment for this project without touching your base.
 
-> **Disk space.** The full environment is roughly 6–8 GB: torch (CPU) ~1 GB,
-> TensorFlow ~600 MB, Docker images ~3 GB, datasets ~500 MB. Budget **10 GB
-> free** before you start. If you are tight, see "Slimming down" at the end.
+> **Disk space.** The full environment is roughly 5–7 GB: torch (CPU, pulled
+> by SDV) ~1 GB, Docker images ~3 GB, datasets ~500 MB. Budget **8 GB free**
+> before you start. If you are tight, see "Slimming down" at the end.
 
 ---
 
@@ -93,8 +94,7 @@ are deliberate markers of what is not built yet.
 `[all]` is convenient but heavy. If you own one track, install its slice:
 
 ```powershell
-pip install -e ".[ml,dev]"      # M1 Arm A, M2, M4 — classical ML, survival, CLV
-pip install -e ".[dl,dev]"      # M1 Arm B — TensorFlow for the LSTM
+pip install -e ".[ml,dev]"      # M1, M2, M3, M4 — boosting, survival, CLV, uplift
 pip install -e ".[gan,dev]"     # Layer 2 — CTGAN, TVAE, SDMetrics
 pip install -e ".[ui,ml,rtl,dev]"  # API + pricing + dashboards + Arabic RTL
 ```
@@ -135,41 +135,8 @@ Windows notes:
 
 ---
 
-## 4. Colab (the one GPU module)
 
-Only M1 Arm B needs a GPU, and it fits comfortably in a free T4 session.
-
-```python
-# In a Colab cell
-!git clone https://github.com/ORG/REPO.git
-%cd REPO
-!pip install -e ".[dl,dev]" -q
-
-from google.colab import drive
-drive.mount('/content/drive')
-```
-
-**Checkpoint to Drive every epoch.** Colab cuts sessions without warning, and
-losing a training run to a disconnect is the kind of avoidable problem that
-eats a day.
-
-Runtime → Change runtime type → T4 GPU. Confirm with:
-
-```python
-import tensorflow as tf
-print(tf.config.list_physical_devices('GPU'))
-```
-
-The trained artefact comes back as a file, not a running process:
-
-- M1 Arm B → `artifacts/models/m1_churn_lstm/` (SavedModel)
-
-Do **not** commit it. It is gitignored. Share it through Drive or a GitHub
-release.
-
----
-
-## 5. Free accounts to create
+## 4. Free accounts to create
 
 All free. Create them on Day 1 so nobody is blocked on a signup mid-sprint.
 
@@ -187,16 +154,13 @@ and most of that is optional.
 
 ---
 
-## 6. Troubleshooting
+## 5. Troubleshooting
 
 **`ModuleNotFoundError: cvm`** — the package is not installed in the active
 env. Run `pip install -e .` from the repo root, and check `conda activate cvm`.
 
 **LightGBM fails to load on Linux/Docker** — missing `libgomp1`. Already in
 the Dockerfiles; if you hit it locally, `sudo apt install libgomp1`.
-
-**TensorFlow reports no GPU on Windows** — expected. Native Windows TF has been
-CPU-only since 2.11. Serving is CPU-only anyway; train on Colab.
 
 **Pip resolves for a long time on `[all]`** — normal, it is a wide dependency
 set. Install the narrow slice for your track instead.
@@ -210,6 +174,4 @@ the ethical core; if a demo needs one relaxed, change the demo.
 If disk space is tight (under ~10 GB free):
 
 - Install CPU torch explicitly, as above. Saves ~1.5 GB.
-- Skip the `dl` extra until you start M1 Arm B, and train it on Colab.
-  Saves ~600 MB.
 - Run `docker system prune` between rebuilds.

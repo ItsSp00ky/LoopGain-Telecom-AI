@@ -1,12 +1,13 @@
-"""SHAP explainability for Arm A.  Owner: E2
+"""SHAP explainability.  Owner: E2
 
 Per-subscriber waterfall plots surfaced in the Subscriber 360 screen, rendered
 in PLAIN LANGUAGE -- "has not topped up in 23 days", not "days_since_last_topup
 = 23, shap = +0.14". Every offer carries a human-readable reason; an opaque
 personalised price is exactly what section 6.5 commits us not to ship.
 
-Arm B is compared on calibration and lift, not interpretability, and the gap is
-discussed in the report rather than papered over.
+Every model in M1 is a tree model, so this is exact SHAP rather than an
+approximation -- which is part of why the module's scope is tabular. There is
+no score in this component whose reasoning we cannot surface.
 
 SHAP contribution shares are also how we attribute churn risk to causes --
 network quality, pricing, declining engagement -- which is what makes the

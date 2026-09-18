@@ -72,7 +72,8 @@ def test_every_response_carries_a_request_id_and_timing(client: TestClient):
 
 def test_raw_msisdn_is_rejected_by_the_scoring_contract(client: TestClient):
     """422, not 500, and certainly not a score."""
-    r = client.post("/v1/score/churn", json={"subscriber_ids": ["0912345678"]})
+    raw = "0912345678"  # msisdn-fixture
+    r = client.post("/v1/score/churn", json={"subscriber_ids": [raw]})
     assert r.status_code == 422
 
 
