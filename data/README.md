@@ -7,7 +7,6 @@ pipeline` produces the rest.
 
 ```
 raw/         Untouched source downloads, exactly as fetched
-external/    OpenCelliD MCC-606 extract
 interim/     Deduplicated, schema-validated, identifiers hashed
 processed/   features_offline.parquet, sequences_offline.npz, features_online.duckdb
 synthetic/   CTGAN output -- the generated Libyan subscriber population
@@ -25,8 +24,14 @@ legally or ethically leave an operator. The corpus is hybrid:
   genuine labels for validation.
 - **A CTGAN** adds the Libyan prepaid layer: LYD recharge denominations,
   scratch-card channels, dual-SIM leakage, outage exposure, advance repayment.
-- **Real Libyan geography** from OpenCelliD anchors each subscriber to an
-  actual tower and district.
+- **The operator's real catalogue and tariffs** (`conf/catalogue.yaml`,
+  `conf/market.yaml`) fix the monetary scale: 57 real bundles, the confirmed
+  3/5/10/20/40/100 LYD recharge ladder, and published pay-as-you-go rates.
+
+**No geography.** All subscribers are modelled as geographically equivalent —
+no districts, no cells, no coordinates. Network quality survives as a
+subscriber-level feature drawn from real data (UCI `Call Failures`, Cell2Cell
+`dropvce`), not as a map.
 
 Synthetic metrics are **not** evidence of production performance. The
 deliverable is a validated pipeline and decision logic with a deployment-ready
@@ -102,28 +107,14 @@ Three roles: an independent CLTV benchmark for M2, a sanity check that our
 churn drivers resemble real ones, and a small fast dataset so the first
 baseline is never blocked on pipeline work.
 
-### D — OpenCelliD · GEOSPATIAL
+### D — OpenCelliD · **removed**
 
-| | |
-|---|---|
-| Source | <https://opencellid.org> |
-| Filter | MCC **606** (Libya); MNC **01** Almadar Aljadid |
-| Licence | **CC BY-SA** — attribution required, share-alike |
-| Credentials | free API key (`OPENCELLID_API_KEY`) |
+Geography is out of scope, so there are no cells to join to. Dropping it also
+sheds an API key and a CC BY-SA attribution obligation on every slide.
 
-Real Libyan tower identifiers with coordinates, used to give each generated
-subscriber a genuine `home_cell_id` in a genuine district. Two uses in this
-branch:
-
-- **District** as a context field — which exists mainly so the fairness
-  guardrail can forbid it as a pricing lever. It enters the model only as a
-  network-quality proxy.
-- **Per-cell grouping** for M3's off-peak trough detection, so the night
-  window is set per site rather than nationally.
-
-> **Attribution obligation.** CC BY-SA means the attribution must appear
-> wherever the site data is shown — any map, the deck, and the report. Do not
-> drop it from a slide for space.
+Network quality is kept as a **subscriber-level** feature instead, sourced from
+the real datasets above (UCI `Call Failures`, Cell2Cell `dropvce` / `blckvce` /
+`unansvce`) rather than from a tower map.
 
 ---
 
@@ -189,7 +180,7 @@ scale; KKBox gives real **sequences** and a real **no-renewal** label.
 It is also large (the raw logs are several GB), so subsample before use — you
 have limited disk.
 
-### I — Telecom Italia / Milan CDR · real cell load matrices
+### I — Telecom Italia / Milan CDR · **no longer needed**
 
 | | |
 |---|---|
@@ -199,17 +190,15 @@ have limited disk.
 | Contents | SMS in/out, call in/out, internet traffic per cell per interval |
 | Licence | **ODbL** (Open Database License) — share-alike, attribution required |
 
-Right now the per-cell hourly load curves are generated. This is **real
-aggregated telecom activity** at cell-grid resolution: resample the 10-minute
-intervals to hourly and you have authentic daily and weekly load shapes to
-seed the synthetic cells from.
+Its only purpose was real per-cell load curves for off-peak trough detection,
+and that went with geography. **M3 now uses Almadar's own published
+06:00–11:00 window** (عروض الصبح), which is stronger evidence than any trough
+we could detect ourselves — the operator has told us when its spare capacity
+is.
 
-The direct benefit is M3: off-peak trough detection finds *real* troughs
-rather than ones we designed, which is the difference between "we set the
-night window from measured load" and "we picked 1am to 6am".
-
-Note ODbL is share-alike — check it against your MIT licence before
-redistributing anything derived from it.
+Listed here only so nobody re-discovers it and wonders why it was skipped. If
+you ever need real cell-level load shapes, this is where they are, and note
+ODbL is share-alike.
 
 ### J — UCI Online Retail II · CLV validation
 
@@ -243,10 +232,8 @@ implementation is correct before you point it at recharges.
 2. **UCI Iranian** — the primary set; do the dedup and leakage audit here.
 3. **Hillstrom** → **Criteo** — get uplift validated early, since it gates M3.
 4. **Cell2Cell** — scale, and the trend features.
-5. **Milan CDR** — real load curves before you generate synthetic cells.
-6. **KKBox** — only if the LSTM arm needs more sequence signal than Cell2Cell gives.
-7. **OpenCelliD** — needed for the demo geography, not for modelling.
-8. **Online Retail II** — when you start M2's CLV.
+5. **KKBox** — only if the LSTM arm needs more sequence signal than Cell2Cell gives.
+6. **Online Retail II** — when you start M2's CLV.
 
 ### Disk budget
 
@@ -254,16 +241,14 @@ You have roughly 20 GB free. Do not download everything at once.
 
 | Dataset | Approx. size |
 |---|---|
-| UCI Iranian, IBM Telco, Hillstrom, OpenCelliD | < 50 MB total |
+| UCI Iranian, IBM Telco, Hillstrom | < 30 MB total |
 | Online Retail II | ~45 MB |
 | Cell2Cell | ~100 MB |
 | Criteo Uplift | ~300 MB compressed, ~3 GB expanded |
-| Milan CDR | ~2–20 GB depending on how many of the 62 days you take |
 | KKBox | ~30 GB raw — **subsample on download or skip** |
 
-For Milan, take one representative week rather than all 62 days. For KKBox,
-`user_logs` is the huge file; sample members first, then filter the logs to
-that member set while streaming.
+For KKBox, `user_logs` is the huge file; sample members first, then filter the
+logs to that member set while streaming.
 
 ---
 
@@ -300,4 +285,6 @@ derived artefact:
 > Iranian Churn Dataset, UCI Machine Learning Repository (ID 563), CC BY 4.0.
 > Cell2Cell dataset, Duke University Teradata Center for CRM.
 > IBM Telco Customer Churn sample, IBM.
-> Cell site data © OpenCelliD contributors, CC BY-SA.
+
+Add Criteo, Hillstrom, KKBox or Online Retail II to this block if you enable
+them — each carries its own terms.

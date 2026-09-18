@@ -26,7 +26,7 @@ The full platform has five components. This repository is one of them.
 | # | Component | Owner | Relationship to this branch |
 |---|---|---|---|
 | 1 | GIS & Network Planning | teammate | Independent |
-| 2 | Network ML — congestion, anomaly detection | teammate | **Supplies** per-cell quality signals we consume as churn features |
+| 2 | Network ML — congestion, anomaly detection | teammate | **Supplies** per-subscriber quality signals we consume as churn features |
 | **3** | **Customer Intelligence, Retention & Loyalty** | **Ali — this repo** | — |
 | 4 | Customer Chatbot | teammate | **Consumes** our offer + eligibility API |
 | 5 | Employee Telecom Copilot | teammate | **Consumes** our scoring + cohort API |
@@ -109,9 +109,10 @@ Four modules. Each answers one question, and each feeds the next.
 
 **Deliberately out of scope**, because they belong to other components:
 
-- **Network anomaly detection** (Component 2). We consume per-cell quality
-  signals — dropped-call rate, outage hours — as ordinary churn features in M1.
-  We do not model the network ourselves.
+- **Network anomaly detection** (Component 2). We consume per-subscriber
+  quality signals — dropped-call rate, outage hours — as ordinary churn
+  features in M1. We do not model the network, and we model no geography at
+  all: no districts, no cells, no coordinates.
 - **Care-text classification** (Component 4). Complaint text is the chatbot's
   domain.
 - **Employee Copilot** (Component 5). Scaffolding was written and handed to its
@@ -128,7 +129,6 @@ Full specification: **[docs/proposal/](docs/proposal/)**.
 ├── conf/                    YAML config. Guardrail thresholds live here, not in code.
 ├── data/                    Gitignored. `python scripts/download_data.py` refills it.
 │   ├── raw/                 Untouched source downloads
-│   ├── external/            OpenCelliD MCC-606 extract
 │   ├── interim/             Deduplicated, schema-validated, hashed
 │   ├── processed/           features_offline.parquet, sequences_offline.npz, features_online.duckdb
 │   └── synthetic/           CTGAN output — the generated Libyan population
@@ -218,8 +218,8 @@ macOS / Linux teammates: the same targets exist in the [`Makefile`](Makefile).
 Every record is either public research data or generated. No public Libyan CDR
 dataset exists, and none should — subscriber data cannot legally or ethically
 leave an operator. The corpus is hybrid: real public datasets supply the
-statistical structure of telecom behaviour, a CTGAN adds the Libyan prepaid
-layer, and OpenCelliD supplies real tower coordinates.
+statistical structure of telecom behaviour, and a CTGAN adds the Libyan prepaid
+layer on top of the operator's real catalogue and tariffs.
 
 **Synthetic metrics are not evidence of production performance.** The
 deliverable is a validated pipeline and decision logic with a deployment-ready

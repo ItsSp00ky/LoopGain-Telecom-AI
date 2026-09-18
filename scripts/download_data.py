@@ -8,10 +8,9 @@ Kaggle credential should be an obvious, separate failure from a schema break.
 Nothing here transforms data -- it only fetches.
 
 Credentials needed (see .env.example):
+    A  UCI 563     none
     B  Cell2Cell   KAGGLE_USERNAME + KAGGLE_KEY, or ~/.kaggle/kaggle.json
     C  IBM Telco   same Kaggle credentials
-    D  OpenCelliD  OPENCELLID_API_KEY (free, from opencellid.org/register.php)
-    A  UCI 563     none
 """
 
 from __future__ import annotations
@@ -30,7 +29,6 @@ SOURCES = {
     "A": ("UCI Iranian Churn (563)", "cvm.ingest.uci_iranian"),
     "B": ("Cell2Cell (Duke/Teradata)", "cvm.ingest.cell2cell"),
     "C": ("IBM Telco Customer Churn", "cvm.ingest.ibm_telco"),
-    "D": ("OpenCelliD MCC 606", "cvm.ingest.opencellid"),
 }
 
 # Recommended additions. Opt in with --only, because several are large and
@@ -39,7 +37,6 @@ OPTIONAL_SOURCES = {
     "F": ("Criteo Uplift (real treatment/control)", "cvm.ingest.criteo_uplift"),
     "G": ("Hillstrom MineThatData (uplift warm-up)", "cvm.ingest.hillstrom"),
     "H": ("KKBox WSDM (real daily sequences)", "cvm.ingest.kkbox"),
-    "I": ("Milan CDR (real cell load matrices)", "cvm.ingest.milan_cdr"),
     "J": ("UCI Online Retail II (502, CLV validation)", "cvm.ingest.online_retail"),
 }
 
@@ -47,8 +44,8 @@ ALL_SOURCES = {**SOURCES, **OPTIONAL_SOURCES}
 
 # Rough download sizes, so --only can be chosen against available disk.
 APPROX_MB = {
-    "A": 1, "B": 100, "C": 5, "D": 20,
-    "F": 300, "G": 5, "H": 30_000, "I": 20_000, "J": 45,
+    "A": 1, "B": 100, "C": 5,
+    "F": 300, "G": 5, "H": 30_000, "J": 45,
 }
 
 
@@ -66,11 +63,6 @@ def check_credentials(ids: list[str]) -> list[str]:
             "Dataset H (KKBox) is a competition dataset -- you must accept the rules at "
             "https://www.kaggle.com/c/kkbox-churn-prediction-challenge/rules first, "
             "or the download returns 403."
-        )
-    if "D" in ids and not settings.opencellid_api_key:
-        problems.append(
-            "OPENCELLID_API_KEY missing (dataset D). Free key: "
-            "https://opencellid.org/register.php"
         )
     return problems
 
@@ -94,11 +86,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--only",
-        default="A,B,C,D",
+        default="A,B,C",
         help=(
-            "Comma-separated source ids. Default A,B,C,D (the core set). "
+            "Comma-separated source ids. Default A,B,C (the core set). "
             "Optional extras: F Criteo uplift, G Hillstrom, H KKBox, "
-            "I Milan CDR, J Online Retail II."
+            "J Online Retail II."
         ),
     )
     parser.add_argument("--list", action="store_true", help="List every source and exit.")

@@ -192,9 +192,9 @@ def check_cannibalisation(
 def check_fairness(pricing_features: list[str]) -> Verdict:
     """Assert no forbidden attribute reached the pricing computation.
 
-    District is the one to watch. It enters the system legitimately as a
-    *network-quality* input and must never become a socioeconomic price
-    lever. Age group may inform offer *relevance*, never price.
+    Age group may inform offer *relevance*, never price. ``district`` stays on
+    the forbidden list although this branch no longer models geography, so
+    that reintroducing it later cannot silently make it a price lever.
     """
     forbidden = set(guardrail("pricing", "guardrails", "fairness", "forbidden_pricing_features"))
     used = forbidden.intersection(pricing_features)
@@ -212,27 +212,44 @@ def check_fairness(pricing_features: list[str]) -> Verdict:
     return Verdict("fairness", passed=True, binding=False, detail="no protected attributes used")
 
 
-def audit_redlining(mean_discount_by_district: dict[str, float]) -> Verdict:
-    """Post-hoc audit: does discount distribution vary suspiciously by district?
+def audit_distribution(mean_discount_by_group: dict[str, float], dimension: str) -> Verdict:
+    """Post-hoc audit: is discount spend distributed defensibly across a group?
+
+    Replaces the redlining audit, which went with geography -- auditing a
+    dimension we no longer model would have been theatre. ``dimension`` is
+    ``value_decile`` or ``tenure_band``.
+
+    **A gap here is expected and legitimate.** Loyalty tiers exist and d_max
+    rises with tenure by design, so Platinum should receive more than Bronze.
+    What this catches is a gap LARGER than the published tier structure
+    explains, which is the signal that something other than the ladder is
+    driving price.
 
     Run after every campaign allocation, not once at the end of the project.
     """
-    max_gap = guardrail(
-        "pricing", "guardrails", "fairness", "redlining_audit",
-        "max_mean_discount_gap_between_districts",
-    )
-    if not mean_discount_by_district:
-        return Verdict("fairness", passed=True, binding=False, detail="no districts to audit")
-    values = list(mean_discount_by_district.values())
+    conf = load_conf("pricing")["guardrails"]["fairness"]["distribution_audit"]
+    allowed = conf["across"]
+    if dimension not in allowed:
+        raise ValueError(f"{dimension!r} is not an audited dimension. Allowed: {allowed}")
+
+    max_gap = conf["max_mean_discount_gap"]
+    if not mean_discount_by_group:
+        return Verdict(
+            "fairness", passed=True, binding=False, detail=f"no {dimension} groups to audit"
+        )
+
+    values = list(mean_discount_by_group.values())
     gap = max(values) - min(values)
     passed = gap <= max_gap + 1e-9
-    hi = max(mean_discount_by_district, key=mean_discount_by_district.get)
-    lo = min(mean_discount_by_district, key=mean_discount_by_district.get)
+    hi = max(mean_discount_by_group, key=mean_discount_by_group.get)
+    lo = min(mean_discount_by_group, key=mean_discount_by_group.get)
     return Verdict(
         "fairness",
         passed=passed,
         binding=not passed,
-        detail=f"discount gap {gap:.4f} ({hi} vs {lo}) against limit {max_gap}",
+        detail=(
+            f"{dimension} discount gap {gap:.4f} ({hi} vs {lo}) against limit {max_gap}"
+        ),
     )
 
 

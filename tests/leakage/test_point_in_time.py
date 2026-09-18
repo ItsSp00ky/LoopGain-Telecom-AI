@@ -43,22 +43,44 @@ def test_customer_value_is_excluded(features_conf):
     assert "Customer Value" in features_conf["leakage_controls"]["excluded_columns"]
 
 
-def test_label_generating_fields_are_excluded_from_features(features_conf):
-    """Every field synthesis/hazard.py reads must be excluded.
+def test_label_artifacts_are_excluded_from_features(features_conf):
+    """Every label ARTIFACT must be excluded.
 
     This catches the subtlest failure mode in the project: a synthetic label
-    that is trivially recoverable from a feature we forgot to drop, producing a
-    model that looks excellent and knows nothing.
+    trivially recoverable from a column we forgot to drop, producing a model
+    that looks excellent and knows nothing.
     """
-    from cvm.synthesis.hazard import LABEL_GENERATING_FIELDS
+    from cvm.synthesis.hazard import LABEL_ARTIFACT_FIELDS
 
     lc = features_conf["leakage_controls"]
-    assert lc["exclude_label_generating_fields"] is True
-    missing = set(LABEL_GENERATING_FIELDS) - set(lc["excluded_columns"])
+    assert lc["exclude_label_artifacts"] is True
+    missing = set(LABEL_ARTIFACT_FIELDS) - set(lc["excluded_columns"])
     assert not missing, (
-        f"These fields generate the label but are not in excluded_columns: {sorted(missing)}. "
-        "Either exclude them in conf/features.yaml or stop using them in hazard.py."
+        f"These fields encode the label but are not in excluded_columns: {sorted(missing)}. "
+        "Add them in conf/features.yaml -- do not remove them from hazard.py."
     )
+
+
+def test_label_drivers_are_deliberately_available(features_conf):
+    """The mirror image, and just as important.
+
+    The hazard is a function of observable behaviour so the signal is
+    recoverable. If someone "tightens" leakage control by excluding the drivers
+    too, the model has nothing left to learn and every metric collapses for a
+    reason nobody will be able to find. This test documents that the overlap is
+    intentional.
+    """
+    from cvm.synthesis.hazard import LABEL_ARTIFACT_FIELDS, LABEL_DRIVER_FIELDS
+
+    excluded = set(features_conf["leakage_controls"]["excluded_columns"])
+    wrongly_excluded = set(LABEL_DRIVER_FIELDS) & excluded
+    assert not wrongly_excluded, (
+        f"These are label DRIVERS, not artifacts, and must stay available as "
+        f"features: {sorted(wrongly_excluded)}. Excluding them leaves the model "
+        "nothing to learn. See cvm/synthesis/hazard.py."
+    )
+    # The two categories must not overlap, or the distinction is meaningless.
+    assert not set(LABEL_DRIVER_FIELDS) & set(LABEL_ARTIFACT_FIELDS)
 
 
 def test_observation_window_and_label_window_do_not_touch(features_conf):

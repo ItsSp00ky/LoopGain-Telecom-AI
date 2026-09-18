@@ -79,14 +79,30 @@ guardrails:
   fairness:
     enabled: true
     forbidden_pricing_features:
-      - district          # network-quality input ONLY, never a price lever
       - age_group         # may inform offer relevance, never price
       - language_pref
       - gender
-    # Post-hoc redlining audit across districts.
-    redlining_audit:
+      - district          # kept on the list although we no longer model it,
+                          # so reintroducing geography cannot silently make it
+                          # a price lever
+    # The redlining audit across districts was REMOVED with geography (Q9) --
+    # auditing a dimension we no longer model would be theatre.
+    #
+    # Replaced by a distribution audit we can actually run: are we
+    # systematically giving less to low-value or newer subscribers? That is a
+    # real fairness question, and unlike redlining it is answerable with the
+    # data this branch holds.
+    distribution_audit:
       enabled: true
-      max_mean_discount_gap_between_districts: 0.03
+      across:
+        - value_decile
+        - tenure_band
+      max_mean_discount_gap: 0.05
+      note: >
+        A gap is expected and legitimate -- loyalty tiers exist, and d_max
+        rises with tenure by design. The audit catches a gap LARGER than the
+        tier structure explains, which is the signal that something other
+        than the published ladder is driving price.
 
   # 6. Auditability — every decision replayable.
   audit:
@@ -108,20 +124,12 @@ guardrails:
 # trough is MORNING, not night. See conf/catalogue.yaml#morning_offpeak.
 offpeak:
   anchor_product: SABAH_1
-  # Per-cell trough detection refines the window per site. The operator's
-  # national 06:00-11:00 band is the fallback, not a guess.
-  per_cell_trough_detection: true
-  global_fallback_window: { start_hour: 6, end_hour: 11 }
-  trough:
-    min_window_hours: 3
-    max_window_hours: 6
-    load_percentile_threshold: 0.25
-    # Source of the 24h load curve. See conf/features.yaml#network_quality.
-    load_curve_source: features_store
-    # Sanity check: a detected trough far from the operator's own
-    # 06:00-11:00 band probably means the load curve is wrong, not that we
-    # found something they missed.
-    warn_if_outside_hours: [5, 13]
+  # ONE national window, and it is the operator's own. Per-cell trough
+  # detection was dropped with geography (Q9): it needed cell load curves we
+  # no longer model, and it was only ever a refinement of this window. Using
+  # the real published hours is not a compromise -- it is the answer.
+  window: { start_hour: 6, end_hour: 11 }
+  per_cell_trough_detection: false
   # Off-peak data is preferred over headline cuts: near-zero marginal cost on
   # an idle sector, perceived as generous, and it leaves the price sheet intact.
   value_add_before_discount: true

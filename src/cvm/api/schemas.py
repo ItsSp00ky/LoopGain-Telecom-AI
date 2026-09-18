@@ -175,7 +175,8 @@ class OfferResponse(BaseModel):
     price_lyd: LYD = Field(description="Post-discount price. Never below the margin floor.")
     discount_pct: float = Field(ge=0.0, le=1.0)
     bonus_mb: int = Field(default=0, description="Off-peak bonus data, if awarded.")
-    # Per-cell trough detection sets these per site, not by a blanket rule.
+    # The operator's published off-peak window: 06:00-11:00 national. Present
+    # only when the offer is time-restricted.
     valid_from_hour: int | None = Field(default=None, ge=0, le=23)
     valid_to_hour: int | None = Field(default=None, ge=0, le=23)
     tier: Tier
@@ -285,8 +286,8 @@ class RfmLeScores(BaseModel):
 class SubscriberProfile(BaseModel):
     subscriber_id: SubscriberId
     tenure_months: int
-    district: str
-    home_cell_id: str
+    # No district or cell id: all subscribers are modelled as geographically
+    # equivalent. Network quality arrives as subscriber-level fields below.
     language_pref: Literal["ar", "ar-LY", "ber", "en"]
     rfm_le: RfmLeScores
     segment: Segment
@@ -302,10 +303,10 @@ class SubscriberProfile(BaseModel):
     leakage_score: Probability
     incoming_outgoing_ratio: float
     onnet_ratio: float
-    # Raw network-quality signals. These feed M1 directly as churn features --
-    # there is no separate network model in this branch.
+    # Subscriber-level network quality. Feeds M1 directly as churn features;
+    # there is no network model in this branch.
     dropped_call_rate_30d: float
-    cell_outage_hours_30d: float
+    service_outage_hours_30d: float
     recommended_offer: OfferResponse | None = None
     advance: AdvanceLimitResponse | None = None
 
@@ -322,7 +323,6 @@ class SubscriberProfile(BaseModel):
 class CohortFilter(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    district: str | None = None
     segment: Segment | None = None
     tier: Tier | None = None
     retention_stage: RetentionStage | None = None

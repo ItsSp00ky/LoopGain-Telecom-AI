@@ -35,4 +35,4 @@ module is called complete.
 
 If this is at risk, what is the fallback? (See the descoping ladder, §6.3.)
 
-<!-- e.g. "Falls back to a single global off-peak window instead of per-cell trough detection." -->
+<!-- e.g. "Falls back to a flat discount instead of the off-peak morning pass." -->

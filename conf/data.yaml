@@ -51,18 +51,9 @@ sources:
     churn_rate: 0.27
     benchmark_columns: [CLTV, "Churn Reason", "Churn Score"]
 
-  # --- D: real Libyan tower geography.
-  opencellid:
-    id: D
-    enabled: true
-    loader: opencellid_api
-    api_key_env: OPENCELLID_API_KEY
-    licence: CC-BY-SA
-    filter:
-      mcc: 606
-      # 01 is Almadar Aljadid -- the operator this project models.
-      mnc: ["01"]
-    output: ./data/external/opencellid_mcc606_almadar.parquet
+  # Dataset D (OpenCelliD) REMOVED with geography -- see conf/market.yaml
+  # section 6. No cells are modelled, so there is nothing to join to, and
+  # dropping it also sheds an API key and a CC BY-SA attribution obligation.
 
   # --- Recommended additions. Off by default; turn on as you need them.
   # Rationale and download links: data/README.md#recommended-additions
@@ -107,18 +98,10 @@ sources:
     role: real_daily_sequences
     note: "~30 GB raw. Sample members first, then stream-filter user_logs."
 
-  # I: real aggregated telecom activity on a 100x100 grid at 10-min intervals.
-  # Resample to hourly and M3's off-peak trough detection finds real troughs
-  # instead of ones we designed.
-  milan_cdr:
-    id: I
-    enabled: false
-    loader: dataverse
-    doi: 10.7910/DVN/EGZHFV
-    licence: ODbL          # share-alike -- check before redistributing derivatives
-    resample_to: 1H
-    role: real_cell_load_curves
-    note: "62 daily files. Take one representative week, not all of them."
+  # Dataset I (Milan CDR) REMOVED. Its only purpose was real per-cell load
+  # curves for off-peak trough detection, and that was dropped with geography.
+  # M3 now uses the operator's own published 06:00-11:00 window, which is
+  # better evidence than any trough we could detect.
 
   # J: the canonical BG/NBD + Gamma-Gamma validation set. Prove the CLV
   # implementation is correct here before pointing it at recharges.
@@ -170,13 +153,21 @@ synthesis:
 
   # Constructs the real data cannot supply.
   business_overlays:
-    outage_exposure:
+    # Subscriber-level, with no geographic variation -- all subscribers are
+    # modelled as geographically equivalent (Q9).
+    service_outage_exposure:
       enabled: true
-      higher_in_districts: [Sabha, Ghat, Murzuq, Ubari, Jufra]
-    ramadan_seasonality: true
+      level: subscriber
+    # Ramadan removed (Q8): needs real per-year dates and the effect was a
+    # large guess.
     salary_week_spike:
       enabled: true
       day_of_month_window: [25, 30]
+    # Friday-Saturday rhythm. A flag only -- no usage multiplier.
+    weekend_rhythm:
+      enabled: true
+      days: [friday, saturday]
+      apply_usage_multiplier: false
     # Both Almadar emergency-credit products. See conf/catalogue.yaml.
     emergency_credit_behaviour: true
     diaspora_roaming: true

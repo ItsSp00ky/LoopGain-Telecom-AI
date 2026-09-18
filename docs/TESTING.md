@@ -304,7 +304,6 @@ Before writing them, set up credentials so the loaders have something to use:
 | Need | How |
 |---|---|
 | Kaggle (B, C, H) | kaggle.com → Settings → API → Create New Token → save `kaggle.json` to `%USERPROFILE%\.kaggle\` |
-| OpenCelliD (D) | free key from <https://opencellid.org/register.php> → `OPENCELLID_API_KEY` in `.env` |
 | KKBox (H) | additionally accept the competition rules, or the download 403s |
 
 **Mind the disk.** Full links, sizes and a suggested order are in
@@ -433,7 +432,7 @@ When the Copilot owner is ready, give them
 [`INTEGRATION.md`](INTEGRATION.md) and run the §4 worked example together:
 
 ```powershell
-curl -X POST http://localhost:8000/v1/cohort/query -H "Content-Type: application/json" -d "{\"district\":\"Benghazi\",\"min_dropped_call_rate\":0.04,\"min_churn_probability\":0.5}"
+curl -X POST http://localhost:8000/v1/cohort/query -H "Content-Type: application/json" -d "{\"min_dropped_call_rate\":0.04,\"min_churn_probability\":0.5,\"min_clv_lyd\":300}"
 ```
 
 **Checkpoint:** their agent answers *"Which Benghazi subscribers are at risk

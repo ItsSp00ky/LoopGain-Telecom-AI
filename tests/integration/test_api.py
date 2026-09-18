@@ -50,6 +50,13 @@ def test_integration_surface_is_present(client: TestClient):
         assert endpoint in paths, f"{endpoint} is part of the published contract"
 
 
+def test_cohort_filter_rejects_district(client: TestClient):
+    """Geography is out of scope. A filter that silently accepted `district`
+    would let a caller believe we model it."""
+    r = client.post("/v1/cohort/query", json={"district": "Tripoli"})
+    assert r.status_code == 422
+
+
 def test_no_agent_endpoint_is_exposed(client: TestClient):
     """The Copilot is a separate component. This branch serves it; it does not
     host it. An agent endpoint appearing here means scope has drifted."""

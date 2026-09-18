@@ -24,11 +24,13 @@ router = APIRouter(tags=["cohort"])
 async def query_cohort(payload: CohortFilter) -> CohortResponse:
     """Return the hashed IDs matching a filter, plus the aggregate at risk.
 
-    Example: the Copilot answering "which Benghazi subscribers are at risk
-    because of coverage?" resolves to
-    ``{district: "Benghazi", top_complaint_reason: "coverage",
-       min_churn_probability: 0.5}``, then calls /v1/offer/next-best per
-    subscriber for the recommendation.
+    Example: the Copilot answering "which high-value subscribers are at risk
+    and have poor service?" resolves to
+    ``{min_churn_probability: 0.5, min_clv_lyd: 300, min_dropped_call_rate: 0.04}``,
+    then calls /v1/offer/next-best per subscriber for the recommendation.
+
+    There is no `district` filter -- geography is out of scope, so a caller
+    asking for one gets a 422 rather than a silently-ignored field.
     """
     # TODO(E4/Ali): from cvm.features.store import query_cohort
     raise HTTPException(status_code=501, detail="Cohort query not implemented yet.")

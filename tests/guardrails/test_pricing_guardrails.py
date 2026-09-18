@@ -10,7 +10,7 @@ import pytest
 
 from cvm.decision.guardrails import (
     GuardrailBreach,
-    audit_redlining,
+    audit_distribution,
     check_budget,
     check_cannibalisation,
     check_clv_ceiling,
@@ -115,6 +115,8 @@ def test_non_additive_night_pack_is_excluded():
 
 @pytest.mark.parametrize("attr", ["district", "age_group", "language_pref", "gender"])
 def test_protected_attributes_cannot_reach_pricing(attr: str):
+    """`district` stays forbidden although geography is no longer modelled, so
+    reintroducing it cannot silently make it a price lever."""
     v = check_fairness(["churn_probability", attr])
     assert not v.passed
 
@@ -123,12 +125,30 @@ def test_clean_feature_list_passes_fairness():
     assert check_fairness(["churn_probability", "loyalty_index"]).passed
 
 
-def test_redlining_audit_flags_a_wide_district_gap():
-    assert not audit_redlining({"Tripoli": 0.02, "Sabha": 0.14}).passed
+def test_distribution_audit_flags_a_gap_wider_than_the_tier_ladder():
+    """Bronze-to-Platinum d_max spans 0.05 to 0.20, so a 0.15 spread is the
+    structure working. A wider gap means something else is driving price."""
+    wide = {"decile_1": 0.02, "decile_10": 0.30}
+    assert not audit_distribution(wide, "value_decile").passed
 
 
-def test_redlining_audit_passes_a_narrow_gap():
-    assert audit_redlining({"Tripoli": 0.09, "Sabha": 0.10}).passed
+def test_distribution_audit_passes_a_gap_the_ladder_explains():
+    ok = {"decile_1": 0.06, "decile_10": 0.10}
+    assert audit_distribution(ok, "value_decile").passed
+
+
+def test_distribution_audit_covers_tenure_bands():
+    assert audit_distribution({"0-12m": 0.05, "84m+": 0.08}, "tenure_band").passed
+
+
+def test_distribution_audit_rejects_an_unaudited_dimension():
+    """Auditing a dimension the config does not list would give false comfort."""
+    with pytest.raises(ValueError, match="district"):
+        audit_distribution({"Tripoli": 0.05}, "district")
+
+
+def test_distribution_audit_handles_an_empty_group():
+    assert audit_distribution({}, "value_decile").passed
 
 
 # --- 6. Tier ceiling ------------------------------------------------------

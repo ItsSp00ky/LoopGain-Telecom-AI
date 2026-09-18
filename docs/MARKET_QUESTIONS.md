@@ -9,11 +9,12 @@ modelled only as the competitor that dual-SIM leakage flows toward.
 
 | | Count | |
 |---|---|---|
-| **Confirmed** | 7 | Q1 recharge · Q2 tariffs · Q3 catalogue · Q3b volumes · Q4 off-peak · Q5 zero-rating · Q6 emergency credit · Q10 language |
+| **Confirmed** | 8 | Q1 recharge · Q2 tariffs · Q3 catalogue · Q3b volumes · Q4 off-peak · Q5 zero-rating · Q6 emergency credit · Q10 language |
 | **Decided estimate** | 1 | Q7 base and economics — ARPU 30 LYD, dual-SIM 85% |
-| **Awaiting a call** | 2 | Q8 weekend days · Q9 geography |
+| **Scope decided** | 2 | Q8 weekend kept · Q9 geography dropped, network quality kept |
+| **Open** | 1 | Q6b partial-recharge settlement behaviour (minor) |
 
-Nothing is blocking the synthesis engine any more.
+**Every question is answered.** Nothing blocks the synthesis engine.
 
 ---
 
@@ -189,11 +190,10 @@ the evaluators are not Libyan.
 
 ---
 
-## ❔ Awaiting a call
+## ✅ Scope decisions — both settled
 
-Two open items. Both are scope decisions rather than missing facts, and my
-recommendation differs from the initial inclination on each, so neither has
-been applied yet.
+Two scope calls, both now applied in session 3d. The reasoning is kept because
+it is the answer to "why doesn't your model use location?" at the pitch.
 
 ### Q8 — Calendar
 
@@ -208,7 +208,7 @@ been applied yet.
   large guess. A large guessed effect is worse than none: it puts structure in
   the data that the models will learn and that nothing validates.
 
-**Open — weekend days. Recommendation: keep it, minimally.**
+**Weekend days: KEPT, minimally.** ✅ Applied.
 
 This is not the same kind of assumption as Ramadan, for three reasons:
 
@@ -228,13 +228,14 @@ There is also a product reason: a 06:00–11:00 morning pass almost certainly
 sells differently on a work morning than on a Friday. If `offpeak_data_ratio`
 has no weekday structure, M3 cannot tell a commuter from someone who sleeps in.
 
-**Proposed:** keep `weekend_days: [friday, saturday]` and a derived
-`is_weekend` flag. Do **not** add a weekend usage multiplier — that would be
-the guessed part. Let the weekly rhythm come from the flag alone.
+**As applied:** `weekend_days: [friday, saturday]` is `confirmed`, with
+`apply_usage_multiplier: false`. There is an `is_weekend` feature family and
+`sequences.require_weekly_periodicity: true`. No usage multiplier anywhere —
+the weekly rhythm comes from the flag alone.
 
 ### Q9 — Geography and network quality
 
-**Recommendation: remove the geography layer, keep a network-quality feature.**
+**DECIDED: geography layer removed, network-quality feature kept.** ✅ Applied.
 These are two things bundled under one heading and they deserve different
 answers.
 
@@ -270,15 +271,17 @@ That still keeps the Component 2 seam alive at zero cost. If your teammate's
 Network ML lands, they supply a better version of the same subscriber-level
 number and nothing in M1 changes.
 
-**One consequence to decide with it.** Without `district`, the redlining audit
-has nothing to audit. `forbidden_pricing_features` still guards `age_group`,
-`language_pref` and `gender`, so the fairness guardrail stays meaningful — but
-auditing discount distribution across a dimension we no longer model would be
-theatre. I would **replace** the redlining audit with a discount-distribution
-audit across **value deciles and tenure bands**, checking we are not
-systematically penalising low-value or new subscribers. That is a real fairness
-question with data behind it, and it keeps the ethical commitment honest rather
-than nominal.
+**The fairness consequence, as applied.** Without `district` the redlining
+audit had nothing to audit, so `audit_redlining` was replaced by
+`audit_distribution(mean_by_group, dimension)` across **value deciles and
+tenure bands**. It asks a real question — are we systematically giving less to
+low-value or newer subscribers? — and a gap is *expected*, because loyalty
+tiers exist and `d_max` rises with tenure by design. What it catches is a gap
+wider than the published ladder explains.
+
+`district` stays on `forbidden_pricing_features` even though nothing generates
+it, so that reintroducing geography later cannot silently make it a price
+lever. A test asserts that.
 
 ---
 

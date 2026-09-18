@@ -14,8 +14,12 @@ from __future__ import annotations
 import pandas as pd
 
 
-def apply_outage_exposure(df: pd.DataFrame) -> pd.DataFrame:
-    """Power- and fuel-driven downtime, weighted higher in southern districts."""
+def apply_service_outage_exposure(df: pd.DataFrame) -> pd.DataFrame:
+    """Power- and fuel-driven downtime, at SUBSCRIBER level.
+
+    No geographic variation: all subscribers are drawn from one distribution.
+    Geography was dropped, so there are no districts to weight by.
+    """
     raise NotImplementedError("TODO(E1)")
 
 

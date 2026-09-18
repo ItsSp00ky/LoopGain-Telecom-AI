@@ -18,7 +18,7 @@ This document is the map from that narrative to the code.
 
 | Layer | What it does | Code | Config | Owner |
 |---|---|---|---|---|
-| **0** Sources | UCI Iranian · Cell2Cell · IBM Telco · OpenCelliD | — | `conf/data.yaml` | E1 |
+| **0** Sources | UCI Iranian · Cell2Cell · IBM Telco | — | `conf/data.yaml` | E1 |
 | **1** Ingestion | Pandera contracts, dedup, SHA-256 hashing, raw → Parquet | [`src/cvm/ingest/`](../src/cvm/ingest) | `conf/data.yaml` | E1 |
 | **2** GAN synthesis | CTGAN / TVAE / Copula, quantile mapping, overlays, quality gate | [`src/cvm/synthesis/`](../src/cvm/synthesis) | `conf/data.yaml#synthesis` | E1 |
 | **3** Feature store | Rolling aggregates, RFM-LE, decay, leakage, sequences, DuckDB | [`src/cvm/features/`](../src/cvm/features) | `conf/features.yaml` | E1 |
@@ -36,9 +36,9 @@ Chatbot. They call the API read-only. See [INTEGRATION.md](INTEGRATION.md).
 ## Data flow
 
 ```
-Layer 0   [UCI 3,150]  [Cell2Cell 71,047]  [IBM 7,043]  [OpenCelliD MCC 606]
-               |               |                 |               |
-               +---------------+-----------------+---------------+
+Layer 0   [UCI 3,150]      [Cell2Cell 71,047]      [IBM 7,043]
+                 |                   |                    |
+                 +-------------------+--------------------+
                                              v
 Layer 1   INGESTION            Pandera contracts | dedup (~300 UCI dups)
                                MSISDN -> SHA-256+salt | raw -> Parquet
@@ -48,14 +48,14 @@ Layer 2   GAN SYNTHESIS        Generator --(rows)--> Discriminator
                                CTGAN (primary) | TVAE | Copula (baseline)
                                         |
                                quantile -> LYD ladder
-                               overlays: outage, Ramadan, salary week, advance
+                               overlays: outage, salary week, weekend, credit
                                         |
                                [ GATE: KS >= 0.85 | corr d <= 0.10 | det AUC <= 0.65 ]
                                         |  reject -> retrain
                                              v
 Layer 3   FEATURE STORE        rolling 7/30/90d | RFM-LE quintiles
-          (DuckDB + Polars)    decay & leakage ratios | cell join
-                               per-cell 24h load curves (off-peak troughs)
+          (DuckDB + Polars)    decay & leakage ratios | weekly rhythm
+                               subscriber-level network quality
                                ----------------------------------------
                                features_offline.parquet   (training, PIT-correct)
                                sequences_offline.npz      (90 x k, for the LSTM)
@@ -138,13 +138,31 @@ in [`src/cvm/synthesis/hazard.py`](../src/cvm/synthesis/hazard.py), for two
 reasons: the model needs recoverable signal, and the evaluation has to be
 honest about being a simulation ground truth.
 
-`hazard.LABEL_GENERATING_FIELDS` lists every field the hazard reads. All of
-them are excluded from the feature matrix in
-`conf/features.yaml#leakage_controls.excluded_columns`, and
-`tests/leakage/test_point_in_time.py` fails if that list ever falls out of
-sync. Without that test, the most likely failure mode in the whole project is a
-model that scores beautifully by reading its own label back out of a feature we
-forgot to drop.
+`hazard.py` splits its fields into two categories, and confusing them breaks
+the project in opposite directions:
+
+- **`LABEL_DRIVER_FIELDS`** are the behavioural fields the hazard is a function
+  of: `days_since_last_topup`, `recharge_gap_cv`, and so on. These **stay** in
+  the feature matrix. The hazard is built from observable behaviour precisely
+  so the signal is recoverable; a model that can see no driver of the label has
+  nothing to learn, and every metric would collapse for a reason nobody could
+  find.
+- **`LABEL_ARTIFACT_FIELDS`** trivially encode the outcome: `hazard_score`,
+  `churn_date`, the label itself. These must **never** reach the feature
+  matrix. `conf/features.yaml#leakage_controls.excluded_columns` must be a
+  superset of this tuple.
+
+`tests/leakage/test_point_in_time.py` asserts both directions — artifacts
+excluded, drivers available — and fails the build if either drifts. Without the
+first test the project's most likely failure is a model that scores beautifully
+by reading its own label back out. Without the second, someone "tightens"
+leakage control, guts the feature set, and the collapse looks like a modelling
+problem.
+
+**What makes this honest rather than circular** is stated plainly in the
+report: these metrics are computed against a simulation whose ground truth we
+wrote, so they demonstrate that the pipeline and the decision logic work. They
+are not evidence of production performance.
 
 ---
 

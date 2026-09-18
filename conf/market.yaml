@@ -198,38 +198,47 @@ calendar:
     trough_hours: { status: confirmed, from: 6, to: 11, source: "عروض الصبح time condition" }
     peak_hours:   { status: assumption, values: [19, 20, 21, 22] }
 
+  # Friday-Saturday is Libya's official weekend -- a public fact about the
+  # country, not an operator figure we are estimating, so this is confirmed
+  # rather than assumed.
+  #
+  # Kept deliberately small: a derived is_weekend flag and NOTHING ELSE. No
+  # usage multiplier, because that would be the guessed part. The weekly
+  # rhythm comes from the flag alone.
+  #
+  # Why it matters enough to keep: M1 Arm B is an LSTM over 90 days of daily
+  # sequences. Generated data with no weekly structure is unrealistically
+  # smooth, which would hand LightGBM the benchmark on a data-generation
+  # choice rather than on merit. It also lets M3 tell a commuter from someone
+  # who sleeps in, which is exactly who the 06:00-11:00 morning pass suits.
   weekend_days:
-    status: assumption
+    status: confirmed
+    source: "Libya's official weekend"
     values: [friday, saturday]
+    apply_usage_multiplier: false
 
 # ---------------------------------------------------------------------------
-# 6. GEOGRAPHY
+# 6. GEOGRAPHY -- REMOVED (Q9)
 # ---------------------------------------------------------------------------
-# District is a NETWORK-QUALITY context field only. conf/pricing.yaml forbids
-# it as a pricing input and a redlining audit checks it stayed forbidden.
-geography:
-  status: assumption      # ← Q9
-
-  districts:
-    - { name: Tripoli,  name_ar: "طرابلس",  population_share: 0.30, urban: true }
-    - { name: Benghazi, name_ar: "بنغازي",  population_share: 0.15, urban: true }
-    - { name: Misrata,  name_ar: "مصراتة",  population_share: 0.09, urban: true }
-    - { name: Zawiya,   name_ar: "الزاوية", population_share: 0.06, urban: true }
-    - { name: Bayda,    name_ar: "البيضاء", population_share: 0.05, urban: true }
-    - { name: Sabha,    name_ar: "سبها",    population_share: 0.04, urban: false }
-    - { name: Tobruk,   name_ar: "طبرق",    population_share: 0.03, urban: true }
-    - { name: Sirte,    name_ar: "سرت",     population_share: 0.03, urban: true }
-    - { name: Ubari,    name_ar: "أوباري",  population_share: 0.02, urban: false }
-    - { name: Ghat,     name_ar: "غات",     population_share: 0.01, urban: false }
-    - { name: Other,    name_ar: "أخرى",    population_share: 0.22, urban: false }
-
-  outage_severity_multiplier:
-    status: assumption
-    Sabha: 2.5
-    Ubari: 2.8
-    Ghat: 3.0
-    Other: 1.6
-    default: 1.0
+# No districts, no cell identifiers, no OpenCelliD, no per-district outage
+# multipliers. All subscribers are modelled as geographically equivalent.
+#
+# Why: with the network module out of scope, geography had no consumer left.
+# The risk map is gone, and `district` survived only so the fairness guardrail
+# could forbid it -- generating a field purely so a test can assert we did not
+# use it. Removing it also sheds a dataset, an API key and a CC BY-SA
+# attribution obligation.
+#
+# WHAT WE KEPT: network quality as a SUBSCRIBER-LEVEL feature. That is real
+# measured signal, not an invented Libyan field -- UCI Iranian has a
+# `Call Failures` column and Cell2Cell has dropvce/blckvce/unansvce. See
+# conf/features.yaml#network_quality. Component 2 can supply a better version
+# of the same per-subscriber numbers later; see docs/INTEGRATION.md section 6.
+#
+# Consequence, handled in conf/pricing.yaml: the redlining audit had nothing
+# left to audit, so it was replaced by a discount-distribution audit across
+# value deciles and tenure bands -- a real fairness question with data behind
+# it rather than theatre.
 
 # ---------------------------------------------------------------------------
 # 7. LANGUAGE

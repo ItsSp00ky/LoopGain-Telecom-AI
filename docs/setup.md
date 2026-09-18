@@ -75,7 +75,6 @@ Open `.env` and set at minimum:
   python -c "import secrets; print(secrets.token_hex(32))"
   ```
 - `KAGGLE_USERNAME` / `KAGGLE_KEY` — for datasets B and C
-- `OPENCELLID_API_KEY` — free from <https://opencellid.org/register.php>
 - `GROQ_API_KEY` — **optional.** Only writes Arabic offer copy in the channel
   simulator; leave blank and it falls back to templated text.
 
@@ -177,7 +176,6 @@ All free. Create them on Day 1 so nobody is blocked on a signup mid-sprint.
 | Service | For | Link |
 |---|---|---|
 | Kaggle | Datasets B and C | <https://kaggle.com> → Settings → Create New Token |
-| OpenCelliD | Dataset D, MCC 606 | <https://opencellid.org/register.php> |
 | Groq | *Optional* — Arabic offer copy in the channel simulator | <https://console.groq.com> |
 | Hugging Face | Optional — Spaces demo host, Criteo uplift mirror | <https://huggingface.co> |
 | Oracle Cloud Always Free | Demo host — 4 ARM cores, 24 GB RAM | <https://www.oracle.com/cloud/free/> |

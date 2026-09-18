@@ -27,7 +27,6 @@ The `Status` column tracks implementation: `planned` → `generated` →
 | `tenure_months` | int | real | From UCI `Subscription Length`. Loyalty backbone. | planned |
 | `consecutive_active_months` | int | gen | Conditioned on tenure and recharge regularity. | planned |
 | `language_pref` | enum | gen | {ar, ar-LY, ber, en}. Drives message rendering. **Never a pricing input.** | planned |
-| `district` | str | overlay | From the OpenCelliD join. **Network-quality input only — never a price lever.** | planned |
 | `summer_outage_index` | float | overlay | Seasonal outage exposure. | planned |
 | `salary_week_flag` | bool | overlay | Public-sector disbursement drives a pronounced recharge spike. | planned |
 | `diaspora_roaming_flag` | bool | overlay | Roaming marks a high-value, low-churn segment. | planned |
@@ -96,16 +95,22 @@ recovery happens at the next recharge or balance transfer in.
 | `social_bundle_share` | float | derived | Share of data spend on the real Social family (1 / 5 / 20 LYD). No apps are zero-rated, so all traffic consumes allowance. | planned |
 | `bundle_vs_payg_share` | float | derived | Share of data spend inside a bundle versus at the PAYG rate. | planned |
 
-## Network experience (joined to real OpenCelliD sites)
+## Network quality (subscriber-level)
+
+No cells, no coordinates, no districts — geography is out of scope, and all
+subscribers are modelled as geographically equivalent. These are **real
+measured features**, not invented Libyan ones: UCI Iranian has a
+`Call Failures` column and Cell2Cell has `dropvce` / `blckvce` / `unansvce`.
+
+Component 2 (Network ML) can supply better values for the same field names
+later; nothing in M1 changes when it does. See
+[INTEGRATION.md §6](INTEGRATION.md).
 
 | Field | Type | Source | Logic | Status |
 |---|---|---|---|---|
-| `home_cell_id` | str | real | Real Almadar tower, MCC/MNC 606-01. | planned |
-| `home_lat`, `home_lon` | float | real | Real coordinates. CC BY-SA attribution required. | planned |
-| `hourly_load_curve` | float[24] | gen | Mean utilisation by hour, per cell. **Input to M3's off-peak trough detection.** Will come from Component 2 once it exists — see [INTEGRATION.md §6](INTEGRATION.md). | planned |
-| `dropped_call_rate_30d` | float | mapped | Seeded from UCI `Call Failures` and Cell2Cell `dropvce`, perturbed per cell. | planned |
-| `data_session_failure_rate` | float | gen | Per-cell, correlated with load. | planned |
-| `cell_outage_hours_30d` | float | overlay | Power- and fuel-driven; higher in southern and peri-urban districts. | planned |
+| `dropped_call_rate_30d` | float | mapped | Seeded from UCI `Call Failures` and Cell2Cell `dropvce`. | planned |
+| `data_session_failure_rate` | float | gen | Correlated with dropped-call rate. | planned |
+| `service_outage_hours_30d` | float | overlay | Power- and fuel-driven downtime this subscriber experienced. One distribution, no geographic variation. | planned |
 
 ## Care contact
 

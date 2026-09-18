@@ -1,8 +1,8 @@
 """Entry point: `python -m cvm.features.run`  (step 3 of 3)
 
 Builds rolling 7/30/90d aggregates, RFM-LE quintiles, decay and leakage ratios,
-the cell join via home_cell_id, per-cell 24x30 load matrices, the sequence
-tensors, and both feature stores.
+subscriber-level network-quality features, the sequence tensors, and both
+feature stores.
 """
 
 from __future__ import annotations

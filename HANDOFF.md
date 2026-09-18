@@ -45,10 +45,15 @@ all belong to other components.
 Real catalogue data is in hand: 57 bundles across 17 families, the confirmed recharge ladder, and
 both emergency-credit products. See §3a below for what that invalidated.
 
-**No blockers.** Eight of ten market questions are confirmed and one is a
-decided estimate. Two scope decisions are open and flagged in
-[`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md): whether to keep weekend
-days, and whether to drop geography. Both carry a recommendation.
+**No blockers, and no open scope questions.** All ten market questions in
+[`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md) are resolved: eight
+confirmed from operator documentation, one a labelled estimate (base and
+economics), and the two scope calls decided in session 3d. One minor factual
+gap remains (Q6b, partial-recharge settlement) and it does not block anything.
+
+**No geography anywhere.** No districts, cells, coordinates or OpenCelliD.
+Network quality survives as a subscriber-level feature because it is real
+measured signal, not an invented Libyan field.
 
 ---
 
@@ -60,7 +65,9 @@ days, and whether to drop geography. Both carry a recommendation.
 | 2 | **Python 3.11, via conda** | TensorFlow, scikit-survival and SDV have no wheels for 3.12+. Machine has 3.14 and 3.10 in base — neither works. |
 | 3 | **M7 Employee Copilot removed from this branch** | It is Component 5, owned by a teammate. Its scaffolding was written and moved to [`docs/integration/copilot_starter/`](docs/integration/copilot_starter/) as a handover, not deleted. |
 | 4 | **LangChain / Chroma / sentence-transformers dropped** | Consequence of #3. Saves ~2.5 GB of install on a machine with ~20 GB free. |
-| 5 | **M5 (network AutoEncoder) and M6 (Arabic care text) removed entirely** | Session 3. Network modelling is Component 2; care text is Component 4. Building either here would duplicate a teammate's work. M1 now consumes raw per-cell quality signals — dropped-call rate, outage hours — as ordinary churn features instead. Contract in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) §6. |
+| 5 | **M5 (network AutoEncoder) and M6 (Arabic care text) removed entirely** | Session 3. Network modelling is Component 2; care text is Component 4. Building either here would duplicate a teammate's work. M1 consumes subscriber-level quality signals — dropped-call rate, outage hours — as ordinary churn features instead. Contract in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) §6. |
+| 5a | **Geography removed entirely; network quality kept** | Session 3d. No districts, cells, coordinates or OpenCelliD — with M5 gone, geography had no consumer, and `district` survived only to be forbidden by the fairness guardrail. Network quality stays because it is *real measured signal* (UCI `Call Failures`, Cell2Cell `dropvce`), just subscriber-level rather than cell-level. The redlining audit was replaced by a value-decile / tenure-band distribution audit. |
+| 5b | **Weekend days kept, deliberately** | Session 3d. Friday–Saturday is a public fact, not an estimate, and it costs one derived boolean. Removing weekly rhythm from the daily sequences would handicap the M1 LSTM arm through a data-generation choice rather than on merit. No usage multiplier — that would be the guessed part. |
 | 6 | **All syllabus-chapter tracking removed** | Session 3. `docs/syllabus_coverage.md` deleted; chapter annotations stripped from every docstring, config comment, model card and template. Coverage is no longer a project constraint, so the annotations were noise that would drift. |
 | 7 | **Other components integrate over HTTP, never by import** | Four reasons in [`docs/INTEGRATION.md`](docs/INTEGRATION.md) §1: the feature store will be replaced at scale, importers bypass guardrails, importers skip the audit log, independent deploys. |
 | 8 | **Guardrail thresholds live in `conf/*.yaml`, never in code** | An evaluator will ask to change one live during the demo. |
@@ -125,7 +132,7 @@ arguably sharper — full detail in [`conf/advance.yaml`](conf/advance.yaml):
 | [`src/cvm/config.py`](src/cvm/config.py) | Env + YAML loader, `guardrail()` accessor that raises on a typo'd path, `seed_everything()`, salt enforcement |
 | [`src/cvm/api/schemas.py`](src/cvm/api/schemas.py) | Every Pydantic v2 request/response contract. **Frozen** — changing one is a cross-team event |
 | [`src/cvm/api/main.py`](src/cvm/api/main.py) | FastAPI app: lifespan, request-id + latency middleware, structured errors. Boots, `/docs` works |
-| [`src/cvm/decision/guardrails.py`](src/cvm/decision/guardrails.py) | **All six pricing guardrails, fully implemented** — margin floor, CLV ceiling, budget, cannibalisation, fairness + redlining audit, tier ceiling |
+| [`src/cvm/decision/guardrails.py`](src/cvm/decision/guardrails.py) | **All six pricing guardrails, fully implemented** — margin floor, CLV ceiling, budget, cannibalisation, fairness + distribution audit, tier ceiling |
 | [`tests/`](tests/) | ~60 passing tests: config, privacy, schemas, all six guardrails, API contracts, plus config-level leakage and credit-safety assertions |
 | `conf/*.yaml` | Every threshold, weight, tier boundary and safety guard |
 | `docker/`, `docker-compose.yml`, `.github/workflows/ci.yml` | Four-service stack; CI with separate required jobs for leakage and guardrails |
@@ -297,7 +304,7 @@ Learned the hard way or designed in on purpose:
     generates them. Contract: `docs/INTEGRATION.md` §6.
   - Care **volume** (`care_contacts_30d`) survives as a feature; care **text**
     does not.
-  - OpenCelliD stays, for district context and per-cell off-peak troughs.
+  - OpenCelliD stayed at this point, for district context. Removed in 3d.
   - Dependencies: `nlp` extra replaced by `rtl` (arabic-reshaper +
     python-bidi only). Arabic RTL rendering is still needed for offer copy in
     the channel simulator.
@@ -389,6 +396,64 @@ they disagree with it.
    it is measured signal, not an invented Libyan field. If geography goes, the
    redlining audit should be replaced by a discount-distribution audit across
    value deciles and tenure bands, which is auditable with data we have.
+
+### 2026-09-18 · Session 3d — weekend kept, geography dropped
+
+**Weekend days kept**, per the recommendation. `conf/market.yaml#weekend_days`
+is now `confirmed` (Friday-Saturday is a public fact, not an estimate) with
+`apply_usage_multiplier: false` -- the flag only, no guessed effect. Added an
+`is_weekend` feature family and `sequences.require_weekly_periodicity: true`,
+because generated daily series with no weekly rhythm would handicap the M1
+LSTM arm through a data-generation choice rather than on merit.
+
+**Geography dropped entirely.** No districts, cells, coordinates, OpenCelliD or
+per-cell trough detection.
+
+- Deleted `src/cvm/ingest/opencellid.py` and its Pandera contract.
+- Dataset D (OpenCelliD) and dataset I (Milan CDR) removed from
+  `conf/data.yaml`, `scripts/download_data.py` and `data/README.md`. Milan's
+  only purpose was real per-cell load curves, which nothing needs now.
+- `OPENCELLID_API_KEY` gone from `.env.example` and `config.py`.
+- `district` and `home_cell_id` removed from `SubscriberProfile` and
+  `CohortFilter`. A caller passing `district` now gets a 422 rather than a
+  silently-ignored field, with a test asserting it.
+- M3 uses ONE national off-peak window -- the operator's published
+  06:00-11:00 -- instead of detecting troughs. `detect_trough` replaced by
+  `offpeak_window()`.
+- `cell_outage_hours_30d` renamed `service_outage_hours_30d`; network quality
+  is now `level: subscriber` with no cell join and no load curve.
+
+**Fairness guardrail reworked.** The redlining audit went with geography --
+auditing a dimension we no longer model would be theatre. `audit_redlining`
+is replaced by `audit_distribution(mean_by_group, dimension)` across
+**value deciles and tenure bands**, which asks a real question: are we
+systematically giving less to low-value or newer subscribers? `district` stays
+on `forbidden_pricing_features` so reintroducing geography cannot silently make
+it a price lever.
+
+**Defect found and fixed while renaming (worth knowing about).**
+`tests/leakage/test_point_in_time.py` asserted that every field in
+`hazard.LABEL_GENERATING_FIELDS` appeared in `excluded_columns`. It did not,
+so **that test would have failed on the first real pytest run** -- and
+"fixing" it by excluding those fields would have been much worse, because they
+are the hazard's behavioural *drivers*. Excluding them leaves the model nothing
+to learn and every metric collapses for a reason nobody could find.
+
+Resolved by splitting the concept in `hazard.py`:
+
+- `LABEL_DRIVER_FIELDS` -- behavioural inputs to the hazard. These **stay**
+  available as features. Recoverable signal is the whole point.
+- `LABEL_ARTIFACT_FIELDS` -- `hazard_score`, `churn_date`, the label itself,
+  `days_to_churn`. These must **never** reach the feature matrix, and
+  `excluded_columns` is now a superset of them.
+
+`tests/leakage/` asserts both directions and that the two sets are disjoint.
+`docs/architecture.md#label-generation` explains why the driver overlap is
+honest rather than circular, which is the paragraph the report needs.
+
+**Verified:** all Python compiles, all YAML parses, all doc links resolve,
+31/31 config-level assertions pass, and 16/16 guardrail functions behave
+correctly when executed directly (including the new distribution audit).
 
 ## 9. How to update this file
 

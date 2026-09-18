@@ -39,19 +39,6 @@ class IbmTelcoRaw(pa.DataFrameModel):
         coerce = True
 
 
-class OpenCelliDSites(pa.DataFrameModel):
-    """Dataset D, filtered to MCC 606 / MNC 01 (Almadar Aljadid)."""
-
-    cell_id: Series[str]
-    lat: Series[float] = pa.Field(ge=19.0, le=34.0)   # Libya bounding box
-    lon: Series[float] = pa.Field(ge=9.0, le=26.0)
-    mnc: Series[str] = pa.Field(isin=["01"])
-
-    class Config:
-        strict = False
-        coerce = True
-
-
 class SubscriberSnapshot(pa.DataFrameModel):
     """The landed, hashed, per-subscriber snapshot every downstream layer reads."""
 

@@ -89,7 +89,6 @@ class Settings(BaseSettings):
     # --- Dataset access --------------------------------------------------
     kaggle_username: str = Field(default="", alias="KAGGLE_USERNAME")
     kaggle_key: str = Field(default="", alias="KAGGLE_KEY")
-    opencellid_api_key: str = Field(default="", alias="OPENCELLID_API_KEY")
 
     @field_validator("hash_salt")
     @classmethod

@@ -1,4 +1,4 @@
-"""Off-peak offloading and per-cell trough detection.  Owner: E4
+"""Off-peak offloading.  Owner: E4
 
 Peak-hour capacity is what drives network capex, so shifting load has real
 avoided-capex value beyond the near-zero marginal cost of an off-peak bit.
@@ -12,13 +12,11 @@ than proposing a new one.
 
 Two refinements over simply reselling that pass, and both matter:
 
-PER-CELL TROUGH DETECTION. The operator's 06:00-11:00 band is national. Each
-cell's own 24-hour load curve is analysed to find its actual minimum-utilisation
-window, and validity hours are set PER SITE. A congested Tripoli sector and a
-lightly loaded Ghat sector do not trough at the same time. The national band is
-the fallback, which makes this a refinement of a real product rather than a
-guess. If a detected trough lands far outside 05:00-13:00, suspect the load
-curve rather than celebrating a discovery.
+ONE NATIONAL WINDOW. Per-cell trough detection was dropped along with
+geography: it needed cell load curves this branch no longer models, and it was
+only ever a refinement of the window the operator already publishes. Using the
+real published hours is not a compromise -- it is the answer, and it is better
+evidence than a trough we detected ourselves.
 
 CANNIBALISATION GUARD. A 1 LYD unlimited morning pass is cheap enough to pull
 heavy users down off a 35-80 LYD monthly bundle -- and at 06:00-11:00 it covers
@@ -35,15 +33,12 @@ from __future__ import annotations
 import numpy as np
 
 
-def detect_trough(load_curve_24h: np.ndarray, min_hours: int = 3, max_hours: int = 6) -> tuple[int, int]:
-    """Return (start_hour, end_hour) of this cell's minimum-utilisation band."""
-    raise NotImplementedError("TODO(E4)")
+def offpeak_window() -> tuple[int, int]:
+    """The operator's published off-peak hours, from conf/pricing.yaml.
 
-
-def detect_troughs_batch(load_curves: dict[str, np.ndarray]) -> dict[str, tuple[int, int]]:
-    """Trough detection across every cell at once. Cached -- a cell's load
-    curve changes slowly, and recomputing it per offer would blow the latency
-    budget."""
+    Returns (6, 11). There is deliberately no trough-detection function in
+    this module: the window is a known fact, not something to infer.
+    """
     raise NotImplementedError("TODO(E4)")
 
 
