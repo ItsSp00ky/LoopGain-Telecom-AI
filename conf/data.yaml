@@ -251,6 +251,17 @@ synthesis:
       epochs: 300
     gaussian_copula:             # classical baseline
       enabled: true
+      # Per-column marginals, chosen by shape. Beta for the columns genuinely
+      # bounded on [0, 1]; Gamma for the positive heavy-tailed ones.
+      #
+      # SDV's default is Beta for everything, which cannot represent a
+      # heavy-tailed positive quantity -- the first run scored KS-complement
+      # 0.72. And the obvious alternatives are unavailable: `truncnorm` and
+      # `gaussian_kde` both ABORT AT THE C LEVEL on this data (exit 127, no
+      # traceback). Timings on the backbone: beta 8.2s, norm 4.8s, gamma 6.1s,
+      # truncnorm crash, gaussian_kde crash.
+      bounded_distribution: beta
+      unbounded_distribution: gamma
   # Comparing all three is itself a reportable experiment, not scaffolding.
   report_comparison: true
 
@@ -293,6 +304,28 @@ synthesis:
   hazard_function:
     documented_at: docs/architecture.md#label-generation
     base_monthly_churn: 0.035
+
+    # Weights on the STANDARDISED drivers, combined on the logit scale. In
+    # config because an evaluator may well ask to change one live, and because
+    # the sign of each is a claim about prepaid behaviour that should be
+    # readable without opening Python.
+    #
+    # The intercept is NOT set here: it is solved per run so that the mean
+    # drawn probability equals base_monthly_churn. Fixing both the weights and
+    # the intercept would let the realised churn rate drift away from the
+    # market assumption every time a weight changed.
+    driver_weights:
+      days_since_last_topup: 0.90      # the strongest single tell
+      recharge_gap_cv: 0.55            # erratic beats infrequent-but-regular
+      balance_zero_hours_30d: 0.45     # no postpaid equivalent exists
+      incoming_outgoing_ratio: 0.50    # dual-SIM: this became the receiving SIM
+      service_outage_hours_30d: 0.30   # real measured signal, modest weight
+      onnet_ratio: -0.35               # NEGATIVE: off-net share rising = leaving
+
+    # Spread of the hazard across the population. Too low and every subscriber
+    # is average, so there is nothing for a model to rank; too high and the
+    # label is nearly deterministic and every metric looks wonderful.
+    logit_scale: 1.0
 
   # Quality gate. Above the detection threshold the generator is REJECTED and
   # retrained. We evaluate the GAN with an adversarial test — the same

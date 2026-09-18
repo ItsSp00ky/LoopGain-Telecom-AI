@@ -2,7 +2,7 @@
 # Layer 3 — feature store and the prepaid-adapted RFM             (Owner: E1)
 # ---------------------------------------------------------------------------
 
-# --- Temporal framing. Shared by M1 both arms and the M4 PD head. ----------
+# --- Temporal framing. Shared by every M1 model and the M4 PD head. --------
 # 90-day observation -> 15-day gap -> 30-day outcome.
 windows:
   observation_days: 90

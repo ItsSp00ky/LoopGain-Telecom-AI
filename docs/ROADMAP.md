@@ -1,12 +1,14 @@
 # Roadmap
 
-**108 functions left, in a chain that cannot be reordered.** This document is
+**90 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
 
-**Phase 1 is done.** Layer 1 is at 100%, the whole project at 41%. Next is
-phase 2, synthesis.
+**Phases 1 and 2 are written.** Layer 1 is at 100%, layer 2 at 100%, the whole
+project at **59%**. Phase 2's code is complete but its quality gate does not yet
+pass — see that section before starting phase 3, because it decides whether the
+population you build features on is usable.
 
 ## Two commands
 
@@ -239,84 +241,118 @@ for k, v in measured_distributions().items():
 
 ---
 
-## Phase 2 · Synthesis — 18 functions, 3–4 days
+## Phase 2 · Synthesis — **BUILT, GATE NOT YET CLEARED**
 
-**Build the Gaussian copula first and treat CTGAN as an upgrade.** This is the
-one change I would make to the plan as written. The quality gate is a *gate* —
-KS ≥ 0.85 **and** correlation delta ≤ 0.10 **and** detection AUC ≤ 0.65,
-simultaneously, over ~80 columns. If CTGAN misses, you iterate, and each
-iteration is a training run. `GaussianCopulaSynthesizer` fits in seconds,
-`ctgan_engine.py` already calls it *"fast, and sometimes wins"*, and the
-three-way comparison was always a deliverable. Get the whole downstream
-pipeline working on the copula population, then try CTGAN with time to spare.
+**Every function in this layer is written and the gate runs. The Gaussian
+copula does not pass it.** Two of three metrics clear; the detector does not:
 
-Order inside the phase:
-
-| | File | Functions | Note |
+| | value | threshold | |
 |---|---|---|---|
-| 1 | `synthesis/quantile_map.py` | 1 | Map measured Cell2Cell marginals |
-| 2 | `synthesis/hazard.py` | 2 | The label. Get this wrong and nothing downstream means anything |
-| 3 | `synthesis/overlays.py` | 5 | The Libyan layer — recharge ladder, morning peak, salary week |
-| 4 | `synthesis/ctgan_engine.py` | 4 | **Copula first**, then TVAE, then CTGAN |
-| 5 | `synthesis/quality_gate.py` | 5 | Three metrics, all fatal on failure |
-| 6 | `synthesis/run.py` | 1 | Orchestration |
+| KS-complement | **0.8698** | ≥ 0.85 | pass |
+| correlation delta | **0.0762** | ≤ 0.10 | pass |
+| detection AUC | **0.9924** | ≤ 0.65 | **fail** |
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+So the marginals are right and the pairwise rank correlations are right, and a
+LightGBM detector still separates real from synthetic almost perfectly. That is
+the Gaussian copula's own dependence structure: it is Gaussian by construction,
+real behavioural data is not, and a tree ensemble finds the difference. This is
+the problem CTGAN exists to solve.
+
+**CTGAN crashes on this machine.** Not a modelling failure — an environment
+one: `OSError: [WinError -1066598273] Windows Error 0xc06d007f` raised from
+`threadpoolctl`, which is an OpenMP/MKL duplicate-runtime conflict between
+torch and LightGBM. Worth trying, in order:
+
+1. `set KMP_DUPLICATE_LIB_OK=TRUE` before the run — the standard workaround.
+2. Reinstall torch and lightgbm from one channel so there is a single OpenMP
+   runtime. Note the env is not writable by your user (see phase 1), so this
+   needs fixing first.
+3. Run CTGAN in its own process with `OMP_NUM_THREADS=1`.
+
+**The gate is correctly refusing to let this through, and that is the point.**
+`fail_build_on_breach` is true in `conf/data.yaml` and it stays true. Lowering
+the threshold to 0.99 so the copula passes would make every metric measured
+downstream a statement about data a discriminator already knows is fake — which
+is exactly what §3.3 of the proposal promises not to do.
+
+### What did land, and is verified
+
+| File | What works |
+|---|---|
+| `quantile_map.py` | Rank-preserving map onto the real ladder (ρ = 0.93), plus the two structural corrections below |
+| `hazard.py` | Logistic hazard on six weighted drivers, intercept **solved** so the realised rate pins to 3.5% exactly and tracks any target |
+| `overlays.py` | Eight overlays, all with measured output; Ramadan removed, weekend added |
+| `ctgan_engine.py` | Copula / TVAE / CTGAN behind one interface, plus `compare_generators` for D2 |
+| `quality_gate.py` | Three metrics, `enforce()` raises, and the summary table prints |
+| `run.py` | End-to-end orchestration, gate before overlays |
+
+**Two structural corrections the generator cannot express**, both in
+`quantile_map.py` and both logged rather than hidden:
+
+* **Point masses.** A continuous generator produces values *near* zero and
+  never exactly zero, while real ratio data is full of exact zeros. The
+  correction is symmetric and it needed to be: a Beta marginal produced 0%
+  zeros where the real data has 7.5%, and a **Gamma marginal produced 40%**
+  where the real data has 3.5%. Too many zeros is the case nobody expects and
+  it is the worse one. Every share now matches to the decimal.
+* **Orderings.** `active_lines <= household_lines` holds for **100.00%** of
+  real rows — you cannot have more active lines than lines. A copula models the
+  correlation and nothing else, so it generates households with three lines of
+  which four are active, and a detector finds every one.
+
+### Three bugs found by running it
+
+**1. The hazard solved the wrong equation.** `1.0 / (1.0 + np.exp(...)).mean()`
+is `1 / mean(1 + exp)`, not `mean(1 / (1 + exp))` — the `.mean()` binds to the
+parenthesised term. It converged happily to a **9.9% churn rate against a 3.5%
+target**, and every calibration claim downstream would have been measured
+against a prior nobody chose. One pair of brackets.
+
+**2. Cell2Cell is voice-era.** Measured on the file: `recv_sms_Mean` is 99.1%
+zeros, the data-failure ratio is 97.4% zeros, `mou_cdat_Mean` is 86.6% zeros.
+It is a ~2001 US dataset from before mobile data. Those columns do not fit
+badly — they assert that nobody uses data, which is the opposite of Libyan
+prepaid in 2026. Dropped from the backbone, with data and SMS behaviour coming
+from the overlays instead. **This source grounds voice behaviour, the leakage
+ratio, the off-peak activity split and the decay ratios. That is what it has.**
+
+**3. `offpeak_data_ratio` was grounded on voice.** The measured 0.424 comes from
+`mou_opkv_Mean / (mou_peav_Mean + mou_opkv_Mean)` — off-peak share of *minutes*.
+Renamed `offpeak_activity_ratio` at the source, with the data ratio *derived*
+from it. The transferable claim is that a subscriber active in the off-peak
+window stays that kind of subscriber, not that voice and data split the day
+identically.
+
+### Two libraries that abort at the C level
+
+Both found by bisection, because there is nothing to read: exit 127, no
+traceback, no output.
+
+* `gaussian_kde` as a copula marginal — crashes, and is unusably slow when it
+  does not.
+* `truncnorm` as a copula marginal — crashes.
+
+Timings on the backbone: beta 8.2s, norm 4.8s, gamma 6.1s, truncnorm crash,
+gaussian_kde crash. The config now names beta for bounded columns and gamma for
+unbounded ones, with the measurements recorded beside it.
+
+### How to verify it
+
+```bash
+python -m cvm.synthesis.run
+```
+
+It prints the gate table and **exits non-zero** on a failure, writing no
+population. That is the correct behaviour and it is what happens today.
+
+When a generator does clear the gate, these are the checks that matter:
 
 ```bash
 python scripts/check_phase.py 2
 ```
 
-**Check 1** — the label is plausible and the leakage split holds:
-
-```bash
-python -c "
-from cvm.synthesis.hazard import LABEL_DRIVER_FIELDS, LABEL_ARTIFACT_FIELDS
-assert not set(LABEL_DRIVER_FIELDS) & set(LABEL_ARTIFACT_FIELDS)
-print('driver/artefact sets are disjoint')
-"
-pytest tests/leakage -q
-```
-
-**Check 2** — the generated churn rate matches the market assumption. Expect
-close to 3.5%; a rate near 50% means you inherited the Cell2Cell prior, which
-would destroy the calibration claim:
-
-```bash
-python -c "
-import pandas as pd
-from cvm.config import settings
-df = pd.read_parquet(settings.paths['synthetic'] + '/population.parquet')
-print('rows:', len(df), '| churn rate:', round(df['silent_churn_30d'].mean(), 4))
-"
-```
-
-**Check 3** — the quality gate, which is the deliverable:
-
-```bash
-cvm synthesise
-```
-
-It must print all three metrics and pass all three. **A failing gate is not a
-warning.** If detection AUC is above 0.65 the generator is distinguishable from
-real data and the population is not usable; retrain or fall back to the copula.
-
-**Check 4** — the recharge ladder was respected, not approximated:
-
-```bash
-python -c "
-import pandas as pd
-from cvm.config import load_conf, settings
-df = pd.read_parquet(settings.paths['synthetic'] + '/population.parquet')
-ladder = set(load_conf('market')['recharge']['denominations_lyd'])
-got = set(df['recharge_amount_lyd'].dropna().unique())
-print('invented denominations:', sorted(got - ladder) or 'none')
-"
-```
-
-Anything other than `none` means the generator is selling cards Almadar does
-not print.
+Three of them: the gate passes, the generated churn rate is near 3.5%, and no
+recharge amount is a denomination Almadar does not print.
 
 ---
 
