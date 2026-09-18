@@ -435,7 +435,14 @@ dates**, split 60/20/20 by time, and `scripts/check_phase.py 3` passes 8 of 8.
 | test | 19,899 | 19.9% | 2026-07-29 → 2026-09-18 |
 
 Three label artefacts dropped (`hazard_score`, `churn_date`, `days_to_churn`);
-the target kept. Medians still on their Cell2Cell anchors: leakage ratio 0.280
+the target kept.
+
+**On reproducibility, precisely.** Rebuilding all three layers from source
+reproduces every Parquet artefact byte for byte — the three interim files, the
+population and the offline store. The **DuckDB online store is
+content-reproducible but not byte-reproducible**: two writes of an identical
+frame produce identical rows and different files, because the format embeds
+write-time metadata. Compare that one on content, never on hash. Medians still on their Cell2Cell anchors: leakage ratio 0.280
 against 0.280 measured, revenue decay 0.997 against 1.012, off-peak share 0.461
 against 0.424.
 
