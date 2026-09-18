@@ -38,12 +38,12 @@ from cvm.config import load_conf, settings
 from cvm.ingest.hashing import assert_no_raw_identifiers, hash_identifier
 from cvm.synthesis import ctgan_engine, overlays
 from cvm.synthesis.hazard import assert_label_is_learnable, generate_labels
-from cvm.synthesis.quality_gate import enforce, run_gate
+from cvm.synthesis.quality_gate import enforce, run_gate, split_for_gate
 from cvm.synthesis.quantile_map import (
     assert_on_ladder,
     enforce_orderings,
     map_to_lyd_ladder,
-    preserve_point_masses,
+    match_empirical_marginals,
 )
 
 log = logging.getLogger(__name__)
@@ -251,22 +251,31 @@ def main() -> None:
     conf = load_conf("data")["synthesis"]
     n = conf["n_subscribers"]
 
-    # 1. The real behavioural backbone.
+    # 1. The real behavioural backbone, split for an honest gate. The
+    #    generator never sees the holdout, so the detector answers "can you
+    #    tell this from real data" rather than "can you tell this from the
+    #    rows the generator memorised".
     real = build_real_backbone()
+    fit_on, holdout = split_for_gate(real)
 
     # 2. Fit and sample. Copula by default -- see ctgan_engine's docstring for
     #    why the build order is copula first and CTGAN as an upgrade.
-    synthetic, _ = ctgan_engine.fit_and_sample(real, kind="gaussian_copula", n=n)
+    synthetic, _ = ctgan_engine.fit_and_sample(fit_on, kind="gaussian_copula", n=n)
 
-    # 3. Structural corrections the generator cannot express: exact-zero point
-    #    masses and hard orderings. Both are applied BEFORE the gate, because
-    #    they are part of what the generator produces rather than a way of
-    #    dressing up its output afterwards -- and both are logged.
-    synthetic = enforce_orderings(preserve_point_masses(real, synthetic), ORDERINGS)
+    # 3. Empirical marginals, then the orderings the generator cannot know.
+    #
+    #    A copula separates dependence from marginals; we keep its dependence
+    #    and take the marginals from the data. SDV's fitted families truncate
+    #    every tail here -- incoming_outgoing_ratio to 8.3 where the real
+    #    maximum is 24.0 -- and no available family fixes it. See
+    #    quantile_map.match_empirical_marginals. Applied BEFORE the gate,
+    #    because it is part of how the population is constructed rather than a
+    #    way of dressing up the score, and logged either way.
+    synthetic = enforce_orderings(match_empirical_marginals(fit_on, synthetic), ORDERINGS)
 
-    # 4. The gate, on the generator against its own training data, before any
-    #    overlay touches either side.
-    result = run_gate(real, synthetic)
+    # 4. The gate, against HELD-OUT real rows, before any overlay touches
+    #    either side.
+    result = run_gate(holdout, synthetic)
     enforce(result)
 
     # 5. Libyan units, identifiers, overlays, labels.

@@ -243,37 +243,71 @@ for k, v in measured_distributions().items():
 
 ## Phase 2 · Synthesis — **BUILT, GATE NOT YET CLEARED**
 
-**Every function in this layer is written and the gate runs. The Gaussian
-copula does not pass it.** Two of three metrics clear; the detector does not:
+**Every function is written, the environment is fixed, and every generator
+runs. None of them clears the 0.65 detection threshold.** Measured on 20,000
+rows with empirical marginals applied:
 
-| | value | threshold | |
-|---|---|---|---|
-| KS-complement | **0.8698** | ≥ 0.85 | pass |
-| correlation delta | **0.0762** | ≤ 0.10 | pass |
-| detection AUC | **0.9924** | ≤ 0.65 | **fail** |
+| | KS >= 0.85 | corr <= 0.10 | AUC <= 0.65 | |
+|---|---|---|---|---|
+| **real vs real** (floor) | 0.977 | 0.020 | **0.498** | -- |
+| Gaussian copula | 0.981 | 0.039 | **0.817** | fail |
+| TVAE, 300 epochs | 0.998 | 0.075 | **0.906** | fail |
+| copula at full 100k scale | 0.985 | 0.056 | **0.939** | fail |
 
-So the marginals are right and the pairwise rank correlations are right, and a
-LightGBM detector still separates real from synthetic almost perfectly. That is
-the Gaussian copula's own dependence structure: it is Gaussian by construction,
-real behavioural data is not, and a tree ensemble finds the difference. This is
-the problem CTGAN exists to solve.
+**The floor is the important row.** Two disjoint halves of *real* data score
+0.498 — chance. So the detector and the protocol are sound, and an 0.82 is a
+genuine generator deficiency rather than a measurement artefact. It also means
+KS and correlation are essentially solved: 0.98 and 0.04 against thresholds of
+0.85 and 0.10.
 
-**CTGAN crashes on this machine.** Not a modelling failure — an environment
-one: `OSError: [WinError -1066598273] Windows Error 0xc06d007f` raised from
-`threadpoolctl`, which is an OpenMP/MKL duplicate-runtime conflict between
-torch and LightGBM. Worth trying, in order:
+What remains is **dependence structure only**. A Gaussian copula's dependence
+is Gaussian by construction and real behavioural data's is not, and a tree
+ensemble finds the difference. TVAE is worse, not better. More rows make it
+worse still, because the detector has more to learn from.
 
-1. `set KMP_DUPLICATE_LIB_OK=TRUE` before the run — the standard workaround.
-2. Reinstall torch and lightgbm from one channel so there is a single OpenMP
-   runtime. Note the env is not writable by your user (see phase 1), so this
-   needs fixing first.
-3. Run CTGAN in its own process with `OMP_NUM_THREADS=1`.
+**The threshold was set on paper before anything was measured.** Published
+detection scores for good tabular generators commonly sit in 0.7–0.9, so 0.65
+may not be reachable on twelve correlated behavioural columns. That is a
+decision to take on evidence, and the evidence now sits in
+`conf/data.yaml#quality_gate.measured` beside the number itself.
 
-**The gate is correctly refusing to let this through, and that is the point.**
-`fail_build_on_breach` is true in `conf/data.yaml` and it stays true. Lowering
-the threshold to 0.99 so the copula passes would make every metric measured
-downstream a statement about data a discriminator already knows is fake — which
-is exactly what §3.3 of the proposal promises not to do.
+**It stays failing until someone decides otherwise.** `fail_build_on_breach` is
+true and the pipeline exits non-zero, writing no population. Relaxing the
+threshold so a generator squeaks through would make every downstream metric a
+statement about data a discriminator already knows is fake — exactly what §3.3
+of the proposal promises not to do. Changing it is legitimate; changing it
+quietly is not.
+
+### The environment problem, and the fix
+
+CTGAN and TVAE would not run at all. The failure read as an OpenMP conflict and
+was not one:
+
+```
+OSError: [WinError -1066598273] Windows Error 0xc06d007f   (from threadpoolctl)
+OSError: [WinError 127] ... Error loading "torch\lib\shm.dll"
+```
+
+`KMP_DUPLICATE_LIB_OK=TRUE` and `OMP_NUM_THREADS=1` both leave it failing. Two
+things were actually wrong, and **both** had to be fixed:
+
+1. **The env's `Library/bin` was not on the DLL search path.** Running
+   `envs\cvm\python.exe` directly is not the same as `conda activate cvm` —
+   activation prepends it, a direct invocation does not. Without it MKL cannot
+   resolve and `threadpool_info()` raises 0xc06d007f, which names neither the
+   DLL nor the caller.
+2. **torch must be imported before anything calls `threadpool_info()`.** With
+   the path fixed, calling it first leaves the OpenMP runtimes in a state where
+   `import torch` then dies on `shm.dll`. sklearn calls `threadpool_limits`
+   internally and CTGAN goes through sklearn, so any import order touching
+   sklearn first is a live grenade.
+
+Both are handled in `src/cvm/_dlls.py`, which runs from `cvm/__init__.py`
+before anything else can load a native library. `os.add_dll_directory` alone is
+*not* sufficient — MKL's transitive dependencies resolve via PATH — so it
+prepends to PATH as well. **You would not have hit this yourself**: you work
+inside an activated `(cvm)` prompt, which sets the path already. It was an
+artefact of how the tooling invokes Python, and it is now fixed for both.
 
 ### What did land, and is verified
 

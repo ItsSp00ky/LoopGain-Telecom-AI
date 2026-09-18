@@ -74,6 +74,34 @@ class GateResult:
         return "\n".join([*lines, "", verdict])
 
 
+def split_for_gate(
+    real: pd.DataFrame, holdout_fraction: float = 0.25
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split real rows into (fit_on, gate_against).
+
+    The generator is fitted on the first and scored against the second, so the
+    detector answers "can you tell synthetic from REAL data" rather than "can
+    you tell synthetic from the exact rows the generator memorised". The second
+    question flatters nothing and measures nothing useful -- it penalises
+    memorisation twice over while saying nothing about whether the population
+    is realistic.
+
+    The same principle as a train/test split, applied to a generator. Seeded,
+    because a gate score that moves with the split is not a gate score.
+    """
+    rng = np.random.default_rng(settings.random_seed)
+    shuffled = rng.permutation(len(real))
+    cut = round(len(real) * (1 - holdout_fraction))
+    fit_on = real.iloc[shuffled[:cut]].reset_index(drop=True)
+    gate_against = real.iloc[shuffled[cut:]].reset_index(drop=True)
+    log.info(
+        "gate split: fitting on %d rows, scoring against %d held-out real rows",
+        len(fit_on),
+        len(gate_against),
+    )
+    return fit_on, gate_against
+
+
 def ks_complement(real: pd.DataFrame, synthetic: pd.DataFrame) -> float:
     """Mean 1 - KS statistic across shared numeric marginals. Higher is better.
 
@@ -198,10 +226,17 @@ def detection_auc(real: pd.DataFrame, synthetic: pd.DataFrame) -> float:
 def run_gate(real: pd.DataFrame, synthetic: pd.DataFrame) -> GateResult:
     """Run all three gates. Callers must treat a failure as fatal.
 
-    Compares the generator's output against the generator's *own training
-    data*, and nothing else. Comparing against the overlaid population would
-    measure the overlays, which are business rules we wrote deliberately and
-    which a detector should be able to spot.
+    ``real`` should be real rows the generator DID NOT see. Scoring against the
+    generator's own training rows measures the wrong thing: a generator that
+    has partly memorised its input is *more* separable from those exact rows
+    than from fresh ones, so the detector ends up penalising memorisation twice
+    and answering "can you tell these apart from the training set" instead of
+    "can you tell these apart from real data". `split_for_gate` produces the
+    holdout; `cvm.synthesis.run` uses it.
+
+    Never compares against the overlaid population. The overlays are business
+    rules we wrote deliberately -- a detector should be able to spot them, and
+    gating on that would mean rejecting the Libyan layer for being Libyan.
     """
     conf = _conf()
     if not conf.get("enabled", True):

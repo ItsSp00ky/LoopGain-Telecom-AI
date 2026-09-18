@@ -239,7 +239,10 @@ def seed_everything(seed: int | None = None) -> int:
         import torch
 
         torch.manual_seed(seed)
-    except ImportError:
+    except (ImportError, OSError):
+        # OSError as well as ImportError: on Windows a broken DLL path makes
+        # `import torch` raise OSError, which an ImportError-only guard lets
+        # through and turns an optional dependency into a hard failure.
         pass
 
     return seed

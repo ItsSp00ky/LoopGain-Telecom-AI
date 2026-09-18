@@ -338,6 +338,30 @@ synthesis:
     discriminator_detection_auc_max: 0.65
     detector: lightgbm
 
+    # Scored against HELD-OUT real rows the generator never saw. Scoring
+    # against its own training rows asks "can you tell this from the rows the
+    # generator memorised", which penalises memorisation twice and says nothing
+    # about realism. See quality_gate.split_for_gate.
+    holdout_fraction: 0.25
+
+    # MEASURED, 2026-09-18, 20k rows with empirical marginals applied.
+    # The detector is calibrated: two disjoint halves of REAL data score 0.498,
+    # which is chance, so an 0.82 is a real deficiency and not an artefact.
+    #
+    #   real vs real (floor)      KS 0.977  corr 0.020  AUC 0.498
+    #   gaussian copula           KS 0.981  corr 0.039  AUC 0.817
+    #   tvae, 300 epochs          KS 0.998  corr 0.075  AUC 0.906
+    #
+    # NOTHING CLEARS 0.65 YET. The threshold was set on paper before anything
+    # was measured, and published detection scores for good tabular generators
+    # commonly sit in 0.7-0.9. Keep it failing rather than relax it silently:
+    # the number to change is here, the evidence is here, and the decision
+    # belongs to whoever reads both.
+    measured:
+      floor_real_vs_real_auc: 0.498
+      gaussian_copula_auc: 0.817
+      tvae_300ep_auc: 0.906
+
   # Generated data that is too clean makes models look unrealistically good.
   realism_injection:
     missingness_rate: 0.03

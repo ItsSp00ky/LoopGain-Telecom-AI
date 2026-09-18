@@ -138,7 +138,9 @@ def sample(model, n: int, seed: int | None = None) -> pd.DataFrame:
         import torch
 
         torch.manual_seed(resolved)
-    except ImportError:
+    except (ImportError, OSError):
+        # See cvm/_dlls.py -- torch raises OSError, not ImportError, when its
+        # DLLs cannot resolve.
         pass
 
     drawn = model.sample(num_rows=n)

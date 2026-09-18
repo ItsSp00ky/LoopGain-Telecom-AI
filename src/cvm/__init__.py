@@ -19,5 +19,14 @@ There is deliberately no agent and no LLM call path in this package.
 See docs/INTEGRATION.md.
 """
 
+# Windows native-library paths, registered before anything imports scipy,
+# lightgbm or torch. A conda environment invoked directly rather than through
+# `conda activate` does not have its Libraryin on the DLL search path, and
+# the resulting failure is a bare 0xc06d007f from inside threadpoolctl that
+# names neither the DLL nor the caller. See cvm/_dlls.py for the full account.
+from cvm._dlls import register_conda_dll_directories as _register_dlls
+
+_register_dlls()
+
 __version__ = "0.1.0"
 __all__ = ["__version__"]
