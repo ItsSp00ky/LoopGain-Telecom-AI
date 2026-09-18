@@ -199,8 +199,30 @@ def attach_identifiers(df: pd.DataFrame) -> pd.DataFrame:
             [hash_identifier(f"synthetic:{i}", salt) for i in range(len(out))], dtype="string"
         ),
     )
-    out["snapshot_date"] = pd.Timestamp("2026-09-18")
+
+    # SNAPSHOT DATES ARE SPREAD, NOT CONSTANT, and this is what makes Layer 3
+    # possible at all. A population observed on a single date has no time
+    # dimension, so a "temporal split" degenerates into an arbitrary one --
+    # which is exactly the leakage the project forbids, wearing the right name.
+    #
+    # Each subscriber is observed once, on their own date, across the
+    # configured window. Their outcome window runs from THEIR snapshot, so the
+    # labels stay correct per subscriber and the feature store partitions the
+    # way conf/config.yaml#feature_store.partition_by says it should.
+    conf = load_conf("data")["synthesis"]["observation_window"]
+    start, end = pd.Timestamp(conf["start"]), pd.Timestamp(conf["end"])
+    rng = np.random.default_rng(settings.random_seed + 11)
+    offsets = rng.integers(0, (end - start).days + 1, len(out))
+    out["snapshot_date"] = start + pd.to_timedelta(offsets, unit="D")
     out["source"] = "synthetic"
+
+    log.info(
+        "identifiers: %d subscribers, snapshots spread over %s to %s (%d distinct dates)",
+        len(out),
+        start.date(),
+        end.date(),
+        out["snapshot_date"].nunique(),
+    )
     return out
 
 

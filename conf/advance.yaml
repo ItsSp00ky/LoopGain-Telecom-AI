@@ -158,18 +158,24 @@ limit_function:
 safety_guards:
 
   # NEW, and the most important one for this operator. Never advance more than
-  # the subscriber's own recharge history shows they can clear in one top-up.
-  # A 5 LYD debt against a habitual 3 LYD recharger is a trap, not a service.
+  # the subscriber's own recharge history shows they can clear in one top-up
+  # AND STILL HAVE SOMETHING LEFT. A 5 LYD debt against a habitual 5 LYD
+  # recharger is clearable and buys them nothing -- the whole card goes to the
+  # debt and they are back at zero, which is the trap.
   affordability_ceiling:
     enabled: true
     mandatory: true
     # Use the subscriber's modal recharge, not their mean -- the mean is
     # dragged up by one salary-week top-up they will not repeat.
     basis: modal_recharge_amount_lyd
-    max_debt_as_fraction_of_modal_recharge: 1.0
+    # Strictly less than 1.0 BECAUSE of the zero-residual case. At 1.0 a debt
+    # exactly equal to the modal recharge is permitted, which is precisely the
+    # subscriber this guard exists to protect. 0.6 leaves usable balance after
+    # settlement, so clearing the debt buys them service rather than nothing.
+    max_debt_as_fraction_of_modal_recharge: 0.6
     # Hard floor: never issue a debt larger than the smallest card sold.
     never_exceed_smallest_denomination: false   # set true for the strictest policy
-    smallest_denomination_lyd: 3
+    smallest_denomination_lyd: 5
 
   # Excluded regardless of PD. Repeated advancing to the most financially
   # stressed subscribers is how digital credit has gone wrong elsewhere.

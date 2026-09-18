@@ -239,6 +239,15 @@ synthesis:
   n_subscribers: 100000
   seed: 606
 
+  # Each subscriber is observed once, on their own date, across this window.
+  # A population observed on ONE date has no time dimension, so a "temporal
+  # split" degenerates into an arbitrary one -- which is the leakage this
+  # project forbids, wearing the right name. Nine months gives the 90/15/30
+  # framing room to run and leaves a real train/validation/test ordering.
+  observation_window:
+    start: "2026-01-01"
+    end: "2026-09-18"
+
   models:
     ctgan:                       # primary
       enabled: true

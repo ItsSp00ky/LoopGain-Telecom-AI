@@ -108,14 +108,93 @@ def test_splits_module_exposes_no_random_split():
 # --- Data-level invariants (E1: unmark xfail as the pipeline lands) -------
 
 
-@pytest.mark.xfail(reason="feature store not built yet", strict=False)
+@pytest.mark.slow
 def test_no_feature_column_reads_past_the_snapshot_date():
-    raise NotImplementedError("TODO(E1)")
+    """THE POINT-IN-TIME GUARANTEE, asserted against the real store.
+
+    Asking what was known on a past date must never return a row observed
+    after it. If it does, every backtest is scored against information the
+    model would not have had, every metric is inflated, and nothing in the
+    output looks wrong.
+    """
+    from cvm.config import settings
+    from cvm.features.store import get_features
+
+    if not settings.feature_store_offline.exists():
+        pytest.skip("feature store not built; run `python -m cvm.features.run`")
+
+    import pandas as pd
+
+    full = pd.read_parquet(settings.feature_store_offline, columns=["snapshot_date"])
+    snapshots = pd.to_datetime(full["snapshot_date"])
+    cutoff = snapshots.quantile(0.5)
+
+    visible = get_features(as_of=str(cutoff.date()))
+    assert not visible.empty, "an as-of read at the median date returned nothing"
+
+    latest = pd.to_datetime(visible["snapshot_date"]).max()
+    assert latest <= cutoff, (
+        f"as-of {cutoff.date()} returned a row from {latest.date()}: the store is "
+        "serving the future, and every backtest built on it is invalid."
+    )
+    assert len(visible) < len(full), "the as-of filter returned everything; it is not filtering"
 
 
-@pytest.mark.xfail(reason="feature store not built yet", strict=False)
+@pytest.mark.slow
 def test_train_and_test_are_disjoint_in_time():
-    raise NotImplementedError("TODO(E1)")
+    """No row in train may be contemporaneous with or later than any row in
+    test. A model scored on rows from its own training period is scored on the
+    present, which is not the task."""
+    import pandas as pd
+
+    from cvm.config import settings
+    from cvm.features.splits import temporal_split
+
+    if not settings.feature_store_offline.exists():
+        pytest.skip("feature store not built; run `python -m cvm.features.run`")
+
+    features = pd.read_parquet(settings.feature_store_offline)
+    train, validation, test = temporal_split(features)
+
+    train_latest = pd.to_datetime(train["snapshot_date"]).max()
+    val_earliest = pd.to_datetime(validation["snapshot_date"]).min()
+    val_latest = pd.to_datetime(validation["snapshot_date"]).max()
+    test_earliest = pd.to_datetime(test["snapshot_date"]).min()
+
+    assert (
+        train_latest < val_earliest
+    ), f"train reaches {train_latest.date()} and validation starts {val_earliest.date()}"
+    assert (
+        val_latest < test_earliest
+    ), f"validation reaches {val_latest.date()} and test starts {test_earliest.date()}"
+
+    # And no subscriber may appear in more than one split, or the model is
+    # scored on people it has already seen.
+    ids = [set(part["subscriber_id_hashed"]) for part in (train, validation, test)]
+    assert (
+        not ids[0] & ids[1] and not ids[1] & ids[2] and not ids[0] & ids[2]
+    ), "a subscriber appears in more than one split"
+
+
+@pytest.mark.slow
+def test_no_label_artifact_survives_into_the_feature_store():
+    """The store may keep the TARGET -- it is the training matrix -- but never
+    an artefact. hazard_score, churn_date and days_to_churn each let a model
+    reconstruct the outcome directly."""
+    import pandas as pd
+
+    from cvm.config import settings
+    from cvm.synthesis.hazard import LABEL_ARTIFACT_FIELDS
+
+    if not settings.feature_store_offline.exists():
+        pytest.skip("feature store not built; run `python -m cvm.features.run`")
+
+    columns = set(pd.read_parquet(settings.feature_store_offline).columns)
+    target = load_conf("features")["target"]["name"]
+
+    leaked = (set(LABEL_ARTIFACT_FIELDS) - {target}) & columns
+    assert not leaked, f"label artefacts reached the feature store: {sorted(leaked)}"
+    assert target in columns, f"the target {target!r} is absent, so the store cannot be trained on"
 
 
 @pytest.mark.slow

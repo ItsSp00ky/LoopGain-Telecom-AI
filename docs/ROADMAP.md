@@ -1,14 +1,14 @@
 # Roadmap
 
-**90 functions left, in a chain that cannot be reordered.** This document is
+**65 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
 
-**Phases 1 and 2 are written.** Layer 1 is at 100%, layer 2 at 100%, the whole
-project at **59%**. Phase 2's code is complete but its quality gate does not yet
-pass — see that section before starting phase 3, because it decides whether the
-population you build features on is usable.
+**Phases 1, 2 and 3 are written and verified.** Layers 1, 2 and 3 are all at
+100%, the whole project at **73%**. Phase 2's quality gate passes and phase 3's
+leakage suite is green, so the population and the features built on it are both
+usable. **Next is phase 4 — M1 churn.**
 
 ## Two commands
 
@@ -423,69 +423,97 @@ recharge amount is a denomination Almadar does not print.
 
 ---
 
-## Phase 3 · Features — 25 functions, 3–4 days
+## Phase 3 · Features — **DONE**
 
-**The highest-risk phase for correctness, and the failures are silent.** If
-point-in-time correctness is wrong, every metric from here to the end of the
-project is invalid and nothing tells you. Build `splits.py` before anything
-else in this phase, and do not start Phase 4 until the leakage suite is green
-with every `xfail` marker deleted.
+`python -m cvm.features.run` produces **100,000 × 53 columns over 261 snapshot
+dates**, split 60/20/20 by time, and `scripts/check_phase.py 3` passes 8 of 8.
 
-| | File | Functions | Note |
+| split | rows | share | snapshot range |
 |---|---|---|---|
-| 1 | `features/splits.py` | 4 | Temporal only. There is deliberately no `random_split` |
-| 2 | `features/velocity.py` | 3 | `mean_7d / mean_30d` decay ratios |
-| 3 | `features/distress.py` | 2 | Zero-balance hours, recharge gap volatility |
-| 4 | `features/wallet_leakage.py` | 4 | The dual-SIM signature feature |
-| 5 | `features/rfm_le.py` | 7 | Prepaid-redefined R/F/M plus L and E |
-| 6 | `features/store.py` | 4 | `get_features(as_of=)` must never read the future |
-| 7 | `features/run.py` | 1 | Orchestration |
+| train | 60,069 | 60.1% | 2026-01-01 → 2026-06-06 |
+| validation | 20,032 | 20.0% | 2026-06-07 → 2026-07-28 |
+| test | 19,899 | 19.9% | 2026-07-29 → 2026-09-18 |
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+Three label artefacts dropped (`hazard_score`, `churn_date`, `days_to_churn`);
+the target kept. Medians still on their Cell2Cell anchors: leakage ratio 0.280
+against 0.280 measured, revenue decay 0.997 against 1.012, off-peak share 0.461
+against 0.424.
+
+### The distinction that cost the most time
+
+**`silent_churn_30d` is a label artefact AND the training target.** It is in
+`LABEL_ARTIFACT_FIELDS`, and it must be in the feature store, because a store
+with no target is a store nothing can be trained on. "May not be an input" and
+"must not exist" are different claims, and collapsing them breaks the pipeline
+in one direction and leaks in the other.
+
+`drop_excluded_columns` takes `keep_target` for exactly this, and the first
+version of the Phase 3 check got it wrong in the opposite direction — it failed
+a store that was correct. `snapshot_date` has the same shape of problem: it is
+excluded because it would leak the split, and it is also the column the split
+is made *on*, which is why `run.py` splits at step 3 and drops at step 4 and
+says so in its docstring.
+
+### Five bugs the checks caught
+
+**A single-snapshot population cannot be split temporally.** The generator
+originally stamped every subscriber with one observation date, so every split
+was arbitrary — a random split wearing the right name. `temporal_split` now
+raises below three distinct dates rather than returning something plausible.
+
+**`Lost` silently never fired.** Every `Lost` subscriber also satisfies
+`Hibernating`, and the looser rule was tested first, so it swallowed the
+tighter one. Eight declared segments, seven reachable, and nothing said so. The
+rules are now ordered most-specific first with the reason written at the line.
+
+**`IntCastingNaNError` on the quintiles.** 3% injected missingness leaves those
+rows unranked. A missing value now takes the **middle** quintile, not the worst:
+dropping them shrinks every cohort, and putting them at 1 asserts that an
+unknown recency is a bad recency, which the data does not support.
+
+**`smallest_denomination_lyd: 3` was stale** in `conf/advance.yaml` after the
+ladder moved to 5 LYD, so the zero-residual flag was measuring the wrong floor.
+
+**The mutation check found nothing, which is the point of running it.** Both
+the recency inversion and the filter-before-dedup ordering in the as-of read
+were removed deliberately and the suite caught each one. A test that cannot
+fail is not evidence.
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 3
 ```
 
-**Check 1** — the whole point of the phase. Delete all four `xfail` markers in
-`tests/leakage/test_point_in_time.py`, then:
+Expect 8 passed, 0 failed. The two that matter most:
+
+**The leakage suite is the gate for Phase 4.**
 
 ```bash
 pytest tests/leakage -q
 ```
 
-Expect every test to pass with no `xfail`. **This is the gate for Phase 4.**
+Expect `12 passed, 1 xfailed`. The single remaining `xfail` —
+`test_a_single_feature_cannot_reconstruct_the_label` — needs a trained M1 and
+is Phase 4's to delete. Every other marker is gone.
 
-**Check 2** — the generated distributions match what Cell2Cell measured. The
-targets are in `docs/data_dictionary.md`:
-
-```bash
-python -c "
-import pandas as pd
-from cvm.config import settings
-df = pd.read_parquet(settings.feature_store_offline)
-for col, want in [('incoming_outgoing_ratio', 0.280),
-                  ('offpeak_data_ratio', 0.424),
-                  ('revenue_decay_ratio', 1.012)]:
-    got = df[col].median()
-    flag = 'OK' if abs(got - want) < 0.05 else 'DRIFTED'
-    print(f'{col:<26} median {got:.3f} vs measured {want:.3f}  {flag}')
-"
-```
-
-**Check 3** — point-in-time serving actually holds. Ask for features as of a
-past date and confirm nothing later than that date contributed:
+**Point-in-time serving, on the real store:**
 
 ```bash
-python -c "
-from cvm.features.store import get_features
-df = get_features(subscriber_ids=None, as_of='2026-06-30')
-print('snapshot max date:', df['snapshot_date'].max())
-assert str(df['snapshot_date'].max()) <= '2026-06-30'
-print('no future leakage')
-"
+python -c "from cvm.features.store import get_features; d = get_features(as_of='2026-06-30'); print(len(d), 'rows, latest', d['snapshot_date'].max())"
 ```
+
+An as-of read goes to the **offline** store, filters, and only then takes each
+subscriber's latest row. The other order drops a subscriber entirely whenever
+their newest snapshot post-dates the cut-off, which shrinks a backtest cohort
+silently instead of answering it.
+
+### Unit coverage
+
+`tests/unit/test_features.py` — 26 tests. Ten cover `splits.py` alone, because
+it is the one module here whose failure is invisible: a leaked split produces a
+model that scores beautifully, ships, and is worthless, and the only symptom is
+that the numbers are *better* than they should be.
 
 ---
 

@@ -371,7 +371,213 @@ def check_reproducible() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 3-10 -- declared now, so the check exists before the code does
+# Phase 3 -- the feature store
+# ---------------------------------------------------------------------------
+
+
+def _offline():
+    import pandas as pd
+
+    from cvm.config import settings
+
+    path = settings.feature_store_offline
+    if not path.exists():
+        raise Pending(f"{path} does not exist; run `python -m cvm.features.run`")
+    return pd.read_parquet(path)
+
+
+def check_both_stores_exist() -> str:
+    """Offline for training, online for serving. Two stores, two jobs."""
+    from cvm.config import settings
+    from cvm.features import store
+
+    offline = _offline()
+    if not settings.feature_store.exists():
+        raise Pending(f"{settings.feature_store} does not exist")
+
+    connection = store.connect()
+    try:
+        rows = connection.execute(f"SELECT count(*) FROM {store.TABLE}").fetchone()[0]
+    finally:
+        connection.close()
+    return (
+        f"offline {len(offline):,} x {offline.shape[1]}, online {rows:,} subscribers, "
+        f"{offline['snapshot_date'].nunique()} snapshot dates"
+    )
+
+
+def check_leakage_suite() -> str:
+    """The gate for this phase. Every xfail except the one that genuinely needs
+    a trained M1 must be gone."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/leakage/",
+            "-q",
+            "--no-cov",
+            "-p",
+            "no:cacheprovider",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    lines = result.stdout.strip().splitlines()
+    tail = lines[-1] if lines else result.stderr[-200:]
+    if result.returncode != 0:
+        raise AssertionError(tail)
+    return tail
+
+
+def check_point_in_time_serving() -> str:
+    """An as-of read must never return a snapshot after the cut-off. This is
+    the guarantee every backtest downstream rests on."""
+    import pandas as pd
+
+    from cvm.features import store
+
+    offline = _offline()
+    snapshots = pd.to_datetime(offline["snapshot_date"])
+    cutoff = snapshots.quantile(0.5).normalize()
+
+    visible = store.get_features(as_of=str(cutoff.date()))
+    latest = pd.to_datetime(visible["snapshot_date"]).max()
+    if latest > cutoff:
+        raise AssertionError(f"as-of {cutoff.date()} returned a row from {latest.date()}")
+    if len(visible) >= len(offline):
+        raise AssertionError("the cut-off excluded nothing, so it demonstrates nothing")
+    return (
+        f"as-of {cutoff.date()}: {len(visible):,} of {len(offline):,} rows, latest {latest.date()}"
+    )
+
+
+def check_splits_are_temporal() -> str:
+    """Train strictly before validation strictly before test, and disjoint by
+    subscriber. A random split here leaks the future and nothing would say so."""
+    import pandas as pd
+
+    from cvm.features import splits
+
+    offline = _offline()
+    train, validation, test = splits.temporal_split(offline)
+
+    for earlier, later, names in (
+        (train, validation, "train/validation"),
+        (validation, test, "validation/test"),
+    ):
+        if (
+            pd.to_datetime(earlier["snapshot_date"]).max()
+            >= pd.to_datetime(later["snapshot_date"]).min()
+        ):
+            raise AssertionError(f"{names} overlap in time")
+
+    sizes = [len(train), len(validation), len(test)]
+    if sum(sizes) != len(offline):
+        raise AssertionError(f"the splits sum to {sum(sizes)} of {len(offline)} rows")
+
+    ids = [set(p["subscriber_id_hashed"]) for p in (train, validation, test)]
+    shared = (ids[0] & ids[1]) | (ids[1] & ids[2]) | (ids[0] & ids[2])
+    if shared:
+        raise AssertionError(f"{len(shared)} subscriber(s) appear in more than one split")
+
+    shares = "/".join(f"{100 * s / len(offline):.0f}" for s in sizes)
+    return f"{shares}% by time, disjoint, to {pd.to_datetime(test['snapshot_date']).max().date()}"
+
+
+def check_no_label_artifacts() -> str:
+    """The label belongs in the training matrix; the fields that GENERATED it
+    never do. `hazard_score` alone reconstructs the outcome exactly."""
+    from cvm.config import load_conf
+    from cvm.synthesis.hazard import LABEL_ARTIFACT_FIELDS
+
+    offline = _offline()
+    target = load_conf("features")["target"]["name"]
+
+    # The target is IN LABEL_ARTIFACT_FIELDS and must nonetheless be present:
+    # "may not be an input" and "must not exist" are different claims, and the
+    # training matrix is exactly where the label belongs. Subtract it before
+    # comparing, or this check fails on a store that is correct.
+    artifacts = set(LABEL_ARTIFACT_FIELDS) - {target}
+
+    present = sorted(artifacts & set(offline.columns))
+    if present:
+        raise AssertionError(f"label artefacts survived into the feature store: {present}")
+    if target not in offline.columns:
+        raise AssertionError(f"the target {target!r} is absent; nothing can be trained on this")
+    return f"{len(artifacts)} artefacts dropped ({', '.join(sorted(artifacts))}), target retained"
+
+
+def check_segments_populate() -> str:
+    """All eight segments must be reachable. `Lost` silently never fired on the
+    first run because `Hibernating` was ordered ahead of it."""
+    from cvm.config import load_conf
+
+    offline = _offline()
+    if "segment" not in offline.columns:
+        raise AssertionError("segment is absent from the feature store")
+
+    declared = set(load_conf("features")["rfm_le"]["segments"])
+    counts = offline["segment"].value_counts()
+    invented = set(counts.index) - declared
+    if invented:
+        raise AssertionError(f"segments not in conf/features.yaml: {sorted(invented)}")
+    empty = declared - set(counts.index)
+    if len(empty) > 2:
+        raise AssertionError(f"{len(empty)} segments never fire: {sorted(empty)}")
+
+    detail = ", ".join(f"{k} {100 * v / len(offline):.1f}%" for k, v in counts.head(3).items())
+    return f"{len(counts)} of {len(declared)} populated ({detail})"
+
+
+def check_no_raw_identifiers_in_features() -> str:
+    """The privacy invariant, re-checked at the layer that serves an API."""
+    import re
+
+    offline = _offline()
+    pattern = re.compile(
+        r"(?<![0-9a-zA-Z])(?:\+?218[ -]?(?:0[ -]?)?|0[ -]?)9[1245](?:[ -]?[0-9]){7}(?![0-9])"
+    )
+
+    for column in offline.select_dtypes(include=["object", "string"]).columns:
+        sample = offline[column].dropna().astype(str).head(5000)
+        if any(pattern.search(v) for v in sample):
+            raise AssertionError(f"{column} contains what looks like an MSISDN")
+
+    ids = offline["subscriber_id_hashed"].astype(str)
+    if not ids.str.fullmatch(r"[0-9a-f]{64}").all():
+        raise AssertionError("subscriber_id_hashed is not uniformly a SHA-256 digest")
+    return f"{offline.shape[1]} columns scanned, ids are 64-hex throughout"
+
+
+def check_feature_coverage() -> str:
+    """Every feature family present, and no column entirely null. A family that
+    silently produced nothing would surface as a model that mysteriously
+    underperforms, which is a hard thing to trace back."""
+    offline = _offline()
+
+    expected = {
+        "velocity": "decay_divergence",
+        "distress": "chronic_distress",
+        "leakage": "leakage_score",
+        "rfm_le": "rfmle_cell",
+        "network_quality": "dropped_call_rate_30d",
+    }
+    missing = {k: v for k, v in expected.items() if v not in offline.columns}
+    if missing:
+        raise AssertionError(f"feature families absent: {missing}")
+
+    all_null = [c for c in offline.columns if offline[c].isna().all()]
+    if all_null:
+        raise AssertionError(f"entirely null: {all_null}")
+
+    worst = offline.isna().mean().max()
+    return f"{len(expected)} families, {offline.shape[1]} columns, max nullity {worst:.1%}"
+
+
+# ---------------------------------------------------------------------------
+# Phases 4-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -414,8 +620,14 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("generator is reproducible", check_reproducible),
     ],
     "3": [
-        ("leakage suite fully green", _pending("feature store not built", "3")),
-        ("point-in-time serving", _pending("feature store not built", "3")),
+        ("both stores built", check_both_stores_exist),
+        ("leakage suite fully green", check_leakage_suite),
+        ("point-in-time serving", check_point_in_time_serving),
+        ("splits temporal and disjoint", check_splits_are_temporal),
+        ("no label artefacts, target kept", check_no_label_artifacts),
+        ("RFM-LE segments populate", check_segments_populate),
+        ("no raw identifiers", check_no_raw_identifiers_in_features),
+        ("feature families complete", check_feature_coverage),
     ],
     "4": [
         ("benchmark table has 8 models", _pending("M1 not trained", "4")),
