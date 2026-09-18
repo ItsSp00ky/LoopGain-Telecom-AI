@@ -349,10 +349,11 @@ Real operator data supplied: `Almadar/internet_offers_data_v4.csv`,
 - Updated `docs/MARKET_QUESTIONS.md`: 4 of 10 questions now confirmed. Q2
   (pay-as-you-go tariffs) is the remaining blocker.
 
-**Note on `docs/proposal/`.** The original proposal is left unedited as a
-historical record. It describes Libyana, M5, M6 and syllabus coverage, none of
-which apply any more. Treat this file and the configs as authoritative where
-they disagree with it.
+**Note on `docs/proposal/`.** Rewritten in session 3e to describe the project
+as it now stands: Almadar, four modules, the real catalogue and tariffs, and the
+integration contract. It is written as a standalone proposal with no changelog
+framing, so it reads as the specification rather than a diff. Where it and the
+configs disagree, the configs win -- they are what the code reads.
 
 ---
 
@@ -454,6 +455,37 @@ honest rather than circular, which is the paragraph the report needs.
 **Verified:** all Python compiles, all YAML parses, all doc links resolve,
 31/31 config-level assertions pass, and 16/16 guardrail functions behave
 correctly when executed directly (including the new distribution audit).
+
+### 2026-09-18 · Session 3e — proposal rewritten
+
+`docs/proposal/AI_CVM_Suite_SIC_Proposal_v2.md` rewritten from scratch as a
+standalone specification. ~13,900 words, no changelog framing -- it reads as
+the proposal rather than as a record of revisions.
+
+Reflects the project as it actually is: Almadar Aljadid, four modules, the real
+57-bundle catalogue and published tariffs, subscriber-level service quality, no
+geography, the integration contract, and the emergency-credit argument built on
+the 3 LYD card versus 5 LYD debt.
+
+Three parts are new analysis rather than restatement, and they are the strongest
+material in the document:
+
+1. **The cannibalisation break-even (§7.2).** A 1 LYD unlimited morning pass
+   against 20-75 LYD monthly Mix tiers means cannibalisation, not incentive
+   spend, is what decides the business case. Above **~2.2% downgrade rate on the
+   treated cohort the entire retention gain disappears** -- which is why
+   `max_simulated_arpu_erosion` sits at 2%, just below break-even. The
+   sensitivity table in §7.1 has no loss-making cell and the document says so
+   explicitly rather than manufacturing one.
+2. **Prevented service lockouts (§7.4).** The full assumption chain from
+   150k monthly emergency-credit users down to ~168k LYD/month recoverable,
+   every step labelled.
+3. **The label driver / artifact distinction as a pitch answer (§8.3).** "How
+   can you train on a label you generated yourself?" now has a prepared answer
+   that explains the recoverable-signal design instead of deflecting.
+
+Business case rescaled throughout for ARPU 30: revenue at risk ~1.05M LYD/month,
+ROI ~6.0x at a 1.5 LYD blended incentive, ~1.32M LYD/month in avoided waste.
 
 ## 9. How to update this file
 
