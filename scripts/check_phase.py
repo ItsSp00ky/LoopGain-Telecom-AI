@@ -523,9 +523,12 @@ def check_segments_populate() -> str:
     invented = set(counts.index) - declared
     if invented:
         raise AssertionError(f"segments not in conf/features.yaml: {sorted(invented)}")
+    # No tolerance. A segment that never fires is the exact bug this check
+    # exists for -- `Lost` was unreachable for a whole run because `Hibernating`
+    # was ordered ahead of it -- and any slack here is slack that hides it.
     empty = declared - set(counts.index)
-    if len(empty) > 2:
-        raise AssertionError(f"{len(empty)} segments never fire: {sorted(empty)}")
+    if empty:
+        raise AssertionError(f"{len(empty)} segment(s) never fire: {sorted(empty)}")
 
     detail = ", ".join(f"{k} {100 * v / len(offline):.1f}%" for k, v in counts.head(3).items())
     return f"{len(counts)} of {len(declared)} populated ({detail})"
