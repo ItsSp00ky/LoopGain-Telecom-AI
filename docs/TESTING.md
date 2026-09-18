@@ -3,11 +3,20 @@
 Numbered steps, each with a **checkpoint**: exactly what you should see if it
 worked, and what to do if it did not. Run them in order.
 
-Steps 1–8 are setup and verification of the skeleton — **do these first, they
-take about an hour and prove the machine is right before you write any model
-code.** Steps 9–14 are the build-and-verify loop you repeat as each module lands.
+**On this machine, steps 0–2 and 8 are already done** — the `cvm` conda env is
+built (Python 3.11.16), git and `gh` are configured, and there are eight
+commits on `ali_branch`. Step 3 (`.env`) is the one thing still outstanding.
 
-All commands are PowerShell, run from the repo root (`D:\Sic`).
+Steps 0–9 set up and verify the skeleton. Steps 10–14 are the verify loop you
+repeat as each module lands.
+
+> **For the build ORDER — what to write next, and the check after each phase —
+> see [ROADMAP.md](ROADMAP.md).** This file is the environment and the
+> per-module verify loop; the roadmap is the sequence. Keeping the order in one
+> place only is deliberate.
+
+All commands are PowerShell, run from the repo root (`D:\Sic`). Activate the
+env first with `conda activate cvm`.
 
 ---
 
@@ -70,11 +79,11 @@ must print exactly `Python 3.11.x`. Your prompt should show `(cvm)`.
 
 ---
 
-## Step 2 · Install CPU torch, then the package
+## Step 2 · Install CPU torch, then the package  ·  **done on this machine**
 
 **Order matters.** SDV/CTGAN pulls torch; the default wheel bundles a CUDA
-runtime you will never use on this project (~1.5 GB wasted on a machine with
-20 GB free).
+runtime nothing in this project uses (~1.5 GB wasted on a machine with 20 GB
+free). Nothing here needs a GPU — that is a scope decision, not a limitation.
 
 ```powershell
 pip install torch --index-url https://download.pytorch.org/whl/cpu
@@ -91,7 +100,15 @@ prints `0.1.0`.
 ```powershell
 python -c "import torch; print(torch.__version__)"
 ```
-should end in `+cpu`.
+should end in `+cpu`. If it does not, the CUDA wheel got in first; uninstall
+torch and redo this step in order.
+
+One package is missing from a fresh install and is needed by M3, which is the
+centre of the pipeline:
+
+```powershell
+python -c "import sklift; print('scikit-uplift', sklift.__version__)"
+```
 
 > **If a package fails to build on Windows**, install the narrower slice for
 > the work you are doing: `pip install -e ".[ml,ui,rtl,dev]"` covers the API,
@@ -254,7 +271,7 @@ Shut down with `Ctrl+C`, then `docker compose down`.
 
 ---
 
-## Step 8 · Make the first commit
+## Step 8 · Make the first commit  ·  **done — eight commits on `ali_branch`**
 
 ```powershell
 git add -A
@@ -314,7 +331,16 @@ would not fit.
 
 ## Step 10 · Verify each module as you build it
 
-Repeat this loop for every module. It is the same five checks each time.
+Repeat this loop for every module. It is the same five checks each time, and it
+is *additional* to the phase checkpoint in [ROADMAP.md](ROADMAP.md) — that one
+proves the phase produced the right numbers, this one proves the module is
+wired in like every other.
+
+Before the five, always:
+
+```powershell
+python scripts/progress.py
+```
 
 ```powershell
 # 1. Unit tests for the thing you just wrote

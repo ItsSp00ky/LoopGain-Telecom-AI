@@ -67,6 +67,10 @@ docker compose up
 | Channel Simulator | http://localhost:8502 |
 | MLflow | http://localhost:5000 |
 
+**Building it?** [`docs/ROADMAP.md`](docs/ROADMAP.md) is the order to write
+things in, with a check after every phase. `python scripts/progress.py` prints
+where you are.
+
 Environment details, including the conda path and the Docker demo host:
 **[docs/setup.md](docs/setup.md)**.
 

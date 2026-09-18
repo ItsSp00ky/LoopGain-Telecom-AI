@@ -304,9 +304,15 @@ def test_safety_guards_can_only_reduce_a_limit():
 
 
 @pytest.mark.xfail(reason="decision/advance_limit.py not implemented yet", strict=False)
-def test_habitual_three_lyd_recharger_is_declined_the_data_advance():
-    """The headline case. Modal recharge 3 LYD, data advance 5 LYD: declined,
-    with the 0.5 LYD fallback offered instead."""
+def test_habitual_minimum_recharger_is_declined_the_data_advance():
+    """The headline case. Modal recharge 5 LYD -- the smallest card -- against a
+    5 LYD data advance: declined, with the 0.5 LYD DAY_50MB fallback offered
+    instead.
+
+    Granting it would be defensible on repayment probability alone, which is
+    exactly the trap: they probably WOULD repay, and the repayment would consume
+    their entire next top-up and return them to zero. The objective is solvency,
+    not recovery yield, so affordability declines what PD would approve."""
     raise NotImplementedError("TODO(E2/E4)")
 
 

@@ -194,6 +194,11 @@ Run anything in the project env with `D:\Anaconda\envs\cvm\python.exe`, or
 
 ## 6. What to do next
 
+**The full build order, with a verification command after every phase, is in
+[`docs/ROADMAP.md`](docs/ROADMAP.md).** Run `python scripts/progress.py` to see
+the stub burn-down by layer and which phase is next. The summary below is the
+short version; the roadmap is the operative document.
+
 In order. Do not skip step 1.
 
 0. **Answer the market questions** in
