@@ -8,14 +8,35 @@ mistake, and the expensive failures here are the silent ones.
 **Phase 1 is done.** Layer 1 is at 100%, the whole project at 41%. Next is
 phase 2, synthesis.
 
-Where you are, at any moment:
+## Two commands
+
+Where you are:
 
 ```bash
 python scripts/progress.py
 ```
 
-It prints the burn-down by layer and names the next phase. `--detail` lists
-every remaining function by file.
+Whether the last phase actually landed:
+
+```bash
+python scripts/check_phase.py 1
+```
+
+`progress.py` prints the burn-down by layer and names the next phase;
+`--detail` lists every remaining function. `check_phase.py` runs that phase's
+verification and prints PASS, FAIL or PEND per check. **PEND is not a
+failure** — it means the layer being checked is not built yet, and it names the
+phase that fixes it. Omit the number to run every phase.
+
+Every checkpoint below is one of those two commands. That is deliberate: the
+inline `python -c "..."` one-liners this document used to carry do not survive
+the trip between shells. `cp` is not a command on Windows, quoting rules differ
+three ways, and a multi-line `-c` string cannot be typed into `cmd.exe` at all.
+
+> **Shell.** Commands are plain `python ...` invocations that work identically
+> in `cmd.exe`, PowerShell and bash. Where a shell built-in is genuinely
+> needed, both spellings are given. Activate the environment first with
+> `conda activate cvm`.
 
 **Environment.** The `cvm` conda env is built and working (Python 3.11.16, 39
 of 40 packages). Either `conda activate cvm` first, or call it directly as
@@ -27,46 +48,41 @@ of 40 packages). Either `conda activate cvm` first, or call it directly as
 
 Almost everything is already done. This is what is left.
 
-### 0.1 Create `.env` with a real salt
+### 0.1 `.env` with a real salt — **DONE, do not redo**
 
-The only hard blocker in the repository. The code refuses to hash without a
-salt and refuses the `.env.example` placeholder, both deliberately: an unsalted
-SHA-256 of a 9-digit number space is trivially reversible.
+⚠ **`.env` already exists with a working 64-char salt, and three Parquet files
+in `data/interim` are hashed against it.** Re-copying `.env.example` over it
+would restore the `CHANGE_ME` placeholder and break every landed hash.
+
+If you ever do need a fresh one — a new machine, CI, the demo host — note that
+a salt shared across environments only has to leak once, so generate a separate
+value each time:
 
 ```bash
-cp .env.example .env
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Paste that value over `CHANGE_ME_generate_a_64_char_hex_string` in `.env`.
-
-**Check** — prints the first 8 characters of your salt and nothing else:
-
-```bash
-python -c "from cvm.config import settings; print('salt ok:', settings.require_salt()[:8])"
-```
-
-If it raises `RuntimeError`, the salt is empty. If it raises `ValueError`, you
-left the placeholder in.
-
-### 0.2 Prove the skeleton still runs
-
-**Check** — expect `131 passed, 9 xfailed`, then `All checks passed!`:
+Then copy the template and paste the value over the placeholder. The copy is
+the one genuinely shell-specific step in this document:
 
 ```bash
-pytest -q && ruff check src tests apps scripts && black --check src tests apps scripts
+copy .env.example .env
 ```
 
-The 9 `xfail`s are not failures. Each one marks something in this roadmap that
-is not built yet, and you will turn them green as you go. They are your
-progress bar; `python scripts/progress.py` is the other one.
+(`cmd.exe`; in PowerShell `Copy-Item .env.example .env`, in bash `cp`.)
 
-### 0.1 is DONE — `.env` exists with a real 64-char salt
+### 0.2 Prove the skeleton runs
 
-Local only, and gitignored. Generate a **different** one for CI and for the demo
-host: a salt shared across environments is a salt that only has to leak once.
-Losing this one means every hash already landed in `data/interim` stops
-reconciling, so do not regenerate it casually mid-project.
+```bash
+python scripts/check_phase.py 0
+```
+
+Expect 6 PASS and 1 PEND. The pending one is the git remote, which is step 0.3.
+It checks Python 3.11, the 15 key packages, the salt, that `.env` is
+gitignored, the full test suite, and ruff + black.
+
+The 9 `xfail`s in the suite are not failures. Each marks something in this
+roadmap that is not built yet, and you turn them green as you go.
 
 ### 0.3 Push to GitHub
 
@@ -185,9 +201,21 @@ is now imported rather than re-spelled in the test, and 10,000 digests across
 ### How it was verified
 
 ```bash
-python -m cvm.ingest.run          # lands A, B, C; probes F, G, J
-pytest tests/leakage -q           # 9 passed, 3 xfailed
-python scripts/progress.py        # L1 ingest burn-down
+python scripts/check_phase.py 1
+```
+
+Nine checks, all passing: the UCI duplicate audit against `conf/data.yaml`, the
+leaky field absent from the honest path and present in the naive one, the
+Cell2Cell 1:1 join with 22 protected columns gone, all four measured medians
+against the documented figures, IBM's 12 protected columns gone, Criteo's arms
+with no post-treatment leak, Hillstrom's arms, Online Retail II's cleaning, and
+an MSISDN scan over every landed Parquet file.
+
+To run the pipeline itself, or the leakage suite:
+
+```bash
+python -m cvm.ingest.run
+python -m pytest tests/leakage -q
 ```
 
 `cvm.ingest.run` prints a table of every source with its row and column counts
@@ -232,6 +260,13 @@ Order inside the phase:
 | 4 | `synthesis/ctgan_engine.py` | 4 | **Copula first**, then TVAE, then CTGAN |
 | 5 | `synthesis/quality_gate.py` | 5 | Three metrics, all fatal on failure |
 | 6 | `synthesis/run.py` | 1 | Orchestration |
+
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 2
+```
 
 **Check 1** — the label is plausible and the leakage split holds:
 
@@ -303,6 +338,13 @@ with every `xfail` marker deleted.
 | 6 | `features/store.py` | 4 | `get_features(as_of=)` must never read the future |
 | 7 | `features/run.py` | 1 | Orchestration |
 
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 3
+```
+
 **Check 1** — the whole point of the phase. Delete all four `xfail` markers in
 `tests/leakage/test_point_in_time.py`, then:
 
@@ -358,6 +400,13 @@ benchmark table *is* the deliverable (D3), not the winner.
 | 5 | `models/m1_churn/survival.py` | 3 |
 | 6 | `models/m1_churn/predict.py` | 1 |
 
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 4
+```
+
 **Check 1** — the benchmark has all eight rows and PR-AUC is the headline:
 
 ```bash
@@ -407,6 +456,13 @@ print(naive_vs_honest('uci_iranian').to_string(index=False))
 
 ## Phase 5 · M2 value — 9 functions, 2 days
 
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 5
+```
+
 **Check 1** — BG/NBD validated on real repeat purchases *before* it touches
 recharges. This is the same move Criteo is for uplift:
 
@@ -447,6 +503,13 @@ pytest tests/unit/test_proposal_consistency.py::test_clv_ceiling_matches_the_gua
 **Validate on Criteo before you write anything that touches the generated
 population.** The order matters: it is the difference between a measurement and
 an assertion, and it is the strongest claim in the proposal.
+
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 6
+```
 
 **Check 1** — Qini on real randomised arms. This is deliverable D4:
 
@@ -492,8 +555,14 @@ print('break-even sits where the proposal says it does')
 Cheap, because the PD heads share M1's feature pipeline. The most
 differentiated idea in the project for the least remaining work.
 
-**Check** — delete all five `xfail` markers in `tests/guardrails/
-test_advance_safety.py`, then:
+**First, the phase check:**
+
+```bash
+python scripts/check_phase.py 7
+```
+
+**Then** delete all five `xfail` markers in `tests/guardrails/test_advance_safety.py`
+and run:
 
 ```bash
 pytest -m guardrail -q
@@ -522,6 +591,13 @@ decision log, and the model registry.
 | 5 | `decision/ladder.py` | 3 |
 | 6 | `decision/advance_limit.py` | 6 |
 | 7 | `decision/decision_log.py` | 3 |
+
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 8
+```
 
 **Check 1** — the endpoints stop returning 501:
 
@@ -570,6 +646,13 @@ assert r['cost_lyd'] <= 144_000
 
 ## Phase 9 · Surfaces — 2 days
 
+**First, the phase check** — it will report PEND until this phase lands, then
+PASS:
+
+```bash
+python scripts/check_phase.py 9
+```
+
 **Check 1** — `/health` reports `ok`, which it does only when every model is
 loaded and the feature store is readable:
 
@@ -614,7 +697,13 @@ docker compose up --build
 the one that catches people:
 
 ```bash
-git clone <your-repo-url> /tmp/clean && cd /tmp/clean && docker compose up
+git clone <your-repo-url> C:/Temp/clean
+```
+
+Then `cd C:/Temp/clean` and run `docker compose up` there.
+
+```bash
+docker compose ps
 ```
 
 **Check 3** — the contract test with your teammate's component, against the six
