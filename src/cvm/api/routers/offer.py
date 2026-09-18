@@ -22,7 +22,7 @@ async def next_best_offer(payload: OfferRequest) -> OfferResponse:
     will actually use it, discount budget is converted into off-peak capacity
     rather than a headline price cut that permanently erodes ARPU.
     """
-    # TODO(E4): from cvm.decision.m3_pricing import decide_offer
+    # TODO(E4): from cvm.decision.pricing import decide_offer
     #           return decide_offer(payload)
     raise HTTPException(status_code=501, detail="M3 pricing engine not implemented yet.")
 
@@ -38,5 +38,5 @@ async def price_quote(payload: OfferRequest) -> OfferResponse:
         raise HTTPException(
             status_code=422, detail="bundle_id is required for a quote. Use /offer/next-best instead."
         )
-    # TODO(E4): from cvm.decision.m3_pricing import quote_bundle
+    # TODO(E4): from cvm.decision.pricing import quote_bundle
     raise HTTPException(status_code=501, detail="M3 pricing engine not implemented yet.")

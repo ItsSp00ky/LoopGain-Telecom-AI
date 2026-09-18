@@ -9,7 +9,7 @@ This is `ali_branch` — Component 3 of the platform. The Employee Copilot
 consume it over HTTP; they are not in this repository. See
 [INTEGRATION.md](INTEGRATION.md).
 
-Full narrative: [the proposal, §3](proposal/AI_CVM_Suite_SIC_Proposal_v2.md).
+Full narrative: [the proposal](proposal/AI_CVM_Suite_SIC_Proposal_v2.md).
 This document is the map from that narrative to the code.
 
 ---
@@ -22,8 +22,8 @@ This document is the map from that narrative to the code.
 | **1** Ingestion | Pandera contracts, dedup, SHA-256 hashing, raw → Parquet | [`src/cvm/ingest/`](../src/cvm/ingest) | `conf/data.yaml` | E1 |
 | **2** GAN synthesis | CTGAN / TVAE / Copula, quantile mapping, overlays, quality gate | [`src/cvm/synthesis/`](../src/cvm/synthesis) | `conf/data.yaml#synthesis` | E1 |
 | **3** Feature store | Rolling aggregates, RFM-LE, decay, leakage, sequences, DuckDB | [`src/cvm/features/`](../src/cvm/features) | `conf/features.yaml` | E1 |
-| **4** Models | M1 churn, M2 value, M4 advance + MLflow | [`src/cvm/models/`](../src/cvm/models) | `conf/models/` | E2, E3 |
-| **5** Decision engine | Uplift filter, pricing, advance limit, **guardrails** | [`src/cvm/decision/`](../src/cvm/decision) | `conf/pricing.yaml`, `conf/advance.yaml` | E4 |
+| **4** Models | M1 churn, M2 value, M3 uplift, M4 advance + MLflow | [`src/cvm/models/`](../src/cvm/models) | `conf/models/` | E2, E3 |
+| **5** Decision engine | Worthwhile? Which action? **Guardrails** | [`src/cvm/decision/`](../src/cvm/decision) | `conf/pricing.yaml`, `conf/advance.yaml` | E4 |
 | **6** Serving API | FastAPI, Pydantic v2, p95 < 200 ms tabular. **Also the integration surface.** | [`src/cvm/api/`](../src/cvm/api) | `conf/config.yaml#api` | E4 |
 | **7** Surfaces | Command Center · Channel Sim | [`apps/`](../apps) | — | E5 |
 | **8** MLOps | Docker Compose, GitHub Actions, pytest, MLflow, Evidently | [`docker/`](../docker), [`.github/`](../.github), [`tests/`](../tests) | — | E4 |

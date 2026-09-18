@@ -17,6 +17,7 @@ EXPECTED_MODELS = (
     "m1_churn_lstm",
     "m1b_survival",
     "m2_clv",
+    "m3_uplift",
     "m4_repayment_pd",
 )
 

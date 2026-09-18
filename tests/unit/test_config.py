@@ -19,6 +19,7 @@ def test_every_conf_file_parses():
         "catalogue",
         "models/m1_churn",
         "models/m2_value",
+        "models/m3_uplift",
     ]:
         assert isinstance(load_conf(name), dict), name
 

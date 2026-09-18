@@ -1,10 +1,30 @@
 # ---------------------------------------------------------------------------
-# M3 — Dynamic Pricing & Off-Peak Offloading                    (Owner: E4)
+# DECISION ENGINE — is intervening worthwhile, and with what?   (Owner: E4)
 #
-# Everything here is enforced in src/cvm/decision/guardrails.py and asserted
+# Step four of the pipeline. Consumes M1 (churn), M2 (value/CLV), M3 (uplift)
+# and M4 (credit) and answers two questions:
+#
+#   1. Is treating this subscriber economically worthwhile?
+#         E[gain] = uplift x CLV - offer_cost      (from M3)
+#   2. If so, which action? Chosen from the operator's REAL catalogue, so the
+#      recommendation is executable and its cost is not something we invented.
+#
+# "No action" is a first-class outcome here, not a failure to decide.
+#
+# Everything below is enforced in src/cvm/decision/guardrails.py and asserted
 # in tests/guardrails/. Changing a number here changes system behaviour and
 # must keep the guardrail suite green.
 # ---------------------------------------------------------------------------
+
+# The action space. Not the optimisation target -- the set of things the engine
+# is allowed to recommend, and where their real costs come from.
+action_space:
+  source: conf/catalogue.yaml
+  include_no_action: true        # always a candidate, and often the right one
+  # An offer we invented would have a cost we invented, which would make the
+  # margin floor enforce one made-up number against another. Real prices are
+  # what keep the guardrails meaningful.
+  forbid_synthetic_offers: true
 
 # P(i,b) = P_base(b) * (1 - d(i,b))
 #
@@ -144,17 +164,8 @@ offpeak:
   # Only offer it to subscribers who will actually use it.
   min_offpeak_data_ratio_to_qualify: 0.20
 
-# --- Uplift targeting ------------------------------------------------------
-uplift:
-  # Two-model difference (treated response minus control response), not a
-  # causal-inference library. At this data scale the extra machinery buys
-  # precision we cannot validate on synthetic response anyway.
-  method: two_model_difference
-  control_holdout_fraction: 0.10
-  # Sleeping-dogs guard: contacting a dormant-but-not-departing subscriber can
-  # remind them to leave. The negative-effect quadrant is excluded everywhere.
-  exclude_sleeping_dogs: true
-  sleeping_dog_threshold: -0.005
+# Uplift now lives in conf/models/m3_uplift.yaml -- it is a model, not a
+# pricing knob. The decision engine consumes its output.
 
 # --- Retention ladder ------------------------------------------------------
 # A delivery policy over M1b and M3, not a separate module.

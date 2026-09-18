@@ -1,4 +1,11 @@
-"""M3 -- personalised pricing.  Owner: E4
+"""Offer selection and pricing.  Owner: E4
+
+The "with what" half of the decision. The "whether" half is upstream: M3
+uplift decides who is movable, and E[gain] = uplift x CLV - cost decides
+whether treating them is worthwhile at all.
+
+The action space is the operator's real catalogue (conf/catalogue.yaml), so
+every recommendation is executable and every cost is real.
 
     P(i,b) = P_base(b) * (1 - d(i,b))
 

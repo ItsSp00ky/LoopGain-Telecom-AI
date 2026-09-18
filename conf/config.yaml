@@ -70,3 +70,4 @@ configs:
   - catalogue
   - models/m1_churn
   - models/m2_value
+  - models/m3_uplift

@@ -37,9 +37,11 @@ module number, its owner, and a docstring explaining what it must do and why.
 About 60 tests pass today; they cover config loading, privacy invariants, API
 contracts and all six pricing guardrails.
 
-**Scope is four modules:** M1 churn, M2 value/CLV, M3 pricing, M4 advance.
-Network anomaly detection, care-text classification and the Employee Copilot
-all belong to other components.
+**Scope is one pipeline:** predict churn (M1) -> understand value (M2) ->
+estimate treatment effect (M3 uplift) -> decide whether to intervene (Decision
+Engine), plus M4 emergency credit as one available action. Network anomaly
+detection, care-text classification and the Employee Copilot belong to other
+components.
 
 **Operator is Almadar Aljadid (المدار الجديد), MCC/MNC 606-01** — not Libyana.
 Real catalogue data is in hand: 37 bundles across 12 families, the confirmed recharge ladder, and
@@ -566,6 +568,60 @@ on-net voice as a 3-minute block), data-side failures, care-contact volume,
 **Verified:** Python compiles, YAML parses, all doc links resolve, catalogue
 counts self-consistent, and 8/8 guardrail checks pass against surviving bundles
 (including `MO_20` at 10% off and the 1 LYD morning pass).
+
+### 2026-09-18 · Session 3g — uplift promoted, proposal halved
+
+**Restructured around the stated objective:** predict churn -> understand value
+-> estimate treatment effect -> decide whether to intervene.
+
+The misalignment was that **uplift had no module**. `uplift.py` sat buried in
+the decision package and the module table did not mention it, even though
+"identify who can actually be influenced" is a first-class step in the pipeline.
+Meanwhile M3 was framed as "which of N bundles" — merchandising-forward rather
+than decision-forward.
+
+| Before | After |
+|---|---|
+| M3 = Dynamic Pricing | **M3 = Uplift Engine** (`models/m3_uplift/`) |
+| uplift buried in `decision/uplift.py` | promoted to its own module with its own config |
+| pricing was a numbered module | pricing is what the **Decision Engine** does with M1-M4 |
+| catalogue framed as the thing being optimised | catalogue is the **action space + cost model** |
+
+Moves: `decision/uplift.py` -> `models/m3_uplift/two_model.py`;
+`decision/m3_pricing.py` -> `decision/pricing.py`; new
+`models/m3_uplift/evaluate.py` (Qini, uplift@k, quadrant counts,
+`validate_on_criteo`, `expected_value_of_treatment`); new
+`conf/models/m3_uplift.yaml`; uplift block removed from `conf/pricing.yaml`,
+which now opens with an `action_space` block instead.
+
+Two things made explicit that were implicit before:
+
+- **`E[gain] = uplift x CLV - offer_cost`** is now the stated first question of
+  the decision engine. A negative value means do not treat *regardless of how
+  high the churn score is*.
+- **"No action" is a first-class outcome**, and `include_no_action: true` makes
+  it a real candidate in the action space rather than a fallthrough.
+
+`forbid_synthetic_offers: true` records why the catalogue is not optional: an
+invented offer has an invented cost, which would make the margin floor enforce
+one made-up number against another. Two of the six things this system does
+— "is this offer worthwhile" and "recommend the best action" — cannot be
+answered without a real action space.
+
+**Proposal rewritten smaller:** 1,628 lines / 13,900 words -> **714 lines /
+5,494 words**, restructured so section 2 *is* the pipeline. Cut the exhaustive
+field tables (they live in `data_dictionary.md`), the full catalogue table
+(`catalogue.yaml`), the long execution plan, and half the evaluator Q&A. Kept
+every substantive finding: the 3-vs-5 LYD lockout, the 2.2% cannibalisation
+break-even with the ARPU-invariance proof, the driver/artifact distinction, the
+leakage-grounding caveat, and the Criteo validation.
+
+Added to the Q&A: *"Why does the catalogue matter if you could invent offers?"*
+— because it will be asked now that the catalogue is visibly demoted.
+
+**Verified:** Python compiles, YAML parses, all doc links resolve, no stale
+`m3_pricing` / `decision.uplift` references, and 22/22 checks pass through the
+real config loader and guardrail functions.
 
 ## 9. How to update this file
 

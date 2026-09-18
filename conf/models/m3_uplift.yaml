@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# M3 — Uplift Engine                                          (Owner: E4)
+#
+# Step three of the pipeline: who can actually be influenced?
+#
+# A churn score ranks who is at RISK. An uplift score ranks who is MOVABLE.
+# Targeting on churn probability alone systematically funds the wrong people.
+# ---------------------------------------------------------------------------
+
+method: two_model_difference
+# Treated-response model minus control-response model. Not a causal-inference
+# library -- see docs/adr/0003-two-model-uplift-over-econml.md.
+
+base_learner: lightgbm          # same family as M1 Arm A; shares the pipeline
+
+# --- Validation ------------------------------------------------------------
+# The method is trained and validated on REAL randomised data before it is
+# applied to the generated population. This is the single strongest answer to
+# "your data is generated, how do we know it works?"
+validation:
+  primary_source: criteo_uplift      # 25M rows, real treatment/control arms
+  warmup_source: hillstrom           # 64k rows, small enough to iterate on
+  metrics: [qini_coefficient, uplift_at_k, quadrant_counts]
+  uplift_at_k_default: 0.30
+  # On the generated population these same metrics measure whether the pipeline
+  # recovers the effect we injected. That is a pipeline test, not a performance
+  # claim, and the report must say which is which.
+  generated_population_is_pipeline_test_only: true
+
+# --- Quadrants -------------------------------------------------------------
+# Only one of the four should ever receive budget.
+quadrants:
+  persuadable:   { treat: true,  note: "stays only if treated -- the entire target" }
+  sure_thing:    { treat: false, note: "stays either way -- pure waste" }
+  lost_cause:    { treat: false, note: "leaves either way -- pure waste" }
+  sleeping_dog:  { treat: false, note: "leaves BECAUSE treated -- actively harmful" }
+
+# Sleeping dogs are why this module cannot be skipped. A system without an
+# uplift model does not merely waste budget; it causes churn it would not
+# otherwise have caused.
+exclude_sleeping_dogs: true
+sleeping_dog_threshold: -0.005
+
+# --- Measurement -----------------------------------------------------------
+# Without a randomised holdout there is no way to isolate net margin impact,
+# and every ROI figure in the business case becomes an assertion.
+control_holdout_fraction: 0.10
+holdout_is_mandatory: true
+
+# --- Handover to the decision engine ---------------------------------------
+# E[gain] = uplift x CLV - cost
+# A positive value means intervening is worthwhile before guardrails; a
+# negative one means it is not, regardless of how high the churn score is.
+expected_value_formula: "uplift * clv_lyd - offer_cost_lyd"
+min_expected_value_lyd: 0.0

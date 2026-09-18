@@ -100,12 +100,22 @@ predict who is leaking -> quantify what they are worth -> decide what to offer
 
 Four modules. Each answers one question, and each feeds the next.
 
-| # | Module | Question it answers | Code |
+```
+predict churn ──► understand value ──► estimate treatment effect ──► decide
+     M1                 M2                      M3               Decision Engine
+```
+
+| | Module | Question | Code |
 |---|---|---|---|
-| **M1** | Silent Churn Engine — LightGBM vs LSTM benchmark | Who stops generating revenue in 30 days, and *when*? | [`models/m1_churn/`](src/cvm/models/m1_churn) |
-| **M2** | Value & Loyalty Tiering — RFM-LE, clustering, PCA, CLV | What is this subscriber worth, and how loyal? | [`models/m2_value/`](src/cvm/models/m2_value) |
-| **M3** | Dynamic Pricing & Off-Peak Offloading | What price or bonus for *this* subscriber, within margin? | [`decision/`](src/cvm/decision) |
-| **M4** | Smart Advance — learned micro-credit limit | How much airtime can we safely advance, and to whom? | [`models/m4_advance/`](src/cvm/models/m4_advance) |
+| **M1** | Silent Churn Engine — LightGBM vs LSTM benchmark | Who is leaving, and *when*? | [`models/m1_churn/`](src/cvm/models/m1_churn) |
+| **M2** | Value & Loyalty Tiering — RFM-LE, clustering, PCA, CLV | What are they worth? | [`models/m2_value/`](src/cvm/models/m2_value) |
+| **M3** | **Uplift Engine** — two-model, validated on Criteo | Who can actually be **influenced**? | [`models/m3_uplift/`](src/cvm/models/m3_uplift) |
+| — | **Decision Engine** | Is intervening **worthwhile**? Which action? | [`decision/`](src/cvm/decision) |
+| **M4** | Smart Advance — learned emergency-credit limit | How much credit can we safely extend? | [`models/m4_advance/`](src/cvm/models/m4_advance) |
+
+**"No action" is a first-class outcome.** For most subscribers it is the correct
+one — the decision engine only recommends an offer when
+`uplift × CLV > offer cost` and every guardrail clears.
 
 **Deliberately out of scope**, because they belong to other components:
 
@@ -144,8 +154,8 @@ Full specification: **[docs/proposal/](docs/proposal/)**.
 │   ├── ingest/              Layer 1 — load, validate (Pandera), dedup, SHA-256 hash
 │   ├── synthesis/           Layer 2 — CTGAN / TVAE / Copula + SDMetrics quality gate
 │   ├── features/            Layer 3 — RFM-LE, decay, leakage, sequences, DuckDB store
-│   ├── models/              Layer 4 — M1 churn, M2 value, M4 advance
-│   ├── decision/            Layer 5 — pricing, uplift, advance limit, GUARDRAILS
+│   ├── models/              Layer 4 — M1 churn, M2 value, M3 uplift, M4 advance
+│   ├── decision/            Layer 5 — intervene-or-not, offer selection, GUARDRAILS
 │   └── api/                 Layer 6 — FastAPI, incl. the integration surface
 ├── apps/                    Layer 7 — Streamlit: command center, channel sim
 ├── tests/
