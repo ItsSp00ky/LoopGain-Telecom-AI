@@ -25,20 +25,83 @@ sources:
     leaky_columns:
       - "Customer Value"
 
-  # --- B: scale and sequence viability. An LSTM on 3,000 rows proves nothing.
+  # --- B: scale, and real distributions for our two signature features.
+  # An LSTM on 3,000 rows proves nothing; this is the volume source. It is the
+  # original two-file Duke distribution rather than a preprocessed single-table
+  # cut, which is why it carries columns the condensed versions drop.
   cell2cell:
     id: B
     enabled: true
-    loader: kaggle
-    dataset: jpacse/datasets-for-churn-telecom
+    loader: local_csv_pair
+    path: ./data/raw/telecom/telecom
+    files:
+      client: Client.csv           # 100,000 x 50 -- commercial and handset
+      record: Record.csv           # 100,000 x 51 -- behavioural means + label
+    join_on: Customer_ID           # 1:1, verified complete
     licence: public-research
-    expected_rows: 71047
-    expected_features: 58
-    labelled_rows: 51048
-    holdout_rows: 19999          # doubles as the inference load test
-    churn_rate: 0.29
-    # The direct ancestors of our revenue_decay_ratio_7d_30d.
-    trend_columns: [changem, changer, dropvce, blckvce, unansvce]
+    expected_rows: 100000
+
+    # WHY THIS SOURCE MATTERS BEYOND ROW COUNT.
+    # Two features carry most of this project's differentiation, and both were
+    # otherwise generated end-to-end with no empirical reference:
+    #
+    #   incoming/outgoing ratio  <- recv_vce_Mean / plcd_vce_Mean
+    #   off-peak usage share     <- mou_opkv_Mean / (mou_peav_Mean + mou_opkv_Mean)
+    #
+    # Both columns are 0% null across all 100,000 rows. See
+    # docs/data_dictionary.md for the measured distributions we generate against.
+    grounds_features:
+      incoming_outgoing_ratio: [recv_vce_Mean, plcd_vce_Mean]
+      offpeak_usage_share: [mou_opkv_Mean, mou_peav_Mean, opk_vce_Mean, peak_vce_Mean]
+      revenue_decay_ratio: [avg3mou, avg6mou, avg3rev, avg6rev, change_mou, change_rev]
+      short_call_share: [inonemin_Mean]     # matters under a 3-minute block tariff
+      service_quality: [drop_vce_Mean, blck_vce_Mean, unan_vce_Mean,
+                        drop_dat_Mean, blck_dat_Mean, drop_blk_Mean]
+      care_contact_volume: [custcare_Mean, ccrndmou_Mean, cc_mou_Mean]
+      household_lines: [uniqsubs, actvsubs]  # relevant to the shared Family plans
+      tenure: [months]
+      roaming: [roam_Mean]
+
+    # ⚠ THE LABEL PREVALENCE IS NOT USABLE.
+    # This cut is deliberately balanced at ~49.6% churn. The natural rate is a
+    # small fraction of that. Training on it without correction and then
+    # calibrating would calibrate to a 50% prior, which silently destroys the
+    # project's central claim that a 0.31 means 31%.
+    #
+    # Use this source for feature STRUCTURE and correlation. Take the base rate
+    # from conf/market.yaml#base.monthly_silent_churn_rate.
+    churn_rate_in_file: 0.4956
+    use_label_prevalence: false
+    require_prior_correction: true
+
+    # ⚠ DROPPED AT INGESTION, NOT MERELY EXCLUDED FROM PRICING.
+    # US household marketing data. A Libyan prepaid operator holds none of it,
+    # and several entries are protected or proxy-protected attributes that must
+    # never enter a pricing system in any form. Dropping them at the ingestion
+    # boundary means they cannot reach a feature matrix by accident later.
+    drop_columns:
+      - ethnic
+      - marital
+      - income
+      - adults
+      - kid0_2
+      - kid3_5
+      - kid6_10
+      - kid11_15
+      - kid16_17
+      - ownrent
+      - dwlltype
+      - dwllsize
+      - numbcars
+      - HHstatin
+      - infobase
+      - prizm_social_one
+      - creditcd
+      - lor
+      - rv
+      - truck
+      - forgntvl
+      - area                       # US geography; this project models none
 
   # --- C: independent CLTV benchmark, churn-reason taxonomy, fast baseline.
   ibm_telco:

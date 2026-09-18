@@ -87,6 +87,12 @@ families:
     # Values well below 1.0 are the earliest reliable tell.
     revenue_decay_ratio: "mean_7d / mean_30d"
     also_for: [data, voice, sms]
+    # GROUNDED: Cell2Cell's avg3mou/avg6mou gives a real two-horizon decay
+    # ratio -- median 1.012, p10 0.663, p90 1.314, and 46.8% of subscribers
+    # below 1.0. Nearly half a real base is declining at any moment, which is
+    # a useful sanity bound on how much decline the generator should produce.
+    baseline_source: cell2cell
+    baseline_share_declining: 0.468
 
   volatility:
     - inter_recharge_gap_std
@@ -102,6 +108,9 @@ families:
 
   ratios_mix:
     - onnet_ratio
+    # GROUNDED: Cell2Cell splits peak and off-peak minutes
+    # (mou_peav_Mean / mou_opkv_Mean, 0% null). Measured off-peak share:
+    #   median 0.424 | p10 0.149 | p90 0.715
     - offpeak_data_ratio        # share of data used 06:00-11:00
     - data_to_voice_ratio
     # PAYG data runs ~25x the bundle rate (0.025 LYD/MB vs ~0.001 LYD/MB on a
@@ -119,8 +128,25 @@ families:
 
   # Dual-SIM share-of-wallet leakage. "Active" misleads: a subscriber can stay
   # technically active while 80% of their spend has moved.
+  #
+  # GROUNDED, not invented. Cell2Cell carries recv_vce_Mean and plcd_vce_Mean
+  # separately, 0% null across 100,000 rows, giving a measured baseline:
+  #   median 0.280 | p10 0.052 | p90 0.681 | 3.0% above 1.0
+  #
+  # Read that 3.0% carefully. It is a single-SIM postpaid market, so it is the
+  # baseline to DEVIATE from -- at 85% dual-SIM penetration the generated
+  # right tail must be far fatter. The measured shape tells us where to start;
+  # the overlay supplies the dual-SIM behaviour on top.
   leakage:
     primary_detector: incoming_outgoing_ratio
+    baseline_source: cell2cell          # recv_vce_Mean / plcd_vce_Mean
+    baseline_median: 0.280
+    baseline_share_above_one: 0.030
+    # In the source data this ratio does NOT separate churners (0.282 vs
+    # 0.278). Expected: the hypothesis is dual-SIM-prepaid-specific and there
+    # is no receiving-SIM behaviour in a single-SIM market. The source grounds
+    # the DISTRIBUTION, not the predictive power. Say so in the report.
+    predictive_power_validated: false
     note: >
       Incoming-call volume holding steady while outgoing volume and off-net
       share both rise means the subscriber has quietly made this their

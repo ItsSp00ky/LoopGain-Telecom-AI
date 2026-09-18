@@ -71,25 +71,58 @@ recovery happens at the next recharge or balance transfer in.
 | `advance_exceeded_modal_recharge_flag` | bool | derived | True when the debt was larger than one typical top-up. **The 3-LYD-card / 5-LYD-debt trap, made measurable.** | planned |
 | `balance_at_advance_lyd` | float | overlay | Should always be ≤ 0.5 (airtime) or ≤ 1.0 (data) — the eligibility gate, which is why the population is selected on being broke. | planned |
 
-> **Do not generate `entered_recharge_stage_flag` or `line_reset_flag`.** Those
-> were Libyana mechanisms. Neither is documented for Almadar, and inventing
-> them would mean fabricating the project's headline finding. The honest
-> equivalent is service **lockout** — unpaid debt blocking re-subscription.
+> **Do not generate `entered_recharge_stage_flag` or `line_reset_flag`.**
+> Neither outcome is documented for Almadar, and inventing them would mean
+> fabricating the project's headline finding. The measurable equivalent is
+> service **lockout** — unpaid debt blocking re-subscription.
+
+---
+
+## A note on `mapped` versus `gen`
+
+Fields marked **mapped** are generated against a *measured* distribution from
+real data rather than an invented one. That is a meaningful distinction for
+three fields in particular, because they carry most of this project's
+differentiation and would otherwise have had no empirical reference at all:
+
+| Field | Measured from | Distribution |
+|---|---|---|
+| `incoming_outgoing_ratio` | `recv_vce_Mean` / `plcd_vce_Mean` | median 0.280, p10 0.052, p90 0.681 |
+| `data_mb_offpeak` | `mou_opkv_Mean` / total | median off-peak share 0.424 |
+| `revenue_decay_ratio` | `avg3mou` / `avg6mou` | median 1.012, p10 0.663, p90 1.314 |
+
+All three columns are 0% null across 100,000 rows.
+
+**Two caveats that must travel with these numbers.**
+
+**The measured baseline is a single-SIM market.** Only 3.0% of real subscribers
+show an incoming/outgoing ratio above 1.0. At 85% dual-SIM penetration the
+generated right tail must be substantially fatter. The measurement tells us
+where the baseline sits; the overlay supplies the dual-SIM behaviour on top of
+it. Generating *to* 3.0% would be as wrong as generating blind.
+
+**The ratio does not predict churn in the source data.** Median 0.282 for
+non-churners against 0.278 for churners — no separation. That is the expected
+result, because the hypothesis is specific to dual-SIM prepaid and there is no
+receiving-SIM behaviour to detect in a single-SIM postpaid market. So the source
+grounds the feature's **distribution**, not its **predictive power**. The
+predictive claim remains a hypothesis testable only on real Libyan data, and the
+report states it that way.
 
 ## Usage & leakage dynamics
 
 | Field | Type | Source | Logic | Status |
 |---|---|---|---|---|
 | `data_mb_peak` | float | gen | | planned |
-| `data_mb_offpeak` | float | gen | Usage inside the 06:00–11:00 عروض الصبح window. | planned |
+| `data_mb_offpeak` | float | **mapped** | Usage inside the 06:00–11:00 عروض الصبح window. Generated against Cell2Cell's measured peak/off-peak split (`mou_opkv_Mean`): median off-peak share 0.424. | planned |
 | `offpeak_data_ratio` | float | derived | Share of data used in the 06:00–11:00 window. Identifies who would actually use a عروض الصبح morning pass. | planned |
-| `voice_min_onnet` | float | gen | Billed as a 3-minute block at 0.090 LYD then 0.050/min, **not** a flat rate — so call *length* drives revenue per minute, and the generator must produce a realistic length distribution. | planned |
+| `voice_min_onnet` | float | **mapped** | Billed as a 3-minute block at 0.090 LYD then 0.050/min, **not** a flat rate — so call *length* drives revenue per minute. Length distribution shaped by Cell2Cell's `inonemin_Mean` (calls under a minute: mean 29.8, median 12.3). | planned |
 | `voice_min_offnet` | float | gen | Flat 0.090 LYD/min to Libyana. | planned |
 | `voice_min_landline` | float | gen | Flat 0.040 LYD/min — the cheapest voice destination. | planned |
 | `payg_data_mb_30d` | float | gen | Data bought at the Bjawak PAYG rate (0.025 LYD/MB) rather than inside a bundle. | planned |
 | `payg_data_spend_lyd_30d` | float | derived | **~25× the bundle rate per GB.** High values mean the subscriber is either unaware of bundles or cannot afford one up front. | planned |
 | `onnet_ratio` | float | derived | **Dual-SIM leakage proxy.** Falling on-net share means the social graph is migrating. | planned |
-| `incoming_outgoing_ratio` | float | derived | **Primary leakage detector.** Rising incoming against flat outgoing = "this is my receiving SIM". | planned |
+| `incoming_outgoing_ratio` | float | **mapped** | **Primary leakage detector.** Rising incoming against flat outgoing = "this is my receiving SIM". Generated against the measured Cell2Cell distribution (`recv_vce_Mean` / `plcd_vce_Mean`): median 0.280, p10 0.052, p90 0.681. See the note below. | planned |
 | `distinct_called_numbers_trend` | float | derived | Contraction of the calling graph precedes silent exit. | planned |
 | `ussd_price_check_sessions_30d` | int | gen | Repeated catalogue browsing indicates active price shopping. | planned |
 | `social_bundle_share` | float | derived | Share of data spend on the real Social family (1 / 5 / 20 LYD). No apps are zero-rated, so all traffic consumes allowance. | planned |
@@ -117,6 +150,9 @@ later; nothing in M1 changes when it does. See
 Volume only. This branch does not read complaint **text** — that is
 Component 4's domain. A subscriber who calls support three times in a month is
 a churn signal regardless of what they said.
+
+Grounded on Cell2Cell's `custcare_Mean` (mean 1.79 contacts), `ccrndmou_Mean`
+and `cc_mou_Mean`.
 
 | Field | Type | Source | Logic | Status |
 |---|---|---|---|---|

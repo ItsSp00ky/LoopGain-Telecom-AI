@@ -42,7 +42,7 @@ Network anomaly detection, care-text classification and the Employee Copilot
 all belong to other components.
 
 **Operator is Almadar Aljadid (المدار الجديد), MCC/MNC 606-01** — not Libyana.
-Real catalogue data is in hand: 57 bundles across 17 families, the confirmed recharge ladder, and
+Real catalogue data is in hand: 37 bundles across 12 families, the confirmed recharge ladder, and
 both emergency-credit products. See §3a below for what that invalidated.
 
 **No blockers, and no open scope questions.** All ten market questions in
@@ -54,6 +54,14 @@ gap remains (Q6b, partial-recharge settlement) and it does not block anything.
 **No geography anywhere.** No districts, cells, coordinates or OpenCelliD.
 Network quality survives as a subscriber-level feature because it is real
 measured signal, not an invented Libyan field.
+
+**Catalogue is 37 bundles across 12 families** (Mix removed). The morning pass
+is now the primary voice instrument as well as the off-peak data one, since only
+it and the Family plans carry minutes.
+
+**Cell2Cell is supplied locally** at `data/raw/telecom/telecom` as the original
+two-file Duke distribution, and it grounds the leakage and off-peak features
+against measured distributions. Three caveats travel with it -- see session 3f.
 
 ---
 
@@ -330,8 +338,8 @@ Real operator data supplied: `Almadar/internet_offers_data_v4.csv`,
   `conf/config.yaml`, the OpenCelliD filter (`mnc: ["01"]` only), the Pandera
   contract, the UI caption, and every doc reference. Libyana remains only as
   the competitor dual-SIM leakage flows toward.
-- **Wrote [`conf/catalogue.yaml`](conf/catalogue.yaml)** — all 57 bundles
-  across 17 families, structured from the CSV, plus both emergency-credit
+- **Wrote [`conf/catalogue.yaml`](conf/catalogue.yaml)** — the bundles
+  structured from the CSV, plus both emergency-credit
   products. `variable_cost_lyd` is an estimate throughout and flagged as one.
 - **Recharge ladder confirmed: 3 / 5 / 10 / 20 / 40 / 100 LYD.** Propagated to
   `conf/market.yaml` and the quantile mapping in `conf/data.yaml`.
@@ -463,7 +471,7 @@ standalone specification. ~13,900 words, no changelog framing -- it reads as
 the proposal rather than as a record of revisions.
 
 Reflects the project as it actually is: Almadar Aljadid, four modules, the real
-57-bundle catalogue and published tariffs, subscriber-level service quality, no
+real catalogue and published tariffs, subscriber-level service quality, no
 geography, the integration contract, and the emergency-credit argument built on
 the 3 LYD card versus 5 LYD debt.
 
@@ -471,7 +479,7 @@ Three parts are new analysis rather than restatement, and they are the strongest
 material in the document:
 
 1. **The cannibalisation break-even (§7.2).** A 1 LYD unlimited morning pass
-   against 20-75 LYD monthly Mix tiers means cannibalisation, not incentive
+   against the 20-80 LYD monthly ladder means cannibalisation, not incentive
    spend, is what decides the business case. Above **~2.2% downgrade rate on the
    treated cohort the entire retention gain disappears** -- which is why
    `max_simulated_arpu_erosion` sits at 2%, just below break-even. The
@@ -486,6 +494,78 @@ material in the document:
 
 Business case rescaled throughout for ARPU 30: revenue at risk ~1.05M LYD/month,
 ROI ~6.0x at a 1.5 LYD blended incentive, ~1.32M LYD/month in avoided waste.
+
+### 2026-09-18 · Session 3f — Mix removed, Cell2Cell grounded
+
+**Mix tiers removed entirely.** Five families (Diamond / Platinum / Gold /
+Silver / Bronze) and 20 bundles deleted from `conf/catalogue.yaml`. The
+catalogue is now **37 bundles across 12 families**; meta counts updated and
+asserted.
+
+Two consequences handled rather than glossed over:
+
+- **The 35 LYD cannibalisation anchor survives.** عروض شهرية `نت 20`
+  (`MO_20`) is 35 LYD for 20 GB over 30 days, so the §7.2 break-even arithmetic
+  (34 LYD/month lost per downgrader, ~2.2% of cohort wipes out the gain) carries
+  over unchanged. Prose re-anchored from "Mix tiers" to the monthly ladder.
+- **Voice instruments thinned.** Mix was the main data+voice family. Only the
+  morning pass (unlimited voice) and the shared Family plans now carry minutes
+  at all, which makes the morning pass the primary **voice** instrument as well
+  as the off-peak data one. `conf/pricing.yaml` tier instruments updated
+  accordingly: Gold -> `morning_pass`, Platinum ->
+  `morning_pass_plus_volume_upgrade`. The loyalty ladder now maps onto the
+  monthly volume ladder (6/10/20/40/80 GB) and the Golden-vs-Silver quality
+  ladder instead of named product tiers.
+
+**Cell2Cell registered as a local two-file source** at
+`data/raw/telecom/telecom` — `Client.csv` (100,000 × 50) and `Record.csv`
+(100,000 × 51), joined 1:1 on `Customer_ID`, join verified complete. This is the
+original Duke distribution rather than a preprocessed single-table cut, and that
+matters: **it keeps placed and received voice as separate columns, and peak and
+off-peak minutes as separate columns.** Condensed versions collapse both.
+
+**What it grounds.** Two features carry most of the project's differentiation
+and were previously generated with no empirical reference at all:
+
+| Feature | Columns | Measured |
+|---|---|---|
+| `incoming_outgoing_ratio` | `recv_vce_Mean` / `plcd_vce_Mean` | median 0.280, p10 0.052, p90 0.681 |
+| `offpeak_data_ratio` | `mou_opkv_Mean` / total | median off-peak share 0.424 |
+| `revenue_decay_ratio` | `avg3mou` / `avg6mou` | median 1.012, 46.8% declining |
+
+Both leakage columns are 0% null across all 100,000 rows. Marked `mapped` rather
+than `gen` in the data dictionary, with the distributions recorded so the
+overlays fit against them.
+
+Also usable: `inonemin_Mean` (short-call share — relevant because Almadar bills
+on-net voice as a 3-minute block), data-side failures, care-contact volume,
+`months` tenure, `roam_Mean`, `uniqsubs`/`actvsubs`.
+
+**Three caveats, all recorded in config and docs rather than just noted here:**
+
+1. **The label prevalence is unusable.** Balanced at ~49.6%. Calibrating on it
+   would calibrate to a 50% prior and silently destroy the claim that a 0.31
+   means 31%. `use_label_prevalence: false`,
+   `require_prior_correction: true`, and `assert_prior_corrected()` in the
+   loader to make it fail loudly rather than quietly.
+2. **The leakage ratio does not predict churn in this data** — 0.282 for
+   non-churners against 0.278 for churners. Expected, because it is a
+   single-SIM postpaid market with no receiving-SIM behaviour to detect. The
+   source grounds the feature's *distribution*, not its *predictive power*, and
+   only 3.0% exceed a ratio of 1.0 — which at 85% dual-SIM penetration is the
+   baseline to **deviate from**, not reproduce. Added as a prepared answer in
+   the proposal's evaluator-questions table rather than buried.
+3. **22 columns dropped at the ingestion boundary** — US household marketing
+   data: ethnicity, marital status, income, five child-age brackets, dwelling
+   type and size, vehicle counts, credit-card flag, US area. A Libyan prepaid
+   operator holds none of it and several are protected or proxy-protected.
+   Dropped at ingestion rather than merely excluded from pricing, and
+   `FORBIDDEN_COLUMNS` is duplicated in the loader so a direct caller cannot
+   bypass the config.
+
+**Verified:** Python compiles, YAML parses, all doc links resolve, catalogue
+counts self-consistent, and 8/8 guardrail checks pass against surviving bundles
+(including `MO_20` at 10% off and the 1 LYD morning pass).
 
 ## 9. How to update this file
 

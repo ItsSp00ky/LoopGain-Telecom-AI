@@ -39,12 +39,17 @@ answer this in thirty seconds — worth asking.
 
 ### Q3 — Bundle catalogue · **confirmed**
 
-**57 bundles across 17 families**, from `Almadar/internet_offers_data_v4.csv`,
+**37 bundles across 12 families**, from `Almadar/internet_offers_data_v4.csv`,
 now structured in [`conf/catalogue.yaml`](../conf/catalogue.yaml).
 
-Families: Mix (five quality tiers × four durations), Golden and Silver
-unlimited, daily / weekly / monthly data, 5G monthly and hourly, Macchiato
-hourly unlimited, Social, Elite, Family share, and the morning off-peak pass.
+Families: Golden and Silver unlimited, daily / weekly / monthly data, 5G
+monthly and hourly, Macchiato hourly unlimited, Social, Elite, Family share,
+and the morning off-peak pass.
+
+Voice minutes appear in only two families -- the morning pass (unlimited) and
+the shared Family plans. That makes the morning pass the primary **voice**
+instrument as well as the off-peak data one, which matters for any subscriber
+showing voice leakage.
 
 This is far better than expected — M3 now prices real products.
 
@@ -167,7 +172,8 @@ meaningful feature.
 | **Dual-SIM penetration** | **85%** | revised from 60% |
 
 The ARPU revision fixes a real inconsistency: at 12 LYD nobody could be buying
-a monthly bundle, since the cheapest is 20 LYD and the Mix tiers run 20–35.
+a monthly bundle, since the cheapest is 20 LYD and the monthly ladder runs
+20–80 LYD.
 
 **It rescales the business case.** At 3.5% monthly churn on 1M subscribers,
 revenue at risk moves from ~420k to **~1.05M LYD/month**, and the CLV ceiling

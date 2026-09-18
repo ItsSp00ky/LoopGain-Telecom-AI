@@ -138,8 +138,10 @@ catalogue:
   status: confirmed
   file: conf/catalogue.yaml
   source: Almadar/internet_offers_data_v4.csv
-  # 57 bundles across 17 families. Predominantly data; the Mix and Family
-  # families add voice minutes.
+  # 37 bundles across 12 families. Predominantly data. Voice minutes appear
+  # in only two places -- the morning pass (unlimited) and the shared Family
+  # plans -- which makes the morning pass the primary voice instrument as well
+  # as the off-peak data one.
   notes:
     - "The off-peak product is عروض الصبح -- 06:00-11:00, MORNING not night."
     - "Volumes for most bundles are inferred from package names; confirm."
@@ -153,10 +155,10 @@ base:
   source: "team estimate, 2026-09-18; not operator-published"
   addressable_prepaid_subscribers: 1_000_000
 
-  # Revised 12 -> 30 LYD. The old figure came from the proposal and was
-  # inconsistent with this catalogue: the cheapest MONTHLY data bundle is
-  # 20 LYD and the Mix tiers run 20-35 LYD, so 12 LYD implied almost nobody
-  # buys a monthly bundle. 30 LYD sits sensibly against real prices.
+  # 30 LYD is set against the real price sheet rather than inherited. The
+  # cheapest MONTHLY data bundle is 20 LYD and the monthly ladder runs
+  # 20-80 LYD, so a figure much below 30 would imply almost nobody buys a
+  # monthly bundle at all.
   #
   # This rescales the business case. At 3.5% monthly churn on 1M subscribers,
   # revenue at risk moves from ~420k to ~1.05M LYD/month, and the CLV ceiling

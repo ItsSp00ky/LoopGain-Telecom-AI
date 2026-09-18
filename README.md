@@ -231,7 +231,7 @@ The Libyan layer is anchored to **real operator data**, not invented:
 
 | | |
 |---|---|
-| [`conf/catalogue.yaml`](conf/catalogue.yaml) | 57 real Almadar bundles across 17 families, plus both emergency-credit products |
+| [`conf/catalogue.yaml`](conf/catalogue.yaml) | 37 real Almadar bundles across 12 families, plus both emergency-credit products |
 | [`conf/market.yaml`](conf/market.yaml) | Confirmed recharge ladder (3/5/10/20/40/100 LYD), calendar, geography |
 | [`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md) | What is confirmed, what is still an estimate, and what would change if an estimate is wrong |
 

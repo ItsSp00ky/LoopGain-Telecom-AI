@@ -19,8 +19,8 @@ meta:
   source_file: Almadar/internet_offers_data_v4.csv
   captured: 2026-09-18
   currency: LYD
-  total_bundles: 57
-  total_families: 17
+  total_bundles: 37
+  total_families: 12
   # Volumes inferred from package names (e.g. "نت 6" -> 6 GB, "نت 1/2" -> 512 MB).
   # Confirm before the demo -- an inferred volume that is wrong makes every
   # price-per-GB figure in the deck wrong too.
@@ -71,64 +71,6 @@ families:
         voice_minutes: unlimited
         variable_cost_lyd: 0.35
         note: "Unlimited data AND voice, 06:00-11:00 only."
-
-  # --- باقات مكس · MIX (data + voice), five tiers -------------------------
-  # The richest family for personalisation: five quality tiers x four durations.
-  # Tier names map cleanly onto the loyalty ladder in conf/pricing.yaml.
-  mix_diamond:
-    name_ar: "باقة مكس الماسية"
-    name_en: Diamond Mix
-    speed_up_mbps: 8
-    speed_down_mbps: 16
-    items:
-      - { id: MIX_D1, name_ar: "مكس 1", price_lyd: 3,  validity_days: 1,  data_gb: 3,  voice_minutes: 40,   variable_cost_lyd: 0.75 }
-      - { id: MIX_D2, name_ar: "مكس 2", price_lyd: 7,  validity_days: 3,  data_gb: 7,  voice_minutes: 100,  variable_cost_lyd: 1.75 }
-      - { id: MIX_D3, name_ar: "مكس 3", price_lyd: 20, validity_days: 7,  data_gb: 20, voice_minutes: 500,  variable_cost_lyd: 5.00 }
-      - { id: MIX_D4, name_ar: "مكس 4", price_lyd: 75, validity_days: 30, data_gb: 80, voice_minutes: 1500, variable_cost_lyd: 18.75 }
-
-  mix_platinum:
-    name_ar: "باقة مكس البلاتينية"
-    name_en: Platinum Mix
-    speed_up_mbps: 8
-    speed_down_mbps: 16
-    items:
-      - { id: MIX_P1, name_ar: "مكس 1", price_lyd: 2,  validity_days: 1,  data_gb: 2,  voice_minutes: 30,  variable_cost_lyd: 0.50 }
-      - { id: MIX_P2, name_ar: "مكس 2", price_lyd: 6,  validity_days: 3,  data_gb: 6,  voice_minutes: 80,  variable_cost_lyd: 1.50 }
-      - { id: MIX_P3, name_ar: "مكس 3", price_lyd: 15, validity_days: 7,  data_gb: 15, voice_minutes: 300, variable_cost_lyd: 3.75 }
-      - { id: MIX_P4, name_ar: "مكس 4", price_lyd: 55, validity_days: 30, data_gb: 60, voice_minutes: 900, variable_cost_lyd: 13.75 }
-
-  mix_gold:
-    name_ar: "باقة مكس الذهبية"
-    name_en: Gold Mix
-    speed_up_mbps: 8
-    speed_down_mbps: 16
-    items:
-      - { id: MIX_G1, name_ar: "مكس 1", price_lyd: 2,  validity_days: 1,  data_gb: 2,  voice_minutes: 20,  variable_cost_lyd: 0.50 }
-      - { id: MIX_G2, name_ar: "مكس 2", price_lyd: 5,  validity_days: 3,  data_gb: 5,  voice_minutes: 60,  variable_cost_lyd: 1.25 }
-      - { id: MIX_G3, name_ar: "مكس 3", price_lyd: 10, validity_days: 7,  data_gb: 10, voice_minutes: 250, variable_cost_lyd: 2.50 }
-      - { id: MIX_G4, name_ar: "مكس 4", price_lyd: 35, validity_days: 30, data_gb: 40, voice_minutes: 800, variable_cost_lyd: 8.75 }
-
-  mix_silver:
-    name_ar: "باقة مكس الفضية"
-    name_en: Silver Mix
-    speed_up_mbps: 8
-    speed_down_mbps: 16
-    items:
-      - { id: MIX_S1, name_ar: "مكس 1", price_lyd: 1,  validity_days: 1,  data_gb: 1,  voice_minutes: 10,  variable_cost_lyd: 0.25 }
-      - { id: MIX_S2, name_ar: "مكس 2", price_lyd: 3,  validity_days: 3,  data_gb: 4,  voice_minutes: 40,  variable_cost_lyd: 0.75 }
-      - { id: MIX_S3, name_ar: "مكس 3", price_lyd: 7,  validity_days: 7,  data_gb: 8,  voice_minutes: 200, variable_cost_lyd: 1.75 }
-      - { id: MIX_S4, name_ar: "مكس 4", price_lyd: 30, validity_days: 30, data_gb: 30, voice_minutes: 500, variable_cost_lyd: 7.50 }
-
-  mix_bronze:
-    name_ar: "باقة مكس البرونزية"
-    name_en: Bronze Mix
-    speed_up_mbps: 8
-    speed_down_mbps: 16
-    items:
-      - { id: MIX_B1, name_ar: "مكس 1", price_lyd: 1,  validity_days: 1,  data_gb: 1,  voice_minutes: 10,  variable_cost_lyd: 0.25 }
-      - { id: MIX_B2, name_ar: "مكس 2", price_lyd: 2,  validity_days: 3,  data_gb: 3,  voice_minutes: 30,  variable_cost_lyd: 0.50 }
-      - { id: MIX_B3, name_ar: "مكس 3", price_lyd: 5,  validity_days: 7,  data_gb: 5,  voice_minutes: 100, variable_cost_lyd: 1.25 }
-      - { id: MIX_B4, name_ar: "مكس 4", price_lyd: 20, validity_days: 30, data_gb: 20, voice_minutes: 200, variable_cost_lyd: 5.00 }
 
   # --- الباقات الذهبية / الفضية · unlimited and speed-capped ---------------
   golden_unlimited:

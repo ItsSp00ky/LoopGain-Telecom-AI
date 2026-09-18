@@ -6,7 +6,7 @@ scripts/download_data.py` refills `raw/` and `external/`; `pwsh tasks.ps1
 pipeline` produces the rest.
 
 ```
-raw/         Untouched source downloads, exactly as fetched
+raw/         Source data. Downloads plus telecom/ (Cell2Cell, supplied locally)
 interim/     Deduplicated, schema-validated, identifiers hashed
 processed/   features_offline.parquet, sequences_offline.npz, features_online.duckdb
 synthetic/   CTGAN output -- the generated Libyan subscriber population
@@ -25,7 +25,7 @@ legally or ethically leave an operator. The corpus is hybrid:
 - **A CTGAN** adds the Libyan prepaid layer: LYD recharge denominations,
   scratch-card channels, dual-SIM leakage, outage exposure, advance repayment.
 - **The operator's real catalogue and tariffs** (`conf/catalogue.yaml`,
-  `conf/market.yaml`) fix the monetary scale: 57 real bundles, the confirmed
+  `conf/market.yaml`) fix the monetary scale: 37 real bundles, the confirmed
   3/5/10/20/40/100 LYD recharge ladder, and published pay-as-you-go rates.
 
 **No geography.** All subscribers are modelled as geographically equivalent —
@@ -70,25 +70,52 @@ needs.
    It is excluded from the feature matrix (`conf/features.yaml`), which is why
    our reported metrics are lower than the published ~97% accuracy / ~0.99 AUC.
 
-### B — Cell2Cell (Duke University / Teradata CRM Center) · SCALE & SEQUENCES
+### B — Cell2Cell (Duke University / Teradata CRM Center) · SCALE & GROUNDING
 
 | | |
 |---|---|
-| Source | <https://kaggle.com/datasets/jpacse/datasets-for-churn-telecom> |
-| Size | 71,047 rows × 58 features (51,048 labelled / 19,999 unlabelled holdout) |
-| Class balance | ~29% churn in the labelled split |
+| Location | `data/raw/telecom/telecom/` — supplied locally, no download |
+| Form | Two files, joined 1:1 on `Customer_ID` (verified complete) |
+| `Client.csv` | 100,000 × 50 — commercial, handset, 3/6-month aggregates |
+| `Record.csv` | 100,000 × 51 — behavioural means, service quality, label |
+| Class balance | ~49.6% churn — **balanced; see caveats** |
 | Licence | public research terms |
-| Credentials | Kaggle (`KAGGLE_USERNAME` + `KAGGLE_KEY`) |
 
-Supplies volume and, critically, **trend and degradation features**:
-`changem` (percent change in minutes of use), `changer` (percent change in
-revenue), `dropvce`, `blckvce`, `unansvce`, care-call counts, handset
-attributes. These are the direct ancestors of our
-`revenue_decay_ratio_7d_30d`.
+The original two-file Duke distribution rather than a preprocessed single-table
+cut, which is why it keeps columns the condensed versions collapse — including
+the two that matter most here.
 
-Also what makes the **M1 LSTM benchmark meaningful** — an LSTM on 3,000 rows
-would prove nothing. The unlabelled holdout doubles as the inference load test
-for the p95 latency evidence.
+**What it grounds.** Two features carry most of this project's differentiation,
+and without this source both would be invented end-to-end:
+
+| Feature | Columns | Measured distribution |
+|---|---|---|
+| `incoming_outgoing_ratio` | `recv_vce_Mean` / `plcd_vce_Mean` | median 0.280, p10 0.052, p90 0.681 |
+| `offpeak_data_ratio` | `mou_opkv_Mean` / total | median off-peak share 0.424 |
+| `revenue_decay_ratio` | `avg3mou` / `avg6mou` | median 1.012, 46.8% declining |
+
+Both leakage columns are 0% null across all 100,000 rows.
+
+Also supplies `inonemin_Mean` (short-call share — relevant under Almadar's
+three-minute block tariff), data-side failures (`drop_dat_Mean`,
+`blck_dat_Mean`), care-contact volume, `months` tenure, `roam_Mean`, and
+`uniqsubs` / `actvsubs` household line counts.
+
+> **The label prevalence is not usable.** Balanced at ~49.6%. Calibrating on it
+> would calibrate to a 50% prior and destroy the claim that a 0.31 means 31%.
+> Use for feature structure; take the base rate from `conf/market.yaml`.
+
+> **The leakage ratio does not predict churn here** — 0.282 for non-churners
+> vs 0.278 for churners. Expected: single-SIM postpaid market, no receiving-SIM
+> behaviour to detect. The source grounds the *distribution*, not the
+> *predictive power*, and the 3.0% share above ratio 1.0 is the baseline to
+> deviate from, not reproduce.
+
+> **22 columns are dropped at ingestion** — US household marketing data
+> (ethnicity, marital status, income, child-age brackets, dwelling, vehicles,
+> credit-card flag, US area). A Libyan prepaid operator holds none of it and
+> several are protected attributes. Dropped at the ingestion boundary so they
+> cannot reach a feature matrix by accident; the loader refuses to return them.
 
 ### C — IBM Telco Customer Churn (extended) · BENCHMARK & CLV
 

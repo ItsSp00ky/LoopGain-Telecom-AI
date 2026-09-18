@@ -31,11 +31,15 @@ tiers:
   gold:
     qualification: "36 <= tenure_months < 84 and high_rfm_le"
     d_max: 0.15
-    preferred_instrument: offpeak_bonus_data
+    preferred_instrument: morning_pass
   platinum:
     qualification: "tenure_months >= 84 or value_decile == 10"
     d_max: 0.20
-    preferred_instrument: offpeak_data_plus_onnet_minutes
+    # The morning pass carries unlimited VOICE as well as unlimited data, so
+    # it is the voice instrument too. Only two families in the catalogue
+    # include minutes at all -- this one and the shared Family plans -- which
+    # makes it the natural answer for a subscriber showing voice leakage.
+    preferred_instrument: morning_pass_plus_volume_upgrade
 
 # --- The six guardrails. Enforced in code, tested in CI. -------------------
 guardrails:

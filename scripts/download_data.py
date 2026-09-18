@@ -9,8 +9,8 @@ Nothing here transforms data -- it only fetches.
 
 Credentials needed (see .env.example):
     A  UCI 563     none
-    B  Cell2Cell   KAGGLE_USERNAME + KAGGLE_KEY, or ~/.kaggle/kaggle.json
-    C  IBM Telco   same Kaggle credentials
+    B  Cell2Cell   none -- supplied locally at data/raw/telecom/telecom
+    C  IBM Telco   KAGGLE_USERNAME + KAGGLE_KEY, or ~/.kaggle/kaggle.json
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ log = logging.getLogger("download")
 # Core sources from the proposal. Fetched by default.
 SOURCES = {
     "A": ("UCI Iranian Churn (563)", "cvm.ingest.uci_iranian"),
-    "B": ("Cell2Cell (Duke/Teradata)", "cvm.ingest.cell2cell"),
+    "B": ("Cell2Cell (local, two-file)", "cvm.ingest.cell2cell"),
     "C": ("IBM Telco Customer Churn", "cvm.ingest.ibm_telco"),
 }
 
@@ -44,7 +44,7 @@ ALL_SOURCES = {**SOURCES, **OPTIONAL_SOURCES}
 
 # Rough download sizes, so --only can be chosen against available disk.
 APPROX_MB = {
-    "A": 1, "B": 100, "C": 5,
+    "A": 1, "B": 0, "C": 5,          # B is already on disk
     "F": 300, "G": 5, "H": 30_000, "J": 45,
 }
 
@@ -52,7 +52,7 @@ APPROX_MB = {
 def check_credentials(ids: list[str]) -> list[str]:
     """Report missing credentials up front rather than failing three minutes in."""
     problems = []
-    kaggle_ids = {"B", "C", "H"}
+    kaggle_ids = {"C", "H"}          # B is supplied locally
     if kaggle_ids & set(ids) and not (settings.kaggle_key or settings.kaggle_username):
         problems.append(
             f"Kaggle credentials missing (datasets {sorted(kaggle_ids & set(ids))}). Set "

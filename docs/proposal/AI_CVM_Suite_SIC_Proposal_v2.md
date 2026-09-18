@@ -46,7 +46,7 @@ student laptop in four containers under 3 GB of RAM. One module trains on a
 free GPU session. Nothing in the design requires production hardware.
 
 **The component is anchored to the operator's real commercial reality**, not to
-a generic telecom template: 57 published bundles across 17 families, the
+a generic telecom template: 37 published bundles across 12 families, the
 confirmed 3/5/10/20/40/100 LYD recharge ladder, published pay-as-you-go
 tariffs, and both emergency-credit services documented from the operator's own
 material.
@@ -80,13 +80,13 @@ subscriber drifting toward off-net calling is paying measurably more to do it.
 That is an economically motivated signal, not a statistical artefact.
 
 **P3 — A rich catalogue with no per-subscriber logic behind it.**
-Almadar publishes 57 distinct bundles: five Mix tiers crossed with four
-durations, unlimited Golden and speed-capped Silver tiers, daily packs from 0.5
-LYD, hourly Macchiato passes, social bundles, 5G monthly tiers up to 600 GB, and
-shared Family plans for three to five members.
+Almadar publishes 37 distinct bundles: unlimited Golden and speed-capped Silver
+tiers, a monthly volume ladder from 6 GB to 80 GB, daily packs from 0.5 LYD,
+weekly packs, hourly Macchiato passes, social bundles, 5G monthly tiers up to
+600 GB, and shared Family plans for three to five members.
 
 That is more than enough product variety for genuine personalisation. What is
-missing is the machinery to decide *which* of the 57 a given subscriber should
+missing is the machinery to decide *which* of the 37 a given subscriber should
 be offered, at what price, and when. The catalogue is broadcast; it is not
 targeted. A nine-year customer and a SIM activated last week browse the same
 USSD menu.
@@ -98,7 +98,7 @@ have recharged anyway; another share lands on subscribers already gone. Net
 margin impact is never isolated because there is no holdout group.
 
 There is a second, sharper risk specific to this catalogue. The morning pass is
-1 LYD for unlimited data *and* voice. The monthly Mix tiers run 20–75 LYD.
+1 LYD for unlimited data *and* voice. The monthly ladder runs 20–80 LYD.
 Handing a cheap unlimited pass to a heavy user who is not actually at risk does
 not just waste the incentive — it invites them to **downgrade off a monthly
 bundle they were happily paying for**. On this price sheet, cannibalisation is a
@@ -194,7 +194,7 @@ Four modules. Each answers one question, and each feeds the next.
 |---|---|---|---|
 | **M1** | **Silent Churn Engine** — LightGBM vs LSTM benchmark | Who stops generating revenue in 30 days, and *when*? | `src/cvm/models/m1_churn/` |
 | **M2** | **Value & Loyalty Tiering** — RFM-LE, clustering, PCA, CLV | What is this subscriber worth, and how loyal? | `src/cvm/models/m2_value/` |
-| **M3** | **Dynamic Pricing & Off-Peak Offloading** | Which of 57 bundles, at what price, for *this* subscriber, within margin? | `src/cvm/decision/` |
+| **M3** | **Dynamic Pricing & Off-Peak Offloading** | Which of 37 bundles, at what price, for *this* subscriber, within margin? | `src/cvm/decision/` |
 | **M4** | **Smart Advance** — learned emergency-credit limit | How much credit can we safely extend, and to whom? | `src/cvm/models/m4_advance/` |
 
 **Scope boundaries, stated deliberately.** This component does not model:
@@ -257,8 +257,11 @@ No public Libyan CDR dataset exists, and none should — subscriber data cannot
 legally or ethically leave an operator. The corpus is built in three layers:
 
 - **Real public datasets** supply the statistical structure of telecom
-  behaviour: usage distributions, churn base rates, feature correlations,
-  service-quality indicators, and genuine labels for validation.
+  behaviour: usage distributions, feature correlations, service-quality
+  indicators, and genuine labels for validation. Critically, they also supply
+  **measured distributions for the two features this project is built on** —
+  the incoming-to-outgoing call ratio and the peak/off-peak usage split — so
+  neither is invented from scratch.
 - **The operator's real catalogue and tariffs** fix the monetary scale. Prices,
   bundle volumes, recharge denominations and pay-as-you-go rates are not
   invented; they are transcribed from Almadar's published material into
@@ -308,24 +311,65 @@ Two mandatory corrections before use:
 Both corrections are why our reported metrics sit below the published figures,
 and §8.1 treats that gap as a result rather than an embarrassment.
 
-#### Dataset B — Cell2Cell (Duke University / Teradata CRM Center) — SCALE & SEQUENCES
+#### Dataset B — Cell2Cell (Duke University / Teradata CRM Center) — SCALE & GROUNDING
 
 | Attribute | Value |
 |---|---|
-| Source | `kaggle.com/datasets/jpacse/datasets-for-churn-telecom` |
-| Size | 71,047 instances × 58 features (51,048 labelled / 19,999 unlabelled holdout) |
-| Class balance | ~29% churn in the labelled split |
+| Form | Original two-file distribution, joined 1:1 on `Customer_ID` |
+| `Client.csv` | 100,000 rows × 50 columns — commercial, handset, 3/6-month aggregates |
+| `Record.csv` | 100,000 rows × 51 columns — behavioural means, service quality, label |
+| Class balance | ~49.6% churn — deliberately balanced. **See the caveat below.** |
 
-Supplies volume and, critically, **trend and degradation features**: percent
-change in minutes of use (`changem`), percent change in revenue (`changer`),
-mean dropped voice calls (`dropvce`), blocked calls (`blckvce`), unanswered
-calls (`unansvce`), care-call counts, handset attributes.
+Supplies volume, and it is the reason the **M1 LSTM benchmark is meaningful at
+all** — an LSTM on 3,000 rows would prove nothing. But its more important
+contribution is **grounding**.
 
-**Role:** this is where decay modelling is learned. The `changem` / `changer`
-delta features are the direct ancestors of our `revenue_decay_ratio_7d_30d`, and
-`dropvce` / `blckvce` seed the service-quality features. It is also large enough
-to make the **LSTM benchmark in M1 meaningful** — an LSTM on 3,000 rows would
-prove nothing. The unlabelled holdout serves as an inference load test.
+**Two features carry most of this project's differentiation**, and without this
+source both would be generated end-to-end with no empirical reference:
+
+| Feature | Measured from | Distribution |
+|---|---|---|
+| `incoming_outgoing_ratio` — the dual-SIM leakage detector | `recv_vce_Mean` / `plcd_vce_Mean` | median 0.280, p10 0.052, p90 0.681 |
+| `offpeak_data_ratio` — morning-pass targeting | `mou_opkv_Mean` / total minutes | median off-peak share 0.424 |
+
+Both columns are **0% null across all 100,000 rows.** Because this is the
+original two-file distribution rather than a condensed single-table cut, it
+retains placed and received voice as separate columns, and peak and off-peak
+minutes as separate columns. Preprocessed versions of Cell2Cell collapse both.
+
+It also supplies a **real two-horizon decay ratio** (`avg3mou` / `avg6mou`:
+median 1.012, p10 0.663, p90 1.314, with **46.8% of subscribers declining** at
+any moment — a useful upper bound on how much decline the generator should
+produce), short-call share via `inonemin_Mean` (which matters because Almadar
+bills on-net voice as a three-minute block), data-side service failures
+(`drop_dat_Mean`, `blck_dat_Mean`), care-contact volume, tenure in months, and
+household line counts relevant to the shared Family plans.
+
+> **Caveat 1 — the label prevalence is not usable.** This cut is balanced at
+> ~49.6% churn. Training on it and then calibrating would calibrate to a 50%
+> prior, which silently destroys the project's central claim that a 0.31 means
+> 31%. The source is used for feature **structure** and correlation; the base
+> rate comes from the market configuration. An assertion in the ingestion layer
+> fails the build if a model is fitted on the raw prevalence.
+
+> **Caveat 2 — the leakage ratio does not predict churn in this data.** Median
+> 0.282 for non-churners against 0.278 for churners: no separation. That is the
+> *expected* result. The hypothesis is specific to dual-SIM prepaid, and there
+> is no receiving-SIM behaviour to detect in a single-SIM postpaid market. So
+> this source grounds the feature's **distribution**, not its **predictive
+> power** — and only 3.0% of real subscribers exceed a ratio of 1.0, which at
+> 85% dual-SIM penetration is the baseline to *deviate from* rather than
+> reproduce. The predictive claim remains a hypothesis testable only on real
+> Libyan data, and §8.1 says so.
+
+> **Caveat 3 — 22 columns are dropped at ingestion.** `Client.csv` carries US
+> household marketing data: ethnicity, marital status, income, five child-age
+> brackets, dwelling type and size, vehicle counts, credit-card flag. A Libyan
+> prepaid operator holds none of it, and several entries are protected or
+> proxy-protected attributes that must never enter a pricing system in any
+> form. They are dropped at the **ingestion boundary** rather than merely
+> excluded from pricing, so they cannot reach a feature matrix later by
+> accident. The loader refuses to return them at all.
 
 #### Dataset C — IBM Telco Customer Churn (extended) — BENCHMARK & CLV
 
@@ -439,12 +483,11 @@ A subscriber paying PAYG data rates is either **unaware** of the catalogue or
 requiring different interventions — one is a communications problem, the other
 an affordability problem — and M3 must not send the same offer to both.
 
-#### Bundle catalogue — 57 bundles across 17 families
+#### Bundle catalogue — 37 bundles across 12 families
 
 | Family | Range | Notes |
 |---|---|---|
 | **عروض الصبح** Morning | 1 LYD | **Unlimited data AND voice, 06:00–11:00.** The off-peak anchor |
-| **مكس** Mix — Diamond / Platinum / Gold / Silver / Bronze | 1–75 LYD | Five tiers × four durations; data + voice; 8/16 Mbps |
 | **الباقات الذهبية** Golden | 10–160 LYD | Unlimited data, 1 / 3 / 7 / 30 days |
 | **الباقات الفضية** Silver | 8–130 LYD | Unlimited at 8 Mbps |
 | **عروض يومية** Daily | 0.5–3 LYD | 50 MB up to 512 MB. The affordability floor |
@@ -458,6 +501,12 @@ an affordability problem — and M3 must not send the same offer to both.
 | **باقات حصتي معاك** Family | 90–250 LYD | Shared across 3–5 members |
 
 No apps are zero-rated: all traffic consumes allowance.
+
+**Voice minutes appear in only two families** — the morning pass, which carries
+unlimited voice, and the shared Family plans. Everything else is data-only. That
+concentration matters for M3: a subscriber showing voice leakage has essentially
+one instrument available, and it happens to be the cheapest thing on the price
+sheet.
 
 **The morning pass is the most commercially interesting line in the catalogue.**
 One dinar for unlimited data *and* unlimited voice, valid only 06:00–11:00. It
@@ -561,6 +610,14 @@ That final gate is worth emphasising in the pitch: **the GAN is evaluated with
 an adversarial test, the same principle that trains it.** It is also the primary
 mitigation against the single biggest risk in the register — generated data that
 is too clean, making models look unrealistically good.
+
+Where a real distribution exists, the overlays **fit against it** rather than
+inventing a shape. The leakage ratio, the off-peak share and the decay ratio all
+have measured baselines from Dataset B, and the generator's job is to reproduce
+that shape and then apply the Libyan deviation on top — a fatter dual-SIM right
+tail, a 06:00–11:00 concentration, the recharge ladder. Fitting to a measured
+baseline and documenting the deviation is a materially stronger position than
+generating blind.
 
 Three overlays are worth calling out because they are anchored to confirmed
 facts rather than guessed:
@@ -792,7 +849,7 @@ below the published ones.
 │  churn_prob ─┐                                                           │
 │  time-to-churn│  ┌──────────────┐   ┌──────────────────┐                 │
 │  CLV ─────────┤  │ Uplift filter│──►│ M3 Pricing:      │                 │
-│  loyalty_idx ─┼─►│ persuadables │   │ 57-bundle choice │                 │
+│  loyalty_idx ─┼─►│ persuadables │   │ 37-bundle choice │                 │
 │  repay_PD ────┤  │ only         │   │ + morning pass   │                 │
 │  net_quality ─┘  └──────────────┘   └────────┬─────────┘                 │
 │                                              ▼                           │
@@ -932,7 +989,7 @@ to a CFO.
 
 #### M3 — Dynamic Pricing & Off-Peak Offloading
 
-Two mechanisms in one module, operating over the real 57-bundle catalogue.
+Two mechanisms in one module, operating over the real 37-bundle catalogue.
 
 **(a) Personalised price.** For bundle `b`, subscriber `i`:
 
@@ -954,9 +1011,12 @@ d(i,b) = clip(
 | Gold | 36–84 months, high RFM-LE | 15% | **Morning pass** |
 | Platinum | 84+ months or top value decile | 20% | **Morning pass + on-net minutes** |
 
-The five Mix tiers map naturally onto this ladder, which is a convenience the
-catalogue hands us: the operator has already built the product structure that a
-loyalty ladder needs.
+The catalogue supplies two independent ladders for this to map onto: a
+**volume** ladder in the monthly family (6 / 10 / 20 / 40 / 80 GB) and a
+**quality** ladder between unlimited Golden and speed-capped Silver. A tier
+upgrade can therefore be expressed as more volume, better speed, or the morning
+pass — three instruments with very different cost profiles, which is what makes
+the margin floor a live constraint rather than a formality.
 
 **(b) Off-peak offloading.** Peak-hour capacity is what drives network capex, so
 shifting load has real avoided-capex value beyond the near-zero marginal cost of
@@ -977,8 +1037,8 @@ the published price sheet intact.
 **Cannibalisation guard.** This is the single most important commercial critique
 of the idea, and it is answered in code rather than in a footnote. At 1 LYD for
 unlimited data and voice across the working morning, the pass is cheap enough to
-pull heavy users **down off a 35–75 LYD monthly Mix bundle** they were paying
-for willingly. Eligibility therefore excludes subscribers whose peak usage would
+pull heavy users **down off a 20–80 LYD monthly bundle** they were paying for
+willingly. Eligibility therefore excludes subscribers whose peak usage would
 simply shift rather than grow, the pass is granted as **additive rather than
 substitutable**, and a simulated margin check runs before any cohort is
 approved. §7.2 shows why this guardrail, not the margin floor, is the one that
@@ -1084,7 +1144,7 @@ become the stage cut-points, recomputed per segment.
 | Stage | Trigger | Intervention | Instrument |
 |---|---|---|---|
 | **1 — Cooling** | Recharge gap exceeds the subscriber's own baseline | Low-cost nudge | Reminder SMS, morning pass, advance-limit reminder |
-| **2 — Cold** | Past the first hazard inflection | Peak spend | Personalised priced bundle from the Mix ladder, loyalty bonus, on-net pack if leakage detected |
+| **2 — Cold** | Past the first hazard inflection | Peak spend | Personalised priced bundle from the monthly volume ladder, loyalty bonus, morning pass if voice leakage detected |
 | **3 — Dormant** | Past the second inflection | **Reduced spend** | Single low-cost win-back, then stop |
 
 Stage 1 triggers on the subscriber's **own** baseline gap, not a global number. A
@@ -1390,8 +1450,8 @@ point, not the number.
 **Assumptions (pilot slice):** 1,000,000 addressable prepaid subscribers ·
 30 LYD monthly ARPU · 3.5% monthly silent churn (~35,000) · model captures ~62%
 of churners in the top 3 deciles · 120,000 treated per monthly campaign · 10%
-untreated control · 1.5 LYD blended incentive, reflecting a mix of the 1 LYD
-morning pass and larger discounts on Mix bundles.
+untreated control · 1.5 LYD blended incentive, reflecting a blend of the 1 LYD
+morning pass and larger discounts on monthly bundles.
 
 ### 7.1 Retention campaign
 
@@ -1422,8 +1482,9 @@ The real fragility is elsewhere, and §7.2 is where it lives.
 ### 7.2 Cannibalisation — the risk that actually decides this
 
 The morning pass costs 1 LYD for unlimited data and voice across 06:00–11:00.
-The monthly Mix tiers run 20–75 LYD. If granting the pass persuades a heavy user
-to **stop buying a monthly bundle**, the ARPU loss dwarfs the incentive saving.
+The monthly ladder runs 20–80 LYD, with the mid-tier **نت 20 at 35 LYD for
+20 GB**. If granting the pass persuades a heavy user to **stop buying a monthly
+bundle**, the ARPU loss dwarfs the incentive saving.
 
 | Line | Value |
 |---|---|
@@ -1488,9 +1549,13 @@ contract, no cancellation, no churn event. We **redefined the target variable**
 (30 days of zero revenue-generating events), **redefined RFM** for a market with
 no purchase transactions, engineered a **dual-SIM leakage detector** from the
 incoming-to-outgoing call ratio, and priced everything against the operator's
-**real 57-bundle catalogue and published tariffs** — including a block-rate
+**real 37-bundle catalogue and published tariffs** — including a block-rate
 voice tariff that makes call length, not call volume, the driver of revenue per
-minute. This problem cannot be solved by downloading a Kaggle notebook.
+minute. And the two features that carry the localisation claim are not
+invented: the incoming-to-outgoing ratio and the peak/off-peak split are
+generated against measured distributions from 100,000 real subscribers, with the
+deviation from that baseline documented rather than hidden. This problem cannot
+be solved by downloading a Kaggle notebook.
 
 **② We found a harm the operator's own reporting cannot see.**
 Almadar's emergency data advance costs 5 LYD. The smallest recharge card sold is
@@ -1510,7 +1575,7 @@ The operator sells a 1 LYD pass for unlimited data and voice between 06:00 and
 capacity, and exactly when it is. So the off-peak strategy is not a proposal —
 it is the personalisation of an existing product, which is a much stronger claim.
 It also means we had to answer the hard question honestly: a 1 LYD unlimited
-pass is cheap enough to cannibalise a 35 LYD monthly bundle, and we can show
+pass is cheap enough to cannibalise the 35 LYD monthly tier, and we can show
 that **above 2.2% downgrade rate the entire retention gain disappears.** The
 guardrail threshold is set below that break-even, in code, before any cohort
 ships.
@@ -1544,10 +1609,11 @@ population it is applied to is generated. **We would rather show a defensible
 | Question | Prepared answer |
 |---|---|
 | *"Your population is generated — how do we know it works?"* | Three separate answers. The *structure* is learned adversarially from three real telecom datasets and gated by a discriminator detection test. The *prices* are the operator's real published catalogue and tariffs, not invented. The *uplift method* is validated on 25 million rows of real randomised treatment and control before it ever touches generated data. What remains generated is the population, and we say so. |
+| *"Does your leakage detector actually predict churn?"* | Not in the data we can test it on, and we say so. In the real 100,000-subscriber source the incoming/outgoing ratio shows no separation between churners and non-churners — 0.282 against 0.278. That is the expected result: it is a single-SIM postpaid market, and there is no receiving-SIM behaviour to detect. What that source gives us is the feature's real *distribution*, which is what the generator fits against. The *predictive* claim is specific to dual-SIM prepaid and is testable only on real Libyan data. We would rather state that than imply a validation we do not have. |
 | *"Why isn't everything deep learning?"* | We benchmarked it. On tabular telecom data gradient boosting matched or beat the LSTM at a fraction of the compute, and SHAP gives regulator-grade explanations. We report whichever arm won and explain why. |
 | *"How can you train on a label you generated yourself?"* | Carefully, and the code makes the distinction explicit. The hazard is a function of observable behaviour, so the signal is recoverable — that is deliberate, because a model that can see no driver of its label has nothing to learn. What it never sees are the label *artefacts*: the hazard score, the churn date, the label itself. Both directions are tested. And we state plainly that this demonstrates the pipeline works, not that the model would perform this way in production. |
 | *"Isn't a 1 LYD unlimited pass going to destroy your ARPU?"* | It could, and we quantified exactly when: above a 2.2% downgrade rate on the treated cohort, the entire retention gain disappears. That is why the cannibalisation guard excludes low-risk high-value subscribers, requires the pass to be additive, runs a simulated margin check before approval, and caps modelled ARPU erosion at 2% — below break-even. |
-| *"How is this different from any churn project?"* | Churn prediction is one of four modules. The product is the pricing, offer and credit-limit decision, with uplift targeting and margin guardrails over a real 57-bundle catalogue. And we found a harm in the operator's own credit product that its reporting cannot detect. |
+| *"How is this different from any churn project?"* | Churn prediction is one of four modules. The product is the pricing, offer and credit-limit decision, with uplift targeting and margin guardrails over a real 37-bundle catalogue. And we found a harm in the operator's own credit product that its reporting cannot detect. |
 | *"Where do your bundle costs come from?"* | They are estimates — 25% of price for metered data, 35% for unlimited — and they are labelled as estimates everywhere they appear, because the operator's marginal cost of a gigabyte is not public. The margin floor needs a figure to enforce; what we owe you is the disclosure, which is in the market-facts register. |
 | *"Why doesn't your model use location?"* | Because we could not do it honestly. Network planning and cell anomaly detection belong to another component of this platform; duplicating them here would mean two teams maintaining two answers to the same question. Service quality still matters and still enters the model — as a per-subscriber feature drawn from real measured data, not as a map we invented. |
 | *"What breaks first at scale?"* | The feature store. DuckDB is correct at demo scale; at millions of subscribers it becomes a columnar warehouse with the same schema. Models and decision logic are unchanged, because nothing above the feature layer knows what the store is made of. |
@@ -1561,7 +1627,7 @@ population it is applied to is generated. **We would rather show a defensible
 | ID | Dataset | Size | Access | Licence | Role |
 |---|---|---|---|---|---|
 | A | Iranian Churn (UCI 563) | 3,150 | `fetch_ucirepo(id=563)` | CC BY 4.0 | Primary: prepaid, MENA, call-failure feature |
-| B | Cell2Cell (Duke/Teradata) | 71,047 | Kaggle `jpacse/datasets-for-churn-telecom` | public research | Scale, trend features, LSTM viability |
+| B | Cell2Cell (Duke/Teradata) | 100,000 × 2 files | local, joined on `Customer_ID` | public research | Scale, LSTM viability, **measured distributions for the leakage and off-peak features** |
 | C | IBM Telco Churn | 7,043 | IBM sample / Kaggle mirrors | public sample | CLTV benchmark, fast baseline |
 | F | Criteo Uplift | 25M | `ailab.criteo.com` / HuggingFace | academic use | **Real randomised uplift validation** |
 | G | Hillstrom MineThatData | 64,000 | `sklift.datasets.fetch_hillstrom` | public | Uplift warm-up, sleeping-dogs demo |
