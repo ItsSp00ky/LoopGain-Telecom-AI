@@ -1,0 +1,319 @@
+# ---------------------------------------------------------------------------
+# ALMADAR ALJADID — product catalogue
+#
+# Source: Almadar/internet_offers_data_v4.csv (operator-published, 2026-09-18)
+# status: confirmed unless a field says otherwise.
+#
+# This is what M3 prices. Every `price_lyd` below is real. Every
+# `variable_cost_lyd` is an ESTIMATE -- nobody outside the operator knows the
+# marginal cost of delivering a gigabyte, and the margin-floor guardrail needs
+# one. They are set at a defensible fraction of price and flagged as such.
+#
+# `data_gb: null` means the CSV did not state a volume and the name did not
+# make it unambiguous. See docs/MARKET_QUESTIONS.md Q3b.
+# ---------------------------------------------------------------------------
+
+meta:
+  operator: Almadar Aljadid
+  operator_ar: "المدار الجديد"
+  source_file: Almadar/internet_offers_data_v4.csv
+  captured: 2026-09-18
+  currency: LYD
+  total_bundles: 57
+  total_families: 17
+  # Volumes inferred from package names (e.g. "نت 6" -> 6 GB, "نت 1/2" -> 512 MB).
+  # Confirm before the demo -- an inferred volume that is wrong makes every
+  # price-per-GB figure in the deck wrong too.
+  volume_inference: inferred_from_name
+  cost_estimation:
+    method: fraction_of_price
+    data_bundle_cost_ratio: 0.25        # ESTIMATE
+    unlimited_bundle_cost_ratio: 0.35   # ESTIMATE -- higher variance
+    voice_minute_cost_ratio: 0.20       # ESTIMATE
+    note: >
+      These ratios exist so the margin floor has something to enforce. They are
+      not operator figures. Say so in the report; do not quote a margin number
+      as if it were audited.
+
+# ---------------------------------------------------------------------------
+# Families. M3 chooses within a family, and the cannibalisation guard compares
+# across them -- a cheap unlimited bundle pulling users down from a big monthly
+# is exactly the failure mode it exists to catch.
+# ---------------------------------------------------------------------------
+
+families:
+
+  # --- عروض الصبح · THE OFF-PEAK BUNDLE -----------------------------------
+  # Almadar's trough is the MORNING, not the night. This single row is the most
+  # commercially interesting line in the whole catalogue: 1 LYD for unlimited
+  # data AND unlimited minutes, valid only 06:00-11:00.
+  #
+  # It means the operator has already priced its own spare capacity, and told
+  # us when that capacity is. M3 does not have to propose off-peak offloading
+  # as an idea -- it personalises a product that exists.
+  morning_offpeak:
+    name_ar: "عروض الصبح"
+    name_en: Morning offers
+    is_offpeak: true
+    time_restricted: true
+    valid_from_hour: 6
+    valid_to_hour: 11
+    items:
+      - id: SABAH_1
+        name_ar: "الصبح"
+        name_en: Morning
+        price_lyd: 1.0
+        validity_days: 1
+        data: unlimited
+        voice_minutes: unlimited
+        variable_cost_lyd: 0.35
+        note: "Unlimited data AND voice, 06:00-11:00 only."
+
+  # --- باقات مكس · MIX (data + voice), five tiers -------------------------
+  # The richest family for personalisation: five quality tiers x four durations.
+  # Tier names map cleanly onto the loyalty ladder in conf/pricing.yaml.
+  mix_diamond:
+    name_ar: "باقة مكس الماسية"
+    name_en: Diamond Mix
+    speed_up_mbps: 8
+    speed_down_mbps: 16
+    items:
+      - { id: MIX_D1, name_ar: "مكس 1", price_lyd: 3,  validity_days: 1,  data_gb: 3,  voice_minutes: 40,   variable_cost_lyd: 0.75 }
+      - { id: MIX_D2, name_ar: "مكس 2", price_lyd: 7,  validity_days: 3,  data_gb: 7,  voice_minutes: 100,  variable_cost_lyd: 1.75 }
+      - { id: MIX_D3, name_ar: "مكس 3", price_lyd: 20, validity_days: 7,  data_gb: 20, voice_minutes: 500,  variable_cost_lyd: 5.00 }
+      - { id: MIX_D4, name_ar: "مكس 4", price_lyd: 75, validity_days: 30, data_gb: 80, voice_minutes: 1500, variable_cost_lyd: 18.75 }
+
+  mix_platinum:
+    name_ar: "باقة مكس البلاتينية"
+    name_en: Platinum Mix
+    speed_up_mbps: 8
+    speed_down_mbps: 16
+    items:
+      - { id: MIX_P1, name_ar: "مكس 1", price_lyd: 2,  validity_days: 1,  data_gb: 2,  voice_minutes: 30,  variable_cost_lyd: 0.50 }
+      - { id: MIX_P2, name_ar: "مكس 2", price_lyd: 6,  validity_days: 3,  data_gb: 6,  voice_minutes: 80,  variable_cost_lyd: 1.50 }
+      - { id: MIX_P3, name_ar: "مكس 3", price_lyd: 15, validity_days: 7,  data_gb: 15, voice_minutes: 300, variable_cost_lyd: 3.75 }
+      - { id: MIX_P4, name_ar: "مكس 4", price_lyd: 55, validity_days: 30, data_gb: 60, voice_minutes: 900, variable_cost_lyd: 13.75 }
+
+  mix_gold:
+    name_ar: "باقة مكس الذهبية"
+    name_en: Gold Mix
+    speed_up_mbps: 8
+    speed_down_mbps: 16
+    items:
+      - { id: MIX_G1, name_ar: "مكس 1", price_lyd: 2,  validity_days: 1,  data_gb: 2,  voice_minutes: 20,  variable_cost_lyd: 0.50 }
+      - { id: MIX_G2, name_ar: "مكس 2", price_lyd: 5,  validity_days: 3,  data_gb: 5,  voice_minutes: 60,  variable_cost_lyd: 1.25 }
+      - { id: MIX_G3, name_ar: "مكس 3", price_lyd: 10, validity_days: 7,  data_gb: 10, voice_minutes: 250, variable_cost_lyd: 2.50 }
+      - { id: MIX_G4, name_ar: "مكس 4", price_lyd: 35, validity_days: 30, data_gb: 40, voice_minutes: 800, variable_cost_lyd: 8.75 }
+
+  mix_silver:
+    name_ar: "باقة مكس الفضية"
+    name_en: Silver Mix
+    speed_up_mbps: 8
+    speed_down_mbps: 16
+    items:
+      - { id: MIX_S1, name_ar: "مكس 1", price_lyd: 1,  validity_days: 1,  data_gb: 1,  voice_minutes: 10,  variable_cost_lyd: 0.25 }
+      - { id: MIX_S2, name_ar: "مكس 2", price_lyd: 3,  validity_days: 3,  data_gb: 4,  voice_minutes: 40,  variable_cost_lyd: 0.75 }
+      - { id: MIX_S3, name_ar: "مكس 3", price_lyd: 7,  validity_days: 7,  data_gb: 8,  voice_minutes: 200, variable_cost_lyd: 1.75 }
+      - { id: MIX_S4, name_ar: "مكس 4", price_lyd: 30, validity_days: 30, data_gb: 30, voice_minutes: 500, variable_cost_lyd: 7.50 }
+
+  mix_bronze:
+    name_ar: "باقة مكس البرونزية"
+    name_en: Bronze Mix
+    speed_up_mbps: 8
+    speed_down_mbps: 16
+    items:
+      - { id: MIX_B1, name_ar: "مكس 1", price_lyd: 1,  validity_days: 1,  data_gb: 1,  voice_minutes: 10,  variable_cost_lyd: 0.25 }
+      - { id: MIX_B2, name_ar: "مكس 2", price_lyd: 2,  validity_days: 3,  data_gb: 3,  voice_minutes: 30,  variable_cost_lyd: 0.50 }
+      - { id: MIX_B3, name_ar: "مكس 3", price_lyd: 5,  validity_days: 7,  data_gb: 5,  voice_minutes: 100, variable_cost_lyd: 1.25 }
+      - { id: MIX_B4, name_ar: "مكس 4", price_lyd: 20, validity_days: 30, data_gb: 20, voice_minutes: 200, variable_cost_lyd: 5.00 }
+
+  # --- الباقات الذهبية / الفضية · unlimited and speed-capped ---------------
+  golden_unlimited:
+    name_ar: "الباقات الذهبية"
+    name_en: Golden
+    items:
+      - { id: GOLD_1,  name_ar: "ذهبي 1",  price_lyd: 10,  validity_days: 1,  data: unlimited, variable_cost_lyd: 3.50 }
+      - { id: GOLD_3,  name_ar: "ذهبي 3",  price_lyd: 25,  validity_days: 3,  data: unlimited, variable_cost_lyd: 8.75 }
+      - { id: GOLD_7,  name_ar: "ذهبي 7",  price_lyd: 50,  validity_days: 7,  data: unlimited, variable_cost_lyd: 17.50 }
+      - { id: GOLD_30, name_ar: "ذهبي 30", price_lyd: 160, validity_days: 30, data: unlimited, variable_cost_lyd: 56.00 }
+
+  silver_capped:
+    name_ar: "الباقات الفضية"
+    name_en: Silver
+    speed_down_mbps: 8
+    items:
+      - { id: SLVR_1,  name_ar: "فضي 1",  price_lyd: 8,   validity_days: 1,  data: unlimited_at_8mbps, variable_cost_lyd: 2.80 }
+      - { id: SLVR_3,  name_ar: "فضي 3",  price_lyd: 20,  validity_days: 3,  data: unlimited_at_8mbps, variable_cost_lyd: 7.00 }
+      - { id: SLVR_7,  name_ar: "فضي 7",  price_lyd: 40,  validity_days: 7,  data: unlimited_at_8mbps, variable_cost_lyd: 14.00 }
+      - { id: SLVR_30, name_ar: "فضي 30", price_lyd: 130, validity_days: 30, data: unlimited_at_8mbps, variable_cost_lyd: 45.50 }
+
+  # --- عروض يومية · daily, the affordability floor -------------------------
+  # The 0.5 LYD entry point matters: it is what a financially stressed
+  # subscriber buys, and a failed purchase of one is a strong distress signal.
+  daily:
+    name_ar: "عروض يومية"
+    name_en: Daily offers
+    items:
+      - { id: DAY_50MB,  name_ar: "نت 50MB",  price_lyd: 0.5, validity_days: 1, data_gb: 0.05,  variable_cost_lyd: 0.13 }
+      - { id: DAY_100MB, name_ar: "نت 100MB", price_lyd: 1,   validity_days: 1, data_gb: 0.10,  variable_cost_lyd: 0.25 }
+      - { id: DAY_QTR,   name_ar: "نت 1/4",   price_lyd: 2,   validity_days: 3, data_gb: 0.25,  variable_cost_lyd: 0.50 }
+      - { id: DAY_HALF,  name_ar: "نت 1/2",   price_lyd: 3,   validity_days: 3, data_gb: 0.50,  variable_cost_lyd: 0.75 }
+
+  weekly:
+    name_ar: "عروض اسبوعية"
+    name_en: Weekly offers
+    items:
+      - { id: WK_1, name_ar: "نت 1", price_lyd: 5, validity_days: 7, data_gb: 1, variable_cost_lyd: 1.25 }
+      - { id: WK_2, name_ar: "نت 2", price_lyd: 8, validity_days: 7, data_gb: 2, variable_cost_lyd: 2.00 }
+
+  monthly:
+    name_ar: "عروض شهرية"
+    name_en: Monthly offers
+    items:
+      - { id: MO_6,  name_ar: "نت 6",  price_lyd: 20, validity_days: 30, data_gb: 6,  variable_cost_lyd: 5.00 }
+      - { id: MO_10, name_ar: "نت 10", price_lyd: 30, validity_days: 30, data_gb: 10, variable_cost_lyd: 7.50 }
+      - { id: MO_20, name_ar: "نت 20", price_lyd: 35, validity_days: 30, data_gb: 20, variable_cost_lyd: 8.75 }
+      - { id: MO_40, name_ar: "نت 40", price_lyd: 50, validity_days: 30, data_gb: 40, variable_cost_lyd: 12.50 }
+      - { id: MO_80, name_ar: "نت 80", price_lyd: 80, validity_days: 30, data_gb: 80, variable_cost_lyd: 20.00 }
+
+  # --- 5G ------------------------------------------------------------------
+  monthly_5g:
+    name_ar: "الباقات الشهرية"
+    name_en: Monthly 5G
+    network: 5G
+    items:
+      - { id: M5G_100, name_ar: "نت 100_5G", price_lyd: 120, validity_days: 30, data_gb: 100, variable_cost_lyd: 30.00 }
+      - { id: M5G_200, name_ar: "نت 200_5G", price_lyd: 180, validity_days: 30, data_gb: 200, variable_cost_lyd: 45.00 }
+      - { id: M5G_600, name_ar: "نت 600_5G", price_lyd: 400, validity_days: 30, data_gb: 600, variable_cost_lyd: 100.00 }
+
+  hourly_5g:
+    name_ar: "باقات الساعة"
+    name_en: Hourly 5G
+    network: 5G
+    time_boxed: true
+    items:
+      - { id: HR5G_1, name_ar: "نت ساعة 1_5G",   price_lyd: 5,  validity_hours: 1, data_gb: null, variable_cost_lyd: 1.75 }
+      - { id: HR5G_2, name_ar: "نت ساعتين 2_5G", price_lyd: 10, validity_hours: 2, data_gb: null, variable_cost_lyd: 3.50 }
+
+  # --- ميكياتو · Macchiato, hourly unlimited ------------------------------
+  # Cheap, short, unlimited. Note the "Net fi Waqtuh" FAQ names Macchiato and
+  # Off-Peak as packages a subscriber may still buy while in emergency-data
+  # debt -- so these two are the operator's own designated cheap escape hatches.
+  macchiato:
+    name_ar: "عروض باقات الساعة"
+    name_en: Macchiato hourly
+    time_boxed: true
+    items:
+      - { id: MACC_1, name_ar: "ميكياتو ساعة",   price_lyd: 2, validity_hours: 1, data: unlimited, variable_cost_lyd: 0.70 }
+      - { id: MACC_2, name_ar: "ميكياتو ساعتين", price_lyd: 3, validity_hours: 2, data: unlimited, variable_cost_lyd: 1.05 }
+
+  # --- عروض Social ---------------------------------------------------------
+  # A real social-bundle family. `social_bundle_share` is therefore a live
+  # segmentation feature, not a hypothetical one.
+  social:
+    name_ar: "عروض Social"
+    name_en: Social offers
+    apps_only: true
+    items:
+      - { id: SOC_D, name_ar: "سوشيال يومي",   price_lyd: 1,  validity_days: 1,  variable_cost_lyd: 0.25 }
+      - { id: SOC_W, name_ar: "سوشيال اسبوعي", price_lyd: 5,  validity_days: 7,  variable_cost_lyd: 1.25 }
+      - { id: SOC_M, name_ar: "سوشيال شهري",   price_lyd: 20, validity_days: 30, variable_cost_lyd: 5.00 }
+
+  # --- عروض إيليت · Elite, long validity -----------------------------------
+  elite:
+    name_ar: "عروض إيليت"
+    name_en: Elite offers
+    items:
+      - { id: ELT_120, name_ar: "نت 120", price_lyd: 100, validity_days: 30, data_gb: 120, variable_cost_lyd: 25.00 }
+      - { id: ELT_200, name_ar: "نت 200", price_lyd: 150, validity_days: 60, data_gb: 200, variable_cost_lyd: 37.50 }
+      - { id: ELT_300, name_ar: "نت 300", price_lyd: 200, validity_days: 60, data_gb: 300, variable_cost_lyd: 50.00 }
+
+  # --- باقات حصتي معاك · Family / shared -----------------------------------
+  # Multi-member. These change the churn calculus: a subscriber on a shared
+  # plan has switching costs the model should know about, and losing the plan
+  # holder risks losing 3-5 lines at once.
+  family:
+    name_ar: "باقات حصتي معاك"
+    name_en: Family share
+    shared: true
+    items:
+      - { id: FAM_70,  name_ar: "فاميلي 70",  price_lyd: 90,  validity_days: 30, data_gb: 70,  voice_minutes: 300,  members: 3, variable_cost_lyd: 22.50 }
+      - { id: FAM_100, name_ar: "فاميلي 100", price_lyd: 120, validity_days: 30, data_gb: 100, voice_minutes: 400,  members: 4, variable_cost_lyd: 30.00 }
+      - { id: FAM_140, name_ar: "فاميلي 140", price_lyd: 160, validity_days: 30, data_gb: 140, voice_minutes: 600,  members: 5, variable_cost_lyd: 40.00 }
+      - { id: FAM_250, name_ar: "فاميلي 250", price_lyd: 250, validity_days: 30, data_gb: 250, voice_minutes: 1000, members: 5, variable_cost_lyd: 62.50 }
+
+# ---------------------------------------------------------------------------
+# EMERGENCY CREDIT SERVICES — the two products M4 is about
+#
+# Source: Almadar/translated_service_details.md
+#         Almadar/translated_internet_service_details.md
+# status: confirmed, operator-published.
+# ---------------------------------------------------------------------------
+emergency_credit:
+
+  # --- رصيد في وقته · "Credit in its time" -- airtime advance -------------
+  rasid_fi_waqtuh:
+    name_ar: "رصيد في وقته"
+    name_en: Credit in its time
+    type: airtime_advance
+    status: confirmed
+    ussd: ["*140#", "*140*5#"]
+    inquiry_ussd: ["*111#", "*140#"]
+
+    eligibility:
+      # NOT tenure-based. The gate is that you are nearly out of money.
+      max_basic_balance_lyd: 0.5
+      tenure_months_required: null
+      requires_no_outstanding_debt: true
+
+    # THREE denominations, chosen "according to the subscriber's consumption".
+    # So crude differentiation already exists -- the rule is just opaque.
+    denominations_lyd: [1, 3, 5]
+    allocation_rule: "according to the subscriber's consumption"
+    allocation_rule_published: false     # the actual thresholds are not public
+
+    usable_for: [local_calls, international_calls, sms, internet]
+
+    settlement:
+      recovered_at: first_recharge
+      # Partial-recharge behaviour is not documented -- see MARKET_QUESTIONS Q6b.
+      cancels_when_recharge_covers_debt: true
+      auto_settle_after_hours: 48
+      auto_settle_condition: "basic balance greater than debt"
+      repeat_allowed_same_day: true
+      repeat_requires_debt_cleared: true
+
+    # NOT documented for Almadar, unlike Libyana. Do not claim these.
+    non_settlement_outcome: undocumented
+    line_reset_documented: false
+
+  # --- نت في وقته · "Net in its time" -- emergency data --------------------
+  net_fi_waqtuh:
+    name_ar: "نت في وقته"
+    name_en: Net in its time
+    also_known_as: Emergency Net
+    type: data_advance
+    status: confirmed
+    ussd: ["*000#"]
+    app: Almadar app
+
+    eligibility:
+      available_to_all_prepaid: true
+      max_basic_balance_lyd: 1.0
+      max_remaining_quota_mb: 250
+      # Mutually exclusive with rasid_fi_waqtuh: you cannot take data credit
+      # while your balance is already negative from airtime credit.
+      blocked_if_balance_negative: true
+
+    # ONE price, ONE size, for everyone. No differentiation at all.
+    price_lyd: 5.0
+    data_gb: 2
+    validity_days: 3
+    denominations_lyd: [5]
+
+    settlement:
+      recovered_at: [first_recharge, balance_transfer_in]
+      repeat_requires_debt_cleared: true
+
+    # The operator explicitly permits buying these while in emergency-data debt.
+    compatible_packages: [macchiato, morning_offpeak]

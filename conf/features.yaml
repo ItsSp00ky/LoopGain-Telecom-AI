@@ -1,0 +1,158 @@
+# ---------------------------------------------------------------------------
+# Layer 3 — feature store and the prepaid-adapted RFM             (Owner: E1)
+# ---------------------------------------------------------------------------
+
+# --- Temporal framing. Shared by M1 both arms and the M4 PD head. ----------
+# 90-day observation -> 15-day gap -> 30-day outcome.
+windows:
+  observation_days: 90
+  gap_days: 15
+  outcome_days: 30
+  rolling: [7, 30, 90]
+
+# --- Target definition -----------------------------------------------------
+# In postpaid, churn is a signed cancellation. Here it is an absence.
+target:
+  name: silent_churn_30d
+  definition: >
+    Zero revenue-generating events (top-up or bundle purchase) for at least 30
+    consecutive days within the prediction window. Usage alone does not count:
+    a subscriber burning residual credit generates no revenue.
+  min_consecutive_zero_revenue_days: 30
+
+# --- Leakage controls. Enforced by tests/leakage/, required in CI. ---------
+leakage_controls:
+  # Features are computed over a window ending strictly before the label
+  # window opens.
+  enforce_point_in_time: true
+  # Temporal splits, never random.
+  split_strategy: temporal
+  forbid_random_split: true
+  # Any field used to generate the synthetic label is excluded outright.
+  exclude_label_generating_fields: true
+  excluded_columns:
+    - "Customer Value"          # UCI: partially encodes the outcome
+    - hazard_score              # our own label generator
+    - churn_date
+    - snapshot_date
+
+# --- Prepaid-adapted RFM-LE ------------------------------------------------
+# Textbook RFM assumes purchase transactions. Prepaid has none, so each
+# dimension is redefined and two are added.
+rfm_le:
+  quintiles: 5
+  dimensions:
+    recency:
+      definition: days_since_last_revenue_generating_event
+      note: "Usage alone does not count. Residual-credit burn is not revenue."
+    frequency:
+      definition: recharge_count_90d
+      penalised_by: recharge_gap_cv
+      note: "Five regular recharges beat five erratic ones."
+    monetary:
+      definition: total_lyd_90d
+      plus_slope: mean_30d_vs_prior_60d
+      note: "Decline is visible inside the score itself."
+    loyalty:                      # added
+      formula: "0.4*tenure_scaled + 0.3*consecutive_active_months_scaled + 0.3*lifetime_recharge_percentile"
+      weights: { tenure: 0.4, consecutive_active_months: 0.3, lifetime_recharge_percentile: 0.3 }
+    engagement:                   # added
+      definition: distinct_service_types_used_normalised
+      service_types: [voice, sms, data, bundles, transfers, advances]
+  segments:
+    - Champions
+    - Loyal High-Value
+    - Potential Loyalists
+    - Promising New
+    - Needs Attention
+    - At-Risk Valuable
+    - Hibernating
+    - Lost
+
+# --- Derived feature families ---------------------------------------------
+families:
+
+  velocity_decay:
+    # Values well below 1.0 are the earliest reliable tell.
+    revenue_decay_ratio: "mean_7d / mean_30d"
+    also_for: [data, voice, sms]
+
+  volatility:
+    - inter_recharge_gap_std
+    - recharge_gap_cv
+    - daily_data_rolling_variance
+
+  ratios_mix:
+    - onnet_ratio
+    - offpeak_data_ratio
+    - bundle_vs_payg_share
+    - data_to_voice_ratio
+
+  distress:
+    - balance_zero_hours_30d          # no postpaid equivalent exists
+    - failed_bundle_attempts_30d      # pure affordability signal
+    - bundle_downgrades_90d
+    - consecutive_sub_5_lyd_recharges
+
+  # Dual-SIM share-of-wallet leakage. "Active" misleads: a subscriber can stay
+  # technically active while 80% of their spend has moved.
+  leakage:
+    primary_detector: incoming_outgoing_ratio
+    note: >
+      Incoming-call volume holding steady while outgoing volume and off-net
+      share both rise means the subscriber has quietly made this their
+      RECEIVING SIM. Conventional churn models score them as retained; in
+      revenue terms they are half-lost.
+    features:
+      - incoming_outgoing_ratio_trend
+      - onnet_ratio_trend
+      - offnet_share_trend
+      - distinct_called_numbers_trend   # calling-graph contraction precedes exit
+
+  # Both Almadar emergency-credit products. Eligibility for each is
+  # balance-based, so these features double as distress signals.
+  credit:
+    - airtime_advance_count_90d        # رصيد في وقته
+    - data_advance_count_90d           # نت في وقته
+    - days_to_settle
+    - unpaid_advance_days
+    - emergency_service_alternations_90d
+    - modal_recharge_amount_lyd        # the affordability ceiling basis
+
+  # Network quality as plain churn features. There is no network model in this
+  # branch -- that is Component 2's job. We consume its signals; we do not
+  # reproduce them. Contract: docs/INTEGRATION.md section 6.
+  network_quality:
+    source: generated          # generated | external
+    external_endpoint: null    # e.g. http://network-ml:8100/v1/cells/quality
+    fields:
+      - dropped_call_rate_30d
+      - data_session_failure_rate
+      - cell_outage_hours_30d
+    # Weighted across the home cell and the top-3 visited cells, so a
+    # subscriber who commutes into a bad sector is not scored as if they live
+    # in a good one.
+    weight_by: cell_outage_hours_30d
+    cells: [home, top_3_visited]
+    # 24-hour mean utilisation per cell. Consumed by M3's off-peak trough
+    # detection, NOT by any model in this branch.
+    hourly_load_curve: true
+
+# --- Sequence tensors for M1 Arm B ----------------------------------------
+# Per-subscriber 90 x k daily matrices. NO aggregation applied — the point of
+# the benchmark is whether the LSTM learns the decay patterns we engineered
+# by hand in the families above.
+sequences:
+  length_days: 90
+  channels: [recharge_lyd, data_mb, voice_min, sms_count]
+  output: ./data/processed/sequences_offline.npz
+  masking_value: 0.0
+  no_hand_aggregation: true
+
+# --- Class imbalance -------------------------------------------------------
+imbalance:
+  # Class weighting first; SMOTE/ADASYN as a documented comparison applied
+  # INSIDE CV folds, never before the split.
+  primary: class_weight
+  comparison_arms: [smote, adasyn]
+  resample_inside_cv_folds_only: true

@@ -1,0 +1,54 @@
+# Install once per clone:  pre-commit install
+# Run over everything:     pre-commit run --all-files
+default_language_version:
+  python: python3.11
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+      # Data and model artefacts are gitignored, but this catches a -f override.
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.7
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+
+  # Never commit notebook output. It can contain subscriber-level rows.
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout
+
+  - repo: local
+    hooks:
+      - id: no-raw-msisdn
+        name: no raw MSISDN in staged files
+        entry: >
+          python -c "import re,sys;p=re.compile(rb'(\+?218[ -]?)?(09[1245])[ -]?[0-9]{7}');
+          bad=[f for f in sys.argv[1:] if p.search(open(f,'rb').read())];
+          sys.exit(bool(bad) and (print('Possible raw MSISDN in:',*bad) or 1))"
+        language: system
+        types: [text]
+        exclude: ^docs/|\.md$

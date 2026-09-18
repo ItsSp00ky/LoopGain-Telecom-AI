@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# M2 — Value & Loyalty Tiering                               (Owner: E3)
+#
+# Three unsupervised techniques applied in parallel. Where the rules and the
+# clusters disagree, the disagreement is itself a dashboard insight.
+# ---------------------------------------------------------------------------
+
+segmentation:
+
+  # Non-hierarchical
+  kmeans:
+    enabled: true
+    k_search: [3, 4, 5, 6, 7, 8, 9, 10]
+    select_k_by: [silhouette, elbow]
+    n_init: 20
+    scale: standard
+
+  # Hierarchical. Structural cross-check: are the eight business
+  # segments natural, or imposed? Descoping ladder step 4 cuts this.
+  hierarchical:
+    enabled: true
+    linkage: ward
+    metric: euclidean
+    plot_dendrogram: true
+
+  # Linear factor model for dimensionality reduction
+  pca:
+    enabled: true
+    n_components: 2
+    report_explained_variance: true
+    note: "How much RFM-LE variance actually sits in two components?"
+
+  # The business-legible reference the clusters are compared against.
+  rule_based_rfm_le:
+    enabled: true
+    source: conf/features.yaml#rfm_le
+
+  compare_rules_vs_clusters: true
+
+# --- CLV -------------------------------------------------------------------
+# Each RECHARGE is a transaction. The non-contractual, alive-or-dead-unobserved
+# assumption behind BG/NBD is literally true in prepaid, which makes this an
+# unusually clean fit rather than a borrowed one.
+clv:
+  frequency_model: bg_nbd           # lifetimes
+  monetary_model: gamma_gamma
+  horizon_months: 12
+  discount_rate_monthly: 0.01
+  transaction_definition: recharge
+  benchmark_against: ibm_telco.CLTV
+
+  # The single constraint that makes the pricing engine defensible to a CFO.
+  # Consumed by conf/pricing.yaml#guardrails.clv_ceiling.
+  budget_ceiling:
+    role: "CLV is the budget ceiling for all retention spend"
+    max_retention_spend_fraction: 0.15
+
+metrics:
+  segmentation: [silhouette, davies_bouldin, calinski_harabasz]
+  clv: [mae, rmse, mape, spearman_vs_ibm_cltv]

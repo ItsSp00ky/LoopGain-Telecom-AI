@@ -1,0 +1,167 @@
+# ---------------------------------------------------------------------------
+# M3 — Dynamic Pricing & Off-Peak Offloading                    (Owner: E4)
+#
+# Everything here is enforced in src/cvm/decision/guardrails.py and asserted
+# in tests/guardrails/. Changing a number here changes system behaviour and
+# must keep the guardrail suite green.
+# ---------------------------------------------------------------------------
+
+# P(i,b) = P_base(b) * (1 - d(i,b))
+#
+# d(i,b) = clip( w1*ChurnRisk(i)
+#              + w2*LoyaltyIndex(i)
+#              + w3*PriceSensitivity(i,b)
+#              - w4*AffordabilityHeadroom(i),
+#              0, d_max(tier(i)) )
+discount_weights:
+  w1_churn_risk:            0.40   # urgency
+  w2_loyalty_index:         0.25   # earned reward
+  w3_price_sensitivity:     0.25   # elasticity
+  w4_affordability_headroom: 0.20  # subtracted: do not discount those who can pay
+
+tiers:
+  bronze:
+    qualification: "tenure_months < 12"
+    d_max: 0.05
+    preferred_instrument: price_discount
+  silver:
+    qualification: "12 <= tenure_months < 36 and regular_recharge"
+    d_max: 0.10
+    preferred_instrument: discount_or_bonus_mb
+  gold:
+    qualification: "36 <= tenure_months < 84 and high_rfm_le"
+    d_max: 0.15
+    preferred_instrument: offpeak_bonus_data
+  platinum:
+    qualification: "tenure_months >= 84 or value_decile == 10"
+    d_max: 0.20
+    preferred_instrument: offpeak_data_plus_onnet_minutes
+
+# --- The six guardrails. Enforced in code, tested in CI. -------------------
+guardrails:
+
+  # 1. Margin floor — no loss-making offer, ever.
+  #    P(i,b) >= variable_cost(b) * (1 + min_margin)
+  margin_floor:
+    enabled: true
+    min_margin: 0.15
+
+  # 2. CLV ceiling — the constraint that makes this defensible to a CFO.
+  #    Cumulative 12-month discount spend on a subscriber never exceeds this
+  #    fraction of their predicted 12-month CLV.
+  clv_ceiling:
+    enabled: true
+    max_fraction_of_clv: 0.15
+    horizon_months: 12
+
+  # 3. Budget constraint — cohort allocation as a knapsack / LP (PuLP).
+  #    Maximise expected retained margin s.t. total discount cost <= budget.
+  budget:
+    enabled: true
+    solver: PULP_CBC_CMD
+    default_campaign_budget_lyd: 144000
+    objective: maximise_expected_retained_margin
+
+  # 4. Cannibalisation guard — low churn risk AND high value are excluded.
+  #    They would have paid full price. This is the single most important
+  #    commercial critique of off-peak offers and it is answered here.
+  cannibalisation:
+    enabled: true
+    exclude_if_churn_prob_below: 0.15
+    exclude_if_value_decile_above: 8
+    # The off-peak pass is additive, not substitutable: it must not simply
+    # shift usage that was already being paid for. At 1 LYD for unlimited
+    # 06:00-11:00, the downgrade risk against a 35-80 LYD monthly is real.
+    require_additive_offpeak_pack: true
+    max_simulated_arpu_erosion: 0.02
+
+  # 5. Fairness — no pricing on protected or proxy-protected attributes.
+  fairness:
+    enabled: true
+    forbidden_pricing_features:
+      - district          # network-quality input ONLY, never a price lever
+      - age_group         # may inform offer relevance, never price
+      - language_pref
+      - gender
+    # Post-hoc redlining audit across districts.
+    redlining_audit:
+      enabled: true
+      max_mean_discount_gap_between_districts: 0.03
+
+  # 6. Auditability — every decision replayable.
+  audit:
+    enabled: true
+    log_table: decision_log
+    persist:
+      - inputs
+      - weights
+      - active_constraints
+      - reason_codes
+      - expected_margin_lyd
+    retention_days: 365
+
+# --- Off-peak offloading ---------------------------------------------------
+# Almadar's off-peak product is عروض الصبح: 1 LYD, unlimited data AND voice,
+# valid 06:00-11:00. The operator has already priced its own spare capacity
+# and told us when it is -- so M3 personalises an existing product rather
+# than proposing a new one. That is a materially stronger position, and the
+# trough is MORNING, not night. See conf/catalogue.yaml#morning_offpeak.
+offpeak:
+  anchor_product: SABAH_1
+  # Per-cell trough detection refines the window per site. The operator's
+  # national 06:00-11:00 band is the fallback, not a guess.
+  per_cell_trough_detection: true
+  global_fallback_window: { start_hour: 6, end_hour: 11 }
+  trough:
+    min_window_hours: 3
+    max_window_hours: 6
+    load_percentile_threshold: 0.25
+    # Source of the 24h load curve. See conf/features.yaml#network_quality.
+    load_curve_source: features_store
+    # Sanity check: a detected trough far from the operator's own
+    # 06:00-11:00 band probably means the load curve is wrong, not that we
+    # found something they missed.
+    warn_if_outside_hours: [5, 13]
+  # Off-peak data is preferred over headline cuts: near-zero marginal cost on
+  # an idle sector, perceived as generous, and it leaves the price sheet intact.
+  value_add_before_discount: true
+  # A 1 LYD unlimited morning pass is a remarkably cheap retention
+  # instrument. Granting one costs less than discounting almost anything
+  # else in the catalogue, which is why the engine reaches for it first.
+  prefer_anchor_product_as_bonus: true
+  # Only offer it to subscribers who will actually use it.
+  min_offpeak_data_ratio_to_qualify: 0.20
+
+# --- Uplift targeting ------------------------------------------------------
+uplift:
+  # Two-model difference (treated response minus control response), not a
+  # causal-inference library. At this data scale the extra machinery buys
+  # precision we cannot validate on synthetic response anyway.
+  method: two_model_difference
+  control_holdout_fraction: 0.10
+  # Sleeping-dogs guard: contacting a dormant-but-not-departing subscriber can
+  # remind them to leave. The negative-effect quadrant is excluded everywhere.
+  exclude_sleeping_dogs: true
+  sleeping_dog_threshold: -0.005
+
+# --- Retention ladder ------------------------------------------------------
+# A delivery policy over M1b and M3, not a separate module.
+retention_ladder:
+  # Stage boundaries come from the hazard function, not from intuition.
+  # Kaplan-Meier / hazard inflection points, recomputed per segment.
+  derive_boundaries_from_hazard: true
+  fallback_boundaries_days: [7, 30, 60]
+  # The inverted-U: recovery probability collapses faster than offer value
+  # rises, so optimal spend is low, then high, then LOW AGAIN.
+  spend_profile: [low, peak, low]
+  stages:
+    cooling:
+      trigger: "recharge_gap > subscriber_baseline_gap"
+      instruments: [reminder_sms, small_offpeak_bonus, advance_limit_reminder]
+    cold:
+      trigger: "past_first_hazard_inflection"
+      instruments: [personalised_priced_bundle, loyalty_bonus, onnet_pack_if_leakage]
+    dormant:
+      trigger: "past_second_hazard_inflection"
+      instruments: [single_low_cost_winback]
+      then: stop

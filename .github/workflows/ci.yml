@@ -1,0 +1,161 @@
+# ---------------------------------------------------------------------------
+# CI: lint -> tests -> schema checks -> leakage check -> docker build
+#
+# The leakage and guardrail jobs are separate and required. They are the two
+# gates the proposal commits to never cutting, so they must be visible as their
+# own red/green signal rather than buried inside a general test run.
+# ---------------------------------------------------------------------------
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  CVM_HASH_SALT: ci-only-salt-not-a-secret
+  CVM_RANDOM_SEED: "606"
+
+jobs:
+
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install ruff black
+      - name: ruff
+        run: ruff check src tests apps scripts
+      - name: black --check
+        run: black --check src tests apps scripts
+
+  test:
+    name: Unit & integration tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[ml,dev]"
+      - name: pytest
+        run: pytest tests/unit tests/integration -m "not slow and not gpu" --cov=cvm --cov-report=xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage.xml
+
+  # --- Non-negotiable gate 1: point-in-time correctness -------------------
+  leakage:
+    name: Leakage check (required)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: |
+          pip install --upgrade pip
+          pip install -e ".[ml,dev]"
+      - name: Assert temporal splits, no label-derived features, no leaky columns
+        run: pytest tests/leakage -m leakage -v --no-cov
+
+  # --- Non-negotiable gate 2: commercial & credit-safety invariants -------
+  guardrails:
+    name: Guardrail check (required)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: |
+          pip install --upgrade pip
+          pip install -e ".[ml,dev]"
+      - name: Assert margin floor, CLV ceiling, budget cap, credit safety
+        run: pytest tests/guardrails -m guardrail -v --no-cov
+
+  schema:
+    name: Schema contracts
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: |
+          pip install --upgrade pip
+          pip install -e ".[ml,dev]"
+      - name: Pandera contracts compile and match the data dictionary
+        run: pytest tests/unit -m "not slow" -k "schema or contract" -v --no-cov
+
+  # --- Privacy: no raw identifier may ever reach the repository -----------
+  privacy-scan:
+    name: Privacy scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on committed secrets or data artefacts
+        run: |
+          set -e
+          if git ls-files | grep -E '\.(parquet|duckdb|h5|keras|joblib|pkl|safetensors)$'; then
+            echo "::error::Model or data artefacts must not be committed."; exit 1
+          fi
+          if git ls-files | grep -E '^\.env$'; then
+            echo "::error::.env must never be committed."; exit 1
+          fi
+      - name: Fail on Libyan MSISDN patterns in tracked files
+        run: |
+          set -e
+          # Libyana 091/092, Almadar 094/095, with or without +218.
+          if git grep -nIE '(\+?218[ -]?)?(09[1245])[ -]?[0-9]{7}' -- ':!docs/**' ':!*.md'; then
+            echo "::error::Possible raw MSISDN in tracked source. Hash at ingestion (SHA-256 + salt)."
+            exit 1
+          fi
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: [test, leakage, guardrails]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/api.Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build UI image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/ui.Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

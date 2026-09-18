@@ -1,0 +1,110 @@
+# ---------------------------------------------------------------------------
+# AI CVM Suite — .gitignore
+# Rule of thumb: code, config and docs are tracked. Data, models and secrets
+# are not. If a teammate cannot regenerate it with `pwsh tasks.ps1 pipeline`,
+# it belongs in a release artefact, not in git.
+# ---------------------------------------------------------------------------
+
+# --- Secrets ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+conf/local/
+
+# --- Data (see data/README.md for how to re-fetch every source) ------------
+data/**
+!data/**/
+!data/**/.gitkeep
+!data/README.md
+
+# --- Model artefacts, experiment tracking ----------------------------------
+artifacts/**
+!artifacts/**/
+!artifacts/**/.gitkeep
+mlruns/
+mlartifacts/
+*.pkl
+*.joblib
+*.h5
+*.keras
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+checkpoints/
+
+# --- Vector store ----------------------------------------------------------
+.chroma/
+chroma_db/
+*.faiss
+
+# --- DuckDB / Parquet local stores -----------------------------------------
+*.duckdb
+*.duckdb.wal
+*.db-shm
+*.db-wal
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# --- Virtual environments --------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# --- Testing / coverage / linting ------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+
+# --- Notebooks -------------------------------------------------------------
+.ipynb_checkpoints/
+# nbstripout (see .pre-commit-config.yaml) strips outputs on commit.
+# Never commit a notebook containing subscriber-level output.
+
+# --- Reports generated at runtime ------------------------------------------
+evidently_reports/
+locust_reports/
+profiling/
+
+# --- IDE / OS --------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# --- Docs build ------------------------------------------------------------
+docs/_build/
+site/
+
+# --- Temp ------------------------------------------------------------------
+tmp/
+scratch/
+*.log
+*.tmp

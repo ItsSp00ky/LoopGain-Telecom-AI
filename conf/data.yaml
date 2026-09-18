@@ -1,0 +1,207 @@
+# ---------------------------------------------------------------------------
+# Layer 1-2 — sources and the synthesis engine                   (Owner: E1)
+# Full attribution and licence detail: data/README.md
+# ---------------------------------------------------------------------------
+
+sources:
+
+  # --- A: PRIMARY. Prepaid, MENA, has a network-quality feature, and its
+  # 9-month observation / 3-month gap is the operational framing we need.
+  uci_iranian:
+    id: A
+    enabled: true
+    loader: ucimlrepo
+    uci_id: 563
+    licence: CC-BY-4.0
+    expected_rows: 3150
+    expected_features: 13
+    quality:
+      # Roughly 9.5% exact duplicates. Deduplicate before anything else.
+      drop_exact_duplicates: true
+      expected_duplicate_rows: 300
+      duplicate_row_tolerance: 50
+    # This field partially encodes the outcome. Dropping it is why our
+    # reported metrics are lower than the published ~0.99 AUC.
+    leaky_columns:
+      - "Customer Value"
+
+  # --- B: scale and sequence viability. An LSTM on 3,000 rows proves nothing.
+  cell2cell:
+    id: B
+    enabled: true
+    loader: kaggle
+    dataset: jpacse/datasets-for-churn-telecom
+    licence: public-research
+    expected_rows: 71047
+    expected_features: 58
+    labelled_rows: 51048
+    holdout_rows: 19999          # doubles as the inference load test
+    churn_rate: 0.29
+    # The direct ancestors of our revenue_decay_ratio_7d_30d.
+    trend_columns: [changem, changer, dropvce, blckvce, unansvce]
+
+  # --- C: independent CLTV benchmark, churn-reason taxonomy, fast baseline.
+  ibm_telco:
+    id: C
+    enabled: true
+    loader: kaggle
+    dataset: yeanzc/telco-customer-churn-ibm-dataset
+    licence: ibm-public-sample
+    expected_rows: 7043
+    churn_rate: 0.27
+    benchmark_columns: [CLTV, "Churn Reason", "Churn Score"]
+
+  # --- D: real Libyan tower geography.
+  opencellid:
+    id: D
+    enabled: true
+    loader: opencellid_api
+    api_key_env: OPENCELLID_API_KEY
+    licence: CC-BY-SA
+    filter:
+      mcc: 606
+      # 01 is Almadar Aljadid -- the operator this project models.
+      mnc: ["01"]
+    output: ./data/external/opencellid_mcc606_almadar.parquet
+
+  # --- Recommended additions. Off by default; turn on as you need them.
+  # Rationale and download links: data/README.md#recommended-additions
+
+  # F: the only REAL treatment/control data in the project. The uplift method
+  # is validated here, then applied to the synthetic population -- which is how
+  # we answer "your data is generated, how do we know it works?" for M3.
+  criteo_uplift:
+    id: F
+    enabled: false
+    loader: huggingface
+    dataset: criteo/criteo-uplift
+    licence: academic-research-use
+    expected_rows: 13979592
+    columns: {treatment: treatment, outcome: conversion, secondary_outcome: visit}
+    role: validate_uplift_method
+    note: >
+      Sub-sampled non-uniformly by Criteo so the true incrementality level
+      cannot be recovered. Use it to validate METHOD, never to quote an
+      effect size.
+
+  # G: small, clean uplift set. Get the two-model difference working here
+  # before scaling to Criteo. Also the clearest demonstration of sleeping dogs.
+  hillstrom:
+    id: G
+    enabled: false
+    loader: sklift          # from sklift.datasets import fetch_hillstrom
+    licence: public
+    expected_rows: 64000
+    arms: [mens_email, womens_email, no_email]
+    role: uplift_warmup
+
+  # H: churn as an ABSENCE (no renewal within 30 days of expiry) plus genuine
+  # DAILY user logs. The closest public analogue to prepaid silent churn, and
+  # the strongest real sequence signal available for M1 Arm B.
+  kkbox:
+    id: H
+    enabled: false
+    loader: kaggle_competition
+    competition: kkbox-churn-prediction-challenge
+    licence: competition-rules
+    role: real_daily_sequences
+    note: "~30 GB raw. Sample members first, then stream-filter user_logs."
+
+  # I: real aggregated telecom activity on a 100x100 grid at 10-min intervals.
+  # Resample to hourly and M3's off-peak trough detection finds real troughs
+  # instead of ones we designed.
+  milan_cdr:
+    id: I
+    enabled: false
+    loader: dataverse
+    doi: 10.7910/DVN/EGZHFV
+    licence: ODbL          # share-alike -- check before redistributing derivatives
+    resample_to: 1H
+    role: real_cell_load_curves
+    note: "62 daily files. Take one representative week, not all of them."
+
+  # J: the canonical BG/NBD + Gamma-Gamma validation set. Prove the CLV
+  # implementation is correct here before pointing it at recharges.
+  online_retail_ii:
+    id: J
+    enabled: false
+    loader: ucimlrepo
+    uci_id: 502
+    licence: CC-BY-4.0
+    expected_rows: 1067371
+    role: validate_clv_implementation
+
+# ---------------------------------------------------------------------------
+# Layer 2 — CTGAN synthesis
+#
+# We are creating a non-existent population of Libyan subscribers, which is
+# precisely the unit's stated objective applied to tabular rather than image
+# data. A generator proposes rows, a discriminator tries to separate them from
+# real ones, and the two train adversarially until the generator wins.
+# ---------------------------------------------------------------------------
+synthesis:
+  n_subscribers: 100000
+  seed: 606
+
+  models:
+    ctgan:                       # primary
+      enabled: true
+      epochs: 300
+      batch_size: 500
+      generator_dim: [256, 256]
+      discriminator_dim: [256, 256]
+    tvae:                        # challenger
+      enabled: true
+      epochs: 300
+    gaussian_copula:             # classical baseline
+      enabled: true
+  # Comparing all three is itself a reportable experiment, not scaffolding.
+  report_comparison: true
+
+  # Iranian `Charge Amount` is ordinal 0-9. Quantile-map it onto the LYD
+  # scratch-card ladder so a 90th-percentile spender lands on 50-100 LYD
+  # cards, not 5 LYD.
+  quantile_mapping:
+    enabled: true
+    # Almadar's confirmed ladder. Mirrors conf/market.yaml#recharge --
+    # do not let these drift apart.
+    recharge_denominations_lyd: [3, 5, 10, 20, 40, 100]
+    weight_toward_low_denominations: true
+
+  # Constructs the real data cannot supply.
+  business_overlays:
+    outage_exposure:
+      enabled: true
+      higher_in_districts: [Sabha, Ghat, Murzuq, Ubari, Jufra]
+    ramadan_seasonality: true
+    salary_week_spike:
+      enabled: true
+      day_of_month_window: [25, 30]
+    # Both Almadar emergency-credit products. See conf/catalogue.yaml.
+    emergency_credit_behaviour: true
+    diaspora_roaming: true
+    # The morning off-peak window is a real product, so generated usage
+    # must show a 06:00-11:00 bump for the subscribers who buy it.
+    morning_offpeak_usage: true
+
+  # Explicit and documented in the repository, so the model has recoverable
+  # signal and the evaluation is honest about being a simulation ground truth.
+  hazard_function:
+    documented_at: docs/architecture.md#label-generation
+    base_monthly_churn: 0.035
+
+  # Quality gate. Above the detection threshold the generator is REJECTED and
+  # retrained. We evaluate the GAN with an adversarial test — the same
+  # principle that trains it.
+  quality_gate:
+    enabled: true
+    fail_build_on_breach: true
+    ks_complement_min: 0.85
+    pairwise_correlation_delta_max: 0.10
+    discriminator_detection_auc_max: 0.65
+    detector: lightgbm
+
+  # Generated data that is too clean makes models look unrealistically good.
+  realism_injection:
+    missingness_rate: 0.03
+    measurement_noise_sd: 0.02

@@ -1,0 +1,121 @@
+# ---------------------------------------------------------------------------
+# AI CVM Suite (ali_branch) — CVM stack only. CPU-only, under 3 GB RAM.
+#
+#   docker compose up            # everything in this branch
+#   docker compose up api ui     # just the demo path
+#
+# Four services: api, ui, channel-sim, mlflow. The Employee Copilot and the
+# Customer Chatbot are separate components owned by other team members; they
+# consume this stack's API read-only and are not started here.
+# See docs/INTEGRATION.md.
+#
+# Deliverable D1: this must reproduce the system from a clean clone.
+# The LSTM benchmark arm (M1 Arm B) trains on a free Colab T4 and ships here
+# as a saved artefact under ./artifacts/models.
+# ---------------------------------------------------------------------------
+
+name: cvm-ali-branch
+
+x-common-env: &common-env
+  CVM_ENV: ${CVM_ENV:-demo}
+  CVM_LOG_LEVEL: ${CVM_LOG_LEVEL:-INFO}
+  CVM_RANDOM_SEED: ${CVM_RANDOM_SEED:-606}
+  CVM_HASH_SALT: ${CVM_HASH_SALT:?set CVM_HASH_SALT in .env}
+  CVM_DATA_DIR: /app/data
+  CVM_ARTIFACT_DIR: /app/artifacts
+  CVM_FEATURE_STORE: /app/data/processed/features_online.duckdb
+  MLFLOW_TRACKING_URI: http://mlflow:5000
+
+services:
+
+  # --- Layer 6: prediction & decision API ---------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: cvm-api
+    environment:
+      <<: *common-env
+      CVM_API_PORT: 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./conf:/app/conf:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mlflow:
+        condition: service_started
+    restart: unless-stopped
+
+  # --- Layer 7a: CVM Command Center ---------------------------------------
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+    container_name: cvm-ui
+    command: >
+      streamlit run apps/command_center/Home.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    environment:
+      <<: *common-env
+      CVM_API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data:ro
+      - ./artifacts:/app/artifacts:ro
+      - ./conf:/app/conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Layer 7b: subscriber channel simulator (USSD + SMS, Arabic RTL) -----
+  channel-sim:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+    container_name: cvm-channel-sim
+    command: >
+      streamlit run apps/channel_sim/Home.py
+      --server.port=8502 --server.address=0.0.0.0 --server.headless=true
+    environment:
+      <<: *common-env
+      CVM_API_URL: http://api:8000
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+    ports:
+      - "8502:8502"
+    volumes:
+      - ./conf:/app/conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Layer 8: experiment tracking & model registry -----------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.2
+    container_name: cvm-mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-store:/mlflow
+    restart: unless-stopped
+
+volumes:
+  mlflow-store:
