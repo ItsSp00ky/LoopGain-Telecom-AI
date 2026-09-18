@@ -25,6 +25,9 @@ meta:
   # Confirm before the demo -- an inferred volume that is wrong makes every
   # price-per-GB figure in the deck wrong too.
   volume_inference: inferred_from_name
+  # Q3b confirmed: the cost ratios STAY as estimates. Nobody outside the
+  # operator knows the marginal cost of a gigabyte, and the margin floor needs
+  # something to enforce. The obligation is to label them, not remove them.
   cost_estimation:
     method: fraction_of_price
     data_bundle_cost_ratio: 0.25        # ESTIMATE
@@ -191,9 +194,10 @@ families:
     name_en: Hourly 5G
     network: 5G
     time_boxed: true
+    # Q3b confirmed: unlimited within the hour, not a volume cap.
     items:
-      - { id: HR5G_1, name_ar: "نت ساعة 1_5G",   price_lyd: 5,  validity_hours: 1, data_gb: null, variable_cost_lyd: 1.75 }
-      - { id: HR5G_2, name_ar: "نت ساعتين 2_5G", price_lyd: 10, validity_hours: 2, data_gb: null, variable_cost_lyd: 3.50 }
+      - { id: HR5G_1, name_ar: "نت ساعة 1_5G",   price_lyd: 5,  validity_hours: 1, data: unlimited, variable_cost_lyd: 1.75 }
+      - { id: HR5G_2, name_ar: "نت ساعتين 2_5G", price_lyd: 10, validity_hours: 2, data: unlimited, variable_cost_lyd: 3.50 }
 
   # --- ميكياتو · Macchiato, hourly unlimited ------------------------------
   # Cheap, short, unlimited. Note the "Net fi Waqtuh" FAQ names Macchiato and

@@ -28,7 +28,6 @@ The `Status` column tracks implementation: `planned` → `generated` →
 | `consecutive_active_months` | int | gen | Conditioned on tenure and recharge regularity. | planned |
 | `language_pref` | enum | gen | {ar, ar-LY, ber, en}. Drives message rendering. **Never a pricing input.** | planned |
 | `district` | str | overlay | From the OpenCelliD join. **Network-quality input only — never a price lever.** | planned |
-| `ramadan_period_flag` | bool | overlay | Seasonality. Libyan operators publish Ramadan offers, confirming these are real commercial cycles. | planned |
 | `summer_outage_index` | float | overlay | Seasonal outage exposure. | planned |
 | `salary_week_flag` | bool | overlay | Public-sector disbursement drives a pronounced recharge spike. | planned |
 | `diaspora_roaming_flag` | bool | overlay | Roaming marks a high-value, low-churn segment. | planned |
@@ -85,13 +84,17 @@ recovery happens at the next recharge or balance transfer in.
 | `data_mb_peak` | float | gen | | planned |
 | `data_mb_offpeak` | float | gen | Usage inside the 06:00–11:00 عروض الصبح window. | planned |
 | `offpeak_data_ratio` | float | derived | Share of data used in the 06:00–11:00 window. Identifies who would actually use a عروض الصبح morning pass. | planned |
-| `voice_min_onnet` | float | gen | On-net pricing is the core competitive lever. | planned |
-| `voice_min_offnet` | float | gen | | planned |
+| `voice_min_onnet` | float | gen | Billed as a 3-minute block at 0.090 LYD then 0.050/min, **not** a flat rate — so call *length* drives revenue per minute, and the generator must produce a realistic length distribution. | planned |
+| `voice_min_offnet` | float | gen | Flat 0.090 LYD/min to Libyana. | planned |
+| `voice_min_landline` | float | gen | Flat 0.040 LYD/min — the cheapest voice destination. | planned |
+| `payg_data_mb_30d` | float | gen | Data bought at the Bjawak PAYG rate (0.025 LYD/MB) rather than inside a bundle. | planned |
+| `payg_data_spend_lyd_30d` | float | derived | **~25× the bundle rate per GB.** High values mean the subscriber is either unaware of bundles or cannot afford one up front. | planned |
 | `onnet_ratio` | float | derived | **Dual-SIM leakage proxy.** Falling on-net share means the social graph is migrating. | planned |
 | `incoming_outgoing_ratio` | float | derived | **Primary leakage detector.** Rising incoming against flat outgoing = "this is my receiving SIM". | planned |
 | `distinct_called_numbers_trend` | float | derived | Contraction of the calling graph precedes silent exit. | planned |
 | `ussd_price_check_sessions_30d` | int | gen | Repeated catalogue browsing indicates active price shopping. | planned |
-| `social_bundle_share` | float | derived | Share of data spend on social/messaging bundles. | planned |
+| `social_bundle_share` | float | derived | Share of data spend on the real Social family (1 / 5 / 20 LYD). No apps are zero-rated, so all traffic consumes allowance. | planned |
+| `bundle_vs_payg_share` | float | derived | Share of data spend inside a bundle versus at the PAYG rate. | planned |
 
 ## Network experience (joined to real OpenCelliD sites)
 

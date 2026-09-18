@@ -3,7 +3,7 @@
 **Read this first if you are picking up this project** — whether you are a new
 AI session, a teammate, or me in three weeks having forgotten everything.
 
-Last updated: **2026-09-18** (session 3)
+Last updated: **2026-09-18** (session 3c)
 Branch: **`ali_branch`** · Repo root: `D:\Sic` · Owner: **Ali**
 
 ---
@@ -29,8 +29,8 @@ Platform-level context: the parent proposal listing all five components.
 ## 2. Current state — one paragraph
 
 **The repository is scaffolded and the skeleton runs; no model has been trained
-and no data has been downloaded.** Git initialised on `ali_branch`, nothing
-committed yet. The config system, the API contracts, the FastAPI app and the
+and no data has been downloaded.** Committed on `ali_branch` (`21e7c09` is the
+root commit), no remote yet. The config system, the API contracts, the FastAPI app and the
 complete pricing-guardrail engine are *written and working*. Everything else is
 a documented stub that raises `NotImplementedError` — each file carries its
 module number, its owner, and a docstring explaining what it must do and why.
@@ -45,9 +45,10 @@ all belong to other components.
 Real catalogue data is in hand: 57 bundles across 17 families, the confirmed recharge ladder, and
 both emergency-credit products. See §3a below for what that invalidated.
 
-**One remaining blocker:** pay-as-you-go tariffs (Q2 in
-[`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md)). Everything else has
-either a confirmed value or a labelled estimate.
+**No blockers.** Eight of ten market questions are confirmed and one is a
+decided estimate. Two scope decisions are open and flagged in
+[`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md): whether to keep weekend
+days, and whether to drop geography. Both carry a recommendation.
 
 ---
 
@@ -107,10 +108,11 @@ arguably sharper — full detail in [`conf/advance.yaml`](conf/advance.yaml):
   personalises a product that exists, and the operator has already told us when
   its spare capacity is. It also sharpens the cannibalisation guard, because
   06:00–11:00 is real usage time for commuters.
-- **ARPU needs re-checking.** The assumed 12 LYD/month looks low against a
-  catalogue whose cheapest monthly bundle is 20 LYD. Either ARPU is higher, or
-  most subscribers live on daily and weekly bundles. Either answer changes the
-  CLV distribution, so resolve it (Q7).
+- **ARPU was wrong and is now fixed.** The inherited 12 LYD/month was
+  inconsistent with a catalogue whose cheapest monthly bundle is 20 LYD.
+  Revised to **30 LYD**, which rescales the business case: revenue at risk
+  ~420k -> **~1.05M LYD/month**, CLV ceiling ~21 -> **~54 LYD** per subscriber.
+  Any figure carried over from the old proposal needs recomputing.
 
 ---
 
@@ -346,6 +348,47 @@ which apply any more. Treat this file and the configs as authoritative where
 they disagree with it.
 
 ---
+
+### 2026-09-18 · Session 3c — market answers applied
+
+`Almadar/Pay-as-you-go tariffs.md` supplied. Confirmed and applied:
+
+- **PAYG tariffs (Q2).** On-net voice is a **3-minute block at 0.090 LYD then
+  0.050/min**, not a flat rate — so call length drives revenue per minute and
+  the generator must produce realistic call lengths. Off-net 0.090/min,
+  landline 0.040/min. SMS **0.050 either direction** — no on-net discount, so
+  SMS carries no pricing signal; `conf/features.yaml` now excludes SMS on/off-net
+  mix by name with the reason. Data (Bjawak) 0.025/MB = **~25x the bundle
+  rate**, which promotes `bundle_vs_payg_share` from a ratio to a targeting
+  feature. International voice is not published and is left null, not guessed.
+- **Q3b.** `نت ساعة 1_5G` / `نت ساعتين 2_5G` are unlimited within the hour.
+  `variable_cost_lyd` stays an estimate by decision — label it, do not remove it.
+- **Q5.** No zero-rated apps.
+- **Q7.** ARPU **12 -> 30 LYD**, dual-SIM **60% -> 85%**. The ARPU fix resolves a
+  real inconsistency (cheapest monthly bundle is 20 LYD). It rescales the
+  business case: revenue at risk ~420k -> **~1.05M LYD/month**, CLV ceiling
+  ~21 -> **~54 LYD**. Dual-SIM at 85% makes `incoming_outgoing_ratio` the
+  central churn feature rather than a clever extra.
+- **Q8 partial.** Ramadan seasonality **removed** — needs per-year dates and the
+  effect was a large guess. Salary days 25-30 and evening peak 19:00-22:00 kept
+  as labelled assumptions.
+- **Q10.** MSA for all customer-facing copy.
+
+**Two decisions still open, with recommendations in MARKET_QUESTIONS.md:**
+
+1. **Weekend days — recommend keeping**, minimally. Friday–Saturday is a public
+   fact rather than a guess, it costs one derived boolean, and removing weekly
+   rhythm from the daily sequences quietly handicaps the M1 LSTM arm against
+   LightGBM through a data-generation choice. No usage multiplier — that would
+   be the guessed part.
+2. **Geography — recommend splitting the question.** Remove the geography layer
+   (district, OpenCelliD, per-cell troughs): with M5 gone it has no consumer,
+   and `district` survived only to be forbidden by the fairness guardrail.
+   But **keep network quality as a subscriber-level feature** — UCI has a real
+   `Call Failures` column and Cell2Cell has `dropvce`/`blckvce`/`unansvce`, so
+   it is measured signal, not an invented Libyan field. If geography goes, the
+   redlining audit should be replaced by a discount-distribution audit across
+   value deciles and tenure bands, which is auditable with data we have.
 
 ## 9. How to update this file
 

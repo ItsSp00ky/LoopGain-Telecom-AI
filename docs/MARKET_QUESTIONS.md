@@ -7,9 +7,13 @@ Status board for the domain facts the synthesis engine needs. Answers live in
 **Operator: Almadar Aljadid (المدار الجديد), MCC/MNC 606-01.** Libyana is
 modelled only as the competitor that dual-SIM leakage flows toward.
 
-| | Answered | Still open |
+| | Count | |
 |---|---|---|
-| Count | 4 | 6 |
+| **Confirmed** | 7 | Q1 recharge · Q2 tariffs · Q3 catalogue · Q3b volumes · Q4 off-peak · Q5 zero-rating · Q6 emergency credit · Q10 language |
+| **Decided estimate** | 1 | Q7 base and economics — ARPU 30 LYD, dual-SIM 85% |
+| **Awaiting a call** | 2 | Q8 weekend days · Q9 geography |
+
+Nothing is blocking the synthesis engine any more.
 
 ---
 
@@ -107,106 +111,185 @@ From `translated_service_details.md` and
 with a 5 LYD debt tops up 3 LYD, is the debt part-settled, or does it stay
 whole until covered? This changes the M4 label definition, so it is worth
 confirming.
+### Q2 — Pay-as-you-go tariffs · **confirmed**
+
+Source: `Almadar/Pay-as-you-go tariffs.md`. Quoted in dirham; 1000 dirham = 1 LYD.
+
+| | LYD |
+|---|---|
+| Almadar → Almadar voice | **0.090 for the first 3 minutes**, then 0.050/min |
+| Almadar → Libyana voice | 0.090/min |
+| Almadar → landline | 0.040/min |
+| SMS, on-net **and** off-net | 0.050 |
+| SMS international | 0.250 |
+| Data (Bjawak) | 0.025/MB |
+| Voice international | **not published** — left null, not guessed |
+
+Three consequences, all now encoded in `conf/market.yaml#payg`:
+
+1. **On-net voice is a 3-minute block, not a flat rate.** A 1-minute call costs
+   0.090 LYD; a 10-minute call costs 0.440 LYD, or 0.044/min. Short calls are
+   expensive and long ones cheap, so generated call *lengths* drive revenue per
+   minute. Flattening this to a single rate would misprice most of the base.
+2. **There is no on-net SMS discount** — 0.050 either way. SMS is therefore not
+   a competitive lever, and any leakage feature built on SMS on/off-net mix
+   would be noise. `conf/features.yaml` excludes it by name, with the reason.
+3. **PAYG data is ~25× the bundle rate** (25 LYD/GB versus ~1 LYD/GB on the
+   80 GB monthly). That promotes `bundle_vs_payg_share` from a ratio to a
+   targeting feature: a subscriber on PAYG data is either unaware of bundles or
+   cannot afford one up front. Those are different problems needing different
+   offers, and M3 should not send the same thing to both.
+
+### Q3b — Bundle volumes and costs · **resolved**
+
+`نت ساعة 1_5G` and `نت ساعتين 2_5G` are **unlimited within the hour**, not
+volume-capped. Updated in `conf/catalogue.yaml`.
+
+`variable_cost_lyd` **stays as an estimate** — 25% of price for metered data,
+35% for unlimited. Confirmed decision. The margin floor needs something to
+enforce, and the obligation is to label the estimate rather than remove it. Say
+so in the report; a stated margin must not look audited when it is not.
+
+### Q5 — Zero-rated apps · **confirmed: none**
+
+All traffic consumes allowance. The Social family (1 / 5 / 20 LYD) is a real
+bundle rather than a zero-rating arrangement, so `social_bundle_share` stays a
+meaningful feature.
+
+### Q7 — Base and economics · **decided estimate**
+
+| | Value | Note |
+|---|---|---|
+| Addressable prepaid subscribers | 1,000,000 | unchanged |
+| **Monthly ARPU** | **30 LYD** | revised from 12 |
+| Monthly silent churn | 3.5% | unchanged |
+| **Dual-SIM penetration** | **85%** | revised from 60% |
+
+The ARPU revision fixes a real inconsistency: at 12 LYD nobody could be buying
+a monthly bundle, since the cheapest is 20 LYD and the Mix tiers run 20–35.
+
+**It rescales the business case.** At 3.5% monthly churn on 1M subscribers,
+revenue at risk moves from ~420k to **~1.05M LYD/month**, and the CLV ceiling
+(15% of 12-month CLV) moves from ~21 to **~54 LYD** per subscriber — a much more
+generous discount budget, and a realistic one given bundle prices.
+
+**Dual-SIM at 85% changes the emphasis of the whole churn model.** At that level
+dual-SIM is the norm, not a segment: "active" tells you almost nothing, and
+`incoming_outgoing_ratio` goes from a clever extra feature to the central one.
+Worth leading with in the pitch.
+
+These remain estimates, not operator figures, and are labelled as such.
+
+### Q10 — Language · **confirmed: MSA**
+
+Modern Standard Arabic for all customer-facing copy. Dialect would read as more
+authentic to a Libyan audience, but MSA is understood everywhere and is safer if
+the evaluators are not Libyan.
+
 
 ---
 
-## ❔ Still open
+## ❔ Awaiting a call
 
-Ordered by how much they matter.
-
-### Q2 — Pay-as-you-go tariffs ⭐ highest priority now
-
-The catalogue covers bundles. It says nothing about what a subscriber pays with
-**no bundle active** — which is the baseline every bundle is a discount
-against, and what makes `bundle_vs_payg_share` meaningful.
-
-- On-net call (Almadar → Almadar), per minute
-- Off-net call (Almadar → Libyana), per minute
-- International, per minute
-- SMS, on-net and off-net
-- Data, per MB
-- Is voice billed **per second or per minute**?
-
-Current values in `conf/market.yaml#payg` are guesses.
-
-### Q3b — Bundle volumes and costs
-
-Two gaps inside the otherwise-confirmed catalogue:
-
-**Volumes.** Most CSV rows left the Data column blank, so volumes were inferred
-from package names — `نت 6` → 6 GB, `نت 1/2` → 512 MB, and so on. Worth a
-spot-check on a few. Two rows I could not resolve at all: `نت ساعة 1_5G` and
-`نت ساعتين 2_5G` — is that unlimited within the hour, or a volume cap?
-
-**Costs.** `variable_cost_lyd` on all 57 bundles is an **estimate** — 25% of
-price for metered data, 35% for unlimited. Nobody outside the operator knows
-the real marginal cost of a gigabyte, but the margin-floor guardrail needs
-*something* to enforce. Keeping the estimate is fine; **saying it is an
-estimate in the report is not optional**, because otherwise a stated margin
-looks audited when it is not.
-
-### Q5 — Zero-rated apps
-
-There is a real Social family (1 / 5 / 20 LYD), so `social_bundle_share` is a
-live feature. Remaining question: are any apps **zero-rated** — traffic that
-does not consume the data allowance at all? That changes how data usage should
-be generated for social-heavy subscribers.
-
-### Q7 — Base and economics
-
-Still carrying the proposal's own estimates:
-
-| | Assumed |
-|---|---|
-| Addressable prepaid subscribers | 1,000,000 |
-| Monthly ARPU | 12 LYD |
-| Monthly silent churn | 3.5% |
-| Dual-SIM penetration | 60% |
-
-An LPTIC annual report, a regulator publication or a press figure would be
-better. If nothing exists, keep these and label them illustrative — the
-business case is explicitly a method demonstration, not a forecast, and
-estimates are fine **when labelled**.
-
-One sanity check worth doing: 12 LYD monthly ARPU against this catalogue looks
-low. The cheapest monthly data bundle is 20 LYD and the Mix tiers start at
-20–35 LYD for a month. Either ARPU is higher than assumed, or most subscribers
-live on daily and weekly bundles rather than monthly ones. **Either answer is
-interesting and should be resolved**, because it changes the whole CLV
-distribution.
+Two open items. Both are scope decisions rather than missing facts, and my
+recommendation differs from the initial inclination on each, so neither has
+been applied yet.
 
 ### Q8 — Calendar
 
-- **Public-sector salary dates.** Assumed days 25–30. This drives the largest
-  recurring spike in the generated data.
-- **Ramadan dates** for the modelling window — needs real calendar dates.
-- **Peak hours.** The 06:00–11:00 trough is confirmed; the evening peak
-  (assumed 19:00–22:00) is not.
-- **Weekend days.** Assumed Friday and Saturday.
+**Settled:**
 
-### Q9 — Geography
+- Public-sector salary dates: **days 25–30**, kept as a labelled assumption.
+  It drives the largest recurring spike in the generated data.
+- Evening peak: **19:00–22:00**, kept as a labelled assumption. The
+  06:00–11:00 *trough* is confirmed by the عروض الصبح time condition.
+- **Ramadan seasonality: removed.** Agreed — it needs real per-year dates, the
+  window shifts ~11 days annually, and the effect we would have applied was a
+  large guess. A large guessed effect is worse than none: it puts structure in
+  the data that the models will learn and that nothing validates.
 
-- Is the district list and its population weighting roughly right?
-- Where is service actually worst? Assumed the south (Sabha, Ubari, Ghat) and
-  peri-urban areas, driven by power and fuel supply. This feeds the
-  network-quality features that M1 consumes.
+**Open — weekend days. Recommendation: keep it, minimally.**
 
-### Q10 — Language
+This is not the same kind of assumption as Ramadan, for three reasons:
 
-- Rough split across MSA, Libyan dialect, Amazigh and English.
-- Should the channel simulator default to **MSA or dialect**? Dialect reads as
-  more authentic; MSA is safer if the evaluators are not Libyan.
+1. **It is not really a guess.** Libya's official weekend being Friday–Saturday
+   is a public fact about the country, not an operator business number we are
+   estimating. There is nothing to be wrong about.
+2. **It costs almost nothing.** One boolean derived from the date. No overlay,
+   no multiplier to invent, no per-year maintenance.
+3. **Removing it quietly handicaps the M1 benchmark.** Arm B is an LSTM over 90
+   days of daily sequences. If the generated data has no weekly rhythm at all,
+   the sequences are unrealistically smooth and there is less temporal
+   structure for the network to find — so LightGBM wins partly because of a
+   data-generation choice rather than on the merits. That is a methodological
+   problem in the project's headline experiment, not a cosmetic one.
+
+There is also a product reason: a 06:00–11:00 morning pass almost certainly
+sells differently on a work morning than on a Friday. If `offpeak_data_ratio`
+has no weekday structure, M3 cannot tell a commuter from someone who sleeps in.
+
+**Proposed:** keep `weekend_days: [friday, saturday]` and a derived
+`is_weekend` flag. Do **not** add a weekend usage multiplier — that would be
+the guessed part. Let the weekly rhythm come from the flag alone.
+
+### Q9 — Geography and network quality
+
+**Recommendation: remove the geography layer, keep a network-quality feature.**
+These are two things bundled under one heading and they deserve different
+answers.
+
+**Remove geography — agreed, and for a stronger reason than "no data".**
+
+With M5 gone, geography has almost no consumer left:
+
+- The Network Risk Map screen is gone.
+- `district` survived only so the fairness guardrail could *forbid* it, which
+  is circular: generating a field purely so a test can assert we did not use it.
+- It costs a dataset (OpenCelliD), an API key, and a CC BY-SA attribution
+  obligation on every slide that shows it.
+- Per-cell off-peak trough detection loses its basis — but that is fine,
+  because we now have the operator's *actual* window. Falling back to the
+  national 06:00–11:00 band is not a compromise, it is using the real answer.
+
+**But keep network quality as a plain subscriber-level feature.**
+
+`dropped_call_rate_30d` is not an invented Libyan field. It comes from the real
+datasets:
+
+- UCI Iranian has a **`Call Failures`** column — one of the four reasons that
+  dataset was chosen as the anchor in the first place.
+- Cell2Cell has `dropvce`, `blckvce`, `unansvce`.
+
+So this is real signal from real data, mapped through. Dropping it would throw
+away measured churn predictors to simplify something that is already simple.
+The change is to make it **subscriber-level rather than cell-level**: no cell
+join, no hourly load matrices, no geography — just "how bad is this
+subscriber's service".
+
+That still keeps the Component 2 seam alive at zero cost. If your teammate's
+Network ML lands, they supply a better version of the same subscriber-level
+number and nothing in M1 changes.
+
+**One consequence to decide with it.** Without `district`, the redlining audit
+has nothing to audit. `forbidden_pricing_features` still guards `age_group`,
+`language_pref` and `gender`, so the fairness guardrail stays meaningful — but
+auditing discount distribution across a dimension we no longer model would be
+theatre. I would **replace** the redlining audit with a discount-distribution
+audit across **value deciles and tenure bands**, checking we are not
+systematically penalising low-value or new subscribers. That is a real fairness
+question with data behind it, and it keeps the ethical commitment honest rather
+than nominal.
 
 ---
 
 ## What to do next
 
-**Q2 is the blocker.** Everything else has either a confirmed value or a
-defensible labelled estimate. Pay-as-you-go tariffs are the one remaining gap
-that makes a *feature* meaningless rather than merely approximate.
+Nothing blocks the synthesis engine. Remaining work is the two decisions above,
+then building Layer 1.
 
-After that, in order: Q3b volumes (quick spot-check), Q7 the ARPU-versus-
-catalogue mismatch, then the rest.
+Small gap still worth confirming when convenient: **Q6b**, partial-recharge
+behaviour on an outstanding emergency-credit debt. It affects the M4 label
+definition.
 
 ## Recording answers
 
@@ -214,7 +297,4 @@ When you replace a value:
 
 1. Change the block's `status:` from `assumption` to `confirmed`.
 2. Add a `source:` line saying where it came from.
-3. Update the count at the top of this file.
-
-A number without recorded provenance will get asked about, and "it was in the
-config" is not an answer.
+3. Update the counts at the top of this file.

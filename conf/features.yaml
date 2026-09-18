@@ -84,9 +84,14 @@ families:
 
   ratios_mix:
     - onnet_ratio
-    - offpeak_data_ratio
-    - bundle_vs_payg_share
+    - offpeak_data_ratio        # share of data used 06:00-11:00
     - data_to_voice_ratio
+    # PAYG data runs ~25x the bundle rate (0.025 LYD/MB vs ~0.001 LYD/MB on a
+    # monthly bundle). A subscriber on PAYG data is either unaware of bundles
+    # or cannot afford one up front -- two different problems needing two
+    # different offers, so this is a targeting feature, not just a ratio.
+    - bundle_vs_payg_share
+    - payg_data_spend_lyd_30d
 
   distress:
     - balance_zero_hours_30d          # no postpaid equivalent exists
@@ -108,6 +113,11 @@ families:
       - onnet_ratio_trend
       - offnet_share_trend
       - distinct_called_numbers_trend   # calling-graph contraction precedes exit
+    # Deliberately NOT here: any SMS on/off-net mix feature. Almadar charges
+    # 0.050 LYD either way, so SMS carries no pricing signal and an SMS-based
+    # leakage ratio would be noise dressed as insight. Voice does carry it.
+    excluded_by_design:
+      - sms_onnet_offnet_mix
 
   # Both Almadar emergency-credit products. Eligibility for each is
   # balance-based, so these features double as distress signals.

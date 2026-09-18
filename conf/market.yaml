@@ -78,19 +78,58 @@ recharge:
 # ---------------------------------------------------------------------------
 # 2. PAY-AS-YOU-GO TARIFFS
 # ---------------------------------------------------------------------------
-# Still unknown. The catalogue covers bundles; it says nothing about what a
-# subscriber pays with no bundle active. These set the baseline every bundle is
-# a discount against.
+# What a subscriber pays with NO bundle active. This is the baseline every
+# bundle is a discount against, and what makes bundle_vs_payg_share meaningful.
+#
+# Source: Almadar/Pay-as-you-go tariffs.md (operator-published, translated).
+# Quoted there in dirham; 1000 dirham = 1 LYD.
 payg:
-  status: assumption      # ← Q2 in MARKET_QUESTIONS.md
-  source: null
-  voice_onnet_lyd_per_min: 0.06
-  voice_offnet_lyd_per_min: 0.12
-  voice_international_lyd_per_min: 1.50
-  sms_onnet_lyd: 0.03
-  sms_offnet_lyd: 0.06
-  data_lyd_per_mb: 0.02
-  voice_billing_increment_seconds: 60
+  status: confirmed
+  source: "Almadar/Pay-as-you-go tariffs.md"
+
+  # ON-NET VOICE IS NOT A FLAT PER-MINUTE RATE.
+  # 90 dirham buys the first 3 minutes as a block, then 50 dirham/min.
+  # A 1-minute on-net call costs 0.090 LYD (effectively 0.090/min); a
+  # 10-minute call costs 0.440 LYD (0.044/min). Short calls are expensive,
+  # long calls are cheap. Generated minute distributions and any
+  # revenue-per-minute feature must respect this -- flattening it to one rate
+  # would misprice most of the base.
+  voice_onnet:
+    first_block_minutes: 3
+    first_block_lyd: 0.090
+    then_lyd_per_min: 0.050
+
+  # Flat per-minute, and NOT far above the on-net marginal rate.
+  voice_offnet_lyd_per_min: 0.090          # Almadar -> Libyana
+  voice_landline_lyd_per_min: 0.040        # cheapest voice destination
+
+  # NOT PUBLISHED in the source. Left null deliberately rather than guessed.
+  # International voice is a small share of prepaid usage, so the pipeline
+  # treats it as unavailable instead of inventing a number.
+  voice_international_lyd_per_min: null
+
+  # NO ON-NET SMS DISCOUNT -- both directions cost the same. SMS is therefore
+  # not a competitive lever the way voice is, and any leakage feature built on
+  # SMS on/off-net mix carries no pricing signal. Use voice for that.
+  sms_onnet_lyd: 0.050
+  sms_offnet_lyd: 0.050
+  sms_international_lyd: 0.250
+
+  # Bjawak -- the PAYG data service.
+  #
+  # 25 dirham/MB = 25 LYD/GB. The monthly 80 GB bundle is 80 LYD = 1 LYD/GB,
+  # so PAYG data runs ~25x the bundle rate. That makes bundle_vs_payg_share a
+  # far stronger signal than in a normal market: a subscriber paying PAYG data
+  # rates is either unaware of bundles or cannot afford one up front. Both are
+  # actionable and they need different treatment -- the first is a comms
+  # problem, the second an affordability problem, and M3 should not send the
+  # same offer to both.
+  data_service_name: Bjawak
+  data_lyd_per_mb: 0.025
+  payg_to_bundle_price_ratio: 25           # derived, for reference
+
+  # Q5 confirmed: no zero-rated apps. All traffic consumes allowance.
+  zero_rated_apps: none
 
 # ---------------------------------------------------------------------------
 # 3. CATALOGUE
@@ -110,13 +149,30 @@ catalogue:
 # 4. BASE AND ECONOMICS
 # ---------------------------------------------------------------------------
 base:
-  status: assumption      # ← Q7
-  source: "figures carried over from the project proposal, not operator-published"
+  status: assumption      # ← Q7, now informed rather than inherited
+  source: "team estimate, 2026-09-18; not operator-published"
   addressable_prepaid_subscribers: 1_000_000
-  monthly_arpu_lyd: 12.0
+
+  # Revised 12 -> 30 LYD. The old figure came from the proposal and was
+  # inconsistent with this catalogue: the cheapest MONTHLY data bundle is
+  # 20 LYD and the Mix tiers run 20-35 LYD, so 12 LYD implied almost nobody
+  # buys a monthly bundle. 30 LYD sits sensibly against real prices.
+  #
+  # This rescales the business case. At 3.5% monthly churn on 1M subscribers,
+  # revenue at risk moves from ~420k to ~1.05M LYD/month, and the CLV ceiling
+  # (15% of 12-month CLV) moves from ~21 to ~54 LYD per subscriber -- a
+  # materially more generous discount budget, which is realistic given what
+  # bundles actually cost.
+  monthly_arpu_lyd: 30.0
+
   monthly_silent_churn_rate: 0.035
   prepaid_share_of_base: 0.95
-  dual_sim_penetration: 0.60      # carrying both an Almadar and a Libyana SIM
+
+  # Revised 60% -> 85%. At this level dual-SIM is the norm, not a segment,
+  # which promotes incoming_outgoing_ratio from a clever extra to the central
+  # feature: if 85% of the base holds two SIMs, "active" tells you almost
+  # nothing and share-of-wallet tells you almost everything.
+  dual_sim_penetration: 0.85
 
 # ---------------------------------------------------------------------------
 # 5. CALENDAR
@@ -128,12 +184,12 @@ calendar:
     day_of_month_end: 30
     recharge_multiplier: 1.8
 
-  ramadan:
-    status: assumption
-    start: null           # YYYY-MM-DD for the modelling window
-    end: null
-    night_data_multiplier: 1.6
-    daytime_voice_multiplier: 0.8
+  # Ramadan seasonality REMOVED (Q8). It needs real per-year dates, the window
+  # shifts ~11 days annually, and the effect we would have applied (night data
+  # up, daytime voice down) was a guess with a large magnitude. A large guessed
+  # effect is worse than none: it puts structure in the data that the models
+  # will happily learn and that nothing validates. Add it back only with real
+  # seasonal data.
 
   daily_profile:
     # The 06:00-11:00 trough is CONFIRMED by the existence of عروض الصبح --
@@ -179,8 +235,12 @@ geography:
 # 7. LANGUAGE
 # ---------------------------------------------------------------------------
 language:
-  status: assumption      # ← Q10
+  status: confirmed       # ← Q10: Modern Standard Arabic
+  # MSA for all customer-facing copy. Dialect would read as more authentic to a
+  # Libyan audience, but MSA is understood everywhere and is the safer choice
+  # if the evaluators are not Libyan.
   default: ar
+  render_copy_in: ar
   distribution:
     ar: 0.55              # Modern Standard Arabic
     ar-LY: 0.38           # Libyan dialect
