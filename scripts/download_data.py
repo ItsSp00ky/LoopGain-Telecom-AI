@@ -13,6 +13,7 @@ Credentials needed (see .env.example):
     C  IBM Telco   KAGGLE_USERNAME + KAGGLE_KEY, or ~/.kaggle/kaggle.json
     F  Criteo      none -- HuggingFace, public
     G  Hillstrom   none -- fetched by scikit-uplift
+    J  Retail II   none -- fetched via ucimlrepo
 
 A source is listed here only when `cvm.ingest.<name>` exists to receive it.
 Listing a dataset we cannot load is worse than not listing it: it reads as
@@ -37,22 +38,29 @@ SOURCES = {
     "C": ("IBM Telco Customer Churn", "cvm.ingest.ibm_telco"),
 }
 
-# M3 validation. NOT optional in any meaningful sense -- the proposal's
-# strongest claim is that the uplift method is validated on real randomised
-# treatment and control before it touches generated data, and these are that
-# data. Separated from SOURCES only because they are a later sprint step and
-# Criteo is a 300 MB download.
-UPLIFT_SOURCES = {
+# VALIDATION SOURCES. Not optional in any meaningful sense: each one turns a
+# claim about a method into a measurement of it, on real data, before the
+# method is pointed at a generated population. Separated from SOURCES only
+# because they land in a later sprint step and Criteo is a 300 MB download.
+#
+#   F, G  ->  M3.  "our uplift model scores well on data we made up" becomes
+#                  "our uplift method is validated on 25M real randomised rows"
+#   J     ->  M2.  BG/NBD is a repeat-purchase model. Validating it on real
+#                  repeat purchases before treating recharges as transactions
+#                  is the same move as F is for uplift.
+#
+# None of the three needs a credential.
+VALIDATION_SOURCES = {
     "F": ("Criteo Uplift (25M rows, real treatment/control)", "cvm.ingest.criteo_uplift"),
     "G": ("Hillstrom MineThatData (uplift warm-up)", "cvm.ingest.hillstrom"),
+    "J": ("UCI Online Retail II (BG/NBD validation)", "cvm.ingest.online_retail"),
 }
 
-# Deliberately NOT listed: KKBox (H) and Online Retail II (J). KKBox went out
-# of scope with the sequence arm; Online Retail II is a BG/NBD sanity check we
-# can run on Cell2Cell recharge behaviour instead. Neither has a loader, and a
-# source without a loader does not belong in this menu.
+# Deliberately NOT listed: KKBox (H). Its distinctive asset is daily user
+# logs, which went out of scope with the sequence arm, and it is a 30 GB
+# download. A source without a purpose does not belong in this menu.
 
-ALL_SOURCES = {**SOURCES, **UPLIFT_SOURCES}
+ALL_SOURCES = {**SOURCES, **VALIDATION_SOURCES}
 
 # Rough download sizes, so --only can be chosen against available disk.
 APPROX_MB = {
@@ -61,6 +69,7 @@ APPROX_MB = {
     "C": 5,
     "F": 300,
     "G": 5,
+    "J": 45,
 }
 
 
@@ -105,7 +114,7 @@ def main() -> int:
         default="A,B,C",
         help=(
             "Comma-separated source ids. Default A,B,C (the core set). "
-            "Add F,G for the M3 uplift validation data."
+            "Add F,G,J for the validation sources (see VALIDATION_SOURCES)."
         ),
     )
     parser.add_argument("--list", action="store_true", help="List every source and exit.")
@@ -116,7 +125,7 @@ def main() -> int:
 
     if args.list:
         for sid, (name, _) in ALL_SOURCES.items():
-            tag = "core" if sid in SOURCES else "uplift"
+            tag = "core" if sid in SOURCES else "validate"
             log.info("%s  %-8s %-45s ~%s MB", sid, tag, name, APPROX_MB.get(sid, "?"))
         return 0
 

@@ -8,7 +8,7 @@
 | **Operator** | Almadar Aljadid — المدار الجديد (MCC/MNC 606-01) |
 | **Repository** | `ali_branch` |
 | **Duration** | 3 weeks |
-| **Infrastructure** | CPU-only; free-tier GPU for one module. Budget ≤ $20 |
+| **Infrastructure** | CPU-only throughout — training and serving. Budget ≤ $20 |
 
 ---
 
@@ -38,10 +38,13 @@ another share on subscribers already gone. Without a control group, net impact
 is never isolated, so nobody can prove the campaign did anything.
 
 **Some retention actions cause churn.** Almadar's emergency data advance costs
-5 LYD. The smallest recharge card sold is 3 LYD. A subscriber whose habitual
-top-up is the smallest card **cannot clear that debt in one transaction** — and
-because re-subscription requires it cleared, they are locked out of the service
-they reached for. §2.5 develops this.
+5 LYD. The smallest recharge card sold is **also 5 LYD**. A subscriber whose
+habitual top-up is that card can clear the debt — and receives **nothing** for
+doing so. The entire card is consumed by the debt and they are handed back a
+zero balance: no airtime, no data, and immediately eligible to take the advance
+again. Five dinars bought no service, so the rational move is not to spend
+them, and a deferred recharge on a prepaid line is indistinguishable from the
+beginning of silent churn. §2.5 develops this.
 
 ---
 
@@ -280,11 +283,23 @@ badly; the rule cannot tell them apart from a heavy user who is fine.
 
 **The data advance has no differentiation at all.** Five dinars for everyone.
 
-**And the debt can exceed what one transaction can clear.** Smallest card 3 LYD,
-data advance 5 LYD. The debt persists, re-subscription requires it cleared, and
-the subscriber is locked out of the service they reached for. The two products
-being mutually exclusive compounds it — subscribers in difficulty **alternate
-between them**, a clean measurable distress signal nobody is watching.
+**And clearing the debt can buy nothing.** Smallest card 5 LYD, data advance
+5 LYD — exactly equal. A subscriber at the bottom of the recharge ladder spends
+the whole top-up on the debt and returns to a zero balance, eligible to take
+the advance again immediately. The harm is therefore a *disincentive to
+recharge*, not a locked door, and we are careful to claim only that: an exact
+equality is weaker evidence than an impossibility would be, and §6.4 is sized
+for a disincentive.
+
+Note also the asymmetry inside the airtime product. A 1 or 3 LYD airtime
+advance still leaves 4 or 2 LYD of usable balance after a minimum top-up, so
+clearing it buys the subscriber something. **Only the 5 LYD rung reproduces the
+problem**, which is a reason for the limit model to prefer the small rungs — and
+it does.
+
+The two products being mutually exclusive compounds all of it: subscribers in
+difficulty **alternate between them**, a clean measurable distress signal
+nobody is watching.
 
 **Our design:**
 
@@ -323,6 +338,19 @@ The objective function is **subscriber solvency, not recovery yield.**
 | **F** | Criteo Uplift | 25M | **Real randomised treatment/control.** Validates the M3 method |
 | **G** | Hillstrom | 64,000 | Uplift warm-up; clearest demonstration of the four quadrants |
 | **J** | UCI Online Retail II | 1.07M | BG/NBD validation before CLV touches recharges |
+
+The six split into two jobs. **A, B and C are inputs** — they provide the
+scale, the real distributions and the first baseline. **F, G and J are
+validation sources**, and they are a different kind of asset: each one turns a
+claim about a *method* into a measurement of it, on real data, before that
+method is pointed at a generated population. Criteo and Hillstrom do that for
+uplift; Online Retail II does it for BG/NBD, which is a repeat-purchase model
+being asked to treat recharges as transactions. None of the three needs a
+credential, and together they are about 350 MB.
+
+Deferring them is the most likely way this project ends up with an
+unsupportable claim, so they are fetched in week 1 rather than when the model
+that needs them is ready.
 
 **Dataset A** needs two corrections: ~300 duplicate rows (~9.5%) deduplicated,
 and the pre-computed `Customer Value` field dropped because it partially
@@ -485,11 +513,11 @@ Full layer map: `docs/architecture.md`. Field-by-field spec:
 ### Interfaces
 
 **Command Center** (Streamlit, four screens): Executive Overview · Segment
-Explorer · **Subscriber 360** — one hashed ID to churn probability from both
-arms, survival curve, RFM-LE, CLV, SHAP in plain language, recommended action
-*with the constraint that set it* · **Campaign Builder**, which shows **which
-guardrail bound and how many candidates each rejected** — the most persuasive
-thing on screen.
+Explorer · **Subscriber 360** — one hashed ID to a calibrated churn
+probability, survival curve, RFM-LE, CLV, uplift quadrant, SHAP in plain
+language, and the recommended action *with the constraint that set it* ·
+**Campaign Builder**, which shows **which guardrail bound and how many
+candidates each rejected** — the most persuasive thing on screen.
 
 **Channel Simulator**: USSD (`*140#`, `*000#`) and SMS previews in Modern
 Standard Arabic with RTL rendering. Arabic SMS is UCS-2 — 70 characters, not
@@ -507,7 +535,7 @@ only when every model is loaded.
 | D1 | `docker compose up` reproduces the system from a clean clone |
 | D2 | Synthesis engine passing the SDMetrics gate, three-way generator comparison |
 | D3 | M1 benchmark: calibration curves, PR-AUC, lift, written architecture verdict |
-| D4 | **M3 uplift validated on Criteo's real randomised arms** before application |
+| D4 | **M3 uplift validated on Criteo's real randomised arms** — Qini and uplift@k on real treatment/control, reported before the method is applied to generated data |
 | D5 | All models logged in MLflow with params, metrics and artefacts |
 | D6 | API with live Swagger docs and p95 latency evidence |
 | D7 | Command Center + Channel Simulator functional on generated data |
@@ -656,8 +684,8 @@ recovery mechanics all exist. **Only the limit-setting logic changes.**
 
 | Week | Goal |
 |---|---|
-| **1** | Data flowing, schema and API contracts frozen, CTGAN passing its gate, LightGBM baseline with honest temporal-split metrics |
-| **2** | M1 both arms + calibration · M2 clustering + CLV validated on Online Retail II · **M3 validated on Criteo** · M4 both PD heads · decision engine with all six guardrails. **Day-10 feature freeze** |
+| **1** | Data flowing — including the three **validation** sources, which gate D4 and are easy to defer until it is too late — schema and API contracts frozen, CTGAN passing its gate, LightGBM baseline with honest temporal-split metrics |
+| **2** | M1 benchmark + calibration · M2 clustering + CLV validated on Online Retail II · **M3 validated on Criteo** · M4 both PD heads · decision engine with all six guardrails. **Day-10 feature freeze** |
 | **3** | Campaign Builder · channel simulator · contract test with the consuming components · latency + drift · documentation · demo video · three timed dry-runs |
 
 **Descope in this order:** hierarchical clustering → RSF challenger →
