@@ -16,7 +16,7 @@ Two rules the contracts encode:
 from __future__ import annotations
 
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -30,14 +30,14 @@ Probability = Annotated[float, Field(ge=0.0, le=1.0)]
 LYD = Annotated[float, Field(ge=0.0, description="Amount in Libyan Dinar")]
 
 
-class Tier(str, Enum):
+class Tier(StrEnum):
     BRONZE = "bronze"
     SILVER = "silver"
     GOLD = "gold"
     PLATINUM = "platinum"
 
 
-class Segment(str, Enum):
+class Segment(StrEnum):
     CHAMPIONS = "Champions"
     LOYAL_HIGH_VALUE = "Loyal High-Value"
     POTENTIAL_LOYALISTS = "Potential Loyalists"
@@ -48,7 +48,7 @@ class Segment(str, Enum):
     LOST = "Lost"
 
 
-class RetentionStage(str, Enum):
+class RetentionStage(StrEnum):
     NONE = "none"
     COOLING = "cooling"
     COLD = "cold"
@@ -186,11 +186,11 @@ class OfferResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class AdvanceProduct(str, Enum):
+class AdvanceProduct(StrEnum):
     """Almadar's two emergency-credit services. They are mutually exclusive."""
 
-    AIRTIME = "rasid_fi_waqtuh"   # رصيد في وقته — 1/3/5 LYD, *140#
-    DATA = "net_fi_waqtuh"        # نت في وقته — flat 5 LYD / 2 GB, *000#
+    AIRTIME = "rasid_fi_waqtuh"  # رصيد في وقته — 1/3/5 LYD, *140#
+    DATA = "net_fi_waqtuh"  # نت في وقته — flat 5 LYD / 2 GB, *000#
 
 
 class AdvanceLimitRequest(BaseModel):
@@ -237,9 +237,7 @@ class AdvanceLimitResponse(BaseModel):
     exceeds_modal_recharge: bool
     modal_recharge_lyd: float
     binding_constraint: str = Field(
-        description=(
-            "Which term of min(f(PD), g(tier), h(CLV), affordability) produced the limit."
-        )
+        description=("Which term of min(f(PD), g(tier), h(CLV), affordability) produced the limit.")
     )
     safety_checks: list[AdvanceSafetyCheck]
     cooling_off_until: date | None = None

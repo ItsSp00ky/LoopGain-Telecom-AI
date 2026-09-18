@@ -44,11 +44,28 @@ import pandas as pd
 # Mirrors conf/data.yaml#sources.cell2cell.drop_columns. Kept here too so a
 # direct caller of load() cannot bypass the exclusion by skipping the config.
 FORBIDDEN_COLUMNS: tuple[str, ...] = (
-    "ethnic", "marital", "income", "adults",
-    "kid0_2", "kid3_5", "kid6_10", "kid11_15", "kid16_17",
-    "ownrent", "dwlltype", "dwllsize", "numbcars", "HHstatin",
-    "infobase", "prizm_social_one", "creditcd", "lor", "rv", "truck",
-    "forgntvl", "area",
+    "ethnic",
+    "marital",
+    "income",
+    "adults",
+    "kid0_2",
+    "kid3_5",
+    "kid6_10",
+    "kid11_15",
+    "kid16_17",
+    "ownrent",
+    "dwlltype",
+    "dwllsize",
+    "numbcars",
+    "HHstatin",
+    "infobase",
+    "prizm_social_one",
+    "creditcd",
+    "lor",
+    "rv",
+    "truck",
+    "forgntvl",
+    "area",
 )
 
 

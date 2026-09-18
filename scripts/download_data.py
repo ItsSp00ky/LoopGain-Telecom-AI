@@ -44,15 +44,20 @@ ALL_SOURCES = {**SOURCES, **OPTIONAL_SOURCES}
 
 # Rough download sizes, so --only can be chosen against available disk.
 APPROX_MB = {
-    "A": 1, "B": 0, "C": 5,          # B is already on disk
-    "F": 300, "G": 5, "H": 30_000, "J": 45,
+    "A": 1,
+    "B": 0,
+    "C": 5,  # B is already on disk
+    "F": 300,
+    "G": 5,
+    "H": 30_000,
+    "J": 45,
 }
 
 
 def check_credentials(ids: list[str]) -> list[str]:
     """Report missing credentials up front rather than failing three minutes in."""
     problems = []
-    kaggle_ids = {"C", "H"}          # B is supplied locally
+    kaggle_ids = {"C", "H"}  # B is supplied locally
     if kaggle_ids & set(ids) and not (settings.kaggle_key or settings.kaggle_username):
         problems.append(
             f"Kaggle credentials missing (datasets {sorted(kaggle_ids & set(ids))}). Set "

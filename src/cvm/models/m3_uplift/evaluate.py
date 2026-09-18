@@ -28,8 +28,9 @@ def qini_curve(uplift_score: pd.Series, outcome: pd.Series, treated: pd.Series):
     raise NotImplementedError("TODO(E4)")
 
 
-def uplift_at_k(uplift_score: pd.Series, outcome: pd.Series, treated: pd.Series,
-                k: float = 0.30) -> float:
+def uplift_at_k(
+    uplift_score: pd.Series, outcome: pd.Series, treated: pd.Series, k: float = 0.30
+) -> float:
     """Realised uplift in the top k fraction by predicted uplift.
 
     This is the number the Campaign Builder actually needs: if we treat the top
@@ -59,8 +60,9 @@ def validate_on_criteo() -> dict[str, float]:
     raise NotImplementedError("TODO(E4)")
 
 
-def expected_value_of_treatment(uplift: np.ndarray, clv: np.ndarray,
-                                cost: np.ndarray) -> np.ndarray:
+def expected_value_of_treatment(
+    uplift: np.ndarray, clv: np.ndarray, cost: np.ndarray
+) -> np.ndarray:
     """Expected LYD gain from treating each subscriber.
 
         E[gain] = uplift x CLV - cost

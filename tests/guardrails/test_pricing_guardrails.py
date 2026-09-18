@@ -93,8 +93,8 @@ def test_budget_breach_detected():
 # monthly, and free mornings do not remove the need for all-day data. Only
 # subscribers above the base have a rung to fall to.
 
-ABOVE_BASE_LYD = 80.0   # نت 80
-BASE_LYD = 35.0         # نت 20
+ABOVE_BASE_LYD = 80.0  # نت 80
+BASE_LYD = 35.0  # نت 20
 
 
 def test_base_monthly_price_matches_the_catalogue():

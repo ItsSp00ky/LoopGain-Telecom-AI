@@ -14,9 +14,7 @@ from __future__ import annotations
 import pandas as pd
 
 
-def fuzzy_augmentation(
-    accepted: pd.DataFrame, rejected: pd.DataFrame, model
-) -> pd.DataFrame:
+def fuzzy_augmentation(accepted: pd.DataFrame, rejected: pd.DataFrame, model) -> pd.DataFrame:
     """Augment the training set with probability-weighted rejected applicants."""
     raise NotImplementedError("TODO(E2)")
 

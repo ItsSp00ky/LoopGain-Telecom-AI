@@ -22,18 +22,18 @@ st.set_page_config(
 )
 
 st.title("AI CVM Suite -- Command Center")
-st.caption("Samsung Innovation Campus Libya 2026  |  Almadar Aljadid — المدار الجديد (MCC/MNC 606-01)")
+st.caption(
+    "Samsung Innovation Campus Libya 2026  |  Almadar Aljadid — المدار الجديد (MCC/MNC 606-01)"
+)
 
-st.markdown(
-    """
+st.markdown("""
     A decision-intelligence layer over prepaid telemetry. Four outputs per
     subscriber: a calibrated silent-churn probability, a value and loyalty
     tier, a margin-constrained priced offer, and a personalised airtime
     advance limit.
 
     Pick a screen from the sidebar.
-    """
-)
+    """)
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Subscribers at risk (30d)", "--", help="M1, calibrated probability, top 3 deciles")

@@ -36,7 +36,8 @@ async def price_quote(payload: OfferRequest) -> OfferResponse:
     """
     if payload.bundle_id is None:
         raise HTTPException(
-            status_code=422, detail="bundle_id is required for a quote. Use /offer/next-best instead."
+            status_code=422,
+            detail="bundle_id is required for a quote. Use /offer/next-best instead.",
         )
     # TODO(E4): from cvm.decision.pricing import quote_bundle
     raise HTTPException(status_code=501, detail="M3 pricing engine not implemented yet.")

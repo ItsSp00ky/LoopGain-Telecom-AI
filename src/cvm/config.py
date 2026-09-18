@@ -65,9 +65,7 @@ class Settings(BaseSettings):
     hash_salt: str = Field(default="", alias="CVM_HASH_SALT")
 
     # --- MLflow ----------------------------------------------------------
-    mlflow_tracking_uri: str = Field(
-        default="http://localhost:5000", alias="MLFLOW_TRACKING_URI"
-    )
+    mlflow_tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
     mlflow_experiment: str = Field(default="ai-cvm-suite", alias="MLFLOW_EXPERIMENT_NAME")
 
     # --- API -------------------------------------------------------------
@@ -96,7 +94,7 @@ class Settings(BaseSettings):
         if v.startswith("CHANGE_ME"):
             raise ValueError(
                 "CVM_HASH_SALT is still the placeholder from .env.example. "
-                "Generate one: python -c \"import secrets; print(secrets.token_hex(32))\""
+                'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         return v
 
@@ -139,7 +137,7 @@ def _interpolate_env(value: Any) -> Any:
     return value
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def load_conf(name: str) -> dict[str, Any]:
     """Load ``conf/<name>.yaml``. Nested configs use a slash: ``models/m1_churn``.
 

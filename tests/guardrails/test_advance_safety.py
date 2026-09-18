@@ -151,7 +151,8 @@ def test_pd_bands_are_monotonic_in_repayment_probability(advance_conf):
 
 def test_lowest_pd_band_declines(advance_conf):
     bands = advance_conf["limit_function"]["airtime"]["pd_to_limit_lyd"]
-    assert [b for b in bands if b["min_pd"] == 0.0][0]["limit_lyd"] == 0
+    decline_band = next(b for b in bands if b["min_pd"] == 0.0)
+    assert decline_band["limit_lyd"] == 0
 
 
 def test_data_advance_threshold_is_stricter_than_airtime(advance_conf):
@@ -169,9 +170,7 @@ def test_declined_data_advance_has_an_affordable_fallback(advance_conf, catalogu
     they can actually afford is a service."""
     fallback_id = advance_conf["limit_function"]["data"]["fallback_offer_id"]
     all_ids = {
-        item["id"]
-        for fam in catalogue["families"].values()
-        for item in fam.get("items", [])
+        item["id"] for fam in catalogue["families"].values() for item in fam.get("items", [])
     }
     assert fallback_id in all_ids, f"{fallback_id} is not a real bundle"
 
@@ -232,9 +231,10 @@ def test_chronic_distress_watches_for_service_alternation(advance_conf):
 def test_cooling_off_is_stricter_than_the_operator_allows(advance_conf, catalogue):
     """The operator permits same-day repeat borrowing once the debt is cleared.
     We do not -- that is a revolving credit line, and this is not one."""
-    assert catalogue["emergency_credit"]["rasid_fi_waqtuh"]["settlement"][
-        "repeat_allowed_same_day"
-    ] is True
+    assert (
+        catalogue["emergency_credit"]["rasid_fi_waqtuh"]["settlement"]["repeat_allowed_same_day"]
+        is True
+    )
     cooling = advance_conf["safety_guards"]["cooling_off"]
     assert cooling["override_operator_same_day_repeat"] is True
     assert cooling["min_days_between_advances"] >= 1

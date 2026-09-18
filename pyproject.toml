@@ -138,6 +138,13 @@ ignore = [
 "tests/**" = ["ARG", "S101"]
 "apps/**" = ["N999"]            # Streamlit pages are named 1_Executive_Overview.py
 
+# A FastAPI handler's parameters ARE the request contract: even one the body
+# never reads still drives validation, the 422 response and the OpenAPI schema.
+# Deleting it to satisfy ARG001 would change the API. Starlette's exception
+# handlers take (request, exc) by signature for the same reason.
+"src/cvm/api/main.py" = ["ARG001"]
+"src/cvm/api/routers/**" = ["ARG001"]
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]

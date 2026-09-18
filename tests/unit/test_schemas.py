@@ -18,10 +18,10 @@ def test_subscriber_id_must_be_a_64_char_hex_digest():
 @pytest.mark.parametrize(
     "bad",
     [
-        "0912345678",            # msisdn-fixture: a raw MSISDN must not validate
-        "a" * 63,                # too short
-        "a" * 65,                # too long
-        "A" * 64,                # uppercase: normalise before calling
+        "0912345678",  # msisdn-fixture: a raw MSISDN must not validate
+        "a" * 63,  # too short
+        "a" * 65,  # too long
+        "A" * 64,  # uppercase: normalise before calling
         "not-a-hash",
     ],
 )

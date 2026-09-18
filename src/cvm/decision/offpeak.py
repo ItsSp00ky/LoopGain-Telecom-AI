@@ -39,8 +39,6 @@ which is why it is answerable in code rather than in a footnote.
 
 from __future__ import annotations
 
-import numpy as np
-
 
 def offpeak_window() -> tuple[int, int]:
     """The operator's published off-peak hours, from conf/pricing.yaml.

@@ -26,7 +26,11 @@ from dataclasses import dataclass
 from cvm.config import guardrail, load_conf
 
 
-class GuardrailBreach(Exception):
+# N818 wants an `Error` suffix. A *breach* is the domain term here: it is the
+# word used in the proposal, in the tests and in docs/INTEGRATION.md, and it
+# says something a generic suffix does not -- a commitment was crossed, not
+# merely that something failed. Keeping the name is the deliberate choice.
+class GuardrailBreach(Exception):  # noqa: N818
     """A decision violated a constraint. Never caught to "just continue"."""
 
 
@@ -287,9 +291,7 @@ def audit_distribution(mean_discount_by_group: dict[str, float], dimension: str)
         "fairness",
         passed=passed,
         binding=not passed,
-        detail=(
-            f"{dimension} discount gap {gap:.4f} ({hi} vs {lo}) against limit {max_gap}"
-        ),
+        detail=(f"{dimension} discount gap {gap:.4f} ({hi} vs {lo}) against limit {max_gap}"),
     )
 
 
