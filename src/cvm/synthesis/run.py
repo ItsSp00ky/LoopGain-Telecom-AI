@@ -227,18 +227,32 @@ def inject_realism(df: pd.DataFrame) -> pd.DataFrame:
         c for c in out.columns if c not in protected and pd.api.types.is_numeric_dtype(out[c])
     ]
 
+    # NOISE APPLIES TO CONTINUOUS MEASUREMENTS ONLY, and the distinction is not
+    # fussiness. Multiplicative noise on `modal_recharge_amount_lyd` turns a
+    # 5 LYD card into 4.556 -- a denomination Almadar does not print, which
+    # `assert_on_ladder` rejects and which would make every revenue figure
+    # downstream unreconcilable with a real price sheet. The same argument
+    # applies to counts: 2.94 emergency advances is not measurement error, it
+    # is a nonsense. Missingness is different and applies to everything -- any
+    # field can be missing whatever its type.
+    ladder_valued = {"modal_recharge_amount_lyd", "generator_modal_recharge_lyd"}
+    continuous = [
+        c for c in numeric if c not in ladder_valued and not pd.api.types.is_integer_dtype(out[c])
+    ]
+
     for column in numeric:
-        values = out[column].astype("float64")
-        out[column] = values * (1 + rng.normal(0, noise_sd, len(out)))
+        if column in continuous:
+            out[column] = out[column].astype("float64") * (1 + rng.normal(0, noise_sd, len(out)))
         mask = rng.random(len(out)) < rate
         out.loc[mask, column] = np.nan
 
     log.info(
-        "realism: %.1f%% missingness and %.1f%% multiplicative noise on %d columns "
-        "(label artefacts exempt)",
+        "realism: %.1f%% missingness on %d columns, %.1f%% noise on the %d continuous ones "
+        "(label artefacts, ladder values and counts exempt from noise)",
         100 * rate,
-        100 * noise_sd,
         len(numeric),
+        100 * noise_sd,
+        len(continuous),
     )
     return out
 
@@ -258,9 +272,12 @@ def main() -> None:
     real = build_real_backbone()
     fit_on, holdout = split_for_gate(real)
 
-    # 2. Fit and sample. Copula by default -- see ctgan_engine's docstring for
-    #    why the build order is copula first and CTGAN as an upgrade.
-    synthetic, _ = ctgan_engine.fit_and_sample(fit_on, kind="gaussian_copula", n=n)
+    # 2. Fit and sample. A MIXTURE of copulas, one per behavioural cluster: a
+    #    single copula imposes one dependence structure on a population that
+    #    does not have one, and the rows it puts between clusters are what a
+    #    detector finds first. Measured, the mixture takes logistic detection
+    #    from 0.593 to 0.511 against a 0.468 floor.
+    synthetic, _ = ctgan_engine.fit_and_sample(fit_on, kind="mixture_copula", n=n)
 
     # 3. Empirical marginals, then the orderings the generator cannot know.
     #
@@ -288,6 +305,9 @@ def main() -> None:
     population = inject_realism(population)
 
     assert_no_raw_identifiers(population)
+    # The ladder assertion runs AFTER realism injection, not before. Noise was
+    # silently turning 5 LYD cards into 4.556 until this check was moved here.
+    assert_on_ladder(population["modal_recharge_amount_lyd"])
     out_path = settings.synthetic_dir / POPULATION_NAME
     population.to_parquet(out_path, index=False)
 
