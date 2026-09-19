@@ -316,15 +316,44 @@ def test_a_bigger_budget_never_buys_less_margin(candidates):
 
 def test_unviable_candidates_are_counted_separately(candidates):
     """ "The guardrail rejected 40,000" should mean the budget bound, not that
-    40,000 rows were never viable in the first place."""
+    40,000 rows were never viable in the first place.
+
+    Viability is NET: a candidate returning 3 LYD for a 5 LYD offer is not
+    viable, and `margin > 0` used to wave them through. The count is therefore
+    the 50 poisoned rows PLUS however many random ones fail to clear their own
+    cost -- derived from the fixture rather than pinned to whatever number its
+    seed happens to produce.
+    """
     poisoned = candidates.copy()
     poisoned.loc[poisoned.index[:50], "expected_margin_lyd"] = -1.0
 
     allocation = budget_lp.allocate(poisoned, budget_lyd=10_000.0)
     summary = budget_lp.campaign_summary(allocation)
 
-    assert summary["not_viable"] == 50
+    assert not allocation.loc[allocation.index[:50], "viable"].any()
     assert not allocation.loc[allocation.index[:50], "selected"].any()
+
+    below_cost = poisoned["expected_margin_lyd"] <= poisoned["discount_cost_lyd"]
+    assert summary["not_viable"] == int(below_cost.sum())
+    assert summary["not_viable"] >= 50
+
+    # The budget is generous enough that nothing else was declined, which is
+    # the distinction the count exists to preserve.
+    assert summary["selected"] == len(candidates) - summary["not_viable"]
+
+
+def test_a_candidate_who_cannot_repay_their_own_offer_is_not_viable():
+    """3 LYD of retained value against a 5 LYD offer destroys 2 LYD."""
+    frame = pd.DataFrame(
+        {
+            "expected_margin_lyd": [3.0, 5.0, 7.0],
+            "discount_cost_lyd": [5.0, 5.0, 5.0],
+        }
+    )
+    allocation = budget_lp.allocate(frame, budget_lyd=1_000.0)
+
+    assert list(allocation["viable"]) == [False, False, True]
+    assert list(allocation["selected"]) == [False, False, True]
 
 
 def test_the_blanket_comparison_is_computed_not_quoted(candidates):
@@ -335,6 +364,99 @@ def test_the_blanket_comparison_is_computed_not_quoted(candidates):
     assert summary["saving_versus_blanket_lyd"] == pytest.approx(
         summary["blanket_cost_lyd"] - summary["cost_lyd"]
     )
+
+
+def test_the_blanket_baseline_is_the_cohort_not_what_survived_the_guardrails(candidates):
+    """The bug this comparison had: it measured targeting against itself.
+
+    The Campaign Builder removes sleeping dogs, negative expected value and
+    sub-ceiling CLV BEFORE calling allocate. With the baseline taken from the
+    allocation frame, "blanket" meant "everyone the guardrails already
+    approved" -- so whenever the budget did not bind the two populations were
+    identical and the screen reported a saving of 0 LYD, directly beneath a
+    chart saying 227 of 497 had been removed.
+    """
+    cohort = candidates.copy()
+    # Pre-filtered to the viable, which is precisely what the screen did before
+    # calling allocate -- and precisely why the naive baseline collapsed onto
+    # the campaign itself.
+    viable = candidates["expected_margin_lyd"] > candidates["discount_cost_lyd"]
+    survivors = candidates[viable].head(100)
+
+    allocation = budget_lp.allocate(survivors, budget_lyd=100_000.0)
+
+    naive = budget_lp.campaign_summary(allocation)
+    honest = budget_lp.campaign_summary(allocation, cohort=cohort)
+
+    # Everything affordable, so the naive baseline IS the campaign.
+    assert naive["saving_versus_blanket_lyd"] == pytest.approx(0.0)
+    assert naive["blanket_baseline"] == "allocation"
+
+    # Against the real cohort it is the other subscribers' worth of offers.
+    assert honest["blanket_baseline"] == "cohort"
+    assert honest["blanket_candidates"] == len(cohort)
+    assert honest["saving_versus_blanket_lyd"] > 0
+
+
+def test_the_saving_splits_into_guardrails_and_budget(candidates):
+    """One number cannot say which mechanism declined whom, and the two are not
+    interchangeable: a guardrail rejection is a decision, a budget rejection is
+    a shortage."""
+    cohort = candidates.copy()
+    survivors = candidates.head(100)
+
+    generous = budget_lp.campaign_summary(
+        budget_lp.allocate(survivors, budget_lyd=100_000.0), cohort=cohort
+    )
+    assert generous["saving_from_budget_lyd"] == pytest.approx(0.0)
+    assert generous["saving_from_guardrails_lyd"] == pytest.approx(
+        generous["saving_versus_blanket_lyd"]
+    )
+
+    tight = budget_lp.campaign_summary(
+        budget_lp.allocate(survivors, budget_lyd=50.0), cohort=cohort
+    )
+    assert tight["saving_from_budget_lyd"] > 0
+
+    for summary in (generous, tight):
+        total = summary["saving_from_guardrails_lyd"] + summary["saving_from_budget_lyd"]
+        assert total == pytest.approx(summary["saving_versus_blanket_lyd"])
+
+
+def test_the_headline_counts_damage_avoided_and_not_only_money_saved(candidates):
+    """Targeting buys two things and the cost saving shows only one.
+
+    What makes skipping a sleeping dog worth something is the expected value
+    NOT destroyed. A discount-saved figure cannot see that at all.
+    """
+    cohort = candidates.copy()
+    # Part of the cohort reacts badly: treating them is actively destructive.
+    cohort.loc[cohort.index[:150], "expected_margin_lyd"] = -40.0
+    survivors = cohort[cohort["expected_margin_lyd"] > cohort["discount_cost_lyd"]]
+
+    summary = budget_lp.campaign_summary(
+        budget_lp.allocate(survivors, budget_lyd=100_000.0), cohort=cohort
+    )
+
+    assert summary["blanket_net_margin_lyd"] < summary["net_margin_lyd"]
+    assert summary["net_margin_versus_blanket_lyd"] == pytest.approx(
+        summary["net_margin_lyd"] - summary["blanket_net_margin_lyd"]
+    )
+    # Strictly the larger claim, because it adds damage avoided to money saved.
+    assert summary["net_margin_versus_blanket_lyd"] > summary["saving_versus_blanket_lyd"]
+
+
+def test_the_margin_column_is_gross_and_the_cost_comes_off_once():
+    """The Campaign Builder passed M3's expected_value_lyd, which is already
+    `uplift x CLV - cost`, so the campaign was charged twice and net margin was
+    understated by exactly the campaign cost -- 1,220 LYD on the default
+    cohort."""
+    frame = pd.DataFrame({"expected_margin_lyd": [100.0, 80.0], "discount_cost_lyd": [5.0, 5.0]})
+    summary = budget_lp.campaign_summary(budget_lp.allocate(frame, budget_lyd=1_000.0))
+
+    assert summary["cost_lyd"] == pytest.approx(10.0)
+    assert summary["expected_margin_lyd"] == pytest.approx(180.0)
+    assert summary["net_margin_lyd"] == pytest.approx(170.0)
 
 
 def test_a_negative_budget_is_refused(candidates):
@@ -419,3 +541,48 @@ def test_the_registry_keys_match_what_health_reports():
     from cvm.models.registry import ARTEFACTS
 
     assert set(EXPECTED_MODELS) <= set(ARTEFACTS)
+
+
+def test_the_same_budget_comparison_holds_spend_constant(candidates):
+    """Comparing a budgeted campaign against an unconstrained one measures the
+    budget, not the targeting.
+
+    The unconstrained figure went to -2,075 LYD on the phase-8 fixture, which
+    reads as "targeting lost money" and means "targeting was given 1,000 LYD
+    and blanket was given 2,400". Holding spend constant isolates the part that
+    is actually about targeting, and that part should never be negative: the
+    LP picks the best net margin per LYD available, so it cannot do worse than
+    the cohort average on the same money.
+    """
+    cohort = candidates.copy()
+    viable = candidates["expected_margin_lyd"] > candidates["discount_cost_lyd"]
+    survivors = candidates[viable]
+
+    tight = budget_lp.campaign_summary(
+        budget_lp.allocate(survivors, budget_lyd=50.0), cohort=cohort
+    )
+
+    # The budget binds hard, so the unconstrained comparison is unflattering...
+    assert tight["net_margin_versus_blanket_lyd"] < 0
+    # ...and the fair one is not.
+    assert tight["net_margin_versus_same_budget_lyd"] > 0
+
+    # The untargeted arm spends the same money, give or take one indivisible
+    # subscriber.
+    mean_cost = float(cohort["discount_cost_lyd"].mean())
+    assert abs(tight["blanket_same_budget_treated"] * mean_cost - tight["cost_lyd"]) <= mean_cost
+
+
+def test_targeting_cannot_lose_to_the_cohort_average_on_equal_money(candidates):
+    """Swept, because a single budget can hide a sign error."""
+    cohort = candidates.copy()
+    viable = candidates["expected_margin_lyd"] > candidates["discount_cost_lyd"]
+    survivors = candidates[viable]
+
+    for budget in (50.0, 200.0, 1_000.0, 100_000.0):
+        summary = budget_lp.campaign_summary(
+            budget_lp.allocate(survivors, budget_lyd=budget), cohort=cohort
+        )
+        assert (
+            summary["net_margin_versus_same_budget_lyd"] >= -1e-6
+        ), f"at a {budget} LYD budget, targeting did worse than the cohort average"

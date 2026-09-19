@@ -1567,11 +1567,21 @@ def check_the_budget_is_never_exceeded() -> str:
         if spent > budget + 1e-6:
             raise AssertionError(f"allocated {spent:.2f} against a {budget:.2f} budget")
 
-    summary = campaign_summary(allocate(candidates, budget_lyd=1_000.0))
+    # The cohort is passed explicitly even though nothing was filtered out of
+    # it here. The blanket baseline defaulting to the allocation frame is what
+    # made the Campaign Builder report a 0 LYD saving, so a caller that means
+    # "compare against all of these" should say so rather than rely on the two
+    # happening to coincide.
+    summary = campaign_summary(allocate(candidates, budget_lyd=1_000.0), cohort=candidates)
+    # The SAME-BUDGET figure, not the unconstrained one. An unconstrained
+    # blanket campaign may outspend the budget, so that comparison goes
+    # negative whenever the budget binds -- it did here, at -2,075 LYD -- and
+    # reads as "targeting lost money" when it means "targeting was given 1,000
+    # LYD and blanket was given 2,400".
     return (
         f"4 budgets respected; at 1,000 LYD it treats {summary['selected']} of "
-        f"{summary['candidates']} for {summary['cost_lyd']:.0f}, saving "
-        f"{summary['saving_versus_blanket_lyd']:.0f} against a blanket campaign"
+        f"{summary['candidates']}, worth {summary['net_margin_versus_same_budget_lyd']:.0f} "
+        f"LYD more than the same money spent untargeted"
     )
 
 

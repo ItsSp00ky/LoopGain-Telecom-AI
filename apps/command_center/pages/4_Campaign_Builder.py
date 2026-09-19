@@ -72,6 +72,14 @@ st.subheader("2. What the guardrails remove")
 before = len(candidates)
 rejections: dict[str, int] = {}
 
+# The blanket baseline. A blanket campaign ignores every guardrail below, so
+# the comparison has to be made against the cohort as it stands HERE -- before
+# the sleeping dogs, the negative expected values and the sub-ceiling CLVs come
+# out. Comparing against what survives them measures targeting against itself,
+# which is what this screen used to do, and it reported a saving of 0 LYD with
+# the rejection chart directly above it saying 227 had been removed.
+cohort = candidates.copy()
+
 sleeping = candidates.get("quadrant", pd.Series(dtype=str)).eq("sleeping_dog")
 if sleeping.any():
     rejections["Sleeping dogs — contacting them causes churn"] = int(sleeping.sum())
@@ -92,6 +100,12 @@ if below_ceiling.any():
 held_out = candidates.get("is_control", pd.Series(False, index=candidates.index)).fillna(False)
 holdout_count = int(held_out.sum())
 candidates = candidates[~held_out.astype(bool)]
+
+# Out of the baseline too: a control subscriber is treated by neither arm, so
+# counting them as a blanket cost would invent a saving that targeting did not
+# earn.
+cohort_control = cohort.get("is_control", pd.Series(False, index=cohort.index))
+cohort = cohort[~cohort_control.fillna(False).astype(bool)]
 
 if rejections:
     rejection_frame = pd.DataFrame(
@@ -141,15 +155,33 @@ budget = st.slider(
     step=1000.0,
 )
 
+
+def _gross_margin(rows: pd.DataFrame) -> pd.Series:
+    """Retained value BEFORE the discount is paid for.
+
+    allocate() and campaign_summary() subtract the cost themselves, so handing
+    them M3's `expected_value_lyd` -- which is already `uplift x CLV - cost` --
+    charged the campaign twice. The screen reported 20,115 LYD of net margin on
+    a cohort that returns 21,335; the missing 1,220 was the campaign cost,
+    deducted once by M3 and once again here.
+
+    Not clipped at zero either. A negative margin is a subscriber the campaign
+    should not touch, and the blanket comparison exists to price exactly those.
+    """
+    if "uplift" in rows.columns:
+        return rows["uplift"].fillna(0) * rows["clv_12m"].fillna(0)
+    return rows["clv_12m"].fillna(0) * rows["churn_probability"].fillna(0)
+
+
 allocation_input = candidates.assign(
-    expected_margin_lyd=candidates.get(
-        "expected_value_lyd",
-        candidates["clv_12m"].fillna(0) * candidates["churn_probability"].fillna(0),
-    ).clip(lower=0),
+    expected_margin_lyd=_gross_margin(candidates),
     discount_cost_lyd=incentive,
 )
 allocation = budget_lp.allocate(allocation_input, budget_lyd=budget)
-summary = budget_lp.campaign_summary(allocation)
+summary = budget_lp.campaign_summary(
+    allocation,
+    cohort=cohort.assign(expected_margin_lyd=_gross_margin(cohort), discount_cost_lyd=incentive),
+)
 
 # --- The result -------------------------------------------------------------
 st.subheader("4. What it buys")
@@ -159,12 +191,35 @@ a.metric("Treated", f"{summary['selected']:,}", f"of {summary['candidates']:,} e
 b.metric("Cost", f"{summary['cost_lyd']:,.0f} LYD", f"of {budget:,.0f} budget")
 c.metric("Expected net margin", f"{summary['net_margin_lyd']:,.0f} LYD")
 d.metric(
-    "Saved against a blanket campaign",
-    f"{summary['saving_versus_blanket_lyd']:,.0f} LYD",
+    "Worth more than spending it untargeted",
+    f"{summary['net_margin_versus_same_budget_lyd']:,.0f} LYD",
     help=(
-        "A blanket campaign treats every eligible subscriber at the same incentive. "
-        "Most of that spend lands on people who would have recharged anyway."
+        f"The same {summary['cost_lyd']:,.0f} LYD spread across the cohort without "
+        f"targeting reaches {summary['blanket_same_budget_treated']:,} subscribers and "
+        f"returns {summary['blanket_same_budget_net_margin_lyd']:,.0f} LYD of net margin. "
+        "Spend is held constant deliberately: comparing a budgeted campaign against an "
+        "unconstrained blanket one measures the size of the budget, not the quality of "
+        "the targeting, and goes negative the moment the budget binds."
     ),
+)
+
+# Two separate claims, because they answer different questions and one of them
+# used to read 0 LYD. The saving is also split by cause: "a guardrail declined
+# them" and "the budget ran out" are not the same event.
+guardrails_saved = summary["saving_from_guardrails_lyd"]
+budget_saved = summary["saving_from_budget_lyd"]
+destruction_avoided = (
+    summary["net_margin_versus_blanket_lyd"] - summary["saving_versus_blanket_lyd"]
+)
+st.caption(
+    f"**Against treating all {summary['blanket_candidates']:,} in the cohort** "
+    f"({summary['blanket_cost_lyd']:,.0f} LYD, netting "
+    f"{summary['blanket_net_margin_lyd']:,.0f} LYD): "
+    f"**{summary['saving_versus_blanket_lyd']:,.0f} LYD of discount not spent** — "
+    f"{guardrails_saved:,.0f} where a guardrail declined the subscriber and "
+    f"{budget_saved:,.0f} where the budget ran out before reaching them — plus "
+    f"**{destruction_avoided:,.0f} LYD of expected value not destroyed** by leaving "
+    "alone the people who react badly to being contacted."
 )
 
 synthetic_notice()

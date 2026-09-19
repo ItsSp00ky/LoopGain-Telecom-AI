@@ -1245,8 +1245,83 @@ Expect 8 passed, 0 failed.
 pytest tests/unit/test_decision.py -q
 ```
 
-35 tests. Two sweep rather than spot-check: the margin floor is checked across
-the full churn range, and the budget is checked at four budgets including zero.
+42 tests. Three sweep rather than spot-check: the margin floor across the full
+churn range, the budget at four budgets including zero, and the same-budget
+blanket comparison at four budgets, where a negative result would mean the LP
+objective had a sign error.
+
+---
+
+### The blanket comparison was measuring the campaign against itself
+
+Found by reading the Campaign Builder rather than testing it: **"Saved against
+a blanket campaign: 0 LYD"**, directly beneath a chart reporting that 227 of
+497 subscribers had been removed by guardrails. The 227 *were* the saving.
+
+Four faults, in one metric.
+
+**The baseline was the wrong population.** `campaign_summary` computed blanket
+cost from the allocation frame — whatever the caller passed in. The Campaign
+Builder removes sleeping dogs, negative expected value and sub-ceiling CLV
+*before* calling, so "blanket" meant "everyone the guardrails already
+approved". Whenever the budget did not bind, the two populations were
+identical and the saving was necessarily zero. It now takes an explicit
+`cohort`, and reports `blanket_baseline` so the answer can never again look
+the same whether or not anyone thought about it.
+
+**The campaign was charged twice.** M3's `expected_value_lyd` is
+`uplift × CLV − cost` — already net. The screen passed it as
+`expected_margin_lyd`, and `campaign_summary` subtracts the cost itself. Net
+margin on the default cohort read **20,115 LYD** against a true
+**21,335 LYD**: understated by 1,220, which is exactly the campaign cost. The
+margin column is gross, the contract now says so, and the screen passes
+`uplift × CLV`.
+
+**Viability was gross.** `viable = margin > 0` admits a subscriber returning
+3 LYD of retained value for a 5 LYD offer. It is now `margin > cost`, which is
+the same break-even the rest of the system is built on, and the LP maximises
+net rather than gross — identical while every incentive is the blended 5 LYD,
+and not identical the first time a segment gets its own offer.
+
+**Negative margins were clipped away at the call site.** `.clip(lower=0)` on
+expected value made a blanket campaign look merely wasteful rather than
+value-destroying, which is the one thing the comparison exists to show. (There
+was also a `.clip(lower=None)` inside `campaign_summary` — a no-op that reads
+like a safeguard. Gone.)
+
+#### And then the fixed metric exposed a flaw in its own framing
+
+With the baseline corrected, the phase-8 check reported that targeting beat a
+blanket campaign by **−2,075 LYD**. Arithmetically right, and a bad headline:
+the targeted arm is capped by the budget and the blanket arm is not, so the
+number was measuring the size of the budget, not the quality of the targeting.
+
+So there are two comparisons now, and the screen leads with the fair one:
+
+| | |
+|---|---|
+| **Same budget, untargeted** | the same money spread across the cohort without targeting. With a uniform incentive, a random selection of *k* returns *k* × the cohort mean **in expectation, exactly** — no sampling, no seed, no ordering to argue about. This is the one that answers "is the targeting worth anything". |
+| **All of them, unconstrained** | what treating the whole cohort would cost and return. This is the one the business case quotes, and it is reported as cost avoided rather than as a margin difference. |
+
+A test sweeps four budgets and asserts the same-budget figure is never
+negative: the LP picks the best net margin per LYD available, so it cannot do
+worse than the cohort average on equal money. If that ever fails, the
+objective has a sign error.
+
+#### What the screen says now
+
+On the default cohort — At-Risk Valuable, risk ≥ 0.05, CLV ≥ 100 LYD:
+
+| | before | after |
+|---|---|---|
+| Expected net margin | 20,115 LYD | **21,335 LYD** |
+| Headline comparison | "saved 0 LYD" | **+14,837 LYD** vs the same money untargeted |
+| Discount not spent | — | 1,005 LYD — *all* of it from guardrails, none from the budget |
+| Value not destroyed | — | 8,478 LYD |
+
+The saving is split by cause because "a guardrail declined them" and "the
+budget ran out" are different events, and summing them into one figure
+measured against the wrong baseline is how it came to read 0.
 
 ---
 
