@@ -1,14 +1,15 @@
 # Roadmap
 
-**39 functions left, in a chain that cannot be reordered.** This document is
+**30 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
 
-**Phases 1 to 5 are written and verified.** Layers 1, 2 and 3 are at 100%, and
-so are M1 and M2; the whole project is at **86%**. Phase 2's quality gate
-passes and the leakage suite is green with **every xfail deleted**. **Next is
-phase 6 — M3 uplift**, which is the one the whole decision engine turns on.
+**Phases 1 to 6 are written and verified.** Layers 1, 2 and 3 are at 100%, and
+so are M1, M2 and M3; the whole project is at **90%**. Phase 2's quality gate
+passes, the leakage suite is green with **every xfail deleted**, and uplift is
+validated on Criteo's real randomised arms at **Qini 0.0771**. **Next is phase
+7 — M4 advance**, the only module that lends money.
 
 ## Two commands
 
@@ -901,55 +902,111 @@ pytest tests/unit/test_proposal_consistency.py::test_clv_ceiling_matches_the_gua
 
 <a id="phase-6"></a>
 
-## Phase 6 · M3 uplift — 9 functions, 2–3 days
+## Phase 6 · M3 uplift — **DONE**
 
-**Validate on Criteo before you write anything that touches the generated
-population.** The order matters: it is the difference between a measurement and
-an assertion, and it is the strongest claim in the proposal.
+`python -m cvm.models.m3_uplift.run` validates the method on Criteo's real
+randomised arms, then applies it to the population and writes the
+expected-value table the decision engine consumes.
+`scripts/check_phase.py 6` passes 8 of 8.
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+### Criteo — this is the evidence
+
+| | |
+|---|---|
+| rows scored (held out) | 419,388 |
+| treated share | 85.1% |
+| naive lift | +1.050 pp |
+| **Qini coefficient** | **+0.0771** |
+| **uplift@30%** | **+2.986 pp** |
+
+Targeting the top 30% by predicted uplift returns **2.8× the incremental
+retention** of treating everyone. That is deliverable D4, and it is the single
+strongest answer to "your data is generated, so how do we know any of this
+works?" — real randomised arms, a real counterfactual, a real number.
+
+All four quadrants populate on Criteo: persuadable 20.6%, sure thing 23.6%,
+lost cause 49.2%, **sleeping dog 6.6%**. That last one is why the module cannot
+be skipped. A system without an uplift model does not merely waste budget on
+the 73% who were never movable; it actively causes churn among the 6.6% who
+leave *because* they were contacted.
+
+### The generated population is a pipeline test, and it is labelled as one
+
+| | held out |
+|---|---|
+| rows scored | 30,000 |
+| Qini | +0.0091 |
+| uplift@30% | +4.911 pp |
+
+The treatment effect here was injected by us, so recovering it shows the
+pipeline is wired correctly end to end and says **nothing** about whether
+uplift modelling works on Libyan prepaid subscribers. Criteo is the evidence;
+this is the wiring diagram. The two are written to separate files with separate
+names so a reader cannot mistake one for the other.
+
+### The break-even is tighter than the headline suggests
+
+| | uplift needed |
+|---|---|
+| at the headline 480 LYD annual ARPU | **1.0417 pp** |
+| at M2's median fitted CLV of 234 LYD | **2.1352 pp** |
+
+The proposal quotes `5 / 480 = 1.04 pp` and that is correct for the headline
+figure. But M2's fitted median CLV is roughly half the annual ARPU, so on a
+*typical* subscriber the offer has to clear **2.14 pp** before it pays for
+itself — twice as hard, and above what the Criteo model achieves at depth. Both
+numbers are now reported on every run rather than only the flattering one.
+
+This does not break the business case: expected value is computed per
+subscriber against *their own* CLV, so the high-value tail carries the
+campaign. It does mean the headline break-even is the best case rather than the
+typical one, and the report should say which it is quoting.
+
+### Three bugs, and one of them I had already written the warning for
+
+**The population path trained and scored on the same rows.** `validate_on_criteo`
+has a docstring explaining that a two-model difference memorises readily —
+both arms overfit independently and the difference of two overfits looks like
+signal — and then two functions later I did exactly that. It reported **Qini
+0.2745 and uplift@30% of +50.8 pp from an injected effect of at most 6 pp.**
+Held out properly: **0.0091 and +4.9 pp**, a 30× drop. Numbers that good on
+data you generated yourself are the symptom, not the result. A phase check now
+fails if the generated population outscores Criteo by more than 3×.
+
+**M2's outputs were features of M3.** `clv_12m` went into the uplift model's
+design matrix and then got multiplied by that model's output two steps later,
+making the expected value partly a function of itself. `retention_ceiling_lyd`
+is 0.15 × CLV and the collinearity guard from Phase 4 was already dropping it —
+which is how the first one got noticed.
+
+**The Qini normalisation was non-standard.** The first version divided the area
+between the model curve and the random line by the total incremental response.
+Right sign, right ordering, magnitude about 3× too large. Radcliffe's
+normalisation divides by the *perfect* curve's area, which is what
+`sklift.metrics.qini_auc_score` computes and what every published Qini means.
+It now agrees with scikit-uplift to **3.1e-05** at 50/50, 85/15 and 15/85 arm
+splits — the residual is a discretisation difference, not an error.
+
+Also: the blended incentive, a number the entire business case turns on, lived
+only as a hardcoded constant in a test fixture. It is now in
+`conf/market.yaml#base.blended_incentive_lyd`, and the proposal-consistency
+test reads it from there.
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 6
 ```
 
-**Check 1** — Qini on real randomised arms. This is deliverable D4:
+Expect 8 passed, 0 failed.
 
 ```bash
-python -c "
-from cvm.models.m3_uplift.evaluate import validate_on_criteo
-r = validate_on_criteo()
-print('Qini:', round(r['qini'], 4), '| uplift@30%:', round(r['uplift_at_k'], 4))
-assert r['qini'] > 0, 'no measurable uplift -- the model is not working'
-"
+pytest tests/unit/test_m3_uplift.py -q
 ```
 
-**Check 2** — the four quadrants are populated and sleeping dogs are excluded.
-A run with zero sleeping dogs usually means the threshold is wrong, not that
-none exist:
-
-```bash
-python -c "
-from cvm.models.m3_uplift.evaluate import quadrant_counts
-q = quadrant_counts()
-for k, v in q.items(): print(f'  {k:<14} {v:>7,}')
-assert q['sleeping_dog'] > 0, 'check sleeping_dog_threshold in conf/models/m3_uplift.yaml'
-"
-```
-
-**Check 3** — the break-even the whole business case rests on. Expected value
-must turn positive at 1.04 pp of uplift and not before:
-
-```bash
-python -c "
-from cvm.models.m3_uplift.evaluate import expected_value_of_treatment as ev
-print('at 1.00 pp:', round(ev(0.0100, 480, 5), 3))
-print('at 1.04 pp:', round(ev(0.0104, 480, 5), 3))
-assert ev(0.0100, 480, 5) < 0 < ev(0.0110, 480, 5)
-print('break-even sits where the proposal says it does')
-"
-```
+25 tests. The one that matters most asserts our Qini against scikit-uplift's at
+three arm splits, because Criteo's 85/15 is exactly where a wrong rescaling
+term hides.
 
 ---
 

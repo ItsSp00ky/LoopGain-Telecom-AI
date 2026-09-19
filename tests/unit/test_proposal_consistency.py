@@ -41,7 +41,9 @@ def money() -> dict[str, float]:
         "annual": arpu * 12,
         "smallest_card": float(min(market["recharge"]["denominations_lyd"])),
         "data_advance": load_conf("catalogue")["emergency_credit"]["net_fi_waqtuh"]["price_lyd"],
-        "blended_incentive": 5.0,  # stated in the assumptions line of section 6
+        # From conf/market.yaml, not hardcoded here. A number the business case
+        # turns on should have one home, and this file is not it.
+        "blended_incentive": market["base"]["blended_incentive_lyd"],
         "treated": 120_000.0,
     }
 

@@ -963,7 +963,215 @@ def check_pca_variance_reported() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 6-10 -- declared now, so the check exists before the code does
+# Phase 6 -- M3 uplift
+# ---------------------------------------------------------------------------
+
+
+def check_qini_on_criteo() -> str:
+    """Deliverable D4, and the strongest claim in the proposal. Real randomised
+    arms, real Qini -- the answer to "your data is generated, so what?"."""
+    m = _report("m3_criteo_validation.json")
+
+    if m["qini"] <= 0:
+        raise AssertionError(
+            f"Qini {m['qini']:.4f} -- no measurable uplift, the model is not working"
+        )
+    if m["uplift_at_k_pp"] <= m["naive_lift_pp"]:
+        raise AssertionError(
+            f"uplift@{m['k']:.0%} is {m['uplift_at_k_pp']:.3f} pp against a naive "
+            f"{m['naive_lift_pp']:.3f} pp: targeting buys nothing over treating everyone"
+        )
+    return (
+        f"Qini {m['qini']:+.4f} on {m['rows_scored']:,} held-out rows ({m['treated_share']:.1%} "
+        f"treated); uplift@{m['k']:.0%} {m['uplift_at_k_pp']:+.3f} pp against a naive "
+        f"{m['naive_lift_pp']:+.3f} pp"
+    )
+
+
+def check_qini_matches_the_reference() -> str:
+    """Our Qini against scikit-uplift's, on lopsided arms.
+
+    Criteo is 85/15 and every Qini formula rescales the control arm to the
+    treated arm's size. Getting that term wrong yields a curve that looks fine
+    and is wrong by the ratio.
+    """
+    import numpy as np
+    from sklift.metrics import qini_auc_score
+
+    from cvm.models.m3_uplift.evaluate import qini_coefficient
+
+    worst = 0.0
+    for share in (0.5, 0.85, 0.15):
+        rng = np.random.default_rng(42)
+        n = 20000
+        t = (rng.random(n) < share).astype(int)
+        score = rng.normal(size=n)
+        y = (rng.random(n) < 0.05 + 0.04 * t * (score > 0)).astype(int)
+        worst = max(worst, abs(qini_coefficient(score, y, t) - qini_auc_score(y, score, t)))
+
+    if worst > 1e-4:
+        raise AssertionError(f"our Qini differs from scikit-uplift by {worst:.2e}")
+    return f"agrees with scikit-uplift to {worst:.1e} at 50/50, 85/15 and 15/85 arms"
+
+
+def check_all_four_quadrants_populate() -> str:
+    """A run with zero sleeping dogs usually means the threshold is wrong, not
+    that none exist -- and sleeping dogs are the reason this module cannot be
+    skipped. A system without one does not merely waste budget; it causes churn
+    it would not otherwise have caused."""
+    from cvm.models.m3_uplift.two_model import QUADRANTS
+
+    m = _report("m3_criteo_validation.json")
+    counts = {name: m.get(f"quadrant_{name}", 0) for name in QUADRANTS}
+
+    empty = [name for name, count in counts.items() if count == 0]
+    if empty:
+        raise AssertionError(
+            f"{empty} never fire. Check sleeping_dog_threshold in "
+            "conf/models/m3_uplift.yaml before concluding the campaign is safe."
+        )
+    total = sum(counts.values())
+    detail = ", ".join(f"{k} {v / total:.1%}" for k, v in counts.items())
+    return f"all four on Criteo ({detail})"
+
+
+def check_break_even_is_where_the_proposal_says() -> str:
+    """Expected value must turn positive at 1.04 pp of uplift and not before.
+    The whole business case rests on this division."""
+    from cvm.config import load_conf
+    from cvm.models.m3_uplift.evaluate import break_even_uplift, expected_value_of_treatment
+
+    market = load_conf("market")["base"]
+    annual = market["monthly_arpu_lyd"] * 12
+    incentive = market["blended_incentive_lyd"]
+
+    point = break_even_uplift(annual, incentive)
+    if round(100 * point, 2) != 1.04:
+        raise AssertionError(f"{incentive} / {annual} = {100 * point:.4f} pp, not 1.04 pp")
+    if not expected_value_of_treatment(0.0100, annual, incentive) < 0:
+        raise AssertionError("treating at 1.00 pp of uplift is not loss-making, and it must be")
+    if not expected_value_of_treatment(0.0110, annual, incentive) > 0:
+        raise AssertionError("treating at 1.10 pp of uplift is not profitable, and it must be")
+
+    return f"{incentive:.0f} / {annual:.0f} = {100 * point:.4f} pp, and E[gain] crosses zero there"
+
+
+def check_the_holdout_is_mandatory_and_random() -> str:
+    """Without a randomised control arm there is no counterfactual, net margin
+    impact cannot be isolated, and every ROI figure becomes an assertion."""
+    import pandas as pd
+
+    from cvm.config import load_conf, settings
+    from cvm.models.m3_uplift.two_model import assign_control_holdout
+
+    conf = load_conf("models/m3_uplift")
+    if not conf.get("holdout_is_mandatory", False):
+        raise AssertionError("holdout_is_mandatory is off in conf/models/m3_uplift.yaml")
+
+    cohort = pd.DataFrame({"x": range(20000)})
+    first = assign_control_holdout(cohort)
+    if not first.equals(assign_control_holdout(cohort)):
+        raise AssertionError("the holdout moves between runs, so it cannot measure anything")
+
+    target = conf["control_holdout_fraction"]
+    if abs(first.mean() - target) > 0.02:
+        raise AssertionError(f"holdout is {first.mean():.3f}, target {target:.3f}")
+
+    path = settings.processed_dir / "m3_uplift.parquet"
+    landed = ""
+    if path.exists():
+        frame = pd.read_parquet(path)
+        landed = f"; {int(frame['is_control'].sum()):,} held out of {len(frame):,} in the run"
+    return f"{target:.0%}, seeded and reproducible{landed}"
+
+
+def check_the_pipeline_test_is_held_out() -> str:
+    """The generated-population numbers are a PIPELINE TEST, and they must be
+    scored on rows the model did not train on.
+
+    A two-model difference memorises readily -- both arms overfit independently
+    and the difference of two overfits looks like signal. Scored in-sample it
+    reported Qini 0.2745 and uplift@30% of +50.8 pp from an injected effect of
+    at most 6 pp; held out, 0.0091 and +4.9 pp.
+    """
+    m = _report("m3_uplift.json")
+    pipeline = m.get("pipeline_test_on_generated_population", {})
+    if "rows_scored" not in pipeline:
+        raise AssertionError("the pipeline test reports no held-out row count")
+
+    criteo = m.get("criteo_validation", {})
+    if criteo and pipeline["qini"] > 3 * criteo["qini"]:
+        raise AssertionError(
+            f"the generated population scores Qini {pipeline['qini']:.4f} against Criteo's "
+            f"{criteo['qini']:.4f}. Numbers that much better on data we made up are the "
+            "symptom of scoring on the training rows."
+        )
+    return (
+        f"{pipeline['rows_scored']:,} held-out rows, Qini {pipeline['qini']:+.4f}, "
+        f"uplift@30% {100 * pipeline['uplift_at_k']:+.3f} pp"
+    )
+
+
+def check_only_persuadables_are_funded() -> str:
+    """Budget goes to persuadables, never to sure things, lost causes or
+    sleeping dogs. The last of those is not waste -- it is harm."""
+    import pandas as pd
+
+    from cvm.config import settings
+
+    path = settings.processed_dir / "m3_uplift.parquet"
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.models.m3_uplift.run`")
+
+    frame = pd.read_parquet(path)
+    treated = frame[frame["would_treat"] == 1]
+
+    wrong = treated[treated["quadrant"] != "persuadable"]
+    if not wrong.empty:
+        raise AssertionError(
+            f"{len(wrong)} non-persuadable subscribers would be treated: "
+            f"{wrong['quadrant'].value_counts().to_dict()}"
+        )
+    if (treated["expected_value_lyd"] <= 0).any():
+        raise AssertionError("a subscriber with non-positive expected value would be treated")
+    if treated["is_control"].any():
+        raise AssertionError("a control-holdout subscriber would be treated")
+
+    dogs = int((frame["quadrant"] == "sleeping_dog").sum())
+    return (
+        f"{len(treated):,} of {len(frame):,} funded, all persuadable with positive E[gain]; "
+        f"{dogs:,} sleeping dogs excluded"
+    )
+
+
+def check_expected_value_respects_the_clv_ceiling() -> str:
+    """M2's ceiling is what M3 is allowed to spend. The bridge between them has
+    to actually hold."""
+    import pandas as pd
+
+    from cvm.config import load_conf, settings
+
+    path = settings.processed_dir / "m3_uplift.parquet"
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.models.m3_uplift.run`")
+
+    frame = pd.read_parquet(path)
+    incentive = load_conf("market")["base"]["blended_incentive_lyd"]
+
+    over = frame[(frame["would_treat"] == 1) & (frame["retention_ceiling_lyd"] < incentive)]
+    if not over.empty:
+        raise AssertionError(
+            f"{len(over):,} funded subscribers have a retention ceiling below the "
+            f"{incentive:.0f} LYD incentive -- the offer costs more than M2 allows"
+        )
+    return (
+        f"every funded subscriber's ceiling clears the {incentive:.0f} LYD incentive "
+        f"(median ceiling {frame['retention_ceiling_lyd'].median():.2f} LYD)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phases 7-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -1035,7 +1243,16 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("segments tested against the data", check_segments_are_tested_against_the_data),
         ("PCA variance reported", check_pca_variance_reported),
     ],
-    "6": [("Qini on Criteo > 0", _pending("M3 not built", "6"))],
+    "6": [
+        ("Qini on Criteo > 0", check_qini_on_criteo),
+        ("Qini matches scikit-uplift", check_qini_matches_the_reference),
+        ("all four quadrants populate", check_all_four_quadrants_populate),
+        ("break-even at 1.04 pp", check_break_even_is_where_the_proposal_says),
+        ("holdout mandatory and random", check_the_holdout_is_mandatory_and_random),
+        ("pipeline test is held out", check_the_pipeline_test_is_held_out),
+        ("only persuadables funded", check_only_persuadables_are_funded),
+        ("funding respects the CLV ceiling", check_expected_value_respects_the_clv_ceiling),
+    ],
     "7": [("advance safety guards green", _pending("M4 not built", "7"))],
     "8": [("endpoints return 200 not 501", _pending("decision engine not built", "8"))],
     "9": [("/health reports ok", _pending("models not loaded", "9"))],

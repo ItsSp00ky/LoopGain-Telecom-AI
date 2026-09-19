@@ -175,6 +175,16 @@ base:
   # Revenue at risk is 35,000 x 40 = 1.4M LYD/month.
   monthly_arpu_lyd: 40.0
 
+  # The blended cost of one retention offer, averaged over the ladder's three
+  # stages. It lived only as a hardcoded constant in the proposal-consistency
+  # test until M3 needed it, which meant the number the entire business case
+  # turns on had no single source -- the document, the test and the decision
+  # engine could each have drifted to a different one.
+  #
+  # Break-even uplift follows directly and is the tightest number in the
+  # project:  5 / 480 = 1.0417 pp.
+  blended_incentive_lyd: 5.0
+
   monthly_silent_churn_rate: 0.035
   prepaid_share_of_base: 0.95
 
