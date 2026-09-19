@@ -13,6 +13,7 @@ PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 BUNDLE_DIR = PROJECT_ROOT / "artifacts" / "bundle"
 SCORES_PATH = PROJECT_ROOT / "artifacts" / "scores" / "scores.csv"
+VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
 # Kaggle's unlabeled customers: never used for evaluation, so they stand in for "this month's base".
 RAW_SCORE_PATH = PROJECT_ROOT / "data" / "raw" / "test.csv"
 GATE_FILE = "gate.json"
@@ -139,6 +140,25 @@ def run_score(args: argparse.Namespace) -> None:
     print(f"{len(scores)} subscribers scored with {bundle.version} into {args.output}: {counts}")
 
 
+def run_almadar_view(args: argparse.Namespace) -> None:
+    from prepaid_churn.almadar import almadar_view, load_market, load_offers, view_report
+    from prepaid_churn.clean import clean
+    from prepaid_churn.schema import validate
+    from prepaid_churn.scoring import SCORING_WINDOW
+    from prepaid_churn.windows import active_in_current_month
+
+    market = load_market()
+    cleaned = clean(validate(load_raw(args.input), labeled=False))
+    view = almadar_view(cleaned, SCORING_WINDOW, market, load_offers())
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    view.to_csv(args.output, index=False, encoding="utf-8")
+    active = active_in_current_month(cleaned, SCORING_WINDOW)
+    report = view_report(view, active, market, args.input.name)
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(report, encoding="utf-8")
+    print(f"Almadar view of {len(view)} customers in {args.output}, summary in {args.report}")
+
+
 def run_output_contract(args: argparse.Namespace) -> None:
     from prepaid_churn.scoring import output_contract_markdown
 
@@ -210,6 +230,14 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--bundle", type=Path, default=BUNDLE_DIR)
     score.set_defaults(handler=run_score)
 
+    view = commands.add_parser(
+        "almadar-view", help="Show every customer in Almadar money and packages (ticket T18)."
+    )
+    view.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
+    view.add_argument("--output", type=Path, default=VIEW_PATH)
+    view.add_argument("--report", type=Path, default=REPORTS_DIR / "almadar_view.md")
+    view.set_defaults(handler=run_almadar_view)
+
     output_contract = commands.add_parser(
         "output-contract", help="Write the subscriber output contract document (ticket T8)."
     )
@@ -220,6 +248,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    from prepaid_churn.almadar import InvalidCatalogueError
     from prepaid_churn.bundle import BundleError
     from prepaid_churn.schema import InvalidExportError
 
@@ -230,5 +259,5 @@ def main(argv: list[str] | None = None) -> None:
         return
     try:
         args.handler(args)
-    except (FileNotFoundError, InvalidExportError, BundleError) as error:
+    except (FileNotFoundError, InvalidExportError, BundleError, InvalidCatalogueError) as error:
         parser.exit(1, f"error: {error}\n")

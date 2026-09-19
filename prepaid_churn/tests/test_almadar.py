@@ -1,15 +1,32 @@
+import numpy as np
 import pandas as pd
 import pytest
+from conftest import build_population
 
 from prepaid_churn.almadar import (
+    PAY_AS_YOU_GO,
     STATUSES,
+    VIEW_COLUMNS,
     InvalidCatalogueError,
+    almadar_view,
+    bundle_held,
     check_against_source,
     load_market,
     load_offers,
+    lyd_rate,
+    nearest_card,
     validate_market,
     validate_offers,
+    view_report,
 )
+from prepaid_churn.cli import main
+from prepaid_churn.windows import WINDOW_A, WINDOW_B, active_in_current_month
+
+MARKET = {
+    "arpu": {"monthly_lyd": 40.0, "status": "assumption", "source": "test"},
+    "reference_spend": {"mean_monthly_recharge": 500.0, "status": "measured", "source": "test"},
+    "recharge_cards": {"values_lyd": [5, 10, 20, 40, 100], "status": "reported", "source": "test"},
+}
 
 
 @pytest.fixture
@@ -167,3 +184,75 @@ def test_market_facts_without_status_or_source_fail():
     assert "arpu: status must be one of" in message
     assert "arpu: source is missing" in message
     assert "cards: must be a table" in message
+
+
+def test_lyd_rate_makes_the_reference_customer_spend_the_arpu():
+    assert lyd_rate(MARKET) == 0.08
+    facts = load_market()
+    reference = facts["reference_spend"]["mean_monthly_recharge"]
+    assert reference * lyd_rate(facts) == pytest.approx(facts["arpu"]["monthly_lyd"])
+
+
+def test_nearest_card():
+    amounts = pd.Series([1, 7.4, 7.6, 15, 30, 150, np.nan])
+    cards = nearest_card(amounts, [5, 10, 20, 40, 100])
+    assert cards.iloc[:6].tolist() == [5, 5, 10, 10, 20, 100]  # a tie goes to the smaller card
+    assert np.isnan(cards.iloc[6])
+
+
+def test_bundle_held_follows_the_packs_of_the_current_month():
+    zero = [0] * 5
+    frame = pd.DataFrame(
+        {
+            "cur_monthly_2g": [0, 1, 0, 0, 0],
+            "cur_monthly_3g": [1, 0, 0, 0, 1],
+            "cur_sachet_2g": [0, 0, 2, 0, 0],
+            "cur_sachet_3g": zero,
+            "cur_total_rech_data": [2, 1, 2, 0, 5],
+            "cur_av_rech_amt_data": [250, 100, 20, 0, 2500],
+        }
+    )
+    held = bundle_held(frame, rate=0.08, offers=load_offers())
+    assert held.tolist() == [
+        "MO_20",  # 2 x 20 LYD of data: Net 20 (35 LYD) is the dearest monthly bundle it pays
+        "MO_6",  # 8 LYD pays for no monthly bundle, so the cheapest one
+        "DAY_100MB",  # short packs of 1.6 LYD: the 1 LYD daily pack
+        PAY_AS_YOU_GO,
+        "MO_80",
+    ]
+
+
+def test_view_reads_only_the_window_months(raw):
+    from prepaid_churn.clean import clean
+    from prepaid_churn.schema import validate
+
+    before = almadar_view(clean(validate(raw)), WINDOW_A, MARKET, load_offers())
+    changed = raw.copy()
+    for column in ("total_rech_amt_8", "max_rech_amt_8", "monthly_3g_8", "sachet_2g_8"):
+        changed[column] = changed[column] + 7
+    after = almadar_view(clean(validate(changed)), WINDOW_A, MARKET, load_offers())
+    assert list(before.columns) == list(VIEW_COLUMNS)
+    pd.testing.assert_frame_equal(before, after)
+
+
+def test_one_customer_alone_is_viewed_like_inside_the_batch():
+    population = build_population()
+    whole = almadar_view(population, WINDOW_B, MARKET, load_offers())
+    alone = almadar_view(population.iloc[[0]], WINDOW_B, MARKET, load_offers())
+    pd.testing.assert_frame_equal(alone, whole.iloc[[0]])
+
+
+def test_view_report_states_every_assumption():
+    population = build_population()
+    view = almadar_view(population, WINDOW_B, MARKET, load_offers())
+    report = view_report(view, active_in_current_month(population, WINDOW_B), MARKET, "x.csv")
+    for expected in ("Almadar ARPU", "| assumption |", "| measured |", "| reported |", "PAYG"):
+        assert expected in report
+
+
+def test_almadar_view_command(raw, tmp_path):
+    source, output, report = tmp_path / "export.csv", tmp_path / "view.csv", tmp_path / "r.md"
+    raw.to_csv(source, index=False)
+    main(["almadar-view", "--input", str(source), "--output", str(output), "--report", str(report)])
+    assert len(pd.read_csv(output)) == len(raw)
+    assert report.read_text(encoding="utf-8").startswith("# T18 Almadar view")

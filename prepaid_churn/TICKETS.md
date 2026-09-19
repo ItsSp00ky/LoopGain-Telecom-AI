@@ -30,7 +30,7 @@ Update this section at the end of every working session.
 **Next steps, in order (the MVP path from decision 17)**
 1. T16 Almadar catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract (done).
-3. T18 Almadar view of the real customers.
+3. T18 Almadar view of the real customers (done).
 4. T10 value tiers, then T11 offers with human approval.
 5. T15 integration service, then T20 integration check with the chatbot and copilot.
 6. T14 demo app and T9 documentation.
@@ -42,7 +42,7 @@ Update this section at the end of every working session.
 - **Folder name:** the module now covers more than churn; rename `prepaid_churn/` (for example to `cvm/`, like Ali's package) once Ali agrees.
 - **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
 - **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) from his catalogue without a recorded reason; ask whether they are still sold (`docs/almadar.md`).
-- **Almadar ARPU:** the 40 LYD per month used by `Ali_Branch` is an assumption; T18 depends on it, so confirm it or replace it with a better source.
+- **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
   We use the upGrad prepaid data instead (decisions 1 and 5), because the IBM data is fictional and postpaid.
   Taha should tell the team leader so the action plan matches the work.
@@ -563,8 +563,8 @@ Acceptance:
 
 ## T18 - Almadar view of the real customers
 
-**Owner:**
-**Status:** Todo
+**Owner:** Claude
+**Status:** Done
 **Depends on:** T4, T16
 
 Why: decision 16; value, offers, emergency credit and the app speak Almadar's money and packages, while the churn model stays on real behaviour.
@@ -581,6 +581,14 @@ Acceptance:
 - Unit tests for each mapping rule on hand-made frames.
 - The report lists every assumption with its status.
 - The view never changes a churn feature or the model.
+
+Findings (`reports/almadar_view.md`, rules in `docs/almadar.md`):
+- Taha chose the 40 LYD ARPU on 2026-09-19.
+  The rate is 40 LYD over 537.17, the mean monthly recharge of the 64,509 customers active in month 8 of `train.csv` (stored in `market.toml` as a measured fact), so 1 unit of the source currency is 0.074464 LYD.
+- On the scoring base (Kaggle's `test.csv`, 27,582 active customers): mean spend 39.39 LYD a month, median 22.08, 10th percentile 5.21, 90th percentile 82.13.
+- For 88.9% of active customers the nearest card to their usual airtime recharge is the smallest, 5 LYD, and for 9.1% it is 10 LYD; small top-ups dominate, as `Ali_Branch` argued.
+- Bundles held: 71.3% pay-as-you-go, 14.4% a monthly bundle (mostly Net 6, the floor for small data spend) and 14.3% a daily pack.
+- A test changes month 8 and checks that a window A view does not move; breaking the code to read month 8 makes it fail.
 
 ## T19 - Emergency credit advice
 

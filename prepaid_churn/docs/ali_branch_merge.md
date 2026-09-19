@@ -25,7 +25,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 |---|---|---|---|---|---|
 | 1 | Almadar source files (packages, tariffs, service rules) | `Almadar/*` | `data/almadar/source/` | T16 | Done (byte-for-byte copies) |
 | 2 | Almadar catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/almadar/offers.csv`, `data/almadar/market.toml`, `src/prepaid_churn/almadar.py` | T16 | Done |
-| 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Planned |
+| 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Done (the idea; a linear rate replaces the quantile map) |
 | 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | `src/prepaid_churn/bundle.py`, `src/prepaid_churn/scoring.py` | T8 | Done |
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | T10 | T10 | Planned |
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | T11 | T11 | Planned |
@@ -80,3 +80,11 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - "A batch of one row is its own worst case": a test scores each customer alone and compares it with the full batch.
   It found a real bug on the first run: pandas 3 typed an all-empty reason column differently in a one-row batch.
 - The zero SHAP background: avoided by design, because LightGBM's own `pred_contrib` needs no background sample.
+
+### Step 5 - T18 Almadar view of the real customers (2026-09-19, Taha + Claude)
+
+- Taha chose Ali's 40 LYD ARPU as the anchor.
+- Ali's `quantile_map.py` maps amounts onto the recharge cards through assumed card shares (54% on 5 LYD, and so on).
+  We used one linear rate instead (40 LYD over the measured mean recharge), which keeps the real differences between customers and needs only the ARPU assumption.
+  The result backs Ali's instinct: for 88.9% of active customers the nearest card to their usual top-up is 5 LYD.
+- The bundle a customer holds, which Ali's cannibalisation guard needs (T11), comes from the real monthly and short pack purchases of the upGrad data.
