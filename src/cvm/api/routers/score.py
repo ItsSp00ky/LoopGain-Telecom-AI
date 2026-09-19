@@ -22,11 +22,9 @@ async def score_churn(payload: ChurnScoreRequest, request: Request) -> ChurnScor
     Target: zero revenue-generating events for >= 30 consecutive days in the
     prediction window. Framing is 90d observation -> 15d gap -> 30d outcome.
     """
-    models = getattr(request.app.state, "models", {})
+    from cvm.models.m1_churn.predict import MODEL_KEY, score_batch
 
-    # TODO(E2): replace with the real inference path.
-    #   from cvm.models.m1_churn.predict import score_batch
-    #   return score_batch(payload, models)
+    models = getattr(request.app.state, "models", {})
     if not models:
         raise HTTPException(
             status_code=503,
@@ -36,15 +34,25 @@ async def score_churn(payload: ChurnScoreRequest, request: Request) -> ChurnScor
             ),
         )
 
-    scores = [
-        ChurnScore(
-            subscriber_id=sid,
-            churn_probability=0.0,
-            decile=10,
-            model_version="stub",
-        )
-        for sid in payload.subscriber_ids
-    ]
+    # The registry stores M1 as a bundle -- the calibrated model plus the
+    # training column list. `score_batch` wants the model with `.columns` set,
+    # which is how it aligns a serving batch to the training matrix.
+    bundle = models.get("m1_churn_lightgbm")
+    if bundle is None:
+        raise HTTPException(status_code=503, detail="m1_churn_lightgbm is not loaded.")
+    model = bundle["model"] if isinstance(bundle, dict) else bundle
+    if isinstance(bundle, dict) and getattr(model, "columns", None) is None:
+        model.columns = bundle["columns"]
+
+    try:
+        return score_batch(payload, {MODEL_KEY: model, **models})
+    except KeyError as exc:
+        # A subscriber the store has never seen. 404 rather than a silent gap:
+        # a caller that asked for 500 and got 480 back cannot tell a cold
+        # subscriber from a bug, and will assume the latter.
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    scores: list[ChurnScore] = []
     return ChurnScoreResponse(
         scores=scores,
         scored_at=datetime.now(UTC),

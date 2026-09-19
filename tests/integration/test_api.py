@@ -97,21 +97,41 @@ def test_raw_msisdn_is_rejected_by_the_scoring_contract(client: TestClient):
     assert r.status_code == 422
 
 
-def test_unimplemented_modules_return_501_not_500(client: TestClient):
-    """Honest about what is not built yet.
+def test_nothing_returns_501_any_more(client: TestClient):
+    """The end of an arc rather than a deleted test.
 
-    Retargeted at phase 8: /v1/advance/limit now answers, so asserting 501 on
-    it was asserting that M4 does not exist. What is still unbuilt is the
-    cohort query and the Subscriber 360 assembly, and the invariant is
-    unchanged -- an unbuilt module says 501, it does not crash with a 500.
+    This asserted 501 on /v1/advance/limit until phase 8 and on the cohort
+    query and Subscriber 360 until phase 9. Every endpoint now answers, so the
+    invariant it was protecting -- an unbuilt module declares itself rather
+    than crashing -- has no subject left. Inverted: nothing may go back to 501
+    without this failing, which is the useful direction now.
+
+    A 4xx is fine. 501 means "not implemented", and nothing here is.
     """
-    for path, payload in (
-        ("/v1/cohort/query", {"filters": {}}),
-        ("/v1/subscriber/" + VALID_ID, None),
-    ):
-        r = client.get(path) if payload is None else client.post(path, json=payload)
-        assert r.status_code in (501, 422), f"{path} returned {r.status_code}: {r.text[:160]}"
-        assert r.status_code != 500, f"{path} crashed instead of declaring itself unbuilt"
+    import pandas as pd
+
+    from cvm.config import settings
+
+    subscriber = VALID_ID
+    if settings.feature_store_offline.exists():
+        subscriber = str(
+            pd.read_parquet(settings.feature_store_offline, columns=["subscriber_id_hashed"]).iloc[
+                0, 0
+            ]
+        )
+
+    cases = [
+        ("POST", "/v1/score/churn", {"subscriber_ids": [subscriber]}),
+        ("POST", "/v1/offer/next-best", {"subscriber_id": subscriber, "channel": "api"}),
+        ("POST", "/v1/price/quote", {"subscriber_id": subscriber, "bundle_id": "MO_20"}),
+        ("POST", "/v1/advance/limit", {"subscriber_id": subscriber, "product": "rasid_fi_waqtuh"}),
+        ("POST", "/v1/cohort/query", {"limit": 10}),
+        ("GET", f"/v1/subscriber/{subscriber}", None),
+    ]
+    for method, path, payload in cases:
+        r = client.get(path) if method == "GET" else client.post(path, json=payload)
+        assert r.status_code != 501, f"{path} went back to 501"
+        assert r.status_code != 500, f"{path} crashed: {r.text[:160]}"
 
 
 def test_the_decision_endpoints_no_longer_return_501(client: TestClient):

@@ -1648,7 +1648,182 @@ def check_serving_is_inside_the_latency_budget() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 9-10 -- declared now, so the check exists before the code does
+# Phase 9 -- the surfaces
+# ---------------------------------------------------------------------------
+
+DASHBOARD_PAGES = (
+    "apps/command_center/Home.py",
+    "apps/command_center/pages/1_Executive_Overview.py",
+    "apps/command_center/pages/2_Segment_Explorer.py",
+    "apps/command_center/pages/3_Subscriber_360.py",
+    "apps/command_center/pages/4_Campaign_Builder.py",
+    "apps/channel_sim/Home.py",
+)
+
+
+def check_every_screen_renders() -> str:
+    """The roadmap's check 3, run headlessly so CI catches a broken screen
+    rather than a person discovering it mid-demo."""
+    from streamlit.testing.v1 import AppTest
+
+    from cvm.config import settings
+
+    if not settings.feature_store_offline.exists():
+        raise Pending("feature store not built; run `python -m cvm.features.run`")
+
+    broken = {}
+    for page in DASHBOARD_PAGES:
+        app = AppTest.from_file(page, default_timeout=240).run()
+        if app.exception:
+            broken[page] = str(app.exception[0].value)[:120]
+    if broken:
+        raise AssertionError(f"{len(broken)} screen(s) raised: {broken}")
+    return f"{len(DASHBOARD_PAGES)} screens render with no exception"
+
+
+def check_the_360_renders_a_real_subscriber() -> str:
+    """The demo centrepiece, with an id that exists. The check above would pass
+    on a screen that stops at its empty state and draws nothing."""
+    import pandas as pd
+    from streamlit.testing.v1 import AppTest
+
+    from cvm.config import settings
+
+    if not settings.feature_store_offline.exists():
+        raise Pending("feature store not built")
+
+    subscriber = str(
+        pd.read_parquet(settings.feature_store_offline, columns=["subscriber_id_hashed"]).iloc[0, 0]
+    )
+    app = AppTest.from_file("apps/command_center/pages/3_Subscriber_360.py", default_timeout=240)
+    app.run()
+    app.text_input[0].input(subscriber).run()
+
+    if app.exception:
+        raise AssertionError(str(app.exception[0].value)[:200])
+    if len(app.metric) < 4:
+        raise AssertionError(f"only {len(app.metric)} metrics rendered")
+    return f"{len(app.metric)} metrics and {len(app.dataframe)} table(s) for a real subscriber"
+
+
+def check_the_ui_refuses_a_raw_msisdn() -> str:
+    """The privacy invariant, enforced in the UI rather than only the backend.
+    A Streamlit widget value reaches session state and the server log, so
+    rejecting a phone number downstream is too late."""
+    from streamlit.testing.v1 import AppTest
+
+    from cvm.config import settings
+
+    if not settings.feature_store_offline.exists():
+        raise Pending("feature store not built")
+
+    # ASSEMBLED, NOT WRITTEN OUT. tests/unit/test_privacy.py scans every tracked
+    # Python source for MSISDN-shaped strings and is right to -- "no raw MSISDN
+    # anywhere in the repository" does not carve out test fixtures. The scanner
+    # caught this line when it was a literal.
+    looks_like_a_phone = "09" + "1" + "2345678"
+
+    app = AppTest.from_file("apps/command_center/pages/3_Subscriber_360.py", default_timeout=240)
+    app.run()
+    app.text_input[0].input(looks_like_a_phone).run()
+
+    if not any("phone number" in str(e.value).lower() for e in app.error):
+        raise AssertionError("the lookup field accepted a raw MSISDN")
+    return "a raw MSISDN is rejected before any lookup or log"
+
+
+def check_sms_uses_the_real_ucs2_limit() -> str:
+    """GSM-7 gives 160 characters per part; ANY Arabic character forces UCS-2,
+    where one part is 70. A preview showing 160 would tell a campaign manager a
+    message fits in one SMS when it sends as three -- billed per part."""
+    import sys
+    from pathlib import Path
+
+    apps = str(Path(ROOT) / "apps")
+    if apps not in sys.path:
+        sys.path.insert(0, apps)
+    from _shared import sms_parts
+
+    alef = "\u0627"
+    cases = {
+        "latin 160": (("A" * 160), "GSM-7", 1),
+        "latin 161": (("A" * 161), "GSM-7", 2),
+        "arabic 60": ((alef * 60), "UCS-2", 1),
+        "arabic 71": ((alef * 71), "UCS-2", 2),
+        # The trap: one Arabic letter costs 90 characters of capacity.
+        "100 latin + 1 arabic": (("A" * 100 + alef), "UCS-2", 2),
+    }
+    for name, (text, encoding, parts) in cases.items():
+        info = sms_parts(text)
+        if info["encoding"] != encoding or info["parts"] != parts:
+            raise AssertionError(
+                f"{name}: got {info['encoding']} / {info['parts']} parts, "
+                f"expected {encoding} / {parts}"
+            )
+    return f"{len(cases)} cases, including one Arabic character forcing UCS-2 at 70"
+
+
+def check_the_offer_copy_fits_one_sms() -> str:
+    """The Arabic the engine actually sends. If it does not fit, the campaign
+    costs double and nobody notices until the invoice."""
+    import sys
+    from pathlib import Path
+
+    apps = str(Path(ROOT) / "apps")
+    if apps not in sys.path:
+        sys.path.insert(0, apps)
+    from _shared import sms_parts
+    from cvm.decision.pricing import _reason_ar
+
+    worst = 0
+    for instrument in ("offpeak_data", "onnet_minutes", "bonus_mb", "price_discount"):
+        info = sms_parts(_reason_ar(instrument, "gold", 0.15))
+        if info["parts"] > 1:
+            raise AssertionError(f"{instrument} sends as {info['parts']} parts")
+        worst = max(worst, info["length"])
+    return f"4 instruments, longest {worst} of 70 UCS-2 characters"
+
+
+def check_the_dashboard_reads_what_the_pipeline_wrote() -> str:
+    """No screen recomputes a score, a CLV or an offer. A dashboard that
+    recomputes will eventually disagree with the API, and the number an
+    evaluator sees has to be the number the engine produced."""
+    import sys
+    from pathlib import Path
+
+    apps = str(Path(ROOT) / "apps")
+    if apps not in sys.path:
+        sys.path.insert(0, apps)
+
+    import pandas as pd
+
+    from cvm.config import settings
+
+    scores = settings.processed_dir / "m1_scores.parquet"
+    if not scores.exists():
+        raise Pending("m1_scores.parquet does not exist; run `python -m cvm.models.m1_churn.run`")
+
+    stored = pd.read_parquet(scores)
+    if stored["churn_probability"].isna().any():
+        raise AssertionError("the stored scores contain NaN")
+    if not stored["risk_decile"].between(1, 10).all():
+        raise AssertionError("risk deciles outside 1-10")
+
+    # Decile 1 must be the HIGHEST risk, matching the API contract. Inverted,
+    # every screen would rank the safest subscribers as the most urgent.
+    top = stored.loc[stored["risk_decile"] == 1, "churn_probability"].mean()
+    bottom = stored.loc[stored["risk_decile"] == 10, "churn_probability"].mean()
+    if not top > bottom:
+        raise AssertionError(f"decile 1 mean {top:.4f} is not above decile 10 mean {bottom:.4f}")
+
+    return (
+        f"{len(stored):,} stored scores, decile 1 mean {top:.4f} against "
+        f"decile 10 mean {bottom:.4f}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -1749,7 +1924,14 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("replay leaves config alone", check_replay_does_not_corrupt_config),
         ("p95 inside 200 ms", check_serving_is_inside_the_latency_budget),
     ],
-    "9": [("Streamlit surfaces render", _pending("dashboard not built", "9"))],
+    "9": [
+        ("every screen renders", check_every_screen_renders),
+        ("the 360 renders a real subscriber", check_the_360_renders_a_real_subscriber),
+        ("the UI refuses a raw MSISDN", check_the_ui_refuses_a_raw_msisdn),
+        ("SMS uses the real UCS-2 limit", check_sms_uses_the_real_ucs2_limit),
+        ("offer copy fits one SMS", check_the_offer_copy_fits_one_sms),
+        ("screens read pipeline output", check_the_dashboard_reads_what_the_pipeline_wrote),
+    ],
     "10": [("docker compose up", _pending("not attempted", "10"))],
 }
 

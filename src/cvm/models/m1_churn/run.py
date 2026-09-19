@@ -163,6 +163,38 @@ def main() -> None:
         artefacts / "m1_churn.joblib",
     )
 
+    # PER-SUBSCRIBER SCORES FOR THE WHOLE BASE. The cohort query and the
+    # Executive Overview both need "who is at risk" across 100,000 subscribers,
+    # and re-scoring that on every dashboard filter is a screen nobody uses
+    # twice. Written once here, where the model already exists.
+    everyone = pd.read_parquet(settings.feature_store_offline)
+    latest = (
+        everyone.sort_values("snapshot_date")
+        .drop_duplicates(subset=["subscriber_id_hashed"], keep="last")
+        .reset_index(drop=True)
+    )
+    X_all, _ = gradient_boosting.prepare_matrix(latest)
+    X_all = X_all.reindex(columns=columns, fill_value=0.0)
+    probability = calibrated[best_name].predict_proba(X_all)[:, 1]
+
+    pd.DataFrame(
+        {
+            "subscriber_id_hashed": latest["subscriber_id_hashed"].astype(str),
+            "churn_probability": probability,
+            # 1 is the HIGHEST risk, matching the API contract.
+            "risk_decile": pd.Series(probability)
+            .rank(pct=True, ascending=False)
+            .mul(10)
+            .apply(lambda v: int(min(10, max(1, -(-v // 1))))),
+        }
+    ).to_parquet(settings.processed_dir / "m1_scores.parquet", index=False)
+    log.info(
+        "scores: %d subscribers written, mean %.4f, top-decile mean %.4f",
+        len(latest),
+        probability.mean(),
+        probability[probability >= pd.Series(probability).quantile(0.9)].mean(),
+    )
+
     # --- Report --------------------------------------------------------------
     print(f"\n{table.to_string(index=False, float_format=lambda v: f'{v:.4f}')}")
     print(f"\n{'CALIBRATION':<22}{'raw':>12}{'calibrated':>14}")

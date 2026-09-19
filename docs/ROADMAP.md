@@ -8,13 +8,14 @@ This document is the order, and after every step a command that tells you
 whether you got it right. If a check fails, do not move on — every layer below
 inherits the mistake, and the expensive failures here are the silent ones.
 
-**Phases 1 to 8 are written and verified**, and the function burn-down is at
+**Phases 1 to 9 are written and verified**, and the function burn-down is at
 **100%**. The quality gate passes, uplift is validated on Criteo's real
 randomised arms at **Qini 0.0771**, both the leakage suite and the guardrail
-suite are green with **every xfail deleted**, and the decision engine serves
-all three endpoints at a **37 ms p95** against a 200 ms budget.
+suite are green with **every xfail deleted**, the decision engine serves at a
+**37 ms p95** against a 200 ms budget, and all six dashboard screens render
+headlessly in CI.
 
-**Next is phase 9 — the surfaces.** The engine works; nobody can see it yet.
+**Only phase 10 remains — shipping it.**
 
 ## Two commands
 
@@ -1248,43 +1249,111 @@ the full churn range, and the budget is checked at four budgets including zero.
 
 <a id="phase-9"></a>
 
-## Phase 9 · Surfaces — 2 days
+## Phase 9 · Surfaces — **DONE**
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+Six screens across two Streamlit apps, all rendering against real pipeline
+output. `scripts/check_phase.py 9` passes 6 of 6, and every screen is tested
+**headlessly in CI** rather than by clicking through before a demo.
+
+| app | screens |
+|---|---|
+| Command Center | Home, Executive Overview, Segment Explorer, Subscriber 360, Campaign Builder |
+| Channel Simulator | USSD menu, SMS preview |
+
+### Three API endpoints had to land first
+
+`/v1/score/churn` was **returning 0.0 for every subscriber** — `score_batch`
+was built in phase 4 and never wired, so the endpoint served a stub that looked
+like a working model. `/v1/cohort/query` and `/v1/subscriber/{id}` were 501s.
+All three now answer, and M1 writes `m1_scores.parquet` for the whole base so
+the dashboard is not re-scoring 100,000 subscribers on every filter change.
+
+**Revenue at risk is CLV weighted by probability**, not the CLV of everyone in
+the top deciles. 3,500 subscribers at 22% risk is not 3,500 lifetimes of
+revenue, and quoting it that way would overstate the headline roughly fivefold
+— in the flattering direction, which is when to be careful.
+
+### The screens say what the analysis found, including the awkward parts
+
+**Segment Explorer leads with the finding it would be easier to bury.** Two
+independent methods say three groups; the taxonomy says eight; adjusted Rand at
+matched k is 0.137. The screen states plainly that the eight RFM-LE segments
+are a reporting convention rather than a discovered structure — and then shows
+the cross-tab, where the least-pure cluster is the group the rules have no
+single word for.
+
+**Executive Overview is built around the do-nothing baseline**, because a model
+metric only becomes an executive number when it is next to the alternative. The
+uplift it applies is the **Criteo** figure measured on real randomised arms, not
+one taken from the generated population, and the caption says so.
+
+**Campaign Builder shows what the guardrails removed before showing what the
+budget bought.** Sleeping dogs, negative expected value, subscribers whose CLV
+ceiling cannot justify the offer — each with a count and a stated reason. The
+mandatory control holdout is on screen, not in a footnote: without a
+counterfactual there is no way to isolate net margin impact, which is pain
+point P4.
+
+**Subscriber 360 renders the SHAP waterfall as sentences** — "has not topped up
+in 23 days", never `days_since_last_topup = 23, shap = +0.14` — and shows every
+guardrail that was *considered*, not only those that bound.
+
+### The SMS limit is 70, not 160
+
+GSM-7 gives 160 characters per part. **Any Arabic character forces the whole
+message into UCS-2, where one part is 70** — and 67 once a message spans parts,
+because the concatenation header costs 6 bytes. Measured:
+
+| message | encoding | parts |
+|---|---|---|
+| 160 Latin characters | GSM-7 | 1 |
+| 161 Latin characters | GSM-7 | 2 |
+| 60 Arabic characters | UCS-2 | 1 |
+| 71 Arabic characters | UCS-2 | **2** |
+| **100 Latin + 1 Arabic** | **UCS-2** | **2** |
+
+That last row is the trap: one Arabic letter in an otherwise Latin message
+costs 90 characters of capacity. A preview showing 160 would tell a campaign
+manager a message fits in one SMS when it sends as three, and they are billed
+per part. All four of the engine's Arabic templates fit one part — the longest
+is 51 of 70.
+
+### Privacy, enforced in the UI
+
+The Subscriber 360 lookup accepts 64 hex characters and refuses anything that
+looks like a phone number, **before** any lookup or log. A Streamlit widget
+value reaches session state and the server log, so rejecting a raw MSISDN at
+the backend is too late. There is a check for it.
+
+### The honest state of two things
+
+The retention ladder uses the **configured fallback** boundaries of 7 / 30 / 60,
+and logs a warning saying so, because M1b returns no inflections on this
+population — the generator places churn dates uniformly, so there is nothing to
+derive. The derivation is built and validated; the data cannot feed it yet.
+
+Every screen carries the same notice: these figures come from generated data.
+The uplift model is validated separately on Criteo's real randomised arms, and
+that is the only performance claim in the project that rests on real outcomes.
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 9
 ```
 
-**Check 1** — `/health` reports `ok`, which it does only when every model is
-loaded and the feature store is readable:
+Expect 6 passed, 0 failed.
 
 ```bash
-python -c "
-from fastapi.testclient import TestClient
-from cvm.api.main import app
-b = TestClient(app).get('/health').json()
-print(b['status'], b['models_loaded'])
-assert b['status'] == 'ok', 'still degraded -- check models_loaded'
-"
+pytest tests/unit/test_surfaces.py -q
 ```
 
-**Check 2** — latency. Delete the `xfail` on the p95 test:
-
-```bash
-pytest tests/integration/test_api.py::test_tabular_scoring_meets_the_p95_budget -q
-```
-
-**Check 3** — the dashboards render with no traceback:
+15 tests, including all six screens rendered headlessly.
 
 ```bash
 streamlit run apps/command_center/Home.py
 streamlit run apps/channel_sim/Home.py
 ```
-
-Click every screen. Arabic copy must render right-to-left, and the SMS preview
-must enforce the real 70-character UCS-2 limit rather than 160.
 
 ---
 
