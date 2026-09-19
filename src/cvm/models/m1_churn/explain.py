@@ -185,6 +185,25 @@ class LinearExplainer:
         if not hasattr(self.model, "coef_"):
             raise TypeError(f"{type(self.model).__name__} has no coef_; it is not linear")
         self.coef = np.asarray(self.model.coef_).ravel()
+
+        # A ONE-ROW BACKGROUND IS NOT A BACKGROUND. The attribution is
+        # `coef_j * (x_j - E[x_j])`, so if E[x] is computed from the single row
+        # being explained, every term is `coef_j * 0` and the whole explanation
+        # is exactly zero -- silently, with the right shape and the right
+        # dtype. Both callers did this: the API explained a one-subscriber
+        # batch against itself, and Subscriber 360 drew a SHAP waterfall whose
+        # every bar was 0.0 while the plain-language text read "lowers churn
+        # risk" for a subscriber scored at 1.0000.
+        #
+        # Raising is deliberate. The serving path catches it and returns no
+        # drivers, and no explanation is strictly better than a confident
+        # wrong one: an empty panel gets reported, five zero bars get believed.
+        if len(X) < 2:
+            raise ValueError(
+                f"background has {len(X)} row(s); a linear SHAP background must describe a "
+                "population, not the row being explained. Pass the training background "
+                "carried on the model bundle."
+            )
         self.background = np.asarray(self.steps.transform(X)).mean(axis=0)
 
     def shap_values(self, X) -> np.ndarray:
@@ -192,26 +211,36 @@ class LinearExplainer:
         return (transformed - self.background) * self.coef
 
 
-def explainer_for(model, X: pd.DataFrame):
+def explainer_for(model, X: pd.DataFrame, background: pd.DataFrame | None = None):
     """The right explainer for whatever model won. Trees get exact TreeSHAP,
     linear pipelines get exact linear attribution, and anything else says so
-    rather than returning a plausible approximation nobody asked for."""
+    rather than returning a plausible approximation nobody asked for.
+
+    `background` is the reference population an attribution is measured
+    AGAINST -- "compared to a typical subscriber, this one tops up less". It
+    belongs to training and is carried on the model bundle. It defaults to `X`
+    only for the batch case at training time, where X is the test matrix and
+    the distinction does not bite; every serving caller must pass it, because
+    a serving batch can be one row and a one-row background yields exactly
+    zero for every feature.
+    """
     from cvm.models.m1_churn.calibration import CalibratedModel
 
     base = model.model if isinstance(model, CalibratedModel) else model
+    reference = X if background is None else background
 
     if hasattr(base, "named_steps"):
         final = base[-1]
         if hasattr(final, "coef_"):
             log.info("shap: exact linear attribution over %s", type(final).__name__)
-            return LinearExplainer(base, X)
+            return LinearExplainer(base, reference)
         raise TypeError(
             f"{type(final).__name__} is neither a tree nor linear. KNN, SVM and Naive "
             "Bayes are in the benchmark for comparison, not for serving: nothing "
             "explains them to a subscriber, and an unexplainable score cannot carry an "
             "offer. If one of them wins, that is a finding to report, not a model to ship."
         )
-    return tree_explainer(base, X)
+    return tree_explainer(base, reference)
 
 
 def tree_explainer(model, X: pd.DataFrame):

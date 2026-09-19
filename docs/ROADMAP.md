@@ -15,8 +15,8 @@ suite are green with **every xfail deleted**, the decision engine serves at a
 **37 ms p95** against a 200 ms budget, and all six dashboard screens render
 headlessly in CI.
 
-**Phase 10 is done.** Both images build and the stack comes up with `/health`
-reporting `ok` from inside a container. Across all eleven phases:
+**Phase 10 is done.** Both images build, the stack comes up, and a real
+subscriber is scored through it end to end. Across all eleven phases:
 **84 checks passed, 0 failed, 1 pending** — and the one pending is the git
 remote, which is a push nobody has made rather than code nobody has written.
 
@@ -1443,15 +1443,117 @@ Not that files exist — that the system runs.
 | docker daemon reachable | 29.8.0 |
 | compose file is valid | 4 services, every Dockerfile present |
 | images build | api 1.84 GB, ui 2.07 GB |
-| **the stack comes up healthy** | **api healthy, answering on :8000, `/health: ok`** |
+| **the stack comes up and scores a subscriber** | **api healthy on :8000, and a real subscriber scored through it** |
 | containers run as non-root | both run as the unprivileged `cvm` user |
 | no secret baked into an image | no salt, token or key in either image or Dockerfile |
 | pipeline artefacts reproduce | 7 Parquet files, byte for byte |
 | the demo path is runnable | 6 entry points |
 
-`/health` is `ok` only when every model artefact is loaded **and** the feature
-store is readable — so a stack that comes up healthy has also proved its volume
-mounts are right.
+`/health` is `ok` only when every model artefact is **usable** and the feature
+store is readable. The word doing the work is *usable*, and it was earned late.
+
+---
+
+### The phase was signed off on a check that could not see three live bugs
+
+This section previously said that a stack coming up healthy had proved its
+volume mounts were right, and stopped there. That was true and it was not
+enough. **Nothing in eleven phases had ever scored one real subscriber through
+the running container**, and three separate faults were waiting on that path.
+All three are fixed; recording them matters more than the fixes.
+
+**They share a single shape: a statistic that belongs to training, taken from
+the request instead.** And all three need the same trigger to show — a batch of
+**one row**, which is exactly what an evaluator does when they look up a
+subscriber, and exactly what the test suite never did.
+
+#### 1 · The serving image outran its own pickles
+
+`pyproject.toml` said `scikit-learn>=1.5`, so the image resolved **1.9.1**
+against artefacts pickled by **1.7.2**. Every artefact deserialised,
+`load_registry` logged "7 of 7 loaded", `/health` returned `ok`, Docker marked
+the container healthy — and the first real request returned **500**:
+`'SimpleImputer' object has no attribute '_fill_dtype'`, a private attribute
+the newer `transform()` reads and the older `fit()` never wrote. It took
+`/v1/score/churn`, `/v1/subscriber/{id}` and the Subscriber 360 SHAP waterfall
+with it.
+
+sklearn had said so, five times, in a warning whose own text is "might lead to
+breaking code **or invalid results**" — to stderr, inside a container.
+
+Pinned to `>=1.7,<1.8`; `registry.smoke_check()` now pushes one row through
+every estimator at startup, because **loading is not working** and only the
+second matters to a caller; version skew logs at `ERROR`, which is the one that
+catches the silent case a smoke check cannot — a skewed pickle that still
+predicts, just wrongly.
+
+#### 2 · `time_to_churn_days: -9223372036854775808`
+
+`fit_cox` computed the training design — columns *and* medians — and returned
+neither, so the artefact never carried them. Serving improvised: it imputed
+with `design.median()` over **the batch being scored**. A one-subscriber
+request is a one-row batch, and the median of a single NaN is that same NaN.
+
+Two columns are undefined for anyone with fewer than two recharges in 90 days
+(`inter_recharge_gap_std`, `recharge_irregularity`). The NaN survived the
+`fillna`, went through the Cox linear predictor, and came out of `.astype(int)`
+as **INT64_MIN** in the response body — well-formed, schema-valid, and wrong by
+nine quintillion days.
+
+This is the same fault `_design(medians=)` was written in phase 4 to prevent.
+The parameter existed. The statistic just never reached the artefact.
+
+Fixed at both ends: `fit_cox` attaches `design_columns` and `design_medians`,
+and a non-finite expectation now reports `null`, which the contract already
+allowed. The artefact was rebuilt through the same seeded path and its held-out
+concordance matches the recorded **0.8485359882** to 1e-9 — the same model,
+now carrying its design.
+
+#### 3 · Every SHAP bar was exactly zero
+
+The worst of the three, because it did not fail. For a linear model the
+attribution is `coef_j · (x_j − E[x_j])`, and both serving callers built the
+explainer with **the rows they were about to explain** as the reference
+population. For one row, `E[x] = x`, so every contribution is `coef_j · 0`.
+
+Exactly zero, for every feature, for every subscriber — with the right shape,
+the right dtype, and a plain-language sentence under each bar reading **"lowers
+churn risk"**, because `0 > 0` is false. On a subscriber scored at **1.0000**.
+The Subscriber 360 waterfall, the explainability deliverable, had never drawn a
+non-zero bar.
+
+The bundle now carries a 500-row training background; `LinearExplainer`
+**raises** on a background of fewer than two rows rather than returning zeros,
+and the serving path turns that into no drivers at all. An empty panel gets
+reported. Five zero bars get believed.
+
+With it fixed, the same subscriber reads:
+
+```
++4.9521  has not topped up in 117 days — raises churn risk
++1.9362  recharges are irregular (variation 2.33) — raises churn risk
+```
+
+Warm p95 for a one-row score is **54 ms** against the 200 ms budget, so the
+background costs nothing that matters.
+
+#### What the checks do now
+
+`check_the_stack_comes_up` no longer reads a readiness flag. It posts a
+subscriber id drawn from the feature store and requires a calibrated
+probability back, which exercises the volume mounts, the model load, the
+sklearn pipeline, the store read and the response contract in one call.
+`/health` gained an additive `model_errors` field, so "degraded" arrives with
+the reason attached; `docs/INTEGRATION.md` is unchanged.
+
+Nine tests were added. The pin test was mutation-checked by unbounding the pin, and the smoke check was verified against the actually-broken 1.9.1
+container, where it flagged `m1_churn_lightgbm` and nothing else — correct, since only M1's pipeline contains the imputer.
+
+**The honest lesson is not the pin.** It is that deserialisation was being read
+as readiness, a batch was being read as a population, and every check in the
+project agreed with both. A green suite and eleven green phases did not mean
+the thing worked — only that nobody had asked it to answer a question the way a
+person would.
 
 ### Still outstanding, and they are yours rather than the code's
 

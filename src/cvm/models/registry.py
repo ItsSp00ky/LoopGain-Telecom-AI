@@ -11,6 +11,7 @@ anything -- it loads.
 from __future__ import annotations
 
 import logging
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -56,7 +57,21 @@ def load_registry(models_dir: Path) -> dict[str, Any]:
             continue
         try:
             if kind == "joblib":
-                loaded[name] = joblib.load(path)
+                # sklearn emits InconsistentVersionWarning when a pickle was
+                # written by a different version, and says plainly that this
+                # "might lead to breaking code OR INVALID RESULTS". It is a
+                # warning, so it goes to stderr and nobody reads it: the
+                # serving image ran sklearn 1.9.1 against 1.7.2 artefacts and
+                # printed four of these before returning 500 on the first
+                # request. Promoted to an error log, because the silent case --
+                # a skewed pickle that still predicts, just wrongly -- is the
+                # one no smoke check can catch.
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always")
+                    loaded[name] = joblib.load(path)
+                for w in caught:
+                    if type(w.message).__name__ == "InconsistentVersionWarning":
+                        log.error("VERSION SKEW loading %s: %s", name, w.message)
             elif kind == "lifetimes_bgnbd":
                 from lifetimes import BetaGeoFitter
 
@@ -127,3 +142,80 @@ def log_run(module: str, params: dict, metrics: dict, artifacts: dict | None = N
         (fallback / f"{module}_{run_id}.json").write_text(json.dumps(record, indent=2, default=str))
         log.warning("mlflow unreachable (%s); logged %s offline to %s", exc, module, fallback)
         return run_id
+
+
+def _feature_names(estimator: Any, bundle: Any) -> list[str] | None:
+    """Where a fitted estimator records the columns it was trained on.
+
+    Four places, because four libraries. None means "cannot be smoke-checked"
+    and is reported as a skip rather than a pass -- a check that silently
+    succeeds when it could not run is worse than no check.
+    """
+    if isinstance(bundle, dict) and isinstance(bundle.get("columns"), list):
+        return list(bundle["columns"])
+    for attr in ("columns", "feature_names_in_", "feature_name_"):
+        names = getattr(estimator, attr, None)
+        if names is not None and len(names) > 0:
+            return [str(c) for c in names]
+    return None
+
+
+def smoke_check(models: dict[str, Any]) -> dict[str, str]:
+    """Push one row through every loaded scorer. Returns name -> error message.
+
+    LOADING IS NOT WORKING, and the gap between them is not theoretical. The
+    serving image resolved scikit-learn 1.9.1 against artefacts pickled by
+    1.7.2. Every artefact deserialised without complaint, load_registry logged
+    "7 of 7 artefacts loaded", /health reported "ok", the container was marked
+    healthy -- and the first real request returned 500 with
+    `'SimpleImputer' object has no attribute '_fill_dtype'`, a private
+    attribute the newer transform() reads and the older fit() never wrote.
+
+    A readiness check that only proves deserialisation cannot see that. This
+    runs one zero-filled row through each estimator's predict_proba, which
+    exercises the whole pipeline -- imputer, scaler, booster -- at startup,
+    where a failure costs a restart instead of a demo.
+
+    Zeros are a legitimate input here and not a shortcut: every column in the
+    matrix is a count, a ratio or a currency amount, so an all-zero row is a
+    subscriber with no activity. The check asserts the call SUCCEEDS, never
+    that the probability means anything.
+    """
+    import numpy as np
+    import pandas as pd
+
+    failures: dict[str, str] = {}
+    checked = 0
+
+    for name, bundle in models.items():
+        estimators: list[tuple[str, Any]] = []
+        if isinstance(bundle, dict):
+            inner = bundle.get("model")
+            if inner is not None:
+                estimators.append((name, inner))
+            else:  # m3_uplift is {treated, control}; m4 is {airtime, data}
+                estimators.extend(
+                    (f"{name}.{k}", v) for k, v in bundle.items() if hasattr(v, "predict_proba")
+                )
+        elif hasattr(bundle, "predict_proba"):
+            estimators.append((name, bundle))
+
+        for label, estimator in estimators:
+            columns = _feature_names(estimator, bundle)
+            if columns is None:
+                log.warning("smoke check: %s exposes no feature names; SKIPPED, not passed", label)
+                continue
+            try:
+                row = pd.DataFrame(np.zeros((1, len(columns))), columns=columns)
+                estimator.predict_proba(row)
+                checked += 1
+            except Exception as exc:
+                failures[label] = f"{type(exc).__name__}: {exc}"
+                log.error("smoke check: %s loaded but CANNOT PREDICT -- %s", label, exc)
+
+    log.info(
+        "smoke check: %d estimator(s) predicted a row%s",
+        checked,
+        f"; {len(failures)} FAILED {sorted(failures)}" if failures else "",
+    )
+    return failures

@@ -1894,11 +1894,19 @@ def check_images_build() -> str:
 
 
 def check_the_stack_comes_up() -> str:
-    """`docker compose up` with the API reporting healthy.
+    """`docker compose up`, and then a real subscriber scored through it.
 
-    The healthcheck polls /health, which is "ok" only when every model artefact
-    is loaded AND the feature store is readable -- so a stack that comes up
-    healthy has also proved the volume mounts are right.
+    /health alone is NOT ENOUGH, and this check used to stop there. A readiness
+    flag proves the artefacts deserialised; it does not prove they predict. The
+    serving image resolved scikit-learn 1.9.1 against artefacts pickled by
+    1.7.2 -- every model loaded, /health said "ok", the container was marked
+    healthy, and /v1/score/churn returned 500 on the first real request with
+    `'SimpleImputer' object has no attribute '_fill_dtype'`.
+
+    So the check now posts a subscriber id read from the feature store and
+    requires a calibrated probability back. That exercises the whole path in
+    one call: the volume mounts, the model load, the sklearn pipeline, the
+    feature-store read and the response contract.
     """
     check_docker_daemon()
 
@@ -1929,15 +1937,57 @@ def check_the_stack_comes_up() -> str:
 
         # And it answers from OUTSIDE the container, which is what the port
         # mapping is for -- a healthcheck passing inside proves less.
+        import urllib.error
         import urllib.request
 
         with urllib.request.urlopen("http://localhost:8000/health", timeout=15) as response:
             body = json.loads(response.read())
         if body["status"] != "ok":
             missing = [k for k, v in body["models_loaded"].items() if not v]
-            raise AssertionError(f"/health is {body['status']}; not loaded: {missing}")
+            errors = body.get("model_errors") or {}
+            raise AssertionError(
+                f"/health is {body['status']}; not usable: {missing}"
+                + (f"; {errors}" if errors else "")
+            )
 
-        return f"api healthy and answering on :8000, status {body['status']}"
+        # --- and now make it actually work -------------------------------
+        import duckdb
+
+        store = ROOT / "data/processed/features_online.duckdb"
+        if not store.exists():
+            raise AssertionError(f"{store} is absent; run the pipeline before this check")
+        con = duckdb.connect(str(store), read_only=True)
+        try:
+            row = con.execute("select subscriber_id_hashed from features limit 1").fetchone()
+        finally:
+            con.close()
+        if row is None:
+            raise AssertionError("the feature store is empty; nothing to score")
+
+        request = urllib.request.Request(
+            "http://localhost:8000/v1/score/churn",
+            data=json.dumps({"subscriber_ids": [row[0]]}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                scored = json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            logs = _docker("compose", "logs", "--tail", "25", "api", timeout=60)
+            raise AssertionError(
+                f"/v1/score/churn returned {exc.code} on a healthy stack -- "
+                f"the models load but do not predict: {logs.stdout.strip()[-500:]}"
+            ) from exc
+
+        probability = scored["scores"][0]["churn_probability"]
+        if not 0.0 <= probability <= 1.0:
+            raise AssertionError(f"churn_probability {probability} is not a probability")
+
+        return (
+            f"api healthy on :8000 and scored a subscriber through it "
+            f"(p={probability:.4f}, {len(scored['scores'][0]['top_drivers'])} drivers)"
+        )
     finally:
         _docker("compose", "down", timeout=300)
 
@@ -2152,7 +2202,7 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("docker daemon reachable", check_docker_daemon),
         ("compose file is valid", check_compose_is_valid),
         ("images build", check_images_build),
-        ("the stack comes up healthy", check_the_stack_comes_up),
+        ("the stack comes up and scores a subscriber", check_the_stack_comes_up),
         ("containers run as non-root", check_the_image_runs_as_a_non_root_user),
         ("no secret baked into an image", check_no_secret_is_baked_into_an_image),
         ("pipeline artefacts reproduce", check_the_pipeline_is_reproducible_end_to_end),

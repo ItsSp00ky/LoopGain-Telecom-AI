@@ -336,6 +336,12 @@ class HealthResponse(BaseModel):
     env: str
     models_loaded: dict[str, bool]
     feature_store_reachable: bool
+    # Empty on a healthy API. Populated when an artefact deserialised but could
+    # not predict a row at startup -- a version-skewed pickle is the usual
+    # cause, and without the message the operator sees only "degraded".
+    # ADDITIVE: existing consumers ignore an unknown field, so this does not
+    # break the integration contract in docs/INTEGRATION.md.
+    model_errors: dict[str, str] = Field(default_factory=dict)
 
 
 class ErrorResponse(BaseModel):

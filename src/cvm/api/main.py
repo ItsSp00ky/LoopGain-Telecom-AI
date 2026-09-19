@@ -68,9 +68,21 @@ async def lifespan(app: FastAPI):
     seed = seed_everything()
     log.info("Starting AI CVM Suite API v%s (env=%s, seed=%d)", __version__, settings.env, seed)
 
-    from cvm.models.registry import load_registry
+    from cvm.models.registry import load_registry, smoke_check
 
     app.state.models = load_registry(settings.models_dir)
+
+    # An artefact that unpickles is not an artefact that predicts. Proving it
+    # here costs one row per model at startup and turns a 500 on the first
+    # request into a container that never reports healthy.
+    app.state.model_errors = smoke_check(app.state.models)
+    if app.state.model_errors:
+        log.error(
+            "%d model(s) loaded but cannot predict; /health will report degraded: %s",
+            len(app.state.model_errors),
+            app.state.model_errors,
+        )
+
     app.state.feature_store = _connect_store()
     app.state.started_at = time.time()
 

@@ -197,3 +197,30 @@ def test_tabular_scoring_meets_the_p95_budget(client: TestClient):
 
     p95 = float(np.percentile(timings, 95))
     assert p95 < 200, f"p95 is {p95:.0f} ms against a 200 ms budget"
+
+
+def test_health_reports_degraded_when_a_model_loads_but_cannot_predict(client: TestClient):
+    """The gap that let a broken container pass its own healthcheck.
+
+    `models_loaded` is read by every consumer as "usable". An artefact that
+    deserialises and then raises on predict_proba is not usable, and reporting
+    True because the bytes unpickled is exactly what marked the container
+    healthy while /v1/score/churn returned 500.
+    """
+    original = dict(getattr(client.app.state, "model_errors", {}))
+    try:
+        client.app.state.model_errors = {
+            "m1_churn_lightgbm": "AttributeError: 'SimpleImputer' object has no attribute '_fill_dtype'"
+        }
+        body = client.get("/health").json()
+
+        assert body["status"] == "degraded"
+        assert body["models_loaded"]["m1_churn_lightgbm"] is False
+        # And it says WHY -- "degraded" with no message sends the operator to
+        # the container logs to find a warning they were never going to read.
+        assert "_fill_dtype" in body["model_errors"]["m1_churn_lightgbm"]
+
+        # A failure in one model must not condemn the others.
+        assert body["models_loaded"]["m4_repayment_pd"] is True
+    finally:
+        client.app.state.model_errors = original

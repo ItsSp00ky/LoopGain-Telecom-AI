@@ -43,6 +43,11 @@ async def score_churn(payload: ChurnScoreRequest, request: Request) -> ChurnScor
     model = bundle["model"] if isinstance(bundle, dict) else bundle
     if isinstance(bundle, dict) and getattr(model, "columns", None) is None:
         model.columns = bundle["columns"]
+    # And the SHAP reference population, for the same reason: a serving batch
+    # can be one row, and a one-row background attributes exactly zero to
+    # every feature.
+    if isinstance(bundle, dict) and getattr(model, "background", None) is None:
+        model.background = bundle.get("background")
 
     try:
         return score_batch(payload, {MODEL_KEY: model, **models})

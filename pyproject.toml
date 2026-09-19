@@ -38,7 +38,12 @@ dependencies = [
 
 # --- Classical ML: survival, CLV, optimisation -----------------------------
 ml = [
-    "scikit-learn>=1.5",
+    # PINNED TO A MINOR SERIES, not >=. sklearn does not guarantee that a
+    # pickle written by one minor version loads into the next: the serving
+    # image resolved 1.9.1 against artefacts written by 1.7.2, every model
+    # unpickled cleanly, and the first /v1/score/churn request died on
+    # `'SimpleImputer' object has no attribute '_fill_dtype'`.
+    "scikit-learn>=1.7,<1.8",
     "lightgbm>=4.4",
     "xgboost>=2.1",
     "catboost>=1.2",
@@ -67,7 +72,12 @@ ml = [
 # Subscriber 360 waterfall, pulp for the campaign LP, and lifelines/lifetimes
 # because registry.load_registry deserialises a Cox fit and two BG/NBD fits.
 serve = [
-    "scikit-learn>=1.5",
+    # PINNED TO A MINOR SERIES, not >=. sklearn does not guarantee that a
+    # pickle written by one minor version loads into the next: the serving
+    # image resolved 1.9.1 against artefacts written by 1.7.2, every model
+    # unpickled cleanly, and the first /v1/score/churn request died on
+    # `'SimpleImputer' object has no attribute '_fill_dtype'`.
+    "scikit-learn>=1.7,<1.8",
     "lightgbm>=4.4",
     "shap>=0.45",
     "pulp>=2.8",

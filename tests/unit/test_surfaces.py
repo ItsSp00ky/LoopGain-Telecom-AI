@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -226,3 +227,92 @@ def test_importing_cvm_does_not_pull_torch_on_linux():
         assert module.register_conda_dll_directories() == []
     finally:
         sys.platform = real
+
+
+def test_scikit_learn_is_pinned_to_the_series_that_wrote_the_pickles():
+    """An unbounded `>=` on sklearn is a demo outage waiting for a rebuild.
+
+    The model artefacts ARE sklearn pickles, and sklearn does not guarantee one
+    minor version can load another's. `scikit-learn>=1.5` let the serving image
+    resolve 1.9.1 against artefacts written by 1.7.2: every artefact
+    deserialised, /health reported "ok", the container was marked healthy, and
+    /v1/score/churn returned 500 on the first request.
+
+    The upper bound is the whole point, so it is asserted rather than trusted
+    to survive the next dependency tidy-up.
+    """
+    import tomllib
+
+    root = Path(__file__).resolve().parents[2]
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+
+    pins = [
+        spec
+        for extra in project["project"]["optional-dependencies"].values()
+        for spec in extra
+        if spec.split(">")[0].split("[")[0].strip() == "scikit-learn"
+    ]
+    assert pins, "scikit-learn vanished from every extra"
+    for spec in pins:
+        assert (
+            "<" in spec
+        ), f"scikit-learn is unbounded ({spec!r}); a rebuild can outrun the pickles"
+
+
+# --- Loading is not working -------------------------------------------------
+
+
+class _Unpicklable:
+    """Deserialises perfectly. Raises the moment it is asked to do its job."""
+
+    feature_names_in_: ClassVar[list[str]] = ["a", "b"]
+
+    def predict_proba(self, X):
+        raise AttributeError("'SimpleImputer' object has no attribute '_fill_dtype'")
+
+
+class _Fine:
+    feature_names_in_: ClassVar[list[str]] = ["a", "b"]
+
+    def predict_proba(self, X):
+        import numpy as np
+
+        return np.tile([0.4, 0.6], (len(X), 1))
+
+
+def test_smoke_check_catches_a_model_that_loads_but_cannot_predict():
+    """The exact failure that reached a request, reproduced without a container."""
+    from cvm.models.registry import smoke_check
+
+    failures = smoke_check({"m1_churn_lightgbm": {"model": _Unpicklable(), "columns": ["a", "b"]}})
+
+    assert "m1_churn_lightgbm" in failures
+    assert "_fill_dtype" in failures["m1_churn_lightgbm"]
+
+
+def test_smoke_check_passes_a_working_model():
+    """Otherwise the test above passes for a check that flags everything."""
+    from cvm.models.registry import smoke_check
+
+    assert smoke_check({"m1_churn_lightgbm": {"model": _Fine(), "columns": ["a", "b"]}}) == {}
+    # And the two-estimator shape: m3 is {treated, control}, m4 is {airtime, data}.
+    assert smoke_check({"m3_uplift": {"treated": _Fine(), "control": _Fine()}}) == {}
+    assert "m3_uplift.control" in smoke_check(
+        {"m3_uplift": {"treated": _Fine(), "control": _Unpicklable()}}
+    )
+
+
+def test_smoke_check_skips_rather_than_passes_what_it_cannot_check():
+    """An estimator exposing no feature names must not be reported as fine.
+
+    A check that silently succeeds when it could not run is worse than none --
+    it converts "unknown" into "verified" in the operator's head.
+    """
+    from cvm.models.registry import _feature_names, smoke_check
+
+    class _Nameless:
+        def predict_proba(self, X):
+            raise AssertionError("must never be called: there are no columns to build a row from")
+
+    assert _feature_names(_Nameless(), None) is None
+    assert smoke_check({"m1_churn_lightgbm": {"model": _Nameless()}}) == {}

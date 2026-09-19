@@ -474,3 +474,84 @@ def test_ladder_boundaries_are_returned_when_the_curve_has_shape():
     spread = survival._boundary_spread(with_cliffs)
     assert spread <= survival.MAX_BOUNDARY_SPREAD_DAYS
     assert survival._largest_drops(with_cliffs) == [110, 120, 130]
+
+
+# --- An attribution is measured against a population ------------------------
+
+
+def _linear_pipeline(X: pd.DataFrame, y: pd.Series):
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    pipeline = make_pipeline(SimpleImputer(), StandardScaler(), LogisticRegression(max_iter=500))
+    pipeline.fit(X, y)
+    return pipeline
+
+
+def test_a_one_row_background_is_refused(matrix):
+    """The failure this guard exists for returns zeros, not an error.
+
+    `coef_j * (x_j - E[x_j])` with E[x] taken from the single row being
+    explained is `coef_j * 0` for every j. Correct shape, correct dtype,
+    plausible-looking output, and no information whatsoever -- which is how it
+    reached a demo screen. Both serving callers did exactly this.
+    """
+    X, y = matrix
+    pipeline = _linear_pipeline(X, y)
+
+    with pytest.raises(ValueError, match="background"):
+        explain.LinearExplainer(pipeline, X.head(1))
+
+
+def test_explaining_one_row_against_the_population_attributes_something(matrix):
+    """And the positive case, so the test above is not passing vacuously."""
+    X, y = matrix
+    pipeline = _linear_pipeline(X, y)
+
+    explainer = explain.explainer_for(pipeline, X.head(1), background=X)
+    values = np.asarray(explainer.shap_values(X.head(1))).ravel()
+
+    assert np.abs(values).sum() > 0.0, "a single row explained against a population attributed 0"
+
+
+def test_the_top_driver_for_an_extreme_subscriber_raises_risk(matrix):
+    """The assertion that would have caught it, stated as a person would.
+
+    A subscriber whose recency is far beyond anyone else's must have recency
+    among their top drivers, and it must RAISE their risk. The zero-background
+    bug gave every driver a contribution of exactly 0.0, and `0 > 0` is false,
+    so every plain-language sentence read "lowers churn risk" -- for the most
+    at-risk subscriber in the base.
+    """
+    X, y = matrix
+    pipeline = _linear_pipeline(X, y)
+
+    extreme = X.head(1).copy()
+    extreme["days_since_last_topup"] = X["days_since_last_topup"].max() * 3
+
+    drivers = explain.drivers_for_batch(
+        explain.explainer_for(pipeline, extreme, background=X), extreme, k=4
+    )[0]
+
+    recency = [d for d in drivers if d["feature"] == "days_since_last_topup"]
+    assert recency, f"recency is not among the top drivers: {[d['feature'] for d in drivers]}"
+    assert recency[0]["contribution"] > 0
+    assert "raises churn risk" in recency[0]["explanation"]
+
+
+def test_the_served_bundle_carries_its_background():
+    """Serving cannot reconstruct a reference population from a request."""
+    import joblib
+
+    from cvm.config import settings
+
+    path = settings.models_dir / "m1_churn.joblib"
+    if not path.exists():
+        pytest.skip("M1 has not been trained on this machine")
+
+    bundle = joblib.load(path)
+    assert "background" in bundle, "the bundle predates the background; retrain M1"
+    assert len(bundle["background"]) >= 2
+    assert list(bundle["background"].columns) == list(bundle["columns"])

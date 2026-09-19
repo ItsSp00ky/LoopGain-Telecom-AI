@@ -271,6 +271,109 @@ Shut down with `Ctrl+C`, then `docker compose down`.
 
 ---
 
+## Step 7b · Drive it yourself
+
+Step 7 proves the stack *starts*. This one proves it *works*, which is not the
+same thing and once was not true: the serving image resolved a newer
+scikit-learn than the one that pickled the artefacts, every container reported
+healthy, and `/v1/score/churn` returned 500 on the first request. **Always make
+it answer a real question before you believe it.**
+
+The three ids below are real rows from the current feature store, chosen
+because they disagree with each other.
+
+### 1 · The API, on a subscriber the engine refuses to treat
+
+```bash
+curl -s -X POST http://localhost:8000/v1/offer/next-best -H "Content-Type: application/json" -d "{\"subscriber_id\":\"f1625300bd1f3880367bdc73e035a1b191b85700cd8221d3102a5df82f312e0f\"}"
+```
+
+**Expect `"offer_id":"NO_ACTION"`** with `reason_codes` containing
+`no_action:sleeping_dog`.
+
+This subscriber has a churn probability of **1.0000** — as certain as the model
+gets — and the engine still recommends nothing. Their uplift is **−0.0573**:
+contacting them makes them *more* likely to leave. `expected_value_lyd` is
+**−16.36**. A propensity-ranked campaign would have put them at the very top of
+the call list. That gap is the entire argument for M3.
+
+### 2 · The same subscriber, at the credit desk
+
+```bash
+curl -s -X POST http://localhost:8000/v1/advance/limit -H "Content-Type: application/json" -d "{\"subscriber_id\":\"f1625300bd1f3880367bdc73e035a1b191b85700cd8221d3102a5df82f312e0f\"}"
+```
+
+**Expect `"approved":true` with `"limit_lyd":1.0`.** Not a contradiction: "do
+not spend retention budget on them" and "they reliably repay 1 LYD" are
+different questions. Repayment probability is **0.977**, and the binding
+constraint is `tier_ceiling`, not risk.
+
+### 3 · A subscriber worth treating
+
+```bash
+curl -s -X POST http://localhost:8000/v1/score/churn -H "Content-Type: application/json" -d "{\"subscriber_ids\":[\"d1b96ede93c81021e17dbfa335eab82808cb2fb93367930ee36d2661ae31b394\"],\"include_survival\":true}"
+```
+
+**Expect a calibrated probability, a decile, a time-to-churn window and SHAP
+drivers with plain-language sentences.** Uplift **+0.2739** against a CLV of
+**9,047.70 LYD** — expected gain **+2,473.24 LYD**.
+
+Swap in the `f1625300…` id and the drivers should read like this — every one
+raising risk, for a subscriber the model scores at 1.0000:
+
+```
+p=1.0000  decile=1  time_to_churn=22 days
+  +4.9521 has not topped up in 117 days — raises churn risk
+  +1.9362 recharges are irregular (variation 2.33) — raises churn risk
+  +0.4418 recharges about every 91 days — raises churn risk
+```
+
+**Three things to check, because all three were once wrong:**
+
+1. **It returns 200 at all.** If it 500s, the models loaded but cannot predict.
+   `curl -s http://localhost:8000/health` — `model_errors` names the estimator
+   and the exception.
+2. **`time_to_churn_days` is a plausible number.** If it is
+   `-9223372036854775808`, a NaN reached `astype(int)`; the contract allows
+   `null` and that is what "we do not know" must look like.
+3. **The contributions are not all zero.** A SHAP attribution is measured
+   against a reference population. Explain a one-row batch against itself and
+   every contribution is exactly `0.0` — which still renders, still validates,
+   and still prints "lowers churn risk" under each one, because `0 > 0` is
+   false.
+
+### 4 · The cohort surface Components 4 and 5 consume
+
+```bash
+curl -s -X POST http://localhost:8000/v1/cohort/query -H "Content-Type: application/json" -d "{\"min_churn_probability\":0.8,\"limit\":3}"
+```
+
+**Expect 668 matched and ~118,522 LYD of revenue at risk.** Try adding
+`"district":"Tripoli"` — it must be **rejected**. Geography is not an input to
+any decision in this branch.
+
+### 5 · The four screens — <http://localhost:8501>
+
+| Screen | What to look for |
+|---|---|
+| Executive Overview | Revenue at risk, and the "against doing nothing" panel |
+| Segment Explorer | **"Are the eight segments a shape in the data?"** — the honest answer is no; the screen says so and shows where rules and clusters disagree |
+| Subscriber 360 | Paste either id above. SHAP waterfall, offer, advance. Paste a **phone number** instead and it must refuse |
+| Campaign Builder | The budget LP. Push the budget down and watch which subscribers drop out |
+
+### 6 · The subscriber's view — <http://localhost:8502>
+
+Switch to Arabic and watch the SMS counter. **One Arabic character forces UCS-2
+and the limit collapses from 160 characters to 70** (67 per part once
+concatenated). The preview shows the real part count, not a character count
+divided by 160.
+
+**Checkpoint for all of it:** every call returns 200, and
+`curl -s http://localhost:8000/health` reports `"status":"ok"` with an empty
+`model_errors`.
+
+---
+
 ## Step 8 · Make the first commit  ·  **done — eight commits on `ali_branch`**
 
 ```powershell

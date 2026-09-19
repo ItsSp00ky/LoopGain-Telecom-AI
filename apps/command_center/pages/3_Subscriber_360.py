@@ -156,7 +156,11 @@ with drivers:
 
         bundle = joblib.load(settings.models_dir / "m1_churn.joblib")
         matrix, _ = prepare_matrix(row.to_frame().T, columns=bundle["columns"])
-        explainer = explainer_for(bundle["model"], matrix)
+        # AGAINST THE TRAINING POPULATION, not against this one subscriber.
+        # `matrix` is a single row; using it as its own reference made every
+        # bar in this waterfall exactly 0.0 while the labels still read
+        # "lowers churn risk".
+        explainer = explainer_for(bundle["model"], matrix, background=bundle.get("background"))
         top = drivers_for_batch(explainer, matrix, k=6)[0]
 
         waterfall = pd.DataFrame(top)

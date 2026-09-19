@@ -215,6 +215,24 @@ def fit_cox(df: pd.DataFrame, duration_col: str = DURATION, event_col: str = EVE
         model.concordance_index_,
         model.log_likelihood_,
     )
+
+    # THE DESIGN THE MODEL WAS FITTED ON, CARRIED ON THE ARTEFACT.
+    #
+    # Serving has to rebuild this matrix from whatever a request supplies, and
+    # without the training columns and medians it improvises. It did: the API
+    # imputed with `design.median()` computed over THE BATCH BEING SCORED, and
+    # a single-subscriber request is a one-row batch whose median of a NaN is
+    # NaN. Two columns are undefined for anyone with fewer than two recharges
+    # in 90 days -- inter_recharge_gap_std and recharge_irregularity -- so the
+    # NaN survived the fillna, went through the linear predictor, and came out
+    # of `.astype(int)` as -9223372036854775808 in the response body.
+    #
+    # Same class of fault as scoring with test-set medians, which _design()
+    # already takes `medians=` to prevent. The statistics just never reached
+    # the artefact, so the serving path could not use them.
+    model.design_columns = list(design.columns)
+    model.design_medians = design.median()
+
     return model, concordance
 
 

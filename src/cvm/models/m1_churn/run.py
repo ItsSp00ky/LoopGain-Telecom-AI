@@ -158,8 +158,21 @@ def main() -> None:
         )
         joblib.dump(_cox, artefacts / "m1b_cox.joblib")
 
+    # THE SHAP BACKGROUND TRAVELS WITH THE MODEL. An attribution is measured
+    # against a reference population -- "tops up less than a typical
+    # subscriber" -- and serving cannot reconstruct that from a request, which
+    # is often one row. Explaining a one-row batch against itself returns
+    # exactly zero for every feature, which is what both serving callers did.
+    # 500 rows is enough for a stable mean over 53 columns and costs ~200 KB.
     joblib.dump(
-        {"model": calibrated[best_name], "columns": columns, "name": best_name},
+        {
+            "model": calibrated[best_name],
+            "columns": columns,
+            "name": best_name,
+            "background": X_train.reindex(columns=columns, fill_value=0.0).sample(
+                min(500, len(X_train)), random_state=settings.random_seed
+            ),
+        },
         artefacts / "m1_churn.joblib",
     )
 

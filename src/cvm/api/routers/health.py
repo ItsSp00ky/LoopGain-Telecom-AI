@@ -23,12 +23,21 @@ EXPECTED_MODELS = (
 
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request) -> HealthResponse:
-    loaded: dict[str, bool] = {
-        name: name in getattr(request.app.state, "models", {}) for name in EXPECTED_MODELS
-    }
+    present = getattr(request.app.state, "models", {})
+    errors: dict[str, str] = getattr(request.app.state, "model_errors", {})
+
+    # A model that deserialised but failed its startup smoke prediction reports
+    # False. "Loaded" is read by every consumer as "usable", and an artefact
+    # that raises on predict_proba is not usable -- reporting True because the
+    # bytes unpickled is the distinction that let a version-skewed sklearn
+    # pickle pass the container healthcheck and 500 on the first request.
+    def _usable(name: str) -> bool:
+        return name in present and not any(k.split(".")[0] == name for k in errors)
+
+    loaded: dict[str, bool] = {name: _usable(name) for name in EXPECTED_MODELS}
     store_ok = settings.feature_store.exists()
 
-    # "ok" only when every model is loaded AND the feature store is readable.
+    # "ok" only when every model is USABLE and the feature store is readable.
     # A degraded API that reports "ok" is worse than one that reports nothing.
     status = "ok" if all(loaded.values()) and store_ok else "degraded"
 
@@ -38,4 +47,5 @@ async def health(request: Request) -> HealthResponse:
         env=settings.env,
         models_loaded=loaded,
         feature_store_reachable=store_ok,
+        model_errors=errors,
     )

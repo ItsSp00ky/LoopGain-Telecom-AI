@@ -71,7 +71,7 @@ def score_batch(payload: ChurnScoreRequest, models: dict[str, Any]) -> ChurnScor
             churn_probability=float(probability[i]),
             calibrated=True,
             decile=int(decile[i]),
-            time_to_churn_days=(None if survival_window is None else int(survival_window[i])),
+            time_to_churn_days=_days(survival_window, i),
             top_drivers=drivers[i],
             model_version=getattr(model, "version", "m1-dev"),
         )
@@ -107,8 +107,19 @@ def _explain(model, X: pd.DataFrame) -> list[list[ShapContribution]]:
     """
     from cvm.models.m1_churn.explain import drivers_for_batch, explainer_for
 
+    background = getattr(model, "background", None)
+    if background is None:
+        # Explaining a batch against itself is what produced five zero bars on
+        # a subscriber scored at 1.0000. Loud, because the request still
+        # succeeds -- it just stops carrying a reason, and section 6.5 commits
+        # to one for every score.
+        log.error(
+            "m1_churn carries no SHAP background; retrain M1 so the bundle stores one. "
+            "Drivers will be omitted rather than computed against the request itself."
+        )
+
     try:
-        explainer = explainer_for(model, X)
+        explainer = explainer_for(model, X, background=background)
         # ONCE FOR THE BATCH, not once per row. Calling shap_values on a single
         # row 500 times measured 2,188 ms for 500 subscribers against a 200 ms
         # p95 budget; batching it is 20x faster and returns the same numbers,
@@ -130,13 +141,54 @@ def _explain(model, X: pd.DataFrame) -> list[list[ShapContribution]]:
         return [[] for _ in range(len(X))]
 
 
+def _days(window: np.ndarray | None, i: int) -> int | None:
+    """None rather than an integer when the expectation is not finite.
+
+    `np.asarray(np.nan).astype(int)` is -9223372036854775808, and an API that
+    answers "we do not know" with INT64_MIN is worse than one that answers
+    nothing: the value is well-formed, satisfies the schema, survives every
+    type check, and is wrong by nine quintillion days. A consumer rendering it
+    on a screen shows a date in the year -25 billion; one summing it over a
+    cohort gets an overflow. None is the honest answer and the contract already
+    allows it.
+    """
+    if window is None:
+        return None
+    value = float(window[i])
+    if not np.isfinite(value):
+        log.warning("m1b returned a non-finite expectation for row %d; reporting None", i)
+        return None
+    return round(value)
+
+
 def _survival(models: dict[str, Any], X: pd.DataFrame) -> np.ndarray | None:
-    """Expected days to churn from M1b, where the model is loaded."""
+    """Expected days to churn from M1b, where the model is loaded.
+
+    Imputed with the TRAINING medians the artefact carries, never with the
+    batch's own. The batch is frequently one row, and the median of one NaN is
+    that same NaN -- see fit_cox for what that produced.
+    """
     model = models.get("m1b_survival")
     if model is None:
         log.warning("include_survival was requested but m1b_survival is not loaded")
         return None
 
-    design = X.reindex(columns=getattr(model, "design_columns", X.columns), fill_value=0.0)
-    design = design.fillna(design.median())
-    return np.asarray(model.predict_expectation(design)).round().astype(int)
+    columns = getattr(model, "design_columns", None)
+    medians = getattr(model, "design_medians", None)
+    if columns is None or medians is None:
+        # An artefact trained before fit_cox carried its design. Say so rather
+        # than improvising from the request, which is what produced INT64_MIN.
+        log.error(
+            "m1b_survival carries no training design; retrain M1b. "
+            "Falling back to the request's own statistics, which is unsound."
+        )
+        columns, medians = list(X.columns), None
+
+    design = X.reindex(columns=columns, fill_value=0.0)
+    design = design.fillna(design.median() if medians is None else medians)
+    # A column that was entirely absent in training has no median either. Zero
+    # is the neutral value for this matrix -- every column is a count, a ratio
+    # or an amount -- and it keeps one missing feature from voiding the row.
+    design = design.fillna(0.0)
+
+    return np.asarray(model.predict_expectation(design), dtype=float)
