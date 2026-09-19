@@ -212,3 +212,35 @@ Consequences:
 - The churn rate among eligible customers is about 4.4% to 4.7% (T4), so the problem is harder and the metrics are honest.
 - Our metrics will look lower than published results on this dataset, which usually include the silent customers.
 - Silent customers are handled by a rule instead of the model: T8 gives them the risk band `already_silent`.
+
+## 13. Success thresholds
+
+Date: 2026-09-19.
+
+The instructor's review of the SIC action plan asked for "success thresholds" per task.
+A churn model is fit for use only if, on an out-of-time test (a later month, unseen customers, active customers only), it passes all four:
+
+1. **Capture:** the riskiest 10% of customers contain at least 50% of the churners.
+   This is the business question: a retention team can only call a small share of customers, so most churners must be in that share.
+2. **Better than chance:** PR-AUC is at least 3 times the churn rate (random ranking scores about the churn rate).
+3. **Better than the baseline:** the champion's PR-AUC is higher than the logistic regression baseline's on the same test, otherwise the simpler model wins.
+4. **Calibration:** the mean predicted churn rate is within 1 percentage point of the observed rate, because T11 turns probabilities into money.
+
+Why these levels: they are minimums a retention team would accept, not numbers tuned to our result.
+
+Honesty note: the thresholds were written after the T7 test run (the current champion passes all four: 61.5%, 8.0 times, 0.348 vs 0.277, 0.13 points).
+So that pass is a check, not a pre-registered result.
+From now on the thresholds gate every new model before use (T8).
+
+## 14. A person approves every retention action
+
+Date: 2026-09-19.
+
+The instructor asked for "a human approval step for retention actions", and the copilot must not make customer decisions.
+So:
+
+- The decision layer (T11) only **proposes** offers, each with its reason, expected cost and expected value.
+- A named reviewer approves or rejects proposals before anything is sent or shown to a customer by the chatbot.
+- Only approved proposals are released; rejected and unreviewed ones never leave the module.
+- Every review is logged with the reviewer, time, decision and an optional note, so each action can be traced.
+- The copilot only reads summaries; it has no path to approve, create or send offers.
