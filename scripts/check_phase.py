@@ -1171,7 +1171,256 @@ def check_expected_value_respects_the_clv_ceiling() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 7-10 -- declared now, so the check exists before the code does
+# Phase 7 -- M4 advance
+# ---------------------------------------------------------------------------
+
+
+def check_guardrail_suite_has_no_xfail() -> str:
+    """The gate the roadmap set: every behavioural marker deleted.
+
+    This is the only module that lends money, so the guardrail suite is not a
+    quality bar -- it is the thing that stops a real subscriber being handed a
+    debt that consumes their next recharge.
+    """
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-m",
+            "guardrail",
+            "-q",
+            "--no-cov",
+            "-p",
+            "no:cacheprovider",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    lines = result.stdout.strip().splitlines()
+    tail = lines[-1] if lines else result.stderr[-200:]
+    if result.returncode != 0:
+        raise AssertionError(tail)
+    if "xfail" in tail:
+        raise AssertionError(f"a guardrail xfail remains: {tail}")
+    return tail
+
+
+def check_the_headline_case() -> str:
+    """A habitual 5 LYD recharger is DECLINED the 5 LYD data advance and
+    offered the 0.5 LYD fallback -- while the same subscriber is granted a
+    small airtime advance.
+
+    PD alone would approve the data advance. That is the trap: they probably
+    WOULD repay, and the repayment would consume their entire next top-up and
+    return them to zero. Affordability declines what PD approves.
+    """
+    from cvm.api.schemas import AdvanceLimitRequest, AdvanceProduct
+    from cvm.decision.advance_limit import decide_limit, limit_from_pd
+
+    features = {
+        "repayment_probability": 0.92,
+        "lockout_risk": 0.02,
+        "modal_recharge_amount_lyd": 5.0,
+        "loyalty_tier": "gold",
+        "clv_12m": 480.0,
+        "balance_zero_hours_30d": 10.0,
+        "failed_bundle_attempts_30d": 0.0,
+        "consecutive_sub_5_lyd_recharges": 0.0,
+        "emergency_service_alternations_90d": 0.0,
+        "airtime_advance_count_90d": 1.0,
+        "data_advance_count_90d": 0.0,
+        "days_since_last_advance": 30.0,
+        "advances_this_month": 0.0,
+        "cumulative_exposure_this_month_lyd": 0.0,
+    }
+    if limit_from_pd(0.92, "data") != 5.0:
+        raise AssertionError("PD alone no longer grants the data advance; the case is not a trap")
+
+    data = decide_limit(
+        AdvanceLimitRequest(subscriber_id="a" * 64, product=AdvanceProduct.DATA), features
+    )
+    if data.approved:
+        raise AssertionError(f"the data advance was approved at {data.limit_lyd} LYD")
+    if data.fallback_offer_id != "DAY_50MB":
+        raise AssertionError(f"no affordable fallback offered: {data.fallback_offer_id}")
+
+    airtime = decide_limit(
+        AdvanceLimitRequest(subscriber_id="b" * 64, product=AdvanceProduct.AIRTIME), features
+    )
+    if not airtime.approved or airtime.limit_lyd >= 5.0:
+        raise AssertionError(
+            f"the same subscriber should still get a SMALL airtime advance, got "
+            f"approved={airtime.approved} at {airtime.limit_lyd} LYD"
+        )
+    return (
+        f"data declined on {data.binding_constraint} with {data.fallback_offer_id} offered; "
+        f"airtime granted {airtime.limit_lyd:.0f} LYD, leaving "
+        f"{5.0 - airtime.limit_lyd:.0f} LYD after settlement"
+    )
+
+
+def check_guards_only_reduce() -> str:
+    """A guard that raises a credit limit is a bug, not a feature. Swept over
+    the grid rather than spot-checked."""
+    import itertools
+
+    from cvm.decision.advance_limit import apply_safety_guards
+
+    base = {
+        "modal_recharge_amount_lyd": 40.0,
+        "loyalty_tier": "gold",
+        "clv_12m": 480.0,
+        "balance_zero_hours_30d": 10.0,
+        "failed_bundle_attempts_30d": 0.0,
+        "consecutive_sub_5_lyd_recharges": 0.0,
+        "emergency_service_alternations_90d": 0.0,
+        "airtime_advance_count_90d": 1.0,
+        "data_advance_count_90d": 0.0,
+        "days_since_last_advance": 30.0,
+        "advances_this_month": 0.0,
+        "cumulative_exposure_this_month_lyd": 0.0,
+    }
+    combinations = 0
+    for start, modal, risk, distress in itertools.product(
+        (0.0, 1.0, 3.0, 5.0), (5.0, 10.0, 40.0), (0.0, 0.5), (0.0, 700.0)
+    ):
+        features = {
+            **base,
+            "modal_recharge_amount_lyd": modal,
+            "lockout_risk": risk,
+            "balance_zero_hours_30d": distress,
+            "consecutive_sub_5_lyd_recharges": 9.0 if distress else 0.0,
+        }
+        adjusted, _ = apply_safety_guards(start, features)
+        combinations += 1
+        if adjusted > start + 1e-9:
+            raise AssertionError(f"guards raised {start} to {adjusted} at {features}")
+        if adjusted < 0:
+            raise AssertionError(f"guards produced a negative limit: {adjusted}")
+    return f"{combinations} combinations of limit, recharge, lockout risk and distress -- all reduced or held"
+
+
+def check_no_invented_denominations() -> str:
+    """We cannot offer a 2 LYD advance. Swept across the whole PD range and
+    through the full decision path, not just the band table."""
+    import numpy as np
+
+    from cvm.api.schemas import AdvanceLimitRequest, AdvanceProduct
+    from cvm.config import load_conf
+    from cvm.decision.advance_limit import decide_limit
+
+    real = {
+        float(d)
+        for d in load_conf("catalogue")["emergency_credit"]["rasid_fi_waqtuh"]["denominations_lyd"]
+    }
+    seen = set()
+    for probability in np.linspace(0, 1, 41):
+        for modal in (5.0, 10.0, 20.0, 40.0, 100.0):
+            features = {
+                "repayment_probability": float(probability),
+                "lockout_risk": 0.02,
+                "modal_recharge_amount_lyd": modal,
+                "loyalty_tier": "platinum",
+                "clv_12m": 2000.0,
+                "balance_zero_hours_30d": 0.0,
+                "failed_bundle_attempts_30d": 0.0,
+                "consecutive_sub_5_lyd_recharges": 0.0,
+                "emergency_service_alternations_90d": 0.0,
+                "airtime_advance_count_90d": 0.0,
+                "data_advance_count_90d": 0.0,
+                "days_since_last_advance": 30.0,
+                "advances_this_month": 0.0,
+                "cumulative_exposure_this_month_lyd": 0.0,
+            }
+            seen.add(
+                decide_limit(
+                    AdvanceLimitRequest(subscriber_id="c" * 64, product=AdvanceProduct.AIRTIME),
+                    features,
+                ).limit_lyd
+            )
+
+    invented = seen - real - {0.0}
+    if invented:
+        raise AssertionError(f"invented denominations: {sorted(invented)}")
+    return f"{len(seen)} distinct limits over 205 cases, all in {sorted(real)} or zero"
+
+
+def check_selection_bias_is_measured() -> str:
+    """The observed population is filtered by a `balance <= 0.5 LYD` gate, so
+    it is non-random by construction and the direction is NOT the textbook one.
+    Measured before it is corrected."""
+    report = _report("m4_advance.json")
+    heads = report["pd_heads"]
+    if not heads:
+        raise AssertionError("no PD head reported a bias measurement")
+
+    lines = []
+    for product, r in heads.items():
+        bias = r["selection_bias"]
+        if bias["max_abs_smd"] <= 0.1:
+            raise AssertionError(
+                f"{product}: worst SMD {bias['max_abs_smd']:.3f} -- either the populations "
+                "really are comparable, which would be surprising, or the comparison is broken"
+            )
+        lines.append(
+            f"{product} worst {bias['max_abs_smd_feature']} at {bias['max_abs_smd']:.2f}, "
+            f"{bias['features_above_0_25']} above 0.25"
+        )
+    return "; ".join(lines)
+
+
+def check_reject_inference_shifts_but_does_not_swamp() -> str:
+    """The correction should move the estimate, and should not dominate it.
+
+    A large shift is the symptom of a broken correction rather than a strong
+    one: passing `sample_weight` to the constructor (where LightGBM discards
+    it) or calibrating on the fuzzy labels both produced shifts around -0.35,
+    and both were artefacts.
+    """
+    report = _report("m4_advance.json")
+    notes = []
+    for product, r in report["pd_heads"].items():
+        shift = r["correction_shift"]
+        if abs(shift) < 1e-6:
+            raise AssertionError(f"{product}: the correction changed nothing; is it running?")
+        if abs(shift) > 0.15:
+            raise AssertionError(
+                f"{product}: the correction moved mean PD by {shift:+.4f}. A shift that large "
+                "is the signature of weights being dropped or a calibrator fitted on inferred "
+                "labels, not of a strong correction."
+            )
+        notes.append(
+            f"{product} {shift:+.4f} (observed repayment {r['observed_repayment_rate']:.3f})"
+        )
+    return "; ".join(notes)
+
+
+def check_advance_decisions_landed() -> str:
+    """Every scored subscriber has a decision, and each declined one names the
+    term that bound."""
+    import pandas as pd
+
+    from cvm.config import settings
+
+    path = settings.processed_dir / "m4_advance.parquet"
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.models.m4_advance.run`")
+
+    frame = pd.read_parquet(path)
+    if frame["binding_constraint"].isna().any():
+        raise AssertionError("a decision has no binding constraint")
+    if not frame.loc[~frame["approved"], "binding_constraint"].notna().all():
+        raise AssertionError("a decline gives no reason")
+
+    approved = frame.groupby("product")["approved"].mean().to_dict()
+    detail = ", ".join(f"{k} {v:.1%}" for k, v in approved.items())
+    return f"{len(frame):,} decisions over {frame['product'].nunique()} products ({detail})"
+
+
+# ---------------------------------------------------------------------------
+# Phases 8-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -1253,7 +1502,15 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("only persuadables funded", check_only_persuadables_are_funded),
         ("funding respects the CLV ceiling", check_expected_value_respects_the_clv_ceiling),
     ],
-    "7": [("advance safety guards green", _pending("M4 not built", "7"))],
+    "7": [
+        ("guardrail suite, zero xfail", check_guardrail_suite_has_no_xfail),
+        ("the headline case", check_the_headline_case),
+        ("guards only reduce", check_guards_only_reduce),
+        ("no invented denominations", check_no_invented_denominations),
+        ("selection bias measured", check_selection_bias_is_measured),
+        ("reject inference shifts sanely", check_reject_inference_shifts_but_does_not_swamp),
+        ("advance decisions landed", check_advance_decisions_landed),
+    ],
     "8": [("endpoints return 200 not 501", _pending("decision engine not built", "8"))],
     "9": [("/health reports ok", _pending("models not loaded", "9"))],
     "10": [("docker compose up", _pending("not attempted", "10"))],

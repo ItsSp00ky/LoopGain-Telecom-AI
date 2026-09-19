@@ -144,7 +144,11 @@ def is_chronic_distress(df: pd.DataFrame) -> pd.Series:
     # same thing across time, and needs a panel this branch does not yet hold.
     chronic = signals.sum(axis=1) >= 2
 
-    log.info(
+    # Single-row calls come from the per-subscriber advance decision, which
+    # runs once per subscriber; logging each one buries the run in 100,000
+    # identical lines.
+    log.log(
+        logging.INFO if len(df) > 1 else logging.DEBUG,
         "chronic distress: %.1f%% excluded on %d of %d configured signals -- %s",
         100 * chronic.mean(),
         signals.shape[1],

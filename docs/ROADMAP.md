@@ -1,15 +1,16 @@
 # Roadmap
 
-**30 functions left, in a chain that cannot be reordered.** This document is
+**19 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
 
-**Phases 1 to 6 are written and verified.** Layers 1, 2 and 3 are at 100%, and
-so are M1, M2 and M3; the whole project is at **90%**. Phase 2's quality gate
-passes, the leakage suite is green with **every xfail deleted**, and uplift is
-validated on Criteo's real randomised arms at **Qini 0.0771**. **Next is phase
-7 — M4 advance**, the only module that lends money.
+**Phases 1 to 7 are written and verified.** Layers 1, 2 and 3 are at 100%, and
+so are all four models; the whole project is at **93%**. Phase 2's quality gate
+passes, uplift is validated on Criteo's real randomised arms at **Qini 0.0771**,
+and **both the leakage suite and the guardrail suite are green with every xfail
+deleted**. **Next is phase 8 — the decision engine**, which is where the four
+models become one recommendation.
 
 ## Two commands
 
@@ -1012,29 +1013,127 @@ term hides.
 
 <a id="phase-7"></a>
 
-## Phase 7 · M4 advance — 5 functions, 1–2 days
+## Phase 7 · M4 advance — **DONE**
 
-Cheap, because the PD heads share M1's feature pipeline. The most
-differentiated idea in the project for the least remaining work.
+`python -m cvm.models.m4_advance.run` trains the two PD heads, measures the
+selection bias, corrects it, and scores the base through
+`min(f(PD), g(tier), h(CLV), affordability)` with every mandatory guard
+applied. `scripts/check_phase.py 7` passes 7 of 7, and **the guardrail suite is
+66 passed with every behavioural xfail deleted**.
 
-**First, the phase check:**
+### The headline case, running
+
+Same subscriber, modal recharge **5 LYD** — the smallest card — repayment
+probability **0.92**:
+
+| product | decision | binding term |
+|---|---|---|
+| نت في وقته (data, 5 LYD flat) | **declined**, `DAY_50MB` offered | affordability_ceiling |
+| رصيد في وقته (airtime) | **granted 3 LYD** | affordability_ceiling |
+
+`limit_from_pd(0.92, "data")` returns 5.0 — **PD alone would approve it**. That
+is the trap: they probably *would* repay, and the repayment would consume their
+entire next top-up and return them to zero. The objective is solvency, not
+recovery yield, so affordability declines what PD approves.
+
+And the asymmetry is what makes the argument precise rather than blanket. The
+same subscriber is granted **3 LYD of airtime**, leaving 2 LYD of usable
+balance after settlement. Clearing that debt still buys them service. Only the
+5 LYD rung reproduces the zero-residual problem.
+
+The declined subscriber is told why, in Arabic, and offered the 0.5 LYD bundle
+they can afford:
+
+> لا يمكن منح هذه السلفة لأن سدادها سيستهلك رصيد التعبئة بالكامل. يمكنك
+> الاستفادة من باقة 50 ميجابايت بنصف دينار.
+
+### Selection bias, measured before it is corrected
+
+| head | observed outcomes | repayment rate | worst covariate imbalance |
+|---|---|---|---|
+| airtime | 29,054 | 0.9669 | `E` at SMD 5.35, 8 features above 0.25 |
+| data | 15,414 | 0.9166 | `data_advance_count_90d` at 3.46, 11 above 0.25 |
+
+Only 38% of the base ever took an advance, so 62% have no settlement outcome —
+they never had a debt to settle. The gate is `balance <= 0.5 LYD`, which
+**selects on being broke**. That is the inverse of a bank's risk filter, so the
+textbook direction of the bias cannot be assumed and is measured rather than
+asserted. After fuzzy augmentation the mean PD moves by **−0.019** (airtime)
+and **−0.026** (data): a real correction, and a modest one.
+
+### Three bugs, two of which made a broken correction look like a strong one
+
+**`sample_weight` was reaching the constructor, where LightGBM discards it.**
+It accepts arbitrary keywords and silently drops the ones it does not know, so
+a weighted fit quietly became an unweighted one. Measured on identical data and
+weights: **mean p = 0.504 through the constructor, 0.950 through `fit()`**. The
+whole reject-inference correction was doing nothing except halving the signal —
+each never-borrowed subscriber counted as one positive *and* one negative at
+equal weight. `gradient_boosting.train` now takes `sample_weight` explicitly
+and **raises** on any other fit-only parameter left in `**params`.
+
+**The calibrator was fitted on the inferred labels.** Fuzzy augmentation gives
+each reject two rows, one repaid and one defaulted, so the augmented set is near
+50/50 by construction *however the weights fall*. Fitting is fine — the weights
+carry the information. Calibrating is not: the isotonic map learns to send every
+score toward 0.5. It moved mean PD from 0.97 to **0.61** and that 36-point drop
+was being reported as a bias correction. It was the calibrator learning the
+shape of the augmentation. Calibration now uses a slice of the **observed**
+outcomes, held out before augmentation, because those are the only rows with a
+real outcome.
+
+Both bugs pointed the same way, and both looked like success. A correction that
+moves an estimate by a third is not a strong correction, it is a broken one —
+the phase check now fails above 0.15.
+
+**The module docstring still carried the retired 3 LYD argument**, claiming the
+debt *exceeded* the smallest card and locked subscribers out entirely. That was
+true when the card was 3 LYD and it is not now. The file says so explicitly
+rather than quietly swapping the number, because a reader who remembers the
+stronger claim needs to see it was withdrawn.
+
+### What binds, at scale
+
+200,000 decisions over the full base — 100,000 subscribers × 2 products:
+
+| product | approved | mean limit | declined by tier | by affordability | by PD |
+|---|---|---|---|---|---|
+| airtime | 91,612 (91.6%) | 2.21 LYD | 4,538 | 3,108 | 677 |
+| data | 13,294 (13.3%) | 5.00 LYD | 80,417 | 5,531 | 690 |
+
+**The credit model is almost never what binds.** PD declines 677 airtime and
+690 data requests; the tier ceiling and affordability decline eighty times as
+many. That is the intended shape: PD says who *can* repay, and the safety terms
+decide who *should be asked to*.
+
+**52,121 subscribers — 52% of the base — top up at the 5 LYD floor.** That is
+the population the zero-residual finding is about, and it is half the base
+rather than a tail. They are largely *approved* for small airtime advances
+(1 or 3 LYD, which leave change) and largely *declined* the flat 5 LYD data
+advance. The asymmetry is doing exactly the work it was designed for.
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 7
 ```
 
-**Then** delete all five `xfail` markers in `tests/guardrails/test_advance_safety.py`
-and run:
+Expect 7 passed, 0 failed. The gate for phase 8:
 
 ```bash
 pytest -m guardrail -q
 ```
 
-Every test must pass with no `xfail`. The headline case is
-`test_habitual_minimum_recharger_is_declined_the_data_advance`: a subscriber
-whose modal top-up is the 5 LYD card is declined the 5 LYD data advance and
-offered `DAY_50MB` instead. They would probably repay — that is the trap, and
-why affordability declines what PD would approve.
+**Expect 66 passed with no xfail.** Two of those checks sweep rather than
+spot-check: 48 combinations of starting limit, modal recharge, lockout risk and
+distress all confirm the guards only ever reduce, and 205 cases across the PD
+range confirm no invented denomination ever reaches a subscriber.
+
+```bash
+pytest tests/unit/test_m4_advance.py -q
+```
+
+20 tests, including regressions for both silent bugs above.
 
 ---
 

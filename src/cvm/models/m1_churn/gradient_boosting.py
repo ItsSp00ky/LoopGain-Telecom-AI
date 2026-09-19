@@ -148,7 +148,26 @@ def _scale_pos_weight(y: pd.Series) -> float:
     return float((len(y) - positives) / positives)
 
 
-def train(X: pd.DataFrame, y: pd.Series, X_val=None, y_val=None, kind: str = "lightgbm", **params):
+# Parameters that belong to `.fit()`, not to the constructor. Passing one of
+# these as a constructor kwarg is SILENTLY IGNORED by LightGBM -- it accepts
+# arbitrary keywords and drops them -- so a weighted fit quietly becomes an
+# unweighted one. Measured: the same data and weights give mean p = 0.504
+# through the constructor and 0.950 through fit(). M4's reject-inference
+# correction was passing `sample_weight` the wrong way and appeared to shift
+# the mean PD by -0.34, which was the weights being discarded rather than a
+# correction being applied.
+FIT_ONLY_PARAMS = frozenset({"sample_weight", "eval_set", "eval_metric", "callbacks", "init_score"})
+
+
+def train(
+    X: pd.DataFrame,
+    y: pd.Series,
+    X_val=None,
+    y_val=None,
+    kind: str = "lightgbm",
+    sample_weight=None,
+    **params,
+):
     """Fit one boosted model. `kind` is lightgbm, xgboost or catboost.
 
     Early stopping needs a validation set that the model does not train on, so
@@ -156,10 +175,22 @@ def train(X: pd.DataFrame, y: pd.Series, X_val=None, y_val=None, kind: str = "li
     `n_estimators` stands. Passing the TEST split here would be the classic
     way to leak: the stopping point is fitted to it, so the reported score is
     optimistic by exactly the amount the stopping bought.
+
+    `sample_weight` is an explicit argument rather than part of `**params`
+    because it has to reach `.fit()`, and anything left in `**params` goes to
+    the constructor -- see FIT_ONLY_PARAMS above for what that costs.
     """
     conf = dict(_conf()["params"])
     rounds = conf.pop("early_stopping_rounds", 50)
     conf.pop("objective", None)
+
+    stray = FIT_ONLY_PARAMS & set(params)
+    if stray:
+        raise TypeError(
+            f"{sorted(stray)} are fit() parameters and would be passed to the constructor, "
+            "where LightGBM accepts and silently discards them. Pass sample_weight as its "
+            "own argument; the others are set by this function."
+        )
     conf.update(params)
 
     seed = settings.random_seed
@@ -196,6 +227,8 @@ def train(X: pd.DataFrame, y: pd.Series, X_val=None, y_val=None, kind: str = "li
                     log_evaluation(0),
                 ],
             }
+        if sample_weight is not None:
+            fit_kwargs["sample_weight"] = sample_weight
         model.fit(X, y, **fit_kwargs)
         if has_val and model.booster_.num_trees() <= 2:
             raise RuntimeError(
@@ -216,7 +249,13 @@ def train(X: pd.DataFrame, y: pd.Series, X_val=None, y_val=None, kind: str = "li
             early_stopping_rounds=rounds if has_val else None,
             **{k: v for k, v in conf.items() if k != "min_child_samples"},
         )
-        model.fit(X, y, eval_set=[(X_val, y_val)] if has_val else None, verbose=False)
+        model.fit(
+            X,
+            y,
+            eval_set=[(X_val, y_val)] if has_val else None,
+            sample_weight=sample_weight,
+            verbose=False,
+        )
 
     elif kind == "catboost":
         from catboost import CatBoostClassifier
@@ -232,7 +271,7 @@ def train(X: pd.DataFrame, y: pd.Series, X_val=None, y_val=None, kind: str = "li
             learning_rate=conf.get("learning_rate", 0.05),
             early_stopping_rounds=rounds if has_val else None,
         )
-        model.fit(X, y, eval_set=(X_val, y_val) if has_val else None)
+        model.fit(X, y, eval_set=(X_val, y_val) if has_val else None, sample_weight=sample_weight)
 
     else:
         raise ValueError(f"unknown model kind {kind!r}; expected lightgbm, xgboost or catboost")

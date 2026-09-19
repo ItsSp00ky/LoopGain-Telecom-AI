@@ -282,30 +282,95 @@ def test_business_metrics_are_measurable_for_this_operator(advance_conf):
     assert not [m for m in metrics if "reset" in m]
 
 
-# --- Behavioural invariants (E2/E4: unmark xfail as you implement) --------
+# --- Behavioural invariants -----------------------------------------------
 
 
-@pytest.mark.xfail(reason="decision/advance_limit.py not implemented yet", strict=False)
-def test_chronic_distress_excludes_regardless_of_pd():
-    """Even a 0.95 repayment probability does not override sustained distress."""
-    raise NotImplementedError("TODO(E2/E4)")
+@pytest.fixture
+def healthy() -> dict:
+    """A subscriber nothing should decline: regular recharges, no distress."""
+    return {
+        "repayment_probability": 0.92,
+        "lockout_risk": 0.02,
+        "modal_recharge_amount_lyd": 40.0,
+        "loyalty_tier": "gold",
+        "clv_12m": 480.0,
+        "balance_zero_hours_30d": 10.0,
+        "failed_bundle_attempts_30d": 0.0,
+        "consecutive_sub_5_lyd_recharges": 0.0,
+        "emergency_service_alternations_90d": 0.0,
+        "airtime_advance_count_90d": 1.0,
+        "data_advance_count_90d": 0.0,
+        "days_since_last_advance": 30.0,
+        "advances_this_month": 0.0,
+        "cumulative_exposure_this_month_lyd": 0.0,
+    }
 
 
-@pytest.mark.xfail(reason="decision/advance_limit.py not implemented yet", strict=False)
-def test_limit_never_exceeds_the_minimum_of_all_four_terms():
-    """min(f(PD), g(tier), h(CLV), affordability). Not a weighted blend."""
-    raise NotImplementedError("TODO(E2/E4)")
+def test_chronic_distress_excludes_regardless_of_pd(healthy):
+    """Even a 0.95 repayment probability does not override sustained distress.
+
+    The asymmetry is the whole design. A chronically distressed subscriber
+    often DOES repay -- out of the next top-up, which then buys them nothing,
+    which is the trap. A model optimising recovery yield would lend to exactly
+    these people."""
+    from cvm.decision.advance_limit import apply_safety_guards
+
+    distressed = {
+        **healthy,
+        "repayment_probability": 0.95,
+        "balance_zero_hours_30d": 700.0,
+        "consecutive_sub_5_lyd_recharges": 9.0,
+    }
+    limit, checks = apply_safety_guards(5.0, distressed)
+
+    assert limit == 0.0
+    failed = {c.guard for c in checks if not c.passed}
+    assert "chronic_distress_exclusion" in failed
 
 
-@pytest.mark.xfail(reason="decision/advance_limit.py not implemented yet", strict=False)
-def test_safety_guards_can_only_reduce_a_limit():
+def test_limit_never_exceeds_the_minimum_of_all_four_terms(healthy):
+    """min(f(PD), g(tier), h(CLV), affordability). Not a weighted blend.
+
+    A blend would let a platinum tier buy back capacity that affordability has
+    already refused, which is precisely the subscriber the guard protects."""
+    from cvm.decision.advance_limit import (
+        affordability_ceiling,
+        limit_from_clv,
+        limit_from_pd,
+        limit_from_tier,
+    )
+
+    # A subscriber strong on three terms and weak on the fourth.
+    terms = [
+        limit_from_pd(0.95, "airtime"),
+        limit_from_tier("platinum"),
+        limit_from_clv(480.0),
+        affordability_ceiling(5.0),  # the binding one: 5 x 0.6 = 3.0
+    ]
+    assert min(terms) == pytest.approx(3.0)
+    assert min(terms) < max(terms), "the fixture must actually have a binding constraint"
+
+
+def test_safety_guards_can_only_reduce_a_limit(healthy):
     """A guard that raises the limit is a bug, not a feature."""
-    raise NotImplementedError("TODO(E2/E4)")
+    from cvm.decision.advance_limit import apply_safety_guards
+
+    for starting in (0.0, 1.0, 3.0, 5.0):
+        adjusted, _ = apply_safety_guards(starting, healthy)
+        assert adjusted <= starting + 1e-9, f"guards raised {starting} to {adjusted}"
 
 
-@pytest.mark.xfail(reason="decision/advance_limit.py not implemented yet", strict=False)
-def test_habitual_minimum_recharger_is_declined_the_data_advance():
-    """The headline case. Modal recharge 5 LYD -- the smallest card -- against a
+def test_a_guard_that_raises_the_limit_is_caught(healthy):
+    """The invariant above is asserted inside the function too, so a future
+    guard written the wrong way round fails loudly rather than issuing credit."""
+    from cvm.decision import advance_limit
+
+    with pytest.raises(AssertionError, match="raised the limit"):
+        advance_limit._assert_only_reduced(original=1.0, limit=5.0)
+
+
+def test_habitual_minimum_recharger_is_declined_the_data_advance(healthy):
+    """THE HEADLINE CASE. Modal recharge 5 LYD -- the smallest card -- against a
     5 LYD data advance: declined, with the 0.5 LYD DAY_50MB fallback offered
     instead.
 
@@ -313,10 +378,69 @@ def test_habitual_minimum_recharger_is_declined_the_data_advance():
     exactly the trap: they probably WOULD repay, and the repayment would consume
     their entire next top-up and return them to zero. The objective is solvency,
     not recovery yield, so affordability declines what PD would approve."""
-    raise NotImplementedError("TODO(E2/E4)")
+    from cvm.api.schemas import AdvanceLimitRequest, AdvanceProduct
+    from cvm.decision.advance_limit import decide_limit
+
+    features = {**healthy, "modal_recharge_amount_lyd": 5.0, "repayment_probability": 0.92}
+    payload = AdvanceLimitRequest(subscriber_id="a" * 64, product=AdvanceProduct.DATA)
+
+    response = decide_limit(payload, features)
+
+    assert response.approved is False
+    assert response.limit_lyd == 0.0
+    assert response.fallback_offer_id == "DAY_50MB"
+    assert "affordability_ceiling" in response.reason_codes
+    # And the PD was high enough that PD alone would have granted it -- which
+    # is what makes this a finding rather than an ordinary decline.
+    from cvm.decision.advance_limit import limit_from_pd
+
+    assert limit_from_pd(0.92, "data") == 5.0
 
 
-@pytest.mark.xfail(reason="decision/advance_limit.py not implemented yet", strict=False)
-def test_material_lockout_risk_steps_the_limit_down_a_denomination():
+def test_the_same_subscriber_is_granted_a_small_airtime_advance(healthy):
+    """The asymmetry that makes the argument precise rather than blanket. A
+    1 LYD airtime advance against a 5 LYD card leaves 4 LYD of usable balance,
+    so clearing it still buys them service. Only the 5 LYD rung reproduces the
+    zero-residual problem."""
+    from cvm.api.schemas import AdvanceLimitRequest, AdvanceProduct
+    from cvm.decision.advance_limit import decide_limit
+
+    features = {**healthy, "modal_recharge_amount_lyd": 5.0, "repayment_probability": 0.92}
+    response = decide_limit(
+        AdvanceLimitRequest(subscriber_id="b" * 64, product=AdvanceProduct.AIRTIME), features
+    )
+
+    assert response.approved is True
+    assert response.limit_lyd in (1.0, 3.0), "must be a real denomination below the card"
+    assert response.limit_lyd < 5.0
+
+
+def test_material_lockout_risk_steps_the_limit_down_a_denomination(healthy):
     """5 -> 3 -> 1, never to an amount the operator does not offer."""
-    raise NotImplementedError("TODO(E2/E4)")
+    from cvm.decision.advance_limit import apply_safety_guards
+
+    threshold = load_conf("advance")["safety_guards"]["lockout_risk"]["flag_if_probability_above"]
+    risky = {**healthy, "lockout_risk": threshold + 0.10}
+
+    safe_limit, _ = apply_safety_guards(5.0, healthy)
+    stepped, checks = apply_safety_guards(5.0, risky)
+
+    assert stepped < safe_limit
+    assert stepped in (0.0, 1.0, 3.0), f"{stepped} is not a denomination the operator offers"
+    assert not next(c for c in checks if c.guard == "lockout_risk").passed
+
+
+def test_a_decline_always_carries_a_reason_a_subscriber_can_read(healthy):
+    """Declining with nothing sends them away. Section 6.5 commits to a
+    human-readable reason for every decision, including the negative ones."""
+    from cvm.api.schemas import AdvanceLimitRequest, AdvanceProduct
+    from cvm.decision.advance_limit import decide_limit
+
+    broke = {**healthy, "modal_recharge_amount_lyd": 5.0}
+    response = decide_limit(
+        AdvanceLimitRequest(subscriber_id="c" * 64, product=AdvanceProduct.DATA), broke
+    )
+
+    assert response.customer_facing_reason_ar
+    assert response.reason_codes
+    assert "50" in response.customer_facing_reason_ar, "the affordable fallback is named"
