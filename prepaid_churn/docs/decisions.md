@@ -244,3 +244,93 @@ So:
 - Only approved proposals are released; rejected and unreviewed ones never leave the module.
 - Every review is logged with the reviewer, time, decision and an optional note, so each action can be traced.
 - The copilot only reads summaries; it has no path to approve, create or send offers.
+
+## 15. One module from two efforts: this branch plus Ali's `Ali_Branch`
+
+Date: 2026-09-19.
+
+Ali Marghem built the "AI CVM Suite" in parallel on the remote branch `Ali_Branch` (commit `06890f6`).
+Taha asked to take the best of both into one module on `tahaDev`.
+The full review and every ported piece are logged in [ali_branch_merge.md](ali_branch_merge.md).
+
+What the review found:
+- `Ali_Branch` shares no history with `main` or `tahaDev`: it is a separate repository pushed as a branch, with its own files at the repo root.
+- Its churn labels come from a formula Ali wrote (`src/cvm/synthesis/hazard.py`), applied to 100,000 generated subscribers built from Cell2Cell (US postpaid, around 2000).
+  So its churn, value and uplift results measure that formula, as Ali's own docs say.
+- It also holds real, valuable work: Almadar Aljadid's published packages, prices, recharge cards and emergency credit rules, a careful offer engine design, an HTTP contract for the chatbot and copilot with grounding rules for LLMs, and a list of serving bugs found the hard way.
+
+Decided:
+- This module stays the base: real data, `uv`, and the frozen T7 champion.
+- `Ali_Branch` is **not** merged with git.
+  Its history is unrelated and its root-level files would collide with the team repo.
+  Pieces are ported by hand, each one logged in `docs/ali_branch_merge.md` with its source path, and the commits credit Ali as co-author.
+- `Ali_Branch` stays on GitHub untouched, as the record of his work.
+
+Taken (the ticket that uses each piece is in brackets):
+- Almadar catalogue, tariffs, recharge cards and emergency credit rules (T16).
+- Mapping money onto Almadar's scale (T18).
+- Offer engine design: the real catalogue as the action space, "no offer" as a real option, the guardrails including the cannibalisation guard keyed on the bundle a customer holds, the equal-spend comparison, the holdout and the decision log (T11).
+- Serving lessons: everything a scoring run needs travels inside the bundle, pinned library versions, a smoke prediction at load time, and one-row batches as a test case (T8).
+- The API and screen designs, and the grounding rules for LLM consumers (T14, T15, T20).
+- Prepaid value segmentation (T10), two-model uplift with Qini and the Criteo validation (T17), the emergency credit rules (T19), the synthesis engine and its quality gate (T13), and the model card template (T9).
+
+Not taken, and why:
+- The generated population and its formula labels, and every result measured on them: decision 7, the metrics would measure the formula.
+- The repayment model for emergency credit: no real repayment data exists.
+- Cox and random survival forests: our data is monthly, so there is no time-to-event to model.
+- DuckDB feature store, MLflow, Docker, conda and the eight-model benchmark: decision 7, not needed at this size.
+- Cell2Cell, IBM Telco, UCI Iranian, Hillstrom and Online Retail as data sources: decisions 5 and 7.
+
+Conflicts between the two efforts, and how they are settled:
+- Syllabus coverage: `Ali_Branch` removed chapter tracking; it stays here, because SIC grades it (decision 8).
+- Data in git: `Ali_Branch` never commits data; the raw Kaggle files stay committed here (decision 9).
+- Churn definition: `Ali_Branch` uses "30 days without a top-up"; we keep the usage-based rule, because the only real label (Kaggle's month 9) uses it.
+
+## 16. Almadar Aljadid is the operator, and real customers are shown in Almadar terms
+
+Date: 2026-09-19.
+
+Almadar Aljadid (MCC-MNC 606-01) is the only Libyan operator with real, confirmed data in the project: its published packages, prices, recharge cards and emergency credit rules, collected by Ali on 2026-09-18.
+Libyana has none yet, so this updates decision 11: the module targets Almadar, and Libyana can be added later as more rows in the same catalogue.
+
+How the two datasets meet:
+- The churn model keeps training on the real upGrad customers in their original units.
+  The T7 champion stays frozen.
+- The business layer (value, offers, emergency credit, app) shows each real customer in Almadar terms (T18): money in LYD, the Almadar bundle they would hold, and their usual recharge card.
+- The conversion is one documented scale anchored on stated assumptions, kept in one file with a status per value (confirmed, assumption or estimate).
+
+What the report must say: the behaviour comes from a real prepaid operator in another market; the prices, packages and money are Almadar's; real use needs retraining on Almadar's own export (decision 11).
+
+## 17. The customer MVP comes first, built to plug into the team platform
+
+Date: 2026-09-19.
+
+The instructor's review of the action plan asked to:
+- narrow the MVP to one measurable customer use case, so the three weeks allow credible integration and testing;
+- protect customer data through de-identification, access control and a human approval step for retention actions;
+- use the employee copilot only as retrieval-grounded Q&A over approved model outputs and documentation, with citations and refusal when evidence is missing, never making network or customer decisions.
+
+The team's final goal is one platform: GIS planning, network ML, this customer module, a customer chatbot and an employee copilot.
+In the action plan, Taha owns the chatbot, the copilot and the integration, and Ali owns customer intelligence and the chatbot.
+
+Our MVP use case: "Which active prepaid customers are likely to stop using their line next month, and which approved Almadar offer should each one get?"
+The MVP path is T16, T8, T18, T10, T11, T15, T20, T14 and T9.
+T12, T13, T17 and T19 come after the MVP works end to end.
+
+How the module links to each part of the platform (extends decision 10):
+- **Customer chatbot:** reads the Almadar catalogue (T16) and, for the one subscriber it is talking to, the approved offer and its reason (T15).
+  It never sees a churn probability.
+- **Employee copilot:** reads portfolio summaries (T15) and indexes this module's documents (model card, contracts, decisions) for retrieval with citations.
+  It gets no subscriber rows and has no way to create, change or approve an offer.
+- **Network ML:** a future input.
+  Once operator data exists, per-subscriber network quality (dropped calls, outage hours) can become churn features; the field contract is written in T20, and nothing is built before then.
+- **GIS planning:** no direct data link, because the churn data has no location.
+  The copilot combines the two only at the answer level.
+
+Rules that follow from the review:
+- **No LLM in any path that sets an offer, a price or a credit limit.**
+  LLM components read and explain API outputs; Ali's grounding rules (never invent a number, cite the field, refuse rather than guess) are part of the contract (T20).
+- **De-identification:** subscriber IDs are pseudonymous.
+  An operator hashes phone numbers with a secret salt before export, the module never receives a phone number, and the API rejects IDs shaped like one (T15).
+- **Access control:** the chatbot and the copilot use separate API keys, each limited to its own endpoints (T15).
+- **Human approval:** unchanged from decision 14.
