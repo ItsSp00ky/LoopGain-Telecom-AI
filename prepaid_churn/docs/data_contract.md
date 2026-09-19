@@ -13,7 +13,7 @@ Extra columns are allowed and ignored.
 
 | Column | Type | Missing allowed | Meaning |
 |---|---|---|---|
-| `id` | whole number, unique | no | Subscriber identifier (pseudonymous). |
+| `id` | number or text, unique | no | Pseudonymous subscriber identifier, for example a salted hash of the phone number; never the phone number itself (decision 17). |
 | `aon` | whole number >= 0 | no | Age on network in days. |
 | `churn_probability` | 0 or 1 | no | Training data only: 1 if the subscriber churned in the month after the last feature month. |
 

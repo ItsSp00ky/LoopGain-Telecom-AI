@@ -1,13 +1,21 @@
 """Command-line entry point. Each pipeline stage adds one subcommand here."""
 
 import argparse
+import datetime
+import json
 from pathlib import Path
 
 from prepaid_churn.data import PROJECT_ROOT, RAW_TRAIN_PATH, REPORTS_DIR, load_raw
 
 CONTRACT_PATH = PROJECT_ROOT / "docs" / "data_contract.md"
+OUTPUT_CONTRACT_PATH = PROJECT_ROOT / "docs" / "output_contract.md"
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
+BUNDLE_DIR = PROJECT_ROOT / "artifacts" / "bundle"
+SCORES_PATH = PROJECT_ROOT / "artifacts" / "scores" / "scores.csv"
+# Kaggle's unlabeled customers: never used for evaluation, so they stand in for "this month's base".
+RAW_SCORE_PATH = PROJECT_ROOT / "data" / "raw" / "test.csv"
+GATE_FILE = "gate.json"
 
 
 def run_profile(args: argparse.Namespace) -> None:
@@ -74,12 +82,10 @@ def run_train(args: argparse.Namespace) -> None:
 
 
 def run_evaluate(args: argparse.Namespace) -> None:
-    import datetime
-
     import joblib
     import pandas as pd
 
-    from prepaid_churn.evaluation import evaluation_report, freeze
+    from prepaid_churn.evaluation import evaluation_report, freeze, release_gate
 
     variant = args.data_dir.name
     model_dir = MODELS_DIR / variant
@@ -92,11 +98,53 @@ def run_evaluate(args: argparse.Namespace) -> None:
     validation = pd.read_parquet(args.data_dir / "validation.parquet")
     test = pd.read_parquet(args.data_dir / "test.parquet")
 
-    champion, choices = freeze(models, validation, datetime.date.today().isoformat())
+    champion, choices = freeze(models, validation, args.chosen_at)
     joblib.dump(champion, model_dir / "champion.joblib")
+    gate = release_gate(champion, choices, models, test)
+    (model_dir / GATE_FILE).write_text(json.dumps(gate, indent=2), encoding="utf-8")
     report = REPORTS_DIR / f"evaluation_{variant}.md"
-    report.write_text(evaluation_report(champion, choices, models, test), encoding="utf-8")
+    report.write_text(evaluation_report(champion, choices, models, test, gate), encoding="utf-8")
     print(f"Champion frozen in {model_dir / 'champion.joblib'}, report in {report}")
+    print(f"Release gate {'passed' if gate['passed'] else 'FAILED'} ({model_dir / GATE_FILE})")
+
+
+def run_bundle(args: argparse.Namespace) -> None:
+    import joblib
+    import pandas as pd
+
+    from prepaid_churn.bundle import build_bundle, save_bundle
+
+    model_dir = MODELS_DIR / args.data_dir.name
+    champion_path, gate_path = model_dir / "champion.joblib", model_dir / GATE_FILE
+    for path in (champion_path, gate_path):
+        if not path.exists():
+            raise FileNotFoundError(f"{path} not found. Run `uv run churn evaluate` first.")
+    gate = json.loads(gate_path.read_text("utf-8"))
+    examples = pd.read_parquet(args.data_dir / "validation.parquet")
+    created_at = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+    bundle = build_bundle(joblib.load(champion_path), gate, examples, created_at)
+    save_bundle(bundle, args.output_dir)
+    print(f"Bundle {bundle.version} written to {args.output_dir}")
+
+
+def run_score(args: argparse.Namespace) -> None:
+    from prepaid_churn.bundle import load_bundle
+    from prepaid_churn.scoring import score
+
+    bundle = load_bundle(args.bundle)
+    scores = score(load_raw(args.input), bundle)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    scores.to_csv(args.output, index=False, encoding="utf-8")
+    counts = scores["risk_band"].value_counts().to_dict()
+    print(f"{len(scores)} subscribers scored with {bundle.version} into {args.output}: {counts}")
+
+
+def run_output_contract(args: argparse.Namespace) -> None:
+    from prepaid_churn.scoring import output_contract_markdown
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(output_contract_markdown(), encoding="utf-8")
+    print(f"Output contract written to {args.output}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -140,12 +188,39 @@ def build_parser() -> argparse.ArgumentParser:
         "evaluate", help="Calibrate, freeze choices, then score the test window once (ticket T7)."
     )
     evaluate.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
+    evaluate.add_argument(
+        "--chosen-at",
+        default=datetime.date.today().isoformat(),
+        help="Date recorded as the freeze date (default: today).",
+    )
     evaluate.set_defaults(handler=run_evaluate)
+
+    bundle = commands.add_parser(
+        "bundle", help="Package the champion that passed its release gate (ticket T8)."
+    )
+    bundle.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
+    bundle.add_argument("--output-dir", type=Path, default=BUNDLE_DIR)
+    bundle.set_defaults(handler=run_bundle)
+
+    score = commands.add_parser(
+        "score", help="Score every subscriber of an export into the output contract (ticket T8)."
+    )
+    score.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
+    score.add_argument("--output", type=Path, default=SCORES_PATH)
+    score.add_argument("--bundle", type=Path, default=BUNDLE_DIR)
+    score.set_defaults(handler=run_score)
+
+    output_contract = commands.add_parser(
+        "output-contract", help="Write the subscriber output contract document (ticket T8)."
+    )
+    output_contract.add_argument("--output", type=Path, default=OUTPUT_CONTRACT_PATH)
+    output_contract.set_defaults(handler=run_output_contract)
 
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
+    from prepaid_churn.bundle import BundleError
     from prepaid_churn.schema import InvalidExportError
 
     parser = build_parser()
@@ -155,5 +230,5 @@ def main(argv: list[str] | None = None) -> None:
         return
     try:
         args.handler(args)
-    except (FileNotFoundError, InvalidExportError) as error:
+    except (FileNotFoundError, InvalidExportError, BundleError) as error:
         parser.exit(1, f"error: {error}\n")

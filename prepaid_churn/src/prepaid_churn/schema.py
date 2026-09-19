@@ -220,7 +220,7 @@ def _month_end_present(month: int) -> pa.Check:
 
 def build_schema(months=FEATURE_MONTHS, labeled: bool = False) -> pa.DataFrameSchema:
     columns = {
-        ID: pa.Column(int, unique=True, coerce=True),
+        ID: pa.Column(unique=True),  # a number or text: operators may export a salted hash
         TENURE: pa.Column(int, pa.Check.ge(0), coerce=True),
     }
     if labeled:
@@ -292,7 +292,9 @@ def contract_markdown(months=FEATURE_MONTHS) -> str:
         "",
         "| Column | Type | Missing allowed | Meaning |",
         "|---|---|---|---|",
-        f"| `{ID}` | whole number, unique | no | Subscriber identifier (pseudonymous). |",
+        f"| `{ID}` | number or text, unique | no | Pseudonymous subscriber identifier, "
+        "for example a salted hash of the phone number; never the phone number itself "
+        "(decision 17). |",
         f"| `{TENURE}` | whole number >= 0 | no | Age on network in days. |",
         f"| `{LABEL_COLUMN}` | 0 or 1 | no | Training data only: 1 if the subscriber "
         "churned in the month after the last feature month. |",

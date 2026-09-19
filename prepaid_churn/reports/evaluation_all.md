@@ -62,3 +62,16 @@ High-risk threshold on test: precision 0.3844, recall 0.4109, 450 customers.
 | slice | roc_auc | pr_auc | log_loss | brier | mean_probability | churn_rate |
 |---|---|---|---|---|---|---|
 | high value | 0.9059 | 0.3825 | 0.0872 | 0.0222 | 0.0320 | 0.0293 |
+
+## Success thresholds (decision 13)
+
+lightgbm must pass all four before it is bundled for use (T8).
+
+| threshold | check | value | required | passed |
+|---|---|---|---|---|
+| capture | Share of churners among the riskiest 10% of customers | 0.6152 | >= 0.5 | yes |
+| better_than_chance | PR-AUC divided by the churn rate | 7.9922 | >= 3.0 | yes |
+| better_than_baseline | PR-AUC against the logistic regression baseline | 0.3477 | > 0.2770 | yes |
+| calibration | Distance between mean predicted and observed churn rate | 0.0013 | <= 0.01 | yes |
+
+Release gate: **passed**.

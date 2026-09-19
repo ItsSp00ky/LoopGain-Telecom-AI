@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import log_loss, precision_recall_curve
+from sklearn.metrics import average_precision_score, log_loss, precision_recall_curve
 from sklearn.model_selection import StratifiedKFold
 
 from prepaid_churn.training import metrics, predict
@@ -20,6 +20,13 @@ from prepaid_churn.windows import HIGH_VALUE_QUANTILE, LABEL, SEED
 CALIBRATION_METHODS = ("none", "sigmoid", "isotonic")
 TOP_SHARES = (0.05, 0.10, 0.20)
 EPSILON = 1e-6
+
+# Success thresholds (decision 13): a model is fit for use only if it passes all four.
+CAPTURE_SHARE = 0.10  # the riskiest 10% of customers ...
+MIN_CAPTURE = 0.50  # ... must hold at least half of the churners
+MIN_LIFT = 3.0  # PR-AUC at least 3 times the churn rate (random ranking scores about the rate)
+MAX_CALIBRATION_GAP = 0.01  # mean prediction within 1 point of the observed churn rate
+BASELINE = "logistic_regression"
 
 
 class Calibrator:
@@ -163,7 +170,90 @@ def freeze(models: dict, validation: pd.DataFrame, chosen_at: str) -> tuple[Cham
     return champion, choices
 
 
-def evaluation_report(champion: Champion, choices: dict, models: dict, test: pd.DataFrame) -> str:
+def success_thresholds(y, probability, baseline_probability=None) -> dict:
+    """The four checks of decision 13, each with its value, its requirement and the verdict.
+
+    `baseline_probability` is None when the champion is the baseline itself: the simpler
+    model already won, so the third check has nothing to beat.
+    """
+    y, probability = np.asarray(y), np.asarray(probability)
+    rate = float(y.mean())
+    capture = float(top_share_metrics(probability, y, (CAPTURE_SHARE,))["recall"].iloc[0])
+    pr_auc = float(average_precision_score(y, probability))
+    gap = abs(float(probability.mean()) - rate)
+    checks = {
+        "capture": {
+            "description": f"Share of churners among the riskiest {CAPTURE_SHARE:.0%} of customers",
+            "value": capture,
+            "required": f">= {MIN_CAPTURE}",
+            "passed": capture >= MIN_CAPTURE,
+        },
+        "better_than_chance": {
+            "description": "PR-AUC divided by the churn rate",
+            "value": pr_auc / rate,
+            "required": f">= {MIN_LIFT}",
+            "passed": pr_auc >= MIN_LIFT * rate,
+        },
+        "better_than_baseline": {
+            "description": "PR-AUC against the logistic regression baseline",
+            "value": pr_auc,
+            "required": "champion is the baseline",
+            "passed": True,
+        },
+        "calibration": {
+            "description": "Distance between mean predicted and observed churn rate",
+            "value": gap,
+            "required": f"<= {MAX_CALIBRATION_GAP}",
+            "passed": gap <= MAX_CALIBRATION_GAP,
+        },
+    }
+    if baseline_probability is not None:
+        baseline = float(average_precision_score(y, baseline_probability))
+        checks["better_than_baseline"] |= {
+            "required": f"> {baseline:.4f}",
+            "passed": pr_auc > baseline,
+        }
+    return checks
+
+
+def release_gate(champion: Champion, choices: dict, models: dict, test: pd.DataFrame) -> dict:
+    """Test metrics for every model and the success thresholds for the champion.
+
+    Stored next to the frozen champion; T8 refuses to bundle a champion that fails a check.
+    """
+    y = test[LABEL]
+    calibrated = {
+        name: choices[name]["calibrator"].transform(predict(model, test))
+        for name, model in models.items()
+    }
+    baseline = None if champion.name == BASELINE else calibrated[BASELINE]
+    thresholds = success_thresholds(y, calibrated[champion.name], baseline)
+    return {
+        "champion": champion.name,
+        "chosen_at": champion.chosen_at,
+        "passed": all(check["passed"] for check in thresholds.values()),
+        "thresholds": thresholds,
+        "test_metrics": {name: metrics(y, p) for name, p in calibrated.items()},
+    }
+
+
+def thresholds_table(gate: dict) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            name: {
+                "check": check["description"],
+                "value": round(check["value"], 4),
+                "required": check["required"],
+                "passed": "yes" if check["passed"] else "no",
+            }
+            for name, check in gate["thresholds"].items()
+        }
+    ).T
+
+
+def evaluation_report(
+    champion: Champion, choices: dict, models: dict, test: pd.DataFrame, gate: dict
+) -> str:
     from prepaid_churn.profile import markdown_table
 
     y = test[LABEL]
@@ -234,6 +324,14 @@ def evaluation_report(champion: Champion, choices: dict, models: dict, test: pd.
                 pd.DataFrame({"high value": metrics(y[high_value], probability[high_value])}).T,
                 "slice",
             ),
+            "",
+            "## Success thresholds (decision 13)",
+            "",
+            f"{champion.name} must pass all four before it is bundled for use (T8).",
+            "",
+            markdown_table(thresholds_table(gate), "threshold"),
+            "",
+            f"Release gate: **{'passed' if gate['passed'] else 'failed'}**.",
             "",
         ]
     )

@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -69,17 +71,13 @@ def raw() -> pd.DataFrame:
     return build_raw()
 
 
-@pytest.fixture
-def population() -> pd.DataFrame:
-    """200 cleaned customers: 50 copies of the four hand-made ones, with distinct ids.
+def build_population_raw() -> pd.DataFrame:
+    """200 raw customers: 50 copies of the four hand-made ones, with distinct ids.
 
     Recharge amounts grow with the copy number, so a top-30% filter has something to cut.
     In every other copy customer 0, who stays active, churns in month 9, so the test
     window has churners among eligible customers.
     """
-    from prepaid_churn.clean import clean
-    from prepaid_churn.schema import validate
-
     base = build_raw()
     copies = []
     for copy in range(50):
@@ -89,4 +87,50 @@ def population() -> pd.DataFrame:
         for month in MONTHS:
             frame[f"total_rech_amt_{month}"] = 10 * (copy + 1)
         copies.append(frame)
-    return clean(validate(pd.concat(copies, ignore_index=True)))
+    return pd.concat(copies, ignore_index=True)
+
+
+def build_population() -> pd.DataFrame:
+    from prepaid_churn.clean import clean
+    from prepaid_churn.schema import validate
+
+    return clean(validate(build_population_raw()))
+
+
+@pytest.fixture
+def population() -> pd.DataFrame:
+    """The 200 customers of `build_population_raw`, validated and cleaned."""
+    return build_population()
+
+
+@pytest.fixture(scope="session")
+def trained() -> dict:
+    """Models, champion and release gate, trained once on the population (T8 tests)."""
+    from prepaid_churn.evaluation import freeze, release_gate
+    from prepaid_churn.training import train_models
+    from prepaid_churn.windows import build_datasets
+
+    datasets = build_datasets(build_population())
+    models = train_models(datasets["train"])
+    champion, choices = freeze(models, datasets["validation"], chosen_at="2026-09-19")
+    gate = release_gate(champion, choices, models, datasets["test"])
+    return {"datasets": datasets, "models": models, "champion": champion, "gate": gate}
+
+
+@pytest.fixture
+def passing_gate(trained) -> dict:
+    """The real gate with every check set to pass: 200 copied customers cannot judge a model."""
+    gate = deepcopy(trained["gate"])
+    for check in gate["thresholds"].values():
+        check["passed"] = True
+    gate["passed"] = True
+    return gate
+
+
+@pytest.fixture
+def bundle(trained, passing_gate):
+    from prepaid_churn.bundle import build_bundle
+
+    return build_bundle(
+        trained["champion"], passing_gate, trained["datasets"]["validation"], "2026-09-19T12:00"
+    )

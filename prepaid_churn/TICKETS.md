@@ -29,7 +29,7 @@ Update this section at the end of every working session.
 
 **Next steps, in order (the MVP path from decision 17)**
 1. T16 Almadar catalogue and market facts (done).
-2. T8 model bundle, batch scoring and the output contract.
+2. T8 model bundle, batch scoring and the output contract (done).
 3. T18 Almadar view of the real customers.
 4. T10 value tiers, then T11 offers with human approval.
 5. T15 integration service, then T20 integration check with the chatbot and copilot.
@@ -318,8 +318,8 @@ From now on they are a gate for every new model (retraining, a new month or an o
 
 ## T8 - Model bundle and batch scoring
 
-**Owner:**
-**Status:** Todo
+**Owner:** Claude
+**Status:** Done
 **Depends on:** T7
 
 Scope:
@@ -344,6 +344,21 @@ Acceptance:
 - A test shows the bundle is refused for a champion that fails a threshold.
 - A one-row batch gives the same probability and reasons as the same row inside a larger batch, and its reasons are not all zero.
 - A bundle whose smoke prediction fails is refused.
+
+Findings:
+- Commands: `churn evaluate` now also stores the release gate (`artifacts/models/all/gate.json`) and adds the four thresholds to `reports/evaluation_all.md`; `churn bundle` packages the champion; `churn score` writes `artifacts/scores/scores.csv`; `churn output-contract` writes `docs/output_contract.md`.
+- `churn evaluate` was rerun once, only to store the gate: `champion.joblib` is byte-identical (same SHA-256) and every T7 number is unchanged; the report only gained the thresholds section.
+- The bundle `lightgbm-2026-09-19-ef9430fb` is `artifacts/bundle/manifest.json` (plain JSON: library versions, data contract fingerprint, gate, thresholds, features) plus `model.joblib`.
+  Loading checks the versions before unpickling anything, then predicts a stored sample row and refuses a bundle whose answer changed.
+- `churn score` defaults to Kaggle's `test.csv`: 30,000 customers never used for training or evaluation, which stand in for "this month's base".
+  In 10 seconds: 1,209 high, 3,594 medium, 22,779 low and 2,418 already silent; the mean prediction among active customers is 4.14% (test churn rate 4.35%).
+- Reasons are exact SHAP values from LightGBM's own `pred_contrib`, which needs no background sample, so `Ali_Branch`'s "every reason is zero" bug cannot happen here.
+  Computing them on all cores gives identical numbers 9 times faster (55 to 10 seconds for 30,000 customers).
+  The most frequent top reasons are days since the last recharge, the amount on the last recharge day and outgoing roaming minutes.
+- A one-row bug was found and fixed: pandas 3 gives an all-empty text column the type `object` in a one-row batch and `str` in a larger one; text columns now have an explicit type, and a test compares each customer alone with the full batch.
+- Nothing is computed from the scored batch except the month end date, which the data contract already requires on at least one row.
+- Data contract: `id` may now be a number or text, so an operator can export a salted hash of the phone number (decision 17); `docs/data_contract.md` was regenerated.
+- `shap` was removed from the dependencies (LightGBM computes SHAP itself), and with it numba, llvmlite, slicer and tqdm.
 
 ## T9 - Documentation
 

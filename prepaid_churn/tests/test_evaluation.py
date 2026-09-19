@@ -8,8 +8,10 @@ from prepaid_churn.evaluation import (
     choose_calibrator,
     evaluation_report,
     freeze,
+    release_gate,
     reliability_table,
     risk_band,
+    success_thresholds,
     top_share_metrics,
 )
 from prepaid_churn.training import train_models
@@ -87,6 +89,41 @@ def test_freeze_and_report(population):
     assert set(choices) == set(models)
     probability = champion.predict(datasets["test"])
     assert probability.shape == (len(datasets["test"]),)
-    report = evaluation_report(champion, choices, models, datasets["test"])
+    gate = release_gate(champion, choices, models, datasets["test"])
+    assert gate["champion"] == champion.name
+    assert set(gate["test_metrics"]) == set(models)
+    report = evaluation_report(champion, choices, models, datasets["test"], gate)
     assert "Frozen choices" in report
     assert "2026-09-19" in report
+    assert "Success thresholds (decision 13)" in report
+
+
+def _ranked(churners_on_top: int) -> tuple[np.ndarray, np.ndarray]:
+    """100 customers, 10 churners; `churners_on_top` of them are among the 10 riskiest."""
+    y = np.zeros(100, dtype=int)
+    y[:churners_on_top] = 1
+    y[50 : 50 + 10 - churners_on_top] = 1
+    probability = np.linspace(0.2, 0.001, 100)  # mean 0.1005, the churn rate is 0.10
+    return y, probability
+
+
+def test_success_thresholds_pass_for_a_good_model():
+    y, probability = _ranked(churners_on_top=8)
+    checks = success_thresholds(y, probability, baseline_probability=probability[::-1])
+    assert all(check["passed"] for check in checks.values())
+    assert checks["capture"]["value"] == 0.8
+
+
+def test_each_success_threshold_can_fail():
+    y, probability = _ranked(churners_on_top=4)
+    checks = success_thresholds(y, probability * 2, baseline_probability=probability)
+    assert not checks["capture"]["passed"]  # 4 of 10 churners in the riskiest 10%
+    assert not checks["calibration"]["passed"]  # mean prediction 0.20 against 0.10
+    assert not checks["better_than_baseline"]["passed"]  # same ranking as the baseline
+    y, _ = _ranked(churners_on_top=0)
+    assert not success_thresholds(y, probability)["better_than_chance"]["passed"]
+
+
+def test_a_baseline_champion_has_nothing_to_beat():
+    y, probability = _ranked(churners_on_top=8)
+    assert success_thresholds(y, probability)["better_than_baseline"]["passed"]

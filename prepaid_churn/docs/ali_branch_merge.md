@@ -26,7 +26,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 1 | Almadar source files (packages, tariffs, service rules) | `Almadar/*` | `data/almadar/source/` | T16 | Done (byte-for-byte copies) |
 | 2 | Almadar catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/almadar/offers.csv`, `data/almadar/market.toml`, `src/prepaid_churn/almadar.py` | T16 | Done |
 | 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Planned |
-| 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | T8 bundle and scoring | T8 | Planned |
+| 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | `src/prepaid_churn/bundle.py`, `src/prepaid_churn/scoring.py` | T8 | Done |
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | T10 | T10 | Planned |
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | T11 | T11 | Planned |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | T15 | T15 | Planned |
@@ -70,3 +70,13 @@ Useful for the team but outside this module: `docs/integration/copilot_starter/`
 - Not carried over from `conf/market.yaml`: the recharge popularity split, channel shares, dual-SIM share, calendar and language shares, which only fed the generated population.
 - `src/prepaid_churn/almadar.py` validates both files and checks the catalogue row by row against the operator file; `tests/test_almadar.py` covers each rule and each kind of mismatch.
 - `docs/almadar.md` explains the files for the chatbot owners and for future refreshes.
+
+### Step 4 - T8 model bundle and scoring (2026-09-19, Claude)
+
+Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules, not ported as code:
+- "Any statistic a serving path needs must travel on the artefact": the bundle carries the features, thresholds and a sample row, and nothing is computed from the scored batch except the month end date the data contract requires.
+- "Loading is not working": loading predicts the stored sample row and refuses a bundle whose answer changed.
+- Library skew between the pickle and the installed versions: `manifest.json` records the versions and is checked before anything is unpickled (Ali pinned scikit-learn below 1.8 instead; we record and compare every version).
+- "A batch of one row is its own worst case": a test scores each customer alone and compares it with the full batch.
+  It found a real bug on the first run: pandas 3 typed an all-empty reason column differently in a one-row batch.
+- The zero SHAP background: avoided by design, because LightGBM's own `pred_contrib` needs no background sample.
