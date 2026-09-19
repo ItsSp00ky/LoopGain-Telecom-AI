@@ -23,6 +23,28 @@ def test_profile_writes_report(raw, tmp_path):
     assert output.read_text(encoding="utf-8").startswith("# T1 data profile")
 
 
+def test_validate_accepts_valid_export(raw, tmp_path, capsys):
+    source = tmp_path / "train.csv"
+    raw.to_csv(source, index=False)
+    main(["validate", "--input", str(source)])
+    assert "matches the data contract (4 rows)" in capsys.readouterr().out
+
+
+def test_validate_rejects_invalid_export(raw, tmp_path, capsys):
+    source = tmp_path / "train.csv"
+    raw.drop(columns="aon").to_csv(source, index=False)
+    with pytest.raises(SystemExit) as exc:
+        main(["validate", "--input", str(source)])
+    assert exc.value.code == 1
+    assert "aon" in capsys.readouterr().err
+
+
+def test_contract_writes_document(tmp_path):
+    output = tmp_path / "contract.md"
+    main(["contract", "--output", str(output)])
+    assert output.read_text(encoding="utf-8").startswith("# Data contract")
+
+
 def test_profile_missing_input_fails_cleanly(tmp_path, capsys):
     with pytest.raises(SystemExit) as exc:
         main(["profile", "--input", str(tmp_path / "missing.csv")])

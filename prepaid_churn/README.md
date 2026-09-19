@@ -30,6 +30,8 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | Command | Ticket | What it does |
 |---|---|---|
 | `uv run churn profile` | T1 | Profiles `data/raw/train.csv` and writes `reports/profile.md` |
+| `uv run churn validate [--input <file>]` | T2 | Checks an export against the [data contract](docs/data_contract.md) |
+| `uv run churn contract` | T2 | Regenerates `docs/data_contract.md` from the code |
 
 ## Development
 

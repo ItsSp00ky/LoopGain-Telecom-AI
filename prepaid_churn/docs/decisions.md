@@ -161,3 +161,38 @@ Trade-offs Taha accepted:
 Consequences:
 - The repo must stay private, and the data must never be copied anywhere public.
 - `data/processed/` and `artifacts/` stay git-ignored; they are rebuilt by the pipeline.
+
+## 10. Integration with the team's other services
+
+Date: 2026-09-19.
+
+The team's SIC action plan combines this module with a customer chatbot (offers and nearby service points) and an employee copilot (questions about network, planning and, "where authorized", customer intelligence).
+So the churn module is built as a service with two fixed contracts and simple integration points first:
+
+- **Input contract** (`docs/data_contract.md`, T2): what an operator export must contain.
+  An operator integrates by producing a file that passes `churn validate`.
+- **Output contract** (T8, extended by T11): one row per subscriber with subscriber ID, calibrated churn probability, risk band, top three reasons in plain language, value tier, recommended offer and its reason, model version and scoring time.
+- **For the customer chatbot:** it shows the recommended offer and its reason, never the raw churn probability, and only for the subscriber it is talking to.
+- **For the employee copilot:** portfolio summaries (customers and revenue at risk by risk band and value tier) plus the model's test metrics.
+- **Integration points, simplest first:** the `score` function and the versioned output file (T8).
+  A small HTTP service (T15) is built only when a teammate's service needs to call us over the network.
+
+Both contracts are generated from code and checked by tests, so the documentation cannot drift from what the code does.
+
+## 11. Real Libyan market data and commercial use
+
+Date: 2026-09-19.
+
+Taha and the team want the product as close to the real market as possible, and may try to sell it.
+
+Findings:
+- Nothing in the repo contains real Libyana or Al-Madar packages or prices; only tower locations and operator codes (in the antenna module).
+- Al-Madar publishes its data packages on its website; Libyana's site blocks automated requests but works in a normal browser.
+  T16 builds a real package catalogue from these official sources, with a collection date on every row.
+- The Orange Belgium Churn-Uplift dataset in the action plan is real: 11,896 customers of a real phone retention campaign with a random control group.
+  It is postpaid, its features are anonymized, and its license is non-commercial (CC BY-NC-ND 4.0), so it serves the T17 experiment only.
+
+Consequence for selling:
+- Both training datasets are for education or non-commercial use only, so models trained on them cannot be sold.
+- What can be sold is the pipeline: the input contract, cleaning, features, training, calibration and decision logic, retrained on the operator's own export.
+- The data contract is therefore written so that a Libyan operator can map its own data to it (see "Adapting a Libyan export" in `docs/data_contract.md`).
