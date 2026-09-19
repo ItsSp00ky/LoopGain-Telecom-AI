@@ -9,8 +9,10 @@
 # consume this stack's API read-only and are not started here.
 # See docs/INTEGRATION.md.
 #
-# Deliverable D1: this must reproduce the system from a clean clone.
-# as a saved artefact under ./artifacts/models.
+# Deliverable D1: this must reproduce the system from a clean clone. The
+# models are NOT trained in the container -- they are produced by the
+# pipeline and mounted from ./artifacts/models, so `up` is seconds and not
+# forty minutes. /health reports degraded until they are there.
 # ---------------------------------------------------------------------------
 
 name: cvm-ali-branch
@@ -71,6 +73,12 @@ services:
       - ./data:/app/data:ro
       - ./artifacts:/app/artifacts:ro
       - ./conf:/app/conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
       api:
         condition: service_healthy
@@ -92,10 +100,26 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+      # The healthcheck below polls this; without it the check hits 8501 and
+      # the container is marked unhealthy while serving perfectly on 8502.
+      STREAMLIT_SERVER_PORT: 8502
     ports:
       - "8502:8502"
     volumes:
+      # The simulator reads the feature store and the model artefacts, not just
+      # the config: it shows the offer and advance THIS subscriber would get,
+      # which means calling the decision engine with their real features.
+      # Mounting only ./conf made every lookup report "not in the feature
+      # store", which looks like a data problem and is a compose problem.
+      - ./data:/app/data:ro
+      - ./artifacts:/app/artifacts:ro
       - ./conf:/app/conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8502/_stcore/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
       api:
         condition: service_healthy

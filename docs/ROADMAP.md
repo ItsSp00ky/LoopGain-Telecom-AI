@@ -15,7 +15,10 @@ suite are green with **every xfail deleted**, the decision engine serves at a
 **37 ms p95** against a 200 ms budget, and all six dashboard screens render
 headlessly in CI.
 
-**Only phase 10 remains — shipping it.**
+**Phase 10 is partly verified.** Both Dockerfiles are written and the API image
+builds; the containerised stack has not been brought up, because the Docker
+engine on this machine crashed exporting the UI layer and did not recover. The
+five affected checks report PENDING rather than passing — see that section.
 
 ## Two commands
 
@@ -1359,32 +1362,95 @@ streamlit run apps/channel_sim/Home.py
 
 <a id="phase-10"></a>
 
-## Phase 10 · Ship — 2 days
+## Phase 10 · Ship — **PARTLY VERIFIED**
 
-**Check 1** — Docker, from a clean clone. Start Docker Desktop first; the
-daemon has never run on this machine, so D1 is unverified:
+The two Dockerfiles the compose file had always referenced **did not exist**.
+`docker/api.Dockerfile` and `docker/ui.Dockerfile` were named by four services
+and were never written — deliverable D1 was a compose file pointing at nothing,
+which validates as YAML and fails at build. Both are now written, and the API
+image **built successfully**.
 
-```bash
-docker compose up --build
-```
+Read the state honestly before the detail:
 
-**Check 2** — the definition of done, on a machine that is not yours. This is
-the one that catches people:
+| | |
+|---|---|
+| Dockerfiles written | yes |
+| API image builds | **verified** — built at 3.68 GB, then reduced |
+| UI image builds | built once at 3.82 GB; the rebuild **crashed the engine** |
+| `docker compose up` healthy | **not verified** |
+| clean-clone build elsewhere | **not verified** |
 
-```bash
-git clone <your-repo-url> C:/Temp/clean
-```
+`scripts/check_phase.py 10` reports 3 passed and 5 **pending** — pending, not
+failed, because the daemon is unreachable rather than the checks being wrong.
+They will run the moment Docker is healthy.
 
-Then `cd C:/Temp/clean` and run `docker compose up` there.
+### What building it actually found
 
-```bash
-docker compose ps
-```
+**The images were installing the entire training stack to serve.** The first
+API build measured **3.68 GB**, of which **454 MB was NVIDIA CUDA runtime** —
+`xgboost` declares `nvidia-nccl-cu12` unconditionally on Linux, and nccl is
+multi-GPU collective communication that a CPU booster never calls. Behind it:
+catboost 269 MB, xgboost 228 MB, llvmlite 173 MB.
 
-**Check 3** — the contract test with your teammate's component, against the six
-frozen endpoints in `docs/INTEGRATION.md`.
+None of it is needed to answer a request. catboost, xgboost, scikit-survival,
+optuna, statsmodels, imbalanced-learn and scikit-uplift exist to **build** the
+benchmark; nothing loads or calls them at serving time. There is now a `serve`
+extra — sklearn and lightgbm to load the artefacts, shap for the Subscriber 360
+waterfall, pulp for the campaign LP, and lifelines plus lifetimes because the
+registry deserialises a Cox fit and two BG/NBD fits. Both images install that
+instead of `ml`, and two tests hold the boundary.
 
-**Check 4** — three timed dry-runs of the demo. Not two.
+**Exporting the 3.8 GB UI layer crashed the Docker engine — twice.** It did not
+recover from a `docker desktop restart` or from terminating the
+`docker-desktop` WSL distro. That is what drove the finding above rather than
+being incidental to it: the image was too big, and it was too big for a reason
+worth fixing.
+
+### Three smaller things the build caught
+
+**`libgomp1` is not in `python:3.11-slim`.** Without it `import lightgbm` fails
+at load with a bare `libgomp.so.1: cannot open shared object file`, which reads
+like a Python problem and is a missing system package.
+
+**Streamlit blocks on stdin asking for an email** on first run. A container that
+does that never serves and never says why. Fixed with a baked `config.toml`
+rather than hoping an environment variable is set.
+
+**The channel simulator mounted only `./conf`.** It shows the offer and advance
+*this* subscriber would get, which means calling the decision engine with their
+real features — so every lookup would have reported "not in the feature store",
+which looks like a data problem and was a compose problem. It also had no
+healthcheck, and the shared one would have polled 8501 while it served on 8502.
+
+### A claim of mine that was wrong
+
+The first draft of `api.Dockerfile` said the CPU-only choice was "the
+difference between a ~700 MB image and a ~3.5 GB one". The measured image was
+**3.68 GB with no torch in it at all**. The docstring now carries measured
+figures rather than an estimate.
+
+### What the checks verify, once Docker is up
+
+Not that files exist — that the system runs.
+
+| check | what it proves |
+|---|---|
+| images build | D1. A Dockerfile never built is one that does not work |
+| the stack comes up healthy | `/health` is `ok`, so every model loaded and the store is readable |
+| containers run as non-root | neither image can write to mounted host data as root |
+| no secret baked into an image | the salt is a runtime variable; a `--build-arg` survives in every layer |
+| pipeline artefacts reproduce | seven Parquet files, byte for byte ✓ |
+| the demo path is runnable | six entry points an evaluator can type ✓ |
+
+### Still outstanding, and they are yours rather than the code's
+
+- **Get Docker healthy and re-run `python scripts/check_phase.py 10`.** The
+  engine needs attention on this machine; the five pending checks are written
+  and waiting.
+- **`git remote`** — nothing has been pushed anywhere. Phase 0.3.
+- **A clean-clone build on another machine.** That is the point of the check.
+- **The contract test** against a teammate's component, per `docs/INTEGRATION.md`.
+- **Three timed dry-runs of the demo.** Not two.
 
 ---
 

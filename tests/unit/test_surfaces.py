@@ -171,3 +171,58 @@ def test_the_360_refuses_a_raw_msisdn():
     assert any(
         "phone number" in str(e.value).lower() for e in app.error
     ), "a raw MSISDN was accepted by the lookup field"
+
+
+# --- What the containers actually need --------------------------------------
+
+
+def test_the_serve_extra_covers_the_serving_path():
+    """The Docker images install `serve`, not `ml`, and the difference is 2 GB.
+
+    catboost, xgboost, scikit-survival, optuna, statsmodels, imbalanced-learn
+    and scikit-uplift exist to BUILD the benchmark. If one of them creeps into
+    an import the serving path executes, the container stops working and the
+    first sign is a 500 during a demo -- so the boundary is asserted rather
+    than remembered.
+    """
+    import tomllib
+
+    root = Path(__file__).resolve().parents[2]
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    extras = project["project"]["optional-dependencies"]
+
+    serve = {name.split(">")[0].split("[")[0].strip() for name in extras["serve"]}
+    assert {"scikit-learn", "lightgbm", "shap", "pulp"} <= serve
+
+    training_only = {"catboost", "xgboost", "scikit-survival", "optuna", "statsmodels"}
+    assert not (
+        serve & training_only
+    ), f"serve pulls training-only packages: {serve & training_only}"
+
+
+def test_importing_cvm_does_not_pull_torch_on_linux():
+    """`cvm/_dlls.py` preloads torch to fix a Windows DLL-ordering crash. It
+    must stay behind the platform guard: the containers are Linux and do not
+    install torch, so an unguarded preload would make `import cvm` attempt a
+    package that is not there on every single request path.
+
+    Guarded here by construction -- the early return precedes the preload --
+    and this asserts that ordering rather than trusting it.
+    """
+    import importlib.util
+    import inspect
+
+    root = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location("_dlls_probe", root / "src/cvm/_dlls.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    source = inspect.getsource(module.register_conda_dll_directories)
+    assert source.index('sys.platform != "win32"') < source.index("_preload_torch()")
+
+    real = sys.platform
+    try:
+        sys.platform = "linux"
+        assert module.register_conda_dll_directories() == []
+    finally:
+        sys.platform = real

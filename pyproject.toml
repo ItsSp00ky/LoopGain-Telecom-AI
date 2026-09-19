@@ -56,6 +56,26 @@ ml = [
     "statsmodels>=0.14",
 ]
 
+# --- Serving only. What the containers actually need. ----------------------
+# SERVING NEEDS FAR LESS THAN TRAINING, and the difference is not marginal.
+# catboost, xgboost, scikit-survival, optuna, statsmodels, imbalanced-learn and
+# scikit-uplift exist to BUILD the benchmark; nothing loads or calls them to
+# answer a request. Installing `ml` in a serving image measured 3.68 GB and
+# crashed the Docker engine twice while exporting the UI layer.
+#
+# What stays: sklearn and lightgbm to load the model artefacts, shap for the
+# Subscriber 360 waterfall, pulp for the campaign LP, and lifelines/lifetimes
+# because registry.load_registry deserialises a Cox fit and two BG/NBD fits.
+serve = [
+    "scikit-learn>=1.5",
+    "lightgbm>=4.4",
+    "shap>=0.45",
+    "pulp>=2.8",
+    "scipy>=1.13",
+    "lifelines>=0.28",
+    "lifetimes>=0.11.3",
+]
+
 # --- Synthesis: CTGAN / TVAE / Copula --------------------------------------
 # Pulls torch. Install the CPU wheel first or it drags ~2.5 GB of CUDA:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
