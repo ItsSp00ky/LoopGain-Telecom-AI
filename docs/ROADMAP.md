@@ -542,14 +542,14 @@ calibrates every one of them, fits M1b, and writes six reports.
 
 | model | PR-AUC | lift@1 | recall@1 | Brier | ECE | ROC-AUC |
 |---|---|---|---|---|---|---|
-| **logistic_regression** | **0.4735** | 6.30 | 63.0% | 0.0248 | 0.0037 | 0.8655 |
-| lightgbm | 0.4407 | 6.28 | 62.8% | 0.0258 | 0.0036 | 0.8616 |
-| xgboost | 0.4233 | 6.15 | 61.5% | 0.0264 | 0.0039 | 0.8588 |
-| catboost | 0.4182 | 6.23 | 62.4% | 0.0262 | 0.0034 | 0.8633 |
+| **logistic_regression** | **0.4721** | 6.30 | 63.0% | 0.0248 | 0.0036 | 0.8651 |
+| lightgbm | 0.4417 | 6.26 | 62.6% | 0.0257 | 0.0039 | 0.8570 |
+| catboost | 0.4195 | 6.34 | 63.4% | 0.0261 | 0.0039 | 0.8628 |
+| xgboost | 0.4177 | 6.03 | 60.3% | 0.0263 | 0.0037 | 0.8576 |
 | decision_tree | 0.4032 | 5.84 | 58.4% | 0.0265 | 0.0038 | 0.8353 |
-| knn | 0.3746 | 5.55 | 55.5% | 0.0269 | 0.0039 | 0.7763 |
-| naive_bayes | 0.2664 | 5.98 | 59.8% | 0.0295 | 0.0047 | 0.8278 |
-| svm | 0.2306 | 5.12 | 51.2% | 0.0311 | 0.0036 | 0.7951 |
+| knn | 0.3770 | 5.57 | 55.7% | 0.0268 | 0.0039 | 0.7734 |
+| naive_bayes | 0.2672 | 5.98 | 59.8% | 0.0295 | 0.0046 | 0.8241 |
+| svm | 0.2314 | 5.14 | 51.4% | 0.0311 | 0.0041 | 0.7952 |
 
 Base rate 3.68%. Accuracy is the last column in the written CSV and the phase
 check fails if it ever leads.
@@ -583,8 +583,8 @@ happened on the first run.
 
 | | raw | calibrated |
 |---|---|---|
-| Brier | 0.11860 | **0.02479** |
-| ECE | 0.25506 | **0.00366** |
+| Brier | 0.11859 | **0.02480** |
+| ECE | 0.25502 | **0.00363** |
 | mean predicted | 0.2919 | 0.0337 |
 
 Observed rate 0.0368. `scale_pos_weight ≈ 27` is correct for ranking at a 3.5%
@@ -619,14 +619,14 @@ pretend they are.
 
 | | in-sample | **held-out** |
 |---|---|---|
-| Cox | 0.8533 | **0.8534** |
-| Random Survival Forest | 0.8937 | **0.8292** |
+| Cox | 0.8492 | **0.8493** |
+| Random Survival Forest | 0.8930 | **0.8293** |
 
 **The forest's win was entirely memorisation.** lifelines'
 `concordance_index_` and scikit-survival's `.score()` both report the fit on
 the rows they were fitted to, and the first run duly reported RSF 0.8962
 against Cox 0.8540 — a 4-point win for the forest, and the wrong conclusion.
-Scored on rows neither model has seen, the forest drops 6.5 points and **Cox
+Scored on rows neither model has seen, the forest drops 6.4 points and **Cox
 wins**. The penalised linear model barely moves, which is what a model with no
 capacity to memorise looks like.
 
@@ -693,15 +693,30 @@ compares against the best non-linear arm, which is the number a reader wants.
 against a 200 ms budget. The explainer is stateless across rows, so one call
 over the batch returns identical numbers: **438 ms, 0.88 ms each.**
 
-**Two feature columns were exact duplicates.** `recency_raw` *is*
-`days_since_last_topup`, and `at_recharge_floor` *is*
+**Four feature columns were redundant — two exactly, two affinely.**
+`recency_raw` *is* `days_since_last_topup`, and `at_recharge_floor` *is*
 `data_advance_leaves_nothing` because the data advance and the smallest card
-are both 5 LYD — the M4 finding surfacing as two names for one condition. Two
-names for one signal halves each one's SHAP importance and puts the same
-sentence into a five-item waterfall twice. Dropped at the model boundary rather
-than in the feature layer, so the store keeps its semantics, and logged so that
-if the ladder ever changes and the two stop coinciding, the log line
-disappearing is itself information.
+are both 5 LYD — the M4 finding surfacing as two names for one condition.
+
+Fixing those by equality left two more, found only by re-checking the serving
+output afterwards: `offnet_share_30d == 1 − onnet_ratio` and
+`balance_zero_share_30d == balance_zero_hours_30d / 720`. Both carry |r| = 1.0
+and neither is an exact copy.
+
+**That matters more here than it usually would, because the model that wins is
+logistic regression.** Perfectly collinear columns leave a linear model's
+coefficients unidentifiable — the split between the pair is pinned only by the
+L2 penalty, so it is an artefact of regularisation strength rather than a fact
+about subscribers. It also put "spent 91 hours at zero balance" and "spent 13%
+of the month unable to transact" into the same five-item waterfall, which is
+one fact and two sentences.
+
+The matrix goes 56 → 52 columns. Dropped at the model boundary rather than in
+the feature layer, so the store keeps its semantics, and logged so that if the
+ladder ever changes and the advance stops matching the smallest card, the log
+line disappearing is itself information. A correlated-but-distinct column is
+deliberately left alone, and there is a test for that too — a guard that eats
+real features is worse than the redundancy it removes.
 
 ### Verify it yourself
 

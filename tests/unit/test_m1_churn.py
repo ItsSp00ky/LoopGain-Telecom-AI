@@ -95,6 +95,32 @@ def test_an_exactly_duplicated_column_is_dropped(frame):
     assert "recency_raw" not in X.columns, "the duplicate survived into the design matrix"
 
 
+def test_a_perfectly_collinear_column_is_dropped(frame):
+    """Equality is not the only way to be the same column. The store holds two
+    affine pairs -- `offnet_share_30d == 1 - onnet_ratio` and
+    `balance_zero_share_30d == balance_zero_hours_30d / 720` -- which survive an
+    equality check and carry |r| = 1.0.
+
+    It matters more than it would elsewhere because the model that WINS this
+    benchmark is logistic regression, and perfectly collinear columns leave its
+    coefficients pinned only by the L2 penalty."""
+    affine = frame.assign(leakage_pct=frame["leakage_score"] * 100 - 7)
+
+    X, _ = gradient_boosting.prepare_matrix(affine)
+
+    assert "leakage_score" in X.columns
+    assert "leakage_pct" not in X.columns, "an affine duplicate survived"
+
+
+def test_a_merely_correlated_column_survives(frame):
+    """The guard must not eat genuinely distinct features. Two columns can be
+    strongly related and still each carry signal the other does not."""
+    rng = np.random.default_rng(0)
+    noisy = frame.assign(leakage_echo=frame["leakage_score"] * 2 + rng.normal(0, 0.05, len(frame)))
+    X, _ = gradient_boosting.prepare_matrix(noisy)
+    assert "leakage_echo" in X.columns, "a correlated-but-distinct column was dropped"
+
+
 def test_serving_keeps_the_training_columns_verbatim(frame):
     """Dedup runs when the column list is being DISCOVERED, not when it is
     given. A serving batch must produce exactly the training columns, and
@@ -296,6 +322,26 @@ def test_plain_language_leaks_no_jargon():
     assert "23" in sentence and "days" in sentence
     assert "days_since_last_topup" not in sentence
     assert "shap" not in sentence.lower() and "0.14" not in sentence
+
+
+def test_every_served_column_has_real_phrasing():
+    """The fallback exists so a NEW feature degrades to a sentence instead of a
+    KeyError -- not so shipped features can lean on it. `engagement raw is 0.50`
+    reached a Subscriber 360 screen before this test existed.
+
+    Skips when the store is absent, because the column list is the point."""
+    from cvm.config import settings
+    from cvm.models.m1_churn.explain import PHRASING
+
+    if not settings.feature_store_offline.exists():
+        pytest.skip("feature store not built; run `python -m cvm.features.run`")
+
+    served, _ = gradient_boosting.prepare_matrix(pd.read_parquet(settings.feature_store_offline))
+    # One-hot segments render from the segment name itself, not a template.
+    missing = [c for c in served.columns if c not in PHRASING and not c.startswith("segment_")]
+    assert (
+        not missing
+    ), f"{len(missing)} served column(s) fall back to the generic phrasing: {missing}"
 
 
 def test_an_unknown_feature_degrades_to_a_sentence():

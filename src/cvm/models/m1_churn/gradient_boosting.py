@@ -98,11 +98,46 @@ def _drop_duplicate_columns(X: pd.DataFrame) -> pd.DataFrame:
     and logged rather than done quietly: if the ladder changes and the advance
     stops matching the smallest card, these stop being duplicates and the log
     line disappears, which is information.
+
+    EQUALITY IS NOT THE ONLY WAY TO BE THE SAME COLUMN. Two more pairs survived
+    the first version of this function because they are affine transforms
+    rather than copies:
+
+        offnet_share_30d      == 1 - onnet_ratio
+        balance_zero_share_30d == balance_zero_hours_30d / 720
+
+    Both carry |r| = 1.0, which matters more here than it would elsewhere,
+    because the model that WINS this benchmark is logistic regression and
+    perfectly collinear columns leave its coefficients unidentifiable -- they
+    are pinned only by the L2 penalty, so the split between the pair is an
+    artefact of regularisation strength rather than a fact about subscribers.
+    It also put "spent 91 hours at zero balance" and "spent 13% of the month
+    unable to transact" into the same five-item waterfall, which are one fact
+    and two sentences.
     """
     duplicated = X.columns[X.T.duplicated()].tolist()
-    if duplicated:
-        log.info("dropped %d exactly-duplicated column(s): %s", len(duplicated), duplicated)
-    return X.drop(columns=duplicated)
+    kept = X.drop(columns=duplicated)
+
+    # Then the affine ones. Correlation catches any a*x + b relationship, which
+    # equality does not; the LATER column of each pair goes, so the choice is
+    # deterministic rather than dependent on how the families happened to join.
+    correlation = kept.corr().abs()
+    collinear: list[str] = []
+    for position, column in enumerate(kept.columns):
+        earlier = kept.columns[:position].drop(collinear, errors="ignore")
+        if len(earlier) and (correlation.loc[column, earlier] > 1 - 1e-9).any():
+            partner = earlier[correlation.loc[column, earlier].argmax()]
+            collinear.append(column)
+            log.info("  %s is perfectly collinear with %s", column, partner)
+
+    if duplicated or collinear:
+        log.info(
+            "dropped %d duplicated and %d perfectly-collinear column(s): %s",
+            len(duplicated),
+            len(collinear),
+            duplicated + collinear,
+        )
+    return kept.drop(columns=collinear)
 
 
 def _scale_pos_weight(y: pd.Series) -> float:

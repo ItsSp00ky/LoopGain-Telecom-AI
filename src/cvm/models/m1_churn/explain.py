@@ -131,6 +131,26 @@ PHRASING: dict[str, str] = {
     "recency_raw": "has not topped up in {v:.0f} days",
     "frequency_raw": "recharges {v:.1f} times per 90 days, adjusted for regularity",
     "monetary_raw": "has spent about {v:,.0f} LYD over 90 days",
+    "loyalty_raw": "sits in the {v:.0%} percentile for tenure and lifetime spend",
+    "engagement_raw": "uses {v:.0%} of the services available to them",
+    # The remainder, so nothing reaches a Subscriber 360 screen on the generic
+    # fallback. The fallback stays because a NEW feature must degrade to a
+    # sentence rather than a KeyError -- but a shipped feature should not rely
+    # on it, and an audit over the matrix is what keeps that honest.
+    "airtime_advance_count_90d": "took {v:.0f} airtime advances in 90 days",
+    "data_advance_count_90d": "took {v:.0f} data advances in 90 days",
+    "unpaid_advance_days": "has carried advance debt for {v:.0f} days",
+    "days_to_settle": "takes about {v:.0f} days to repay an advance",
+    "emergency_service_alternations_90d": (
+        "switched between the two emergency products {v:.0f} times"
+    ),
+    "alternates_between_products": "alternates between the two emergency credit products",
+    "inter_recharge_gap_mean": "recharges about every {v:.0f} days",
+    "inter_recharge_gap_std": "recharge timing varies by about {v:.0f} days",
+    "recharge_irregularity": "recharge timing swings {v:.1f}x their own cadence",
+    "weekend_usage_share_30d": "does {v:.0%} of their usage at the weekend",
+    "is_weekend_heavy": "uses the service mostly at weekends",
+    "morning_pass_propensity": "has a {v:.0%} propensity for the morning pass",
 }
 
 
