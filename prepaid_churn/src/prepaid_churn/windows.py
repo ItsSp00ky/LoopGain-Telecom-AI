@@ -12,6 +12,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from prepaid_churn.data import LABEL_COLUMN, column_name, monthly_columns
+from prepaid_churn.features import add_features
 from prepaid_churn.labels import usage_inactive
 from prepaid_churn.schema import ID, TENURE
 
@@ -93,7 +94,7 @@ def split_customers(df: pd.DataFrame, seed: int = SEED) -> pd.Series:
 def build_datasets(
     cleaned: pd.DataFrame, high_value_only: bool = False, seed: int = SEED
 ) -> dict[str, pd.DataFrame]:
-    """Train, validation and test frames: `id`, window features and the `churn` label."""
+    """Train, validation and test frames: `id`, window and T5 features, and the `churn` label."""
     split = split_customers(cleaned, seed)
     datasets = {}
     for name in SPLITS:
@@ -104,7 +105,7 @@ def build_datasets(
                 cleaned.index, fill_value=False
             )
         rows = cleaned[split.eq(name) & eligible]
-        frame = window_features(rows, window)
+        frame = add_features(window_features(rows, window))
         frame.insert(0, ID, rows[ID])
         frame[LABEL] = window_label(rows, window)
         datasets[name] = frame.reset_index(drop=True)
