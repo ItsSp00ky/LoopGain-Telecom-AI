@@ -239,16 +239,15 @@ def build_schema(months=FEATURE_MONTHS, labeled: bool = False) -> pa.DataFrameSc
     return pa.DataFrameSchema(columns, checks=checks, strict=False)
 
 
-def _summarize(failure_cases: pd.DataFrame) -> str:
+def summarize_failures(failure_cases: pd.DataFrame, subject: str) -> str:
+    """One readable message listing every failed pandera check, grouped by column and check."""
     lines = []
     for (column, check), cases in failure_cases.groupby(
         [failure_cases["column"].fillna("rows"), "check"], sort=False
     ):
         examples = ", ".join(map(str, cases["failure_case"].dropna().unique()[:3]))
         lines.append(f"- {column}: {check} failed {len(cases)} times (examples: {examples})")
-    return f"The export does not match the data contract ({len(lines)} problems):\n" + "\n".join(
-        lines
-    )
+    return f"{subject} ({len(lines)} problems):\n" + "\n".join(lines)
 
 
 def validate(df: pd.DataFrame, months=FEATURE_MONTHS, labeled: bool | None = None) -> pd.DataFrame:
@@ -261,7 +260,9 @@ def validate(df: pd.DataFrame, months=FEATURE_MONTHS, labeled: bool | None = Non
     try:
         return build_schema(months, labeled).validate(df, lazy=True)
     except SchemaErrors as errors:
-        raise InvalidExportError(_summarize(errors.failure_cases)) from None
+        raise InvalidExportError(
+            summarize_failures(errors.failure_cases, "The export does not match the data contract")
+        ) from None
 
 
 def contract_markdown(months=FEATURE_MONTHS) -> str:

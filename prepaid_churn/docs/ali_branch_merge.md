@@ -23,8 +23,8 @@ Add a dated entry to the step log for every step, and keep the port table curren
 
 | # | What | Source in `Ali_Branch` | Destination here | Ticket | Status |
 |---|---|---|---|---|---|
-| 1 | Almadar source files (packages, tariffs, service rules) | `Almadar/*` | `data/almadar/source/` | T16 | Planned |
-| 2 | Almadar catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/almadar/offers.csv`, `data/almadar/market.yaml` | T16 | Planned |
+| 1 | Almadar source files (packages, tariffs, service rules) | `Almadar/*` | `data/almadar/source/` | T16 | Done (byte-for-byte copies) |
+| 2 | Almadar catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/almadar/offers.csv`, `data/almadar/market.toml`, `src/prepaid_churn/almadar.py` | T16 | Done |
 | 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Planned |
 | 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | T8 bundle and scoring | T8 | Planned |
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | T10 | T10 | Planned |
@@ -58,3 +58,15 @@ Useful for the team but outside this module: `docs/integration/copilot_starter/`
 - Re-read the reviewed SIC action plan: the instructor asks for a narrow customer MVP, de-identification, access control, human approval, and a retrieval-only copilot.
 - Wrote decisions 15, 16 and 17, rewrote the tickets from T8 onward, and added T18 (Almadar view), T19 (emergency credit) and T20 (integration check).
 - Defaults taken where Taha did not choose, all open to change: Almadar only, the folder keeps its name `prepaid_churn/` until Ali agrees on a new one, and emergency credit stays as a small rule-based ticket.
+
+### Step 3 - T16 Almadar catalogue and market facts (2026-09-19, Claude)
+
+- Copied the four files of `Almadar/` into `data/almadar/source/`; their SHA-256 hashes match the `06890f6` blobs.
+- Built `data/almadar/offers.csv` from the operator file: prices, stated volumes, minutes, speeds and member counts are parsed from it, and the IDs follow `conf/catalogue.yaml`.
+  All 57 packages are in, including the five Mix families that Ali's catalogue dropped without a recorded reason (open question in TICKETS.md).
+- Each volume records where it comes from (`stated`, `name`, `reported` or `none`); Ali's catalogue flagged inferred volumes once for the whole file, not per package.
+- Moved the facts from `conf/market.yaml`, `conf/catalogue.yaml` and `conf/advance.yaml` that later tickets need into `data/almadar/market.toml`, each with a status and a source.
+  The recharge cards became `reported` instead of `confirmed`, because no operator document for them is in the repo.
+- Not carried over from `conf/market.yaml`: the recharge popularity split, channel shares, dual-SIM share, calendar and language shares, which only fed the generated population.
+- `src/prepaid_churn/almadar.py` validates both files and checks the catalogue row by row against the operator file; `tests/test_almadar.py` covers each rule and each kind of mismatch.
+- `docs/almadar.md` explains the files for the chatbot owners and for future refreshes.

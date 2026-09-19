@@ -28,7 +28,7 @@ Update this section at the end of every working session.
 - Nothing.
 
 **Next steps, in order (the MVP path from decision 17)**
-1. T16 Almadar catalogue and market facts.
+1. T16 Almadar catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract.
 3. T18 Almadar view of the real customers.
 4. T10 value tiers, then T11 offers with human approval.
@@ -41,6 +41,7 @@ Update this section at the end of every working session.
 - **Ali's agreement:** Ali should read decisions 15 to 17 and `docs/ali_branch_merge.md`, and say if he disagrees with anything taken or left out.
 - **Folder name:** the module now covers more than churn; rename `prepaid_churn/` (for example to `cvm/`, like Ali's package) once Ali agrees.
 - **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
+- **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) from his catalogue without a recorded reason; ask whether they are still sold (`docs/almadar.md`).
 - **Almadar ARPU:** the 40 LYD per month used by `Ali_Branch` is an assumption; T18 depends on it, so confirm it or replace it with a better source.
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
   We use the upGrad prepaid data instead (decisions 1 and 5), because the IBM data is fictional and postpaid.
@@ -499,15 +500,17 @@ Acceptance:
 ## T16 - Almadar catalogue and market facts
 
 **Owner:** Claude
-**Status:** Todo
+**Status:** Done
 **Depends on:** nothing
 
 Why: the retention offers (T11) and the team's customer chatbot both need the real prepaid packages, and Ali collected Almadar's (decision 16).
 
 Scope:
 - Keep Ali's Almadar source files unchanged in `data/almadar/source/`.
-- `data/almadar/offers.csv`, one row per package: offer ID, operator, family, Arabic and English name, price in LYD, validity in days, data volume or unlimited, minutes, time window, off-peak flag, whether the volume is stated or inferred from the name, estimated delivery cost (labelled as an estimate), source and collection date.
-- `data/almadar/market.yaml`: recharge cards, pay-as-you-go tariffs and the two emergency credit products, each value with its status (confirmed, assumption or estimate) and source.
+- `data/almadar/offers.csv`, one row per package: offer ID, operator, family, Arabic and English name, price in LYD, validity, data volume or unlimited, minutes, speed caps, time window, where the volume comes from, source row and collection date.
+  It holds only what the operator sells, so the chatbot can read it as is.
+- `data/almadar/market.toml`: recharge cards, pay-as-you-go tariffs, the two emergency credit products, the ARPU assumption and the delivery cost estimate, each with its status (confirmed, reported, assumption or estimate) and source.
+  TOML instead of YAML, because Python reads it without a new dependency.
 - A loader and validation in `src/prepaid_churn/almadar.py`, and `docs/almadar.md` explaining the files and how to refresh them (prices change, so every row keeps its collection date).
 - Libyana can be added later as rows with its own operator value.
 - Share `offers.csv` with the chatbot owners: it is the action plan's "Offer / Package Catalogue".
@@ -516,6 +519,13 @@ Acceptance:
 - Every row has a source and a collection date.
 - A test validates the files: required columns, positive prices, known operator, unique IDs, and a status on every market value.
 - The package count matches `Ali_Branch`'s catalogue (37 packages in 12 families), or the difference is explained.
+
+Findings (details in `docs/almadar.md`):
+- 57 packages in 17 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
+- The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed without recording why; they stay until he says they are no longer sold (a test pins the difference).
+- Data volumes: 31 packages state them, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
+- Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.
+- The recharge cards are `reported` (no operator document yet); ARPU (40 LYD) is an assumption and delivery costs are estimates.
 
 ## T17 - Uplift experiment on real data
 
@@ -545,7 +555,7 @@ Acceptance:
 Why: decision 16; value, offers, emergency credit and the app speak Almadar's money and packages, while the churn model stays on real behaviour.
 
 Scope, in `src/prepaid_churn/almadar.py`:
-- One scale factor from the source currency to LYD, anchored on Almadar's ARPU assumption in `market.yaml`, so the shape of real spending is kept.
+- One scale factor from the source currency to LYD, anchored on Almadar's ARPU assumption in `data/almadar/market.toml`, so the shape of real spending is kept.
 - Monthly value in LYD from the current month's recharges.
 - Usual recharge card: each customer's typical recharge mapped to the nearest Almadar card (5, 10, 20, 40 or 100 LYD).
 - Bundle held in the current month: customers with a monthly data pack (upGrad `monthly_2g`, `monthly_3g`) get the Almadar monthly bundle their data spend in LYD would buy; customers with only short packs (`sachet_2g`, `sachet_3g`) get a daily pack; the rest are pay-as-you-go.
