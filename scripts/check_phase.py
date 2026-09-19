@@ -770,7 +770,200 @@ def check_model_artefact_loads() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 5-10 -- declared now, so the check exists before the code does
+# Phase 5 -- M2 value
+# ---------------------------------------------------------------------------
+
+
+def check_bg_nbd_on_real_purchases() -> str:
+    """The technique, validated on Online Retail II before it touches recharges.
+
+    Every CLV number for Almadar is computed on generated data from a
+    reconstructed summary, so it cannot validate itself -- a good fit there
+    would only mean the generator and the model agree. This is the one number
+    in M2 that measures whether the technique works.
+    """
+    m = _report("m2_clv.json").get("validation_on_real_purchases")
+    if not m:
+        raise Pending("run `python -m cvm.models.m2_value.run` without --skip-validation")
+
+    if m["mae"] >= m["mean_actual"]:
+        raise AssertionError(
+            f"MAE {m['mae']:.3f} is not below the mean actual {m['mean_actual']:.3f}: "
+            "the model is no better than predicting the average"
+        )
+    if m["spearman"] < 0.4:
+        raise AssertionError(f"Spearman {m['spearman']:.3f} -- the ordering is barely there")
+
+    return (
+        f"{m['customers']:,} customers, {m['holdout_days']:.0f}-day holdout: MAE {m['mae']:.3f} "
+        f"against a mean actual of {m['mean_actual']:.3f}, Spearman {m['spearman']:.3f}"
+    )
+
+
+def check_no_degenerate_bg_nbd_fit() -> str:
+    """b < 1 makes the dropout Beta U-shaped and every zero-repeat customer
+    scores NaN -- silently, which is how it survived a whole run."""
+    import numpy as np
+    import pandas as pd
+
+    from cvm.config import settings
+    from cvm.models.m2_value import clv
+
+    path = settings.feature_store_offline
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.features.run`")
+
+    summary = clv.summary_from_population(pd.read_parquet(path))
+    model = clv.fit_bg_nbd(clv.complete_cases(summary))
+    probe = np.asarray(
+        model.predict(30.0, summary[clv.FREQUENCY], summary[clv.RECENCY], summary[clv.AGE]),
+        dtype="float64",
+    )
+    unusable = int(np.isnan(probe).sum())
+    if unusable:
+        raise AssertionError(f"{unusable} NaN predictions at b={model.params_['b']:.4f}")
+
+    return (
+        f"b={model.params_['b']:.3f} (must exceed 1), r={model.params_['r']:.3f}, "
+        f"0 NaN over {len(summary):,} subscribers"
+    )
+
+
+def check_clv_ceiling_is_live() -> str:
+    """The constraint that makes the pricing engine defensible to a CFO. At a
+    40 LYD ARPU the annual value is 480 and 15% of it is 72 LYD."""
+    import pandas as pd
+
+    from cvm.config import load_conf
+    from cvm.models.m2_value.clv import retention_budget_ceiling
+
+    guard = load_conf("pricing")["guardrails"]["clv_ceiling"]
+    if not guard.get("enabled", True):
+        raise AssertionError("clv_ceiling is disabled in conf/pricing.yaml")
+
+    # The same key tests/unit/test_proposal_consistency.py reads, so the check
+    # and the proposal cannot drift onto two different ARPUs.
+    arpu = load_conf("market")["base"]["monthly_arpu_lyd"]
+    annual = arpu * 12
+    reference = float(retention_budget_ceiling(pd.Series([annual])).iloc[0])
+    if reference != 72.0:
+        raise AssertionError(
+            f"{guard['max_fraction_of_clv']:.0%} of a {annual:.0f} LYD annual value is "
+            f"{reference:.2f}, and the proposal says 72.00"
+        )
+
+    metrics = _report("m2_clv.json")
+    return (
+        f"{guard['max_fraction_of_clv']:.0%} of CLV; the {arpu:.0f} LYD ARPU reference is "
+        f"{reference:.2f} LYD, and the base median is {metrics['median_ceiling_lyd']:.2f}"
+    )
+
+
+def check_every_subscriber_has_a_ceiling() -> str:
+    """A subscriber with no CLV has no ceiling, which means no constraint --
+    strictly worse than an estimated one."""
+    import pandas as pd
+
+    from cvm.config import settings
+
+    path = settings.processed_dir / "m2_clv.parquet"
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.models.m2_value.run`")
+
+    frame = pd.read_parquet(path)
+    if frame["clv_12m"].isna().any():
+        raise AssertionError(f"{int(frame['clv_12m'].isna().sum())} subscribers have no CLV")
+    if (frame["retention_ceiling_lyd"] > frame["clv_12m"]).any():
+        raise AssertionError("a ceiling exceeds the value it is a fraction of")
+    if (frame["clv_12m"] < 0).any():
+        raise AssertionError("negative CLV")
+
+    return (
+        f"{len(frame):,} subscribers, all valued -- median CLV "
+        f"{frame['clv_12m'].median():.1f} LYD, ceiling {frame['retention_ceiling_lyd'].median():.2f}"
+    )
+
+
+def check_k_is_chosen_by_silhouette() -> str:
+    """Chosen by a number, not by eye. An elbow read off a chart gives two
+    people two answers and neither can defend theirs."""
+    import pandas as pd
+
+    from cvm.config import settings
+
+    result = _report("m2_segmentation.json")
+    scores = pd.read_csv(settings.reports_dir / "m2_kmeans_scores.csv")
+
+    best = int(scores.loc[scores["silhouette"].idxmax(), "k"])
+    if result["k_chosen"] != best:
+        raise AssertionError(f"k={result['k_chosen']} chosen but silhouette peaks at {best}")
+    if result["silhouette"] <= 0:
+        raise AssertionError(f"silhouette {result['silhouette']:.4f} -- there is no structure")
+
+    note = (
+        "" if result["k_chosen"] == result["k_by_elbow"] else f", elbow says {result['k_by_elbow']}"
+    )
+    return f"k={result['k_chosen']} at silhouette {result['silhouette']:.4f} over {len(scores)} values{note}"
+
+
+def check_rules_and_clusters_disagree() -> str:
+    """Perfect agreement would mean one of them is redundant. The cells that
+    disagree are the dashboard insight, and they have to exist.
+
+    Reported at MATCHED k as well, because adjusted Rand between 3 clusters and
+    8 rule segments is bounded below 1 by arithmetic rather than disagreement.
+    """
+    result = _report("m2_segmentation.json")
+
+    share = result["disagreement_share"]
+    if share <= 0:
+        raise AssertionError("the clusters reproduce the rules exactly; one is redundant")
+    if share >= 0.95:
+        raise AssertionError(f"{share:.1%} disagreement -- the two labellings are unrelated")
+
+    matched = result.get("matched_k_adjusted_rand")
+    return (
+        f"{share:.1%} disagree at k={result['k_chosen']} (adjusted Rand "
+        f"{result['adjusted_rand']:.3f}); at matched k={result['matched_k']} Rand is {matched:.3f}"
+    )
+
+
+def check_segments_are_tested_against_the_data() -> str:
+    """The uncomfortable question: are the eight business segments a shape in
+    the data, or a grid imposed on it? Reported either way."""
+    result = _report("m2_segmentation.json")
+
+    natural = result.get("natural_clusters_from_dendrogram")
+    declared = result["declared_business_segments"]
+    if natural is None:
+        raise Pending("hierarchical clustering was skipped")
+
+    verdict = (
+        "they match"
+        if natural == declared
+        else "they do NOT -- the segments are a reporting convention, and the report says so"
+    )
+    return f"dendrogram cuts at {natural}, {declared} business segments declared: {verdict}"
+
+
+def check_pca_variance_reported() -> str:
+    """How much RFM-LE variance actually sits in two components. If most of it
+    does, the five dimensions are measuring fewer than five things."""
+    result = _report("m2_segmentation.json")
+    explained = result["pca_explained_variance"]
+    if not 0 < explained <= 1:
+        raise AssertionError(f"explained variance {explained:.3f} is outside (0, 1]")
+
+    note = (
+        "most of RFM-LE collapses into two"
+        if explained > 0.8
+        else "the five dimensions carry genuinely different information"
+    )
+    return f"{explained:.1%} in 2 components -- {note}"
+
+
+# ---------------------------------------------------------------------------
+# Phases 6-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -832,7 +1025,16 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("SHAP attribution by family", check_shap_attribution),
         ("serving artefact loads", check_model_artefact_loads),
     ],
-    "5": [("BG/NBD validated on holdout", _pending("M2 not built", "5"))],
+    "5": [
+        ("BG/NBD validated on holdout", check_bg_nbd_on_real_purchases),
+        ("no degenerate BG/NBD fit", check_no_degenerate_bg_nbd_fit),
+        ("CLV ceiling is live", check_clv_ceiling_is_live),
+        ("every subscriber has a ceiling", check_every_subscriber_has_a_ceiling),
+        ("k chosen by silhouette", check_k_is_chosen_by_silhouette),
+        ("rules and clusters disagree", check_rules_and_clusters_disagree),
+        ("segments tested against the data", check_segments_are_tested_against_the_data),
+        ("PCA variance reported", check_pca_variance_reported),
+    ],
     "6": [("Qini on Criteo > 0", _pending("M3 not built", "6"))],
     "7": [("advance safety guards green", _pending("M4 not built", "7"))],
     "8": [("endpoints return 200 not 501", _pending("decision engine not built", "8"))],

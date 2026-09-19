@@ -1,14 +1,14 @@
 # Roadmap
 
-**48 functions left, in a chain that cannot be reordered.** This document is
+**39 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
 
-**Phases 1 to 4 are written and verified.** Layers 1, 2 and 3 are at 100% and
-so is M1, the whole project at **82%**. Phase 2's quality gate passes and the
-leakage suite is green with **every xfail deleted**, which was the gate for
-starting M1. **Next is phase 5 — M2 value.**
+**Phases 1 to 5 are written and verified.** Layers 1, 2 and 3 are at 100%, and
+so are M1 and M2; the whole project is at **86%**. Phase 2's quality gate
+passes and the leakage suite is green with **every xfail deleted**. **Next is
+phase 6 — M3 uplift**, which is the one the whole decision engine turns on.
 
 ## Two commands
 
@@ -753,43 +753,145 @@ score still ranks, and an explanation still renders if it says `shap = +0.14`.
 
 <a id="phase-5"></a>
 
-## Phase 5 · M2 value — 9 functions, 2 days
+## Phase 5 · M2 value — **DONE**
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+`python -m cvm.models.m2_value.run` validates BG/NBD on real purchases, fits
+CLV on the recharge base, and discovers segments three ways.
+`scripts/check_phase.py 5` passes 8 of 8.
+
+| | value |
+|---|---|
+| median CLV (12m, discounted) | 234.17 LYD |
+| mean CLV | 495.58 LYD |
+| p90 CLV | 1,078.02 LYD |
+| **median retention ceiling** | **35.13 LYD** |
+
+At the 40 LYD ARPU reference the annual value is 480 and 15% of it is exactly
+**72.00 LYD**, which is the figure the proposal quotes and the consistency test
+pins.
+
+### The technique is validated before it is used
+
+BG/NBD on **Online Retail II**, fitted to 2011-06-01 and scored on the 191 days
+after it: 4,933 customers, **MAE 1.085** against a mean actual of 1.649,
+**Spearman 0.629**, mean predicted 1.605 against 1.649 observed.
+
+This is the same move Criteo is for uplift. Every CLV number for Almadar is
+computed on generated recharges from a reconstructed summary, so it cannot
+validate itself — a good fit there would only mean the generator and the model
+agree with each other. Online Retail II has real repeat purchases with real
+timestamps, so fitting one period and scoring the next measures whether the
+technique works at all.
+
+**What the reconstruction costs.** BG/NBD wants a transaction log; the
+population carries 90-day aggregates, so frequency is `recharge_count_90d − 1`,
+T is `min(90, tenure_days)` and recency is `T − days_since_last_topup`. That
+loses the WITHIN-window timing: two subscribers who each recharged six times
+look identical whether one spread them evenly and the other front-loaded all
+six into week one. It is directionally right and it is not a substitute for
+transaction data.
+
+T is the observation window and **not** tenure. Pairing a 90-day count with a
+five-year T tells the model a weekly recharger transacts ten times a decade,
+and every predicted value collapses.
+
+### The segments are not a shape in the data
+
+This is the finding, and it is an uncomfortable one.
+
+| | |
+|---|---|
+| k by silhouette | **3** |
+| k by elbow | 6 |
+| silhouette at k=3 | 0.2466 |
+| dendrogram's natural cut | **3** |
+| declared business segments | 8 |
+| rule/cluster disagreement | 63.2% (51.8% at matched k) |
+| adjusted Rand | 0.085 (0.137 at matched k) |
+| PCA variance in 2 components | 58.0% |
+
+Two independent methods say **three** groups; the business taxonomy says eight.
+Adjusted Rand between the rules and the clusters is 0.137 even after forcing
+k=8 to remove the granularity confound — the two labellings are close to
+independent.
+
+**So the eight RFM-LE segments are a reporting convention, not a discovered
+structure**, and the dashboard should say so rather than imply the data
+produced them. That is exactly the question hierarchical clustering was put in
+the design to answer, and it answered it the inconvenient way. The segments
+remain useful — they are legible to a marketing analyst in a way that "cluster
+2" is not — but they should be presented as a chosen vocabulary.
+
+PCA is the counterweight: 58.0% in two components means the five dimensions are
+carrying genuinely different information, so RFM-LE is not five names for two
+things. The taxonomy is redundant; the underlying measurements are not.
+
+### Five bugs, two of them in my own metrics
+
+**A feature was missing from the store, and CLV is what found it.**
+`recharge_count_90d` never reached the feature store — velocity carried the
+derived ratios and RFM-LE emitted only `frequency_raw`, which is that count
+divided by (1 + cv). BG/NBD takes repeat transactions and cannot use a
+penalised score. A feature store that can train a churn model and cannot fit a
+purchase-frequency model is missing a feature, not expressing a preference.
+Added, and the store went 53 → 54 columns; M1 was retrained against it.
+
+**The penalizer chosen to stabilise the fit was what broke it.** 0.01 shrinks
+`a` and `b` toward zero, and once b < 1 the dropout Beta is U-shaped and
+lifetimes' conditional expectation takes the log of a negative number. Measured
+on Online Retail II:
+
+| penalizer | a | b | NaN predictions | MAE |
+|---|---|---|---|---|
+| **0.0** | 0.157 | **3.317** | **0** | **1.085** |
+| 0.001 | 0.086 | 1.274 | 0 | 1.087 |
+| 0.01 | 0.047 | 0.570 | **844** | 1.139 |
+| 0.1 | 0.017 | 0.203 | 220 | 1.089 |
+
+844 of 4,933, every one a customer with no repeat purchase — the group a
+prepaid base has most of. It returned NaN rather than raising. The default is
+now 0.0 and the fit is probed for NaN before it is returned.
+
+**A Spearman over quantiles is always exactly 1.000.** The IBM benchmark
+correlated two independently sorted quantile vectors, which are monotonic by
+construction, so it returned 1.000 for any two distributions whatsoever. A
+metric that cannot fail is not evidence, and printing it beside the word
+"Spearman" reads as a perfect result. Removed. What survives is the scaled
+quantile MAE and the spread ratio, which found something real: our CLV spread
+(p90/p10 = 9.84) is **4.4× wider** than IBM's (2.25) — a prepaid base runs from
+5 LYD floor-rechargers to heavy users, where a postpaid contract base is
+compressed by its own tariff structure.
+
+**Adjusted Rand between 3 clusters and 8 segments is bounded by arithmetic,**
+not by disagreement — three groups cannot reproduce eight. The comparison now
+runs at matched k as well, and only that one is evidence.
+
+**3% missingness made lifetimes fail to converge** on the first likelihood
+evaluation with `NaN result encountered`, which reads like a modelling problem
+and is a data problem. Inputs are imputed explicitly, the affected 11.5% are
+flagged, and the fit excludes them while scoring keeps them — a subscriber with
+no ceiling has no constraint, which is worse than an estimated one.
+
+Two smaller ones: lifetimes' fitters carry a lambda from `fit()` and cannot be
+joblib-pickled, which raised at the *end* of the run after every number had
+been computed (they now use lifetimes' own serialiser); and the first test
+fixture drew frequency and recency independently, which is not a purchase
+process at all — the fixture is now generated from a real BG/NBD process with
+the parameters fitted on the live base.
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 5
 ```
 
-**Check 1** — BG/NBD validated on real repeat purchases *before* it touches
-recharges. This is the same move Criteo is for uplift:
+Expect 8 passed, 0 failed.
 
 ```bash
-python -c "
-from cvm.models.m2_value.clv import fit_bg_nbd, fit_gamma_gamma, predict_clv
-from cvm.ingest.online_retail import load
-s = load()
-bgf, ggf = fit_bg_nbd(s), fit_gamma_gamma(s)
-print('holdout MAE:', predict_clv(bgf, ggf, s).pipe(lambda p: abs(p - s['actual']).mean()))
-"
+pytest tests/unit/test_m2_value.py -q
 ```
 
-**Check 2** — *k* is chosen by silhouette, not by eye, and the rule-based
-quintiles disagree with the clusters somewhere. Where they disagree is a
-dashboard insight; perfect agreement means one of them is redundant:
-
-```bash
-python -c "
-import json
-from cvm.config import settings
-r = json.load(open(settings.paths['reports'] + '/m2_segmentation.json'))
-print('k:', r['k_chosen'], '| silhouette:', round(r['silhouette'], 3))
-print('rule/cluster disagreement:', f\"{r['disagreement_share']:.1%}\")
-"
-```
-
-**Check 3** — the CLV ceiling is live. At 40 LYD ARPU it must be 72 LYD:
+23 tests. And the guardrail the whole module exists to serve:
 
 ```bash
 pytest tests/unit/test_proposal_consistency.py::test_clv_ceiling_matches_the_guardrail -q

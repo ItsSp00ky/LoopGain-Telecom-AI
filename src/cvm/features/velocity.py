@@ -62,7 +62,19 @@ def volatility_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     out = pd.DataFrame(index=df.index)
 
-    for column in ("recharge_gap_cv", "inter_recharge_gap_std", "inter_recharge_gap_mean"):
+    for column in (
+        # The RAW count, and it was missing until M2 needed it. RFM-LE emits
+        # `frequency_raw`, which is this divided by (1 + cv) -- a different
+        # quantity, and a lossy one to read a count back out of. BG/NBD takes
+        # repeat transactions as its frequency input and cannot use a penalised
+        # score, which is how the gap surfaced: a feature store that can train
+        # a churn model and cannot fit a purchase-frequency model is missing a
+        # feature, not expressing a preference.
+        "recharge_count_90d",
+        "recharge_gap_cv",
+        "inter_recharge_gap_std",
+        "inter_recharge_gap_mean",
+    ):
         if column in df.columns:
             out[column] = df[column]
 
