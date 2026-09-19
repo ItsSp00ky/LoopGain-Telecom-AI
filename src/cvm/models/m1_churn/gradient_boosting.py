@@ -31,7 +31,24 @@ log = logging.getLogger(__name__)
 # Never features. The identifier identifies, the date leaks the split, the cell
 # string is a concatenation of R/F/M/L/E which are already five columns of
 # their own, and the target is the answer.
-NOT_FEATURES = ("subscriber_id_hashed", "snapshot_date", "rfmle_cell")
+# Identifiers and keys, then DOWNSTREAM MODEL OUTPUTS. `tier` comes from M2
+# and `quadrant` from M3, and both are computed from scores that M1 itself
+# feeds -- letting either into the churn matrix would be circular, so they are
+# declared here rather than being caught by the numeric check further down.
+#
+# They are here because a screen found them, not because a screen needed them:
+# Subscriber 360 joins the score columns onto the feature row for display and
+# hands the whole frame to prepare_matrix, which refused `['quadrant', 'tier']`
+# as non-numeric. Dropping them at the boundary is right whatever the caller
+# does, and the alternative -- filtering at the call site -- would leave the
+# next caller to rediscover it.
+NOT_FEATURES = (
+    "subscriber_id_hashed",
+    "snapshot_date",
+    "rfmle_cell",
+    "tier",
+    "quadrant",
+)
 CATEGORICAL = ("segment",)
 
 

@@ -555,3 +555,23 @@ def test_the_served_bundle_carries_its_background():
     assert "background" in bundle, "the bundle predates the background; retrain M1"
     assert len(bundle["background"]) >= 2
     assert list(bundle["background"].columns) == list(bundle["columns"])
+
+
+def test_downstream_model_outputs_never_enter_the_churn_matrix(frame):
+    """`tier` is M2's output and `quadrant` is M3's, and M1 feeds both.
+
+    Letting either into the churn matrix would be circular -- the model would
+    be reading a transformation of its own score. They are declared in
+    NOT_FEATURES rather than left to the numeric check, which only catches
+    them because they happen to be strings: a numerically-encoded tier would
+    sail straight through.
+    """
+    enriched = frame.assign(
+        tier=np.resize(["bronze", "gold"], len(frame)),
+        quadrant=np.resize(["persuadable", "sleeping_dog"], len(frame)),
+    )
+    X, _ = gradient_boosting.prepare_matrix(enriched)
+
+    assert "tier" not in X.columns
+    assert "quadrant" not in X.columns
+    assert not [c for c in X.columns if c.startswith(("tier_", "quadrant_"))]

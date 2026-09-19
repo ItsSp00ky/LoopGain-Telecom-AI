@@ -69,11 +69,19 @@ if len(subscriber_id) != 64 or not all(c in "0123456789abcdef" for c in subscrib
     st.error("A subscriber ID is exactly 64 hexadecimal characters.", icon=":material/error:")
     st.stop()
 
-row = frame[frame["subscriber_id_hashed"].astype(str) == subscriber_id]
-if row.empty:
+matched = frame[frame["subscriber_id_hashed"].astype(str) == subscriber_id]
+if matched.empty:
     st.warning("Not in the feature store.", icon=":material/person_off:")
     st.stop()
-row = row.iloc[0]
+
+# KEEP THE ONE-ROW FRAME, not just the Series. `row.to_frame().T` looks like
+# the obvious way back to a DataFrame and is not: a Series holds one dtype, so
+# transposing it returns every column as `object`. prepare_matrix then refused
+# all 54 of them as "not numeric and not declared categorical", and the SHAP
+# panel on this screen had never once rendered -- it showed that warning
+# instead, on every subscriber, since the screen was written.
+one_row = matched.head(1)
+row = matched.iloc[0]
 
 
 def number(name: str, default: float = 0.0) -> float:
@@ -155,7 +163,7 @@ with drivers:
         from cvm.models.m1_churn.gradient_boosting import prepare_matrix
 
         bundle = joblib.load(settings.models_dir / "m1_churn.joblib")
-        matrix, _ = prepare_matrix(row.to_frame().T, columns=bundle["columns"])
+        matrix, _ = prepare_matrix(one_row, columns=bundle["columns"])
         # AGAINST THE TRAINING POPULATION, not against this one subscriber.
         # `matrix` is a single row; using it as its own reference made every
         # bar in this waterfall exactly 0.0 while the labels still read

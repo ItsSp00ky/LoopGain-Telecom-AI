@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from typing import ClassVar
 
+import pandas as pd
 import pytest
 
 APPS = Path(__file__).resolve().parents[2] / "apps"
@@ -316,3 +317,57 @@ def test_smoke_check_skips_rather_than_passes_what_it_cannot_check():
 
     assert _feature_names(_Nameless(), None) is None
     assert smoke_check({"m1_churn_lightgbm": {"model": _Nameless()}}) == {}
+
+
+def test_a_one_row_lookup_keeps_its_dtypes():
+    """`row.to_frame().T` is the obvious way back to a DataFrame and is wrong.
+
+    A Series holds ONE dtype. Transposing it hands back every column as
+    `object`, and prepare_matrix refuses all 54 -- "not numeric and not
+    declared categorical". That is what the Subscriber 360 SHAP panel showed
+    on every subscriber, every time, since the screen was written. The panel
+    never rendered once.
+
+    Asserts the difference directly rather than the screen's output, because
+    the screen degrades to a warning and a warning is easy to stop noticing.
+    """
+    frame = pd.DataFrame(
+        {
+            "subscriber_id_hashed": ["a" * 64, "b" * 64],
+            "days_since_last_topup": [12.0, 90.0],
+            "recharge_count_90d": [4.0, 0.0],
+        }
+    )
+
+    squeezed = frame.iloc[0].to_frame().T
+    assert (squeezed.dtypes == "object").all(), "pandas changed; revisit the fix, not this test"
+
+    kept = frame.head(1)
+    assert kept["days_since_last_topup"].dtype.kind == "f"
+    assert kept["recharge_count_90d"].dtype.kind == "f"
+
+
+def test_the_deciding_surfaces_can_write_their_decision_log():
+    """A surface that makes decisions must be able to record them.
+
+    `ui` and `channel-sim` call the decision engine in-process, and every
+    pricing and advance decision has to be logged with its inputs, weights,
+    constraints and reason codes, replayably. Mounted `:ro`, the offer panel
+    died on `[Errno 30] Read-only file system` writing decision_log.jsonl --
+    visible only in a container, because a local run writes to the repo.
+    """
+    import yaml
+
+    root = Path(__file__).resolve().parents[2]
+    compose = yaml.safe_load((root / "docker-compose.yml").read_text(encoding="utf-8"))
+
+    for name in ("ui", "channel-sim"):
+        mounts = compose["services"][name]["volumes"]
+        data = [m for m in mounts if m.split(":")[1] == "/app/data"]
+        assert data, f"{name} does not mount /app/data at all"
+        assert not data[0].endswith(
+            ":ro"
+        ), f"{name} mounts /app/data read-only, so it cannot log the decisions it makes"
+        # The artefacts genuinely are read-only, and should stay that way.
+        artefacts = [m for m in mounts if m.split(":")[1] == "/app/artifacts"]
+        assert artefacts[0].endswith(":ro"), f"{name} can overwrite the model artefacts"

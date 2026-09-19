@@ -70,7 +70,15 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./data:/app/data:ro
+      # NOT read-only, and the reason is a requirement rather than a
+      # convenience. This surface calls the decision engine IN-PROCESS -- that
+      # is the deliberate trade in ui.Dockerfile, so the dashboard survives the
+      # API being down -- and every pricing and advance decision must be logged
+      # with its inputs, weights, constraints and reason codes, replayably.
+      # With `:ro` the offer panel died on `[Errno 30] Read-only file system`
+      # while writing data/processed/decision_log.jsonl. A surface that makes
+      # decisions it cannot record is the one thing this system may not ship.
+      - ./data:/app/data
       - ./artifacts:/app/artifacts:ro
       - ./conf:/app/conf:ro
     healthcheck:
@@ -111,7 +119,10 @@ services:
       # which means calling the decision engine with their real features.
       # Mounting only ./conf made every lookup report "not in the feature
       # store", which looks like a data problem and is a compose problem.
-      - ./data:/app/data:ro
+      # Writable for the same reason as `ui`: the simulator shows the offer and
+      # advance THIS subscriber would get, which means a real decision, which
+      # means a logged decision.
+      - ./data:/app/data
       - ./artifacts:/app/artifacts:ro
       - ./conf:/app/conf:ro
     healthcheck:

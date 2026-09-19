@@ -1459,13 +1459,16 @@ store is readable. The word doing the work is *usable*, and it was earned late.
 This section previously said that a stack coming up healthy had proved its
 volume mounts were right, and stopped there. That was true and it was not
 enough. **Nothing in eleven phases had ever scored one real subscriber through
-the running container**, and three separate faults were waiting on that path.
-All three are fixed; recording them matters more than the fixes.
+the running container, or opened a screen in a browser**, and five separate
+faults were waiting on those two paths. All five are fixed; recording them
+matters more than the fixes.
 
-**They share a single shape: a statistic that belongs to training, taken from
-the request instead.** And all three need the same trigger to show — a batch of
+The first three share a single shape: **a statistic that belongs to training,
+taken from the request instead**. All three need the same trigger — a batch of
 **one row**, which is exactly what an evaluator does when they look up a
-subscriber, and exactly what the test suite never did.
+subscriber, and exactly what the test suite never did. The last two share a
+different shape: **they are invisible unless you actually run the thing**, one
+needing a browser and one needing a container.
 
 #### 1 · The serving image outran its own pickles
 
@@ -1519,8 +1522,9 @@ population. For one row, `E[x] = x`, so every contribution is `coef_j · 0`.
 Exactly zero, for every feature, for every subscriber — with the right shape,
 the right dtype, and a plain-language sentence under each bar reading **"lowers
 churn risk"**, because `0 > 0` is false. On a subscriber scored at **1.0000**.
-The Subscriber 360 waterfall, the explainability deliverable, had never drawn a
-non-zero bar.
+
+Measured on `/v1/score/churn`. The Subscriber 360 screen never reached this
+fault, because it had a worse one in front of it — see #4.
 
 The bundle now carries a 500-row training background; `LinearExplainer`
 **raises** on a background of fewer than two rows rather than returning zeros,
@@ -1537,6 +1541,47 @@ With it fixed, the same subscriber reads:
 Warm p95 for a one-row score is **54 ms** against the 200 ms budget, so the
 background costs nothing that matters.
 
+#### 4 · Transposing a Series throws away every dtype
+
+Found by opening the screen in a browser, which is the only reason it was
+found at all.
+
+`3_Subscriber_360.py` looked its subscriber up as a one-row frame, squeezed it
+to a Series, and rebuilt a frame with `row.to_frame().T`. **A Series holds one
+dtype.** Transposing it returns every column as `object`, so `prepare_matrix`
+refused all 54 — "not numeric and are not declared categorical".
+
+So the explainability deliverable had never rendered. Not zero bars: no bars,
+and a warning in their place, on every subscriber, since the screen was
+written. The screen degraded politely and nobody read the warning.
+
+Fixed by keeping the one-row frame instead of reconstructing one. That left
+two genuinely non-numeric columns, `tier` and `quadrant`, which the screen
+joins on for display — and those turn out to belong in `NOT_FEATURES` on their
+own merits: `tier` is M2's output and `quadrant` is M3's, both computed from
+scores M1 feeds, so either one entering the churn matrix would be circular.
+The numeric check only caught them because they happen to be strings; a
+numerically-encoded tier would have sailed through.
+
+#### 5 · `[Errno 30] Read-only file system`
+
+The offer panel died writing `decision_log.jsonl`. `ui` and `channel-sim`
+mounted `./data` as `:ro`.
+
+That mount looked right — a dashboard reads, it does not write — and it was
+wrong, because these two surfaces call the decision engine **in-process**.
+That is the deliberate trade recorded in `ui.Dockerfile`, so the dashboard
+survives the API being down. The corollary nobody followed through on is that
+a surface which makes decisions has to be able to record them, and this
+project's own non-negotiable is that every pricing and advance decision is
+logged with its inputs, weights, constraints and reason codes, replayably.
+
+`./data` is now writable for both. `./artifacts` stays `:ro`, and a test
+asserts both halves of that.
+
+**Invisible outside a container.** A local `streamlit run` writes to the repo
+and never fails, which is why nine phases of local testing never saw it.
+
 #### What the checks do now
 
 `check_the_stack_comes_up` no longer reads a readiness flag. It posts a
@@ -1549,11 +1594,14 @@ the reason attached; `docs/INTEGRATION.md` is unchanged.
 Nine tests were added. The pin test was mutation-checked by unbounding the pin, and the smoke check was verified against the actually-broken 1.9.1
 container, where it flagged `m1_churn_lightgbm` and nothing else — correct, since only M1's pipeline contains the imputer.
 
-**The honest lesson is not the pin.** It is that deserialisation was being read
-as readiness, a batch was being read as a population, and every check in the
-project agreed with both. A green suite and eleven green phases did not mean
-the thing worked — only that nobody had asked it to answer a question the way a
-person would.
+**The honest lesson is not the pin.** Deserialisation was being read as
+readiness, a batch was being read as a population, a dtype was being assumed to
+survive a transpose, and a read-only mount was being assumed to suit a surface
+that writes. Every check in the project agreed with all four.
+
+A green suite and eleven green phases did not mean the thing worked. It meant
+nobody had asked it a question the way a person would — typed an id into the
+box, or read what came back.
 
 ### Still outstanding, and they are yours rather than the code's
 
