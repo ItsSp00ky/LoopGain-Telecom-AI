@@ -196,3 +196,19 @@ Consequence for selling:
 - Both training datasets are for education or non-commercial use only, so models trained on them cannot be sold.
 - What can be sold is the pipeline: the input contract, cleaning, features, training, calibration and decision logic, retrained on the operator's own export.
 - The data contract is therefore written so that a Libyan operator can map its own data to it (see "Adapting a Libyan export" in `docs/data_contract.md`).
+
+## 12. The model only scores customers who are still active
+
+Date: 2026-09-19.
+
+Only customers with calls or data in the current month are trained on, validated and scored.
+
+Why (T1 numbers):
+- 59.9% of month 9 churners were already silent in month 8, and silent customers churn at 77.9%.
+- Predicting them is trivial and useless: they have already left in practice, and no retention offer reaches a silent line.
+- Keeping them would inflate every metric, because the model would mostly learn "silent last month means silent next month".
+
+Consequences:
+- The churn rate among eligible customers is about 4.4% to 4.7% (T4), so the problem is harder and the metrics are honest.
+- Our metrics will look lower than published results on this dataset, which usually include the silent customers.
+- Silent customers are handled by a rule instead of the model: T8 gives them the risk band `already_silent`.

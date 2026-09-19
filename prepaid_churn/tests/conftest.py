@@ -67,3 +67,23 @@ def build_raw() -> pd.DataFrame:
 @pytest.fixture
 def raw() -> pd.DataFrame:
     return build_raw()
+
+
+@pytest.fixture
+def population() -> pd.DataFrame:
+    """200 cleaned customers: 50 copies of the four hand-made ones, with distinct ids.
+
+    Recharge amounts grow with the copy number, so a top-30% filter has something to cut.
+    """
+    from prepaid_churn.clean import clean
+    from prepaid_churn.schema import validate
+
+    base = build_raw()
+    copies = []
+    for copy in range(50):
+        frame = base.copy()
+        frame["id"] = base["id"] + 4 * copy
+        for month in MONTHS:
+            frame[f"total_rech_amt_{month}"] = 10 * (copy + 1)
+        copies.append(frame)
+    return clean(validate(pd.concat(copies, ignore_index=True)))
