@@ -13,7 +13,7 @@ to every action.
 > event. A customer does not leave. They stop topping up, and the revenue
 > disappears without a single row being logged.
 
-[![CI](https://github.com/ORG/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/ORG/REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/ItsSp00ky/LoopGain-Telecom-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/ItsSp00ky/LoopGain-Telecom-AI/actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -43,7 +43,7 @@ the Copilot owner in
 ## Quick start
 
 ```bash
-git clone https://github.com/ORG/REPO.git
+git clone https://github.com/ItsSp00ky/LoopGain-Telecom-AI.git
 cd REPO
 git checkout ali_branch
 conda env create -f environment.yml

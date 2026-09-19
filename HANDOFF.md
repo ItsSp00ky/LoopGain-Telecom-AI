@@ -3,8 +3,77 @@
 **Read this first if you are picking up this project** — whether you are a new
 AI session, a teammate, or me in three weeks having forgotten everything.
 
-Last updated: **2026-09-18** (session 3c)
-Branch: **`ali_branch`** · Repo root: `D:\Sic` · Owner: **Ali**
+Last updated: **2026-09-19** (session 10)
+Branch: **`Ali_Branch`** · Repo root: `D:\Sic` · Owner: **Ali Marghem**
+Remote: **[ItsSp00ky/LoopGain-Telecom-AI](https://github.com/ItsSp00ky/LoopGain-Telecom-AI)** (private)
+
+---
+
+## 0. Start here — a fresh Claude Code session in 5 minutes
+
+You have landed in a **finished** component, not a work in progress. Eleven
+phases are done, 368 tests pass, and the containerised stack runs. The job is
+almost never "build the next thing" — it is "change one thing without breaking
+the other ten".
+
+**Read in this order, and stop when you have what you need:**
+
+1. **This file, §2 and §7.** §2 is what exists; §7 is what will bite you.
+2. **[`docs/ROADMAP.md`](docs/ROADMAP.md)** — the build order, and more usefully
+   a per-phase record of *every bug found and what it taught*. If you are about
+   to touch M1, M3 or the decision engine, read that phase's section first.
+   Several entries exist specifically so the same mistake is not made twice.
+3. **[`docs/TESTING.md`](docs/TESTING.md) Step 7b** — how to drive the running
+   system by hand, with subscriber ids chosen to disagree with each other.
+4. The module's own docstring. They are long on purpose and explain *why*, not
+   what.
+
+**Prove it works before you change anything:**
+
+```bash
+python scripts/check_phase.py          # every phase, every invariant
+python scripts/progress.py             # 345 of 345 functions implemented
+python -m pytest -q                    # 368 passed, 0 xfail
+docker compose up -d                   # api :8000, ui :8501, sim :8502, mlflow :5000
+```
+
+**You cannot run any of it without a salt.** `cp .env.example .env`, then put a
+real 64-hex value in `CVM_HASH_SALT` — the code refuses the placeholder
+deliberately. A *different* salt from the one on Ali's machine means every
+hash in `data/interim` stops reconciling, so if you are given a copy of the
+data you must be given that salt too.
+
+**The data and the models are not in git** and never will be — see §7. A clean
+clone gives you code that passes 368 tests and a stack that reports
+`/health: degraded` until you run the pipeline (`pwsh tasks.ps1 pipeline`,
+~40 minutes) or copy `data/` and `artifacts/` across.
+
+### The five habits this codebase is built on
+
+Match them or the review will be unpleasant:
+
+- **Measure, never assert.** Every number in the docs was produced by running
+  something. If you write "this improves X", show the before and after.
+- **Mutation-test a test that passes first try.** Break the thing it guards; if
+  it still passes, it is not a test. Several entries in the roadmap are tests
+  that were found to be vacuous this way.
+- **Say the awkward thing.** Logistic regression beats the boosters here
+  because the generator is linear. The eight segments are a reporting
+  convention, not a discovered structure. Both are written down rather than
+  buried, and that is the standard.
+- **PENDING is not FAILED.** A missing prerequisite and a broken invariant read
+  differently in `check_phase.py`, and conflating them hides real breakage.
+- **Comments explain WHY.** What the code does is visible in the code.
+
+### What this component will and will not do
+
+It scores churn, values subscribers, estimates uplift, decides an offer, and
+sets an advance limit. **No LLM touches any path that moves money**
+([ADR 0004](docs/adr/0004-llm-has-no-write-path.md)) and there is no agent in
+this branch at all. If you are on the Chatbot or the Copilot, you consume this
+over HTTP, read-only — the contract is
+[`docs/INTEGRATION.md`](docs/INTEGRATION.md), and breaking a schema in
+`src/cvm/api/schemas.py` is a cross-team event.
 
 ---
 
@@ -28,42 +97,50 @@ Platform-level context: the parent proposal listing all five components.
 
 ## 2. Current state — one paragraph
 
-**The repository is scaffolded and the skeleton runs; no model has been trained
-and no data has been downloaded.** Committed on `ali_branch` (`21e7c09` is the
-root commit), no remote yet. The config system, the API contracts, the FastAPI app and the
-complete pricing-guardrail engine are *written and working*. Everything else is
-a documented stub that raises `NotImplementedError` — each file carries its
-module number, its owner, and a docstring explaining what it must do and why.
-78 tests pass today (5 xfail, 0 fail); they cover config loading, privacy
-invariants, API contracts and all six pricing guardrails.
+**Everything is built, trained, tested and running.** All eleven phases of
+[`docs/ROADMAP.md`](docs/ROADMAP.md) are complete: **345 of 345 declared
+functions implemented**, **368 tests passing with zero xfail**, **85 phase
+checks passing with none failed and none pending**, ruff and black clean. The
+full four-service stack builds and comes up, and a real subscriber can be
+scored end to end through the containerised API. There are 15 commits on
+`Ali_Branch`.
 
-**Scope is one pipeline:** predict churn (M1) -> understand value (M2) ->
-estimate treatment effect (M3 uplift) -> decide whether to intervene (Decision
+**The pipeline runs start to finish:** ingest and hash → synthesise a 100,000
+subscriber Libyan population → build features in DuckDB → M1 churn (calibrated,
+plus a Cox time-to-churn) → M2 value (RFM-LE, clustering, BG/NBD CLV) → M3
+uplift (two-model, validated on Criteo's real randomised arms) → M4 advance
+limits → the decision engine → six HTTP endpoints and six screens.
+
+**The headline results, all measured on generated data** and therefore not
+evidence of production performance: M1 PR-AUC 0.4556 with logistic regression
+winning the benchmark (the generator is linear — said plainly rather than
+hidden); Cox held-out concordance 0.8485; M3 Qini 0.0091 held out after the
+in-sample figure of 0.2745 turned out to be training and scoring the same
+rows; break-even uplift 1.0417 pp at headline figures and 2.1352 pp at the
+median fitted CLV.
+
+**Warm p95 is 54 ms** for a one-subscriber score against a 200 ms budget.
+Images are 1.85 GB (api) and 2.08 GB (ui) after dropping the training-only
+stack from the serving extra.
+
+**Scope is one pipeline:** predict churn (M1) → understand value (M2) →
+estimate treatment effect (M3 uplift) → decide whether to intervene (Decision
 Engine), plus M4 emergency credit as one available action. Network anomaly
 detection, care-text classification and the Employee Copilot belong to other
 components.
 
 **Operator is Almadar Aljadid (المدار الجديد), MCC/MNC 606-01** — not Libyana.
-Real catalogue data is in hand: 37 bundles across 12 families, the confirmed recharge ladder, and
-both emergency-credit products. See §3a below for what that invalidated.
-
-**No blockers, and no open scope questions.** All ten market questions in
-[`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md) are resolved: eight
-confirmed from operator documentation, one a labelled estimate (base and
-economics), and the two scope calls decided in session 3d. One minor factual
-gap remains (Q6b, partial-recharge settlement) and it does not block anything.
+Real catalogue data: 37 bundles across 12 families, the confirmed recharge
+ladder, both emergency-credit products. See §3a for what that invalidated.
 
 **No geography anywhere.** No districts, cells, coordinates or OpenCelliD.
-Network quality survives as a subscriber-level feature because it is real
-measured signal, not an invented Libyan field.
+`district` is a forbidden field in pricing and a test enforces it. Network
+quality survives as a subscriber-level feature because it is real measured
+signal, not an invented Libyan field.
 
-**Catalogue is 37 bundles across 12 families** (Mix removed). The morning pass
-is now the primary voice instrument as well as the off-peak data one, since only
-it and the Family plans carry minutes.
-
-**Cell2Cell is supplied locally** at `data/raw/telecom/telecom` as the original
-two-file Duke distribution, and it grounds the leakage and off-peak features
-against measured distributions. Three caveats travel with it -- see session 3f.
+**What is left is not code.** A clean-clone build on a machine that is not
+Ali's, a contract test against a teammate's component, and three timed
+dry-runs of the demo. See §6.
 
 ---
 
@@ -138,111 +215,107 @@ arguably sharper — full detail in [`conf/advance.yaml`](conf/advance.yaml):
 
 ## 4. What is real vs. what is a stub
 
-### Written and working
+**Nothing is a stub.** `python scripts/progress.py` reports **345 of 345
+functions implemented, 100%**. There is no `NotImplementedError` left in
+`src/`, and `grep -rn "TODO(" src/` comes back empty.
 
-| File | What it does |
-|---|---|
-| [`src/cvm/config.py`](src/cvm/config.py) | Env + YAML loader, `guardrail()` accessor that raises on a typo'd path, `seed_everything()`, salt enforcement |
-| [`src/cvm/api/schemas.py`](src/cvm/api/schemas.py) | Every Pydantic v2 request/response contract. **Frozen** — changing one is a cross-team event |
-| [`src/cvm/api/main.py`](src/cvm/api/main.py) | FastAPI app: lifespan, request-id + latency middleware, structured errors. Boots, `/docs` works |
-| [`src/cvm/decision/guardrails.py`](src/cvm/decision/guardrails.py) | **All six pricing guardrails, fully implemented** — margin floor, CLV ceiling, budget, cannibalisation, fairness + distribution audit, tier ceiling |
-| [`tests/`](tests/) | ~60 passing tests: config, privacy, schemas, all six guardrails, API contracts, plus config-level leakage and credit-safety assertions |
-| `conf/*.yaml` | Every threshold, weight, tier boundary and safety guard |
-| `docker/`, `docker-compose.yml`, `.github/workflows/ci.yml` | Four-service stack; CI with separate required jobs for leakage and guardrails |
-
-### Stubbed — raises `NotImplementedError`, docstring explains the contract
-
-Everything under `ingest/`, `synthesis/`, `features/`, `models/`, the rest of
-`decision/`, and all the Streamlit pages. Each stub names its owner and module.
-Grep for `TODO(` to find them all.
+| Layer | Where | What it does |
+|---|---|---|
+| 1 · Ingest | [`src/cvm/ingest/`](src/cvm/ingest) | Load, Pandera-validate, dedup, SHA-256+salt. 22 protected columns dropped at the Cell2Cell boundary, 12 at IBM Telco |
+| 2 · Synthesis | [`src/cvm/synthesis/`](src/cvm/synthesis) | CTGAN/TVAE/Copula + SDMetrics gate, TSTR, a mixture copula for the Libyan layer |
+| 3 · Features | [`src/cvm/features/`](src/cvm/features) | RFM-LE, decay, leakage, sequences, DuckDB online store, temporal splits |
+| 4 · M1 | [`models/m1_churn/`](src/cvm/models/m1_churn) | Boosting benchmark, isotonic calibration, SHAP, Cox + RSF survival |
+| 4 · M2 | [`models/m2_value/`](src/cvm/models/m2_value) | RFM-LE tiering, KMeans/hierarchical, PCA, BG/NBD + Gamma-Gamma CLV |
+| 4 · M3 | [`models/m3_uplift/`](src/cvm/models/m3_uplift) | Two-model uplift, Qini with Radcliffe normalisation, four quadrants |
+| 4 · M4 | [`models/m4_advance/`](src/cvm/models/m4_advance) | Repayment PD, reject inference, affordability ceiling, lockout risk |
+| 5 · Decision | [`src/cvm/decision/`](src/cvm/decision) | Six pricing guardrails, advance limits, the retention ladder, a replayable decision log |
+| 6 · API | [`src/cvm/api/`](src/cvm/api) | Six FastAPI endpoints, the integration surface for Components 4 and 5 |
+| 7 · Surfaces | [`apps/`](apps) | Four Command Center screens + the USSD/SMS channel simulator |
+| 8 · Ship | [`docker/`](docker) | Two Dockerfiles, four services, CI with leakage and guardrails as required jobs |
 
 ### Deliberately absent
 
-- No agent, no LLM client in any decision path, no vector store. That is the
-  point of [ADR 0004](docs/adr/0004-llm-has-no-write-path.md).
-- No network model and no NLP model. Removed in session 3 — those are other
-  components' work. The dependency cost of that decision was ~4.5 GB of
-  install (transformers, peft, CAMeL Tools, LangChain, Chroma,
-  sentence-transformers), which matters on a machine with ~20 GB free.
-- No syllabus-coverage tracking.
+- No agent, no LLM client in any decision path, no vector store —
+  [ADR 0004](docs/adr/0004-llm-has-no-write-path.md).
+- No network model and no NLP model. Other components' work.
+- No geography of any kind.
+
+### Not in git, by design
+
+`data/`, `artifacts/`, `.env`, every `.parquet`, `.joblib`, `.duckdb` and
+`.pkl`. Only `.gitkeep` files and `data/README.md` are tracked. The repository
+is **191 files** and holds no subscriber data, no model weights and no secret.
+
+> Note for the team: `customer_churn_prediction/` on `main` commits raw CSV
+> datasets and a `.joblib` model. This branch's `.gitignore` forbids both. Not
+> a criticism of that work — just be aware the two conventions differ, and
+> merging will need a decision about which one wins.
 
 ---
 
 ## 5. Environment state on this machine
 
+This section describes **Ali's machine**. If you are picking this up elsewhere,
+what you need is: Python 3.11, the conda env from `environment.yml`, Docker,
+and a `.env` with a real salt. Everything else below is local detail.
+
 | Thing | State |
 |---|---|
-| Git 2.55.0 | Installed at `D:\Git` — **not on the default PATH location** |
-| GitHub CLI 2.101.0 | Installed at `D:\GITHUB_CLI` |
-| Docker 29.8.0 | Installed under `%LOCALAPPDATA%\Programs\DockerDesktop` |
-| conda 26.5.3 | Installed at `D:\Anaconda` |
-| Python | base is **3.14.6** — wrong version; the project env is separate |
-| Node 26.8.2, VS Code 1.137.0 | Present, not needed for this branch |
-| **conda `cvm` env** | **Created and working** — Python 3.11.16 at `D:\Anaconda\envs\cvm`, 39 of the 40 packages the stack needs |
-| **git identity** | Configured (`ali-margem`) |
-| **`gh auth login`** | Done (`ali-margem`, keyring) |
-| **Commits** | 8 on `ali_branch` |
-| **Docker daemon** | **Not running** — Docker Desktop is installed but not started. D1 (`docker compose up` from a clean clone) is unverified. |
-| **`.env`** | **Created**, with a real 64-char salt. Local only and gitignored — generate a *different* one for CI and the demo host. Do not regenerate casually: every hash already in `data/interim` stops reconciling. |
-| **conda env writability** | ⚠ **`D:\Anaconda\envs\cvm` is NOT writable by this user.** `pip install` falls back to the user site and then fails a cross-drive metadata rename with `WinError 17` *after* the package is in place — so it looks broken but works. `scikit-uplift` and `openpyxl` live in `%APPDATA%\Python\Python311\site-packages`. Fix before a teammate clones this. |
-| **git remote** | **None** — nothing has been pushed anywhere |
-| Free disk | ~20 GB on C:, ~20 GB on D: — **tight**, see `data/README.md#disk-budget` |
-
-Run anything in the project env with `D:\Anaconda\envs\cvm\python.exe`, or
-`conda activate cvm` first. The 94-test suite passes there in about 5 seconds.
+| **conda `cvm` env** | Python 3.11.16 at `D:\Anaconda\envs\cvm`. Run things with `D:\Anaconda\envs\cvm\python.exe` or `conda activate cvm` first |
+| Python (base) | 3.14.6 — **wrong version**, never install into it |
+| Git 2.55.0 | `D:\Git` — not on the default PATH |
+| GitHub CLI 2.101.0 | `D:\GITHUB_CLI`, authenticated as `ali-margem` |
+| Docker 29.8.0 | Running. Both images build; the stack comes up healthy |
+| **git remote** | **`ItsSp00ky/LoopGain-Telecom-AI`**, branch `Ali_Branch` |
+| **`.env`** | Real 64-char salt, local only, gitignored. Generate a *different* one for CI and the demo host. **Do not regenerate casually** — every hash in `data/interim` stops reconciling |
+| **scikit-learn** | **Pinned `>=1.7,<1.8`, and the bound matters.** The artefacts are sklearn pickles and sklearn does not guarantee one minor version loads another's. See §7 |
+| **conda env writability** | ⚠ `D:\Anaconda\envs\cvm` is not writable by this user. `pip install` falls back to the user site then fails a cross-drive rename with `WinError 17` *after* the package is in place — it looks broken and worked. `scikit-uplift` and `openpyxl` live in `%APPDATA%\Python\Python311\site-packages` |
+| **Free disk** | ~16 GB on C:, ~15 GB on D: — **tight.** Docker's WSL disk reaching 20 GB with 5 GB free on C: crashed the engine mid-build, twice. `docker system df` before a big build |
 
 ---
 
 ## 6. What to do next
 
-**The full build order, with a verification command after every phase, is in
-[`docs/ROADMAP.md`](docs/ROADMAP.md).** Run `python scripts/progress.py` to see
-the stub burn-down by layer and which phase is next. The summary below is the
-short version; the roadmap is the operative document.
+**The code is done.** `python scripts/check_phase.py` passes every phase. What
+remains is verification that cannot be done from this machine, plus two
+judgement calls that belong to a person.
 
-In order. Do not skip step 1.
+### Not code — and not optional before the demo
 
-0. **Answer the market questions** in
-   [`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md) and fill in
-   `conf/market.yaml`. The synthesis engine is blocked on this — everything
-   after step 4 consumes it, so getting it wrong means regenerating the
-   population and retraining.
-1. **Create `.env`** with a real salt. It is the only thing standing between
-   the current state and a runnable ingest layer, and the code refuses to hash
-   without it — deliberately.
-2. **Download the core datasets** (A, C — B is already on disk), then run the
-   EDA: the UCI dedup audit (~300 duplicate rows) and the `Customer Value`
-   leakage audit. These two findings are pitch material, so record the numbers.
-   Note that `scripts/download_data.py` dispatches to loaders that are still
-   stubs, so this step is blocked on step 4.
-4. **Build Layer 1 (`ingest/`)** — the schema contracts and the hashing. Every
-   later layer depends on it, and the privacy commitment is enforced here.
-5. **Build Layer 3 features + splits before any model.** Point-in-time
-   correctness is the invariant that, if broken, silently invalidates every
-   metric downstream. Un-`xfail` the tests in `tests/leakage/` as you go.
-6. **M1 LightGBM + calibration** — the first real model, and the one
-   everything else consumes.
-7. Then, roughly in parallel: M2 (value/CLV), M4 (repayment PD, shares M1's
-   pipeline), M3 (uplift — validate on Criteo before anything else).
-8. **The decision engine**, which is now the only thing standing between a
-   score and a recommendation. There is no GPU work left in this branch.
+1. **A clean-clone build on a machine that is not Ali's.** Everything is
+   verified *here*. That is exactly what the check cannot prove. Clone, create
+   the env, add a salt, `pwsh tasks.ps1 pipeline`, `docker compose up`.
+2. **The contract test against a teammate's component.** Components 4 and 5
+   consume this over HTTP per [`docs/INTEGRATION.md`](docs/INTEGRATION.md).
+   Nobody has yet called it from the other side. The starter kit for the
+   Copilot owner is in [`docs/integration/copilot_starter/`](docs/integration/copilot_starter/).
+3. **Three timed dry-runs of the demo.** Not two. `docs/TESTING.md` Step 7b is
+   the script; the subscriber ids there are chosen to disagree with each other,
+   which is what makes the point land.
+4. **Record the 5-minute demo video** as live-demo insurance.
 
-### Known gaps to close
+### Two open decisions that are yours, not the code's
 
-- `tests/leakage/` and `tests/guardrails/test_advance_safety.py` have `xfail`
-  markers on their behavioural tests. Each `xfail` is a deliberate marker of
-  something not built. **Remove the marker as you implement**, so CI output
-  tracks real progress.
-- The `ORG/REPO` badge URLs in [`README.md`](README.md) and `@ali` in
-  [`.github/CODEOWNERS`](.github/CODEOWNERS) are placeholders.
-- `docs/model_cards/*.md` are stubs. They are also the RAG corpus published to
-  the Copilot and Chatbot, so a stale card becomes a wrong answer in someone
-  else's demo.
-- `conf/market.yaml` is filled with **assumptions, not facts**. Every value
-  marked `ASSUMPTION` needs replacing with real operator data or explicitly
-  defending in the report.
-- `D:\Sic\Proposal\` is an empty leftover folder. Harmless (git ignores empty
-  directories); delete it if it bothers you.
+**The tier ceiling dominates the discount formula.** 96.8% of bronze and 80.9%
+of platinum subscribers clip at exactly `d_max`, so `d(i,b)` reduces to
+`d_max(tier(i))` for most people. `conf/pricing.yaml` specifies
+`clip(..., 0, d_max)`; scaling *by* `d_max` instead would change what every
+subscriber is charged. That is a pricing-policy decision and it has been left
+alone deliberately.
+
+**`conf/market.yaml` still contains assumptions.** Every value carries a
+`status:` of `confirmed`, `assumption` or `placeholder`. The assumptions are
+listed in [`docs/MARKET_QUESTIONS.md`](docs/MARKET_QUESTIONS.md) rather than
+quietly presented as fact, but the report has to either replace them with
+operator data or defend them.
+
+### If you are adding something
+
+Follow the phase pattern, which is what produced a codebase with no stubs:
+implement → run it → find the bug honestly → write the test (mutation-check it
+if it passed first try) → make the phase check real → rewrite the roadmap
+section with **measured** results including what broke → full verification →
+commit with a message that explains why.
 
 ---
 
@@ -276,6 +349,46 @@ Learned the hard way or designed in on purpose:
 - **The privacy scan can flag its own fixtures.** Negative tests need a string
   that looks like a real MSISDN. Tag such a line `msisdn-fixture` and both the
   pytest check and the CI job will skip it — per line, never per directory.
+
+**Added after five bugs that a green test suite could not see.** Every one
+reached a running system and none of them failed a test:
+
+- **A batch of one row is its own worst case, and it is the demo path.** Three
+  separate bugs needed exactly that trigger. The median of a single NaN is that
+  NaN, so imputing from the batch left it in place and `.astype(int)` turned it
+  into `-9223372036854775808` in an API response. A SHAP background taken from
+  the rows being explained gives `E[x] = x`, so every contribution is exactly
+  zero — with "lowers churn risk" printed under each bar, because `0 > 0` is
+  false. **Any statistic a serving path needs must travel on the artefact.**
+- **`scikit-learn` is pinned `>=1.7,<1.8` and the upper bound is the point.**
+  The artefacts are pickles and sklearn does not guarantee cross-minor
+  compatibility. An unbounded `>=` let a rebuild resolve 1.9.1 against 1.7.2
+  pickles: everything deserialised, `/health` said `ok`, the container was
+  marked healthy, and the first request 500'd. sklearn *did* warn — to stderr,
+  inside a container, five times. It now logs at `ERROR`, and
+  `registry.smoke_check()` pushes a row through every estimator at startup.
+- **Loading is not working.** A readiness check that only proves
+  deserialisation will pass for a model that cannot predict. `/health` reports
+  a model as unusable when its startup smoke prediction failed, and the
+  phase-10 check scores a real subscriber rather than reading a flag.
+- **`series.to_frame().T` throws away every dtype.** A Series holds one dtype,
+  so the transpose returns every column as `object`. `prepare_matrix` refused
+  all 54 and the Subscriber 360 SHAP panel had never rendered once, on any
+  subscriber, since the screen was written. It degraded politely and nobody
+  read the warning. **Keep the one-row frame; never rebuild one.**
+- **A surface that makes decisions must be able to record them.** `ui` and
+  `channel-sim` call the decision engine in-process and mounted `./data` as
+  `:ro`, so the offer panel died on `[Errno 30] Read-only file system` writing
+  the decision log. Invisible locally, because a local run writes to the repo.
+- **Check what a baseline is measured against.** The Campaign Builder reported
+  "saved 0 LYD against a blanket campaign" beneath a chart saying 227 of 497
+  had been removed by guardrails — because "blanket" was computed from the
+  post-guardrail pool. The 227 *were* the saving.
+- **Know whether a margin is gross or net before you subtract a cost from it.**
+  M3's `expected_value_lyd` is already `uplift × CLV − cost`. Passing it as
+  `expected_margin_lyd` charged the campaign twice.
+- **Open the screen.** Two of the five were found by loading a page in a
+  browser and reading it. Neither was findable from pytest.
 
 ---
 
@@ -790,6 +903,73 @@ non-numbers and 1,200 digests.
 
 **Verified:** 131 tests pass (9 xfail, from 10 — `test_uci_duplicate_rows_are_dropped`
 is green, and a second leaky-field test joined it), ruff and black clean.
+
+---
+
+### 2026-09-19 · Sessions 5–9 — phases 4 to 10
+
+Built out every remaining layer, one phase at a time, each ending in a full
+verification and a commit. The roadmap carries the detail; the findings worth
+knowing before touching a model:
+
+- **LightGBM built one tree.** It tracks `binary_logloss` alongside the
+  requested metric and early stopping watches all of them; `scale_pos_weight≈27`
+  degrades logloss from iteration 1. PR-AUC 0.3076 → 0.4556 once `metric` was
+  set on the constructor. A hard failure under 3 trees now guards it.
+- **In-sample concordance reversed the survival conclusion.** RSF 0.8937
+  in-sample → 0.8292 held out; Cox 0.8534. The forest's win was memorisation.
+- **M3 trained and scored the same rows.** Qini 0.2745 and uplift@30% +50.8pp
+  became 0.0091 and +4.9pp held out.
+- **Qini normalisation was ~3× too large** — divided by the endpoint rather
+  than Radcliffe. Now agrees with scikit-uplift to 3.1e-05.
+- **`sample_weight` passed to LightGBM's constructor is silently discarded.**
+  Mean p 0.504 vs 0.950. `train` now takes it explicitly and raises on other
+  fit-only params.
+- **The M4 calibrator was fitted on fuzzy inferred labels**, which are ~50/50
+  by construction, so isotonic sent every score to 0.5 — and it was being
+  reported as a bias correction.
+- **BG/NBD with penalizer 0.01 broke the fit**: b=0.570 gives a U-shaped
+  dropout Beta and 844 NaN of 4,933. Default is 0.0 now.
+- **Spearman over sorted quantiles is always exactly 1.000.** Removed from the
+  IBM benchmark rather than reported as agreement.
+- **Four redundant feature columns** — two exact duplicates, two affine.
+- **454 MB of NVIDIA CUDA in a CPU-only image**: `xgboost` declares
+  `nvidia-nccl-cu12` unconditionally on Linux. A `serve` extra halved both
+  images.
+
+### 2026-09-19 · Session 10 — five bugs a green suite could not see
+
+Asked to make the system testable by hand, and found that nothing in eleven
+phases had ever scored one real subscriber through the running container or
+opened a screen in a browser. Five faults were waiting on those two paths.
+
+Three needed a **one-row batch**: the sklearn version skew that 500'd
+`/v1/score/churn`, the NaN median that produced `INT64_MIN` for
+`time_to_churn_days`, and the SHAP background that made every contribution
+exactly zero. Two needed a **running container**: the object-dtype transpose
+that meant the Subscriber 360 waterfall had never rendered, and the read-only
+mount that killed the offer panel.
+
+Then the Campaign Builder's blanket comparison turned out to be measuring the
+campaign against itself, charging the campaign cost twice, testing viability
+gross, and clipping away the negatives that were the whole point. Fixing it
+exposed a flaw in the fix's own headline — an unconstrained blanket arm against
+a budget-capped targeted one measures the budget, not the targeting — so there
+are now two comparisons and the screen leads with the one that holds spend
+constant.
+
+**Verified:** 368 tests pass with zero xfail (from 349), 85 phase checks pass
+with none failed and none pending, ruff and black clean, all six surfaces
+exercised in the container by hand.
+
+**Pushed** to `ItsSp00ky/LoopGain-Telecom-AI` as `Ali_Branch` — the first time
+anything in this branch has left the machine, and the last PENDING check in the
+project.
+
+**A correction recorded in the roadmap:** the blank SHAP waterfall was first
+attributed to the zero-background bug. That bug is real and was measured on the
+API, but the screen never reached it — the dtype fault was in front. Both the
+roadmap and the commit say so.
 
 ---
 

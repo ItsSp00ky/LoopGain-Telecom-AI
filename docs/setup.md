@@ -45,7 +45,7 @@ step 2 creates a 3.11 environment for this project without touching your base.
 ## 2. Local environment
 
 ```powershell
-git clone https://github.com/ORG/REPO.git ai-cvm-suite
+git clone https://github.com/ItsSp00ky/LoopGain-Telecom-AI.git ai-cvm-suite
 cd ai-cvm-suite
 
 conda env create -f environment.yml

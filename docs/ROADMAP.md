@@ -113,9 +113,13 @@ git push -u origin ali_branch
 gh repo view --json url,defaultBranchRef
 ```
 
-Then replace the `ORG/REPO` badge placeholders in `README.md` and `@ali` in
-`.github/CODEOWNERS`, and confirm CI goes green on the push — that is the first
-time the pipeline has ever run end to end.
+**Done on 2026-09-19.** The remote is
+[ItsSp00ky/LoopGain-Telecom-AI](https://github.com/ItsSp00ky/LoopGain-Telecom-AI)
+(private) and the branch is `Ali_Branch`. The badge URLs in `README.md` and the
+handle in `.github/CODEOWNERS` are filled in. The history is **unrelated** to
+`main` — this branch was developed standalone and `main` lays the platform out
+as one directory per component, so integrating it is a decision the team has to
+make rather than a fast-forward.
 
 ---
 
