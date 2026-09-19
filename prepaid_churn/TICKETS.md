@@ -9,7 +9,35 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-19 by Taha + Claude.
+**Last updated:** 2026-09-19 by Taha + Claude (T16, T8 and T18 done; branch pushed for Ali).
+
+**For Ali: how to continue from here**
+
+1. Work on `tahaDev`, not on `Ali_Branch` (which stays untouched as the record of your work, decision 15).
+   A fresh clone is simplest: `git clone -b tahaDev https://github.com/ItsSp00ky/LoopGain-Telecom-AI.git`.
+   Never pull or merge `main` into it.
+2. Install [uv](https://docs.astral.sh/uv/); no conda is needed.
+   Python 3.12 is pinned in `.python-version`, and `uv sync` installs it.
+3. From `prepaid_churn/`, rebuild the git-ignored data, models and scores (about a minute):
+
+   ```bash
+   uv sync
+   uv run churn build-dataset
+   uv run churn train
+   uv run churn evaluate --chosen-at 2026-09-19
+   uv run churn bundle
+   uv run churn score
+   uv run churn almadar-view
+   ```
+
+   It was checked on a fresh clone on 2026-09-19: the bundle must be `lightgbm-2026-09-19-ef9430fb`, and `git status` must show no changed report.
+   `--chosen-at 2026-09-19` keeps the freeze date; this rebuild reproduces the frozen choices and changes no model, feature or threshold.
+4. Start your Claude session in the repo with this message:
+
+   > I am Ali, Taha's teammate on the customer module. We now work together on branch `tahaDev` in `prepaid_churn/`. Read `prepaid_churn/CLAUDE.md`, then the Handoff section of `prepaid_churn/TICKETS.md`, then decisions 15 to 17 in `prepaid_churn/docs/decisions.md` and `prepaid_churn/docs/ali_branch_merge.md`, which explain how my `Ali_Branch` work was combined. Rebuild the artifacts with the commands in the Handoff and check the bundle version. Then tell me which ticket is next and wait for my go before writing code.
+
+5. Two people on one branch: run `git pull --rebase` before you start, claim a ticket by writing your name in its **Owner** field and pushing that change first, keep commits small, push when a ticket is done, and update this Handoff at the end of each session.
+6. Please answer the open questions below that name you.
 
 **Status**
 - T0 to T7 are done: the churn model is trained, calibrated and evaluated once on the test month (`reports/evaluation_all.md`).
@@ -23,6 +51,10 @@ Update this section at the end of every working session.
 - Ali's parallel work on `Ali_Branch` was reviewed and is being combined into this module (decisions 15, 16 and 17).
   Every step is logged in [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
 - Almadar Aljadid is now the operator (decision 16), and the customer MVP comes first, built to plug into the team platform (decision 17).
+- T16 is done: `data/almadar/` holds all 57 Almadar packages and the market facts, each with a status (`docs/almadar.md`).
+- T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
+- T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
+- A fresh clone of `tahaDev` rebuilds everything and reproduces the champion byte for byte (checked on 2026-09-19).
 
 **Blocked on**
 - Nothing.
@@ -33,6 +65,8 @@ Update this section at the end of every working session.
 3. T18 Almadar view of the real customers (done).
 4. T10 value tiers, then T11 offers with human approval.
 5. T15 integration service, then T20 integration check with the chatbot and copilot.
+   Suggested split, for Taha and Ali to confirm: Ali takes T10 and T11 (his value and offer engine designs), and Taha takes T15 and T20 (the chatbot, copilot and integration are his in the action plan).
+   T15 can start with `/health`, `/catalogue` and `/portfolio/summary` before T11 exists.
 6. T14 demo app and T9 documentation.
 7. After the MVP works end to end: T17, T19, T12 and T13.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.

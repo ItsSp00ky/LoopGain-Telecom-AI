@@ -88,3 +88,10 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
   We used one linear rate instead (40 LYD over the measured mean recharge), which keeps the real differences between customers and needs only the ARPU assumption.
   The result backs Ali's instinct: for 88.9% of active customers the nearest card to their usual top-up is 5 LYD.
 - The bundle a customer holds, which Ali's cannibalisation guard needs (T11), comes from the real monthly and short pack purchases of the upGrad data.
+
+### Step 6 - Handover to Ali (2026-09-19, Taha + Claude)
+
+- Taha asked to push the combined work so Ali can continue it.
+- Checked the handover path first: a fresh clone of `tahaDev`, `uv sync` and the six pipeline commands rebuilt everything in about a minute, with a byte-identical champion, the same bundle version (`lightgbm-2026-09-19-ef9430fb`), identical scores and Almadar view, no changed report, and all tests green.
+- Wrote "For Ali: how to continue from here" at the top of the Handoff in `TICKETS.md`, with a first message for his Claude session, and brought `README.md` up to date.
+- Suggested split, for Taha and Ali to confirm: Ali on T10 and T11, Taha on T15 and T20.
