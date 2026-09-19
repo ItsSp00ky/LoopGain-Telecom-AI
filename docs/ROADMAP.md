@@ -1,14 +1,14 @@
 # Roadmap
 
-**65 functions left, in a chain that cannot be reordered.** This document is
+**48 functions left, in a chain that cannot be reordered.** This document is
 the order, and after every step a command that tells you whether you got it
 right. If a check fails, do not move on — every layer below inherits the
 mistake, and the expensive failures here are the silent ones.
 
-**Phases 1, 2 and 3 are written and verified.** Layers 1, 2 and 3 are all at
-100%, the whole project at **73%**. Phase 2's quality gate passes and phase 3's
-leakage suite is green, so the population and the features built on it are both
-usable. **Next is phase 4 — M1 churn.**
+**Phases 1 to 4 are written and verified.** Layers 1, 2 and 3 are at 100% and
+so is M1, the whole project at **82%**. Phase 2's quality gate passes and the
+leakage suite is green with **every xfail deleted**, which was the gate for
+starting M1. **Next is phase 5 — M2 value.**
 
 ## Two commands
 
@@ -45,6 +45,8 @@ of 40 packages). Either `conda activate cvm` first, or call it directly as
 `D:\Anaconda\envs\cvm\python.exe`. Everything below assumes one of those.
 
 ---
+
+<a id="phase-0"></a>
 
 ## Phase 0 · Setup — three things, about 30 minutes
 
@@ -106,6 +108,8 @@ Then replace the `ORG/REPO` badge placeholders in `README.md` and `@ali` in
 time the pipeline has ever run end to end.
 
 ---
+
+<a id="phase-1"></a>
 
 ## Phase 1 · Ingestion — **DONE** (13 functions + 3 new loaders)
 
@@ -240,6 +244,8 @@ for k, v in measured_distributions().items():
 ```
 
 ---
+
+<a id="phase-2"></a>
 
 ## Phase 2 · Synthesis — **DONE, GATE PASSED**
 
@@ -423,6 +429,8 @@ recharge amount is a denomination Almadar does not print.
 
 ---
 
+<a id="phase-3"></a>
+
 ## Phase 3 · Features — **DONE**
 
 `python -m cvm.features.run` produces **100,000 × 53 columns over 261 snapshot
@@ -524,73 +532,211 @@ that the numbers are *better* than they should be.
 
 ---
 
-## Phase 4 · M1 churn — 17 functions, 2–3 days
+<a id="phase-4"></a>
 
-Eight algorithms, one temporal split, calibration curves for all of them. The
-benchmark table *is* the deliverable (D3), not the winner.
+## Phase 4 · M1 churn — **DONE**
 
-| | File | Functions |
+`python -m cvm.models.m1_churn.run` trains eight models on one temporal split,
+calibrates every one of them, fits M1b, and writes six reports.
+`scripts/check_phase.py 4` passes 8 of 8.
+
+| model | PR-AUC | lift@1 | recall@1 | Brier | ECE | ROC-AUC |
+|---|---|---|---|---|---|---|
+| **logistic_regression** | **0.4735** | 6.30 | 63.0% | 0.0248 | 0.0037 | 0.8655 |
+| lightgbm | 0.4407 | 6.28 | 62.8% | 0.0258 | 0.0036 | 0.8616 |
+| xgboost | 0.4233 | 6.15 | 61.5% | 0.0264 | 0.0039 | 0.8588 |
+| catboost | 0.4182 | 6.23 | 62.4% | 0.0262 | 0.0034 | 0.8633 |
+| decision_tree | 0.4032 | 5.84 | 58.4% | 0.0265 | 0.0038 | 0.8353 |
+| knn | 0.3746 | 5.55 | 55.5% | 0.0269 | 0.0039 | 0.7763 |
+| naive_bayes | 0.2664 | 5.98 | 59.8% | 0.0295 | 0.0047 | 0.8278 |
+| svm | 0.2306 | 5.12 | 51.2% | 0.0311 | 0.0036 | 0.7951 |
+
+Base rate 3.68%. Accuracy is the last column in the written CSV and the phase
+check fails if it ever leads.
+
+### Logistic regression wins, and the reason is the finding
+
+**Read the ranking with care, because the generator is linear.** The synthetic
+label comes from a logistic hazard — a weighted sum of standardised drivers
+through a sigmoid — so logistic regression is *correctly specified* on this
+data. The tree models are being asked to rediscover with step functions a
+smooth linear-in-log-odds surface the linear model was handed for free.
+
+This benchmark therefore measures **the generator's functional form** as much
+as it measures the models. It is a working pipeline and a fair comparison on
+this data. It is **not** evidence about which model wins on real Almadar
+subscribers, whose churn is under no obligation to be linear in log-odds. The
+verdict paragraph says so on every run, and emits that caveat only when a
+linear model actually places in the top two — a warning printed unconditionally
+is wallpaper.
+
+The practical consequence: `explain.py` grew a `LinearExplainer`. (Smoke-testing
+the serving path also caught the quintile columns rendering as `E is 2` and
+`recency raw is 2.95` — the column name with a number after it, which is not a
+sentence a marketing analyst can act on.) For a linear
+model the SHAP value *is* `coef × (x − E[x])`, exact and unsampled. A serving
+path that could only explain the tree arms would have silently dropped every
+explanation the day the benchmark changed its mind — which is exactly what
+happened on the first run.
+
+### Calibration is the step that does the most work
+
+| | raw | calibrated |
 |---|---|---|
-| 1 | `models/m1_churn/gradient_boosting.py` | 3 |
-| 2 | `models/m1_churn/calibration.py` | 3 |
-| 3 | `models/m1_churn/benchmark.py` | 3 |
-| 4 | `models/m1_churn/explain.py` | 4 |
-| 5 | `models/m1_churn/survival.py` | 3 |
-| 6 | `models/m1_churn/predict.py` | 1 |
+| Brier | 0.11860 | **0.02479** |
+| ECE | 0.25506 | **0.00366** |
+| mean predicted | 0.2919 | 0.0337 |
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+Observed rate 0.0368. `scale_pos_weight ≈ 27` is correct for ranking at a 3.5%
+base rate and deliberately destroys the absolute scale — the raw scores average
+0.29 against a 3.7% reality. Isotonic puts them back. Without this step every
+`E[gain] = uplift × CLV − offer_cost` in the decision engine is wrong by 8x,
+and because the *ranking* is right, every ranking metric says it is fine.
+
+One claim corrected: isotonic is monotone **non-decreasing**, so it cannot
+reorder anyone, but it can map distinct scores onto shared values, and those
+ties move PR-AUC by about 0.0014. "The AUCs are identical" was the easier
+sentence and it was false. The test asserts the real property — sort by raw
+score and the calibrated scores never go down.
+
+### The honest-metrics disclosure
+
+| setup | rows | leaky field | split | accuracy | ROC-AUC | PR-AUC |
+|---|---|---|---|---|---|---|
+| naive (as published) | 3,150 | kept | random | 0.9524 | 0.9874 | 0.9301 |
+| + duplicates removed | 2,850 | kept | random | 0.9614 | 0.9823 | 0.9087 |
+| + leaky field dropped | 2,850 | dropped | random | 0.9661 | 0.9853 | 0.9250 |
+| **honest (ours)** | 2,850 | dropped | temporal | 0.9263 | 0.9692 | **0.8033** |
+
+The ~0.99 published ROC-AUC reproduces at 0.9874. **PR-AUC is where the damage
+shows: 0.9301 → 0.8033.** Accuracy and ROC-AUC barely move, which is itself the
+argument — the two metrics most often quoted are the two least sensitive to the
+three things that were wrong. And note the middle rows: removing duplicates
+*raises* accuracy. The effects are not additive and the report should not
+pretend they are.
+
+### M1b: holding out reversed the result
+
+| | in-sample | **held-out** |
+|---|---|---|
+| Cox | 0.8533 | **0.8534** |
+| Random Survival Forest | 0.8937 | **0.8292** |
+
+**The forest's win was entirely memorisation.** lifelines'
+`concordance_index_` and scikit-survival's `.score()` both report the fit on
+the rows they were fitted to, and the first run duly reported RSF 0.8962
+against Cox 0.8540 — a 4-point win for the forest, and the wrong conclusion.
+Scored on rows neither model has seen, the forest drops 6.5 points and **Cox
+wins**. The penalised linear model barely moves, which is what a model with no
+capacity to memorise looks like.
+
+That matters beyond the leaderboard: the module docstring says a large RSF
+margin would mean the proportional-hazards assumption is not holding. On the
+held-out numbers there is no such margin, so the assumption stands and Cox's
+coefficients can be read as the effects they claim to be.
+
+Two related bugs were found in the same pass: `_design` re-ranked features by
+correlation **on the test set** and then zero-filled whatever training had
+chosen and test had not, and it imputed with test-set medians.
+
+### No ladder boundaries, and that is the correct answer
+
+The generator places churn dates uniformly across the 30-day outcome window, so
+the survival curve falls at a near-constant rate and the three "largest drops"
+are the three largest random fluctuations. The first run emitted `[115, 122,
+128]`.
+
+**A chi-square against uniformity was the first guard and it was the wrong
+test.** With 3,523 events it rejects exact uniformity on trivial overdispersion
+(chi2 = 45.7, p = 0.025) and then blesses boundaries that are still noise.
+Significance and stability are different properties, and the one that matters
+for a ladder cut-point is stability.
+
+The guard is now a bootstrap: resample the events 40 times, recompute the
+boundaries, and take the mean per-rank standard deviation. Measured —
+
+| event days | spread | returned |
+|---|---|---|
+| the real population | 4.0 days | **none** |
+| uniform, 3,523 events | 4.2 days | none |
+| three planted cliffs at 110/120/130 | 0.0 days | `[110, 120, 130]` |
+
+Tolerance is 3 days: a stage that moves by less than that is the same stage,
+one that moves by a week is different advice to a campaign manager. Two halves
+of the real events return `[115, 125, 134]` and `[115, 122, 130]` — only day
+115 recurs. On real Libyan data the check passes and the cut-points mean
+something.
+
+### Seven bugs, one of which was nearly invisible
+
+**LightGBM early-stopped after one tree.** It tracks `binary_logloss` alongside
+whatever `eval_metric` asks for, and early stopping watches *every* tracked
+metric. `scale_pos_weight ≈ 27` makes logloss degrade from iteration 1, so
+stopping fired immediately: **1 tree instead of 97, PR-AUC 0.3076 instead of
+0.4556.** The model did not crash and did not look broken — it looked mediocre,
+sitting below the decision tree, which is a result you could rationalise. Fixed
+by setting `metric` on the constructor; guarded by a hard failure under three
+trees and a regression test.
+
+**`_positive_class` mishandled SHAP's list form.** LightGBM's TreeExplainer
+returns a *list* of two arrays rather than a 3-D one. Indexing the wrong element
+explains the negative class and flips every sign — it raises nothing and reads
+as a plausible explanation.
+
+**The survival merge collided on the target,** which is on both the feature and
+population sides; pandas suffixed both to `_x`/`_y`.
+
+**The verdict compared the winner to itself** and printed "+0.0%". It now
+compares against the best non-linear arm, which is the number a reader wants.
+
+**SHAP ran once per row in the serving path** — 2,188 ms for 500 subscribers
+against a 200 ms budget. The explainer is stateless across rows, so one call
+over the batch returns identical numbers: **438 ms, 0.88 ms each.**
+
+**Two feature columns were exact duplicates.** `recency_raw` *is*
+`days_since_last_topup`, and `at_recharge_floor` *is*
+`data_advance_leaves_nothing` because the data advance and the smallest card
+are both 5 LYD — the M4 finding surfacing as two names for one condition. Two
+names for one signal halves each one's SHAP importance and puts the same
+sentence into a five-item waterfall twice. Dropped at the model boundary rather
+than in the feature layer, so the store keeps its semantics, and logged so that
+if the ladder ever changes and the two stop coinciding, the log line
+disappearing is itself information.
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 4
 ```
 
-**Check 1** — the benchmark has all eight rows and PR-AUC is the headline:
+Expect 8 passed, 0 failed. The gate for Phase 5:
 
 ```bash
-python -c "
-import pandas as pd
-from cvm.config import settings
-t = pd.read_csv(settings.paths['reports'] + '/m1_benchmark.csv')
-print(t.to_string(index=False))
-assert len(t) >= 8, f'only {len(t)} models in the table'
-assert 'accuracy' not in [c.lower() for c in t.columns[:2]], 'accuracy must not lead'
-"
+pytest tests/leakage -q
 ```
 
-**Check 2** — calibration actually improved something. Brier must fall after
-isotonic; if it does not, the calibration step is decoration and the phrase
-*"a 0.31 means 31%"* is unsupported:
+**Expect `13 passed` with no xfail.** The last marker is gone —
+`test_a_single_feature_cannot_reconstruct_the_label` now runs against the real
+store. Top univariate AUC is 0.7471 (`days_since_last_topup`, the strongest
+hazard driver) against a 0.95 threshold.
 
-```bash
-python -c "
-import json
-from cvm.config import settings
-m = json.load(open(settings.paths['reports'] + '/m1_calibration.json'))
-print('Brier raw:', m['brier_raw'], '-> calibrated:', m['brier_calibrated'])
-assert m['brier_calibrated'] <= m['brier_raw']
-"
-```
+That test has a measured limit worth knowing: it catches *deterministic*
+reconstruction (`days_to_churn` scores 1.0000) but **not** `hazard_score`, which
+reaches only 0.8799 — the label is a Bernoulli draw from that hazard, so the
+probability cannot perfectly separate outcomes it governs only in expectation.
+Lowering the threshold to catch it would leave no margin over the strongest
+honest driver. It is the second line of defence; the named-artefact test is the
+first, and neither covers the other.
 
-**Check 3** — no single feature reconstructs the label. Delete the `xfail`
-first:
+### Unit coverage
 
-```bash
-pytest tests/leakage/test_point_in_time.py::test_a_single_feature_cannot_reconstruct_the_label -q
-```
-
-**Check 4** — the honest-metrics disclosure, which is pitch material. Published
-work on UCI 563 reaches ~97% accuracy and ~0.99 AUC; reproduce it, then show
-the corrected figure:
-
-```bash
-python -c "
-from cvm.models.m1_churn.benchmark import naive_vs_honest
-print(naive_vs_honest('uci_iranian').to_string(index=False))
-"
-```
+`tests/unit/test_m1_churn.py` — 26 tests. Most guard failures that are silent:
+a model that stops after one tree still returns probabilities, an uncalibrated
+score still ranks, and an explanation still renders if it says `shap = +0.14`.
 
 ---
+
+<a id="phase-5"></a>
 
 ## Phase 5 · M2 value — 9 functions, 2 days
 
@@ -635,6 +781,8 @@ pytest tests/unit/test_proposal_consistency.py::test_clv_ceiling_matches_the_gua
 ```
 
 ---
+
+<a id="phase-6"></a>
 
 ## Phase 6 · M3 uplift — 9 functions, 2–3 days
 
@@ -688,6 +836,8 @@ print('break-even sits where the proposal says it does')
 
 ---
 
+<a id="phase-7"></a>
+
 ## Phase 7 · M4 advance — 5 functions, 1–2 days
 
 Cheap, because the PD heads share M1's feature pipeline. The most
@@ -713,6 +863,8 @@ offered `DAY_50MB` instead. They would probably repay — that is the trap, and
 why affordability declines what PD would approve.
 
 ---
+
+<a id="phase-8"></a>
 
 ## Phase 8 · Decision engine — 23 functions, 2–3 days
 
@@ -782,6 +934,8 @@ assert r['cost_lyd'] <= 144_000
 
 ---
 
+<a id="phase-9"></a>
+
 ## Phase 9 · Surfaces — 2 days
 
 **First, the phase check** — it will report PEND until this phase lands, then
@@ -821,6 +975,8 @@ Click every screen. Arabic copy must render right-to-left, and the SMS preview
 must enforce the real 70-character UCS-2 limit rather than 160.
 
 ---
+
+<a id="phase-10"></a>
 
 ## Phase 10 · Ship — 2 days
 

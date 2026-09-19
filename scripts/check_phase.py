@@ -580,7 +580,197 @@ def check_feature_coverage() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 4-10 -- declared now, so the check exists before the code does
+# Phase 4 -- M1 churn
+# ---------------------------------------------------------------------------
+
+
+def _report(name: str):
+    """Load a written report, or PEND if M1 has not been run."""
+    import json
+
+    from cvm.config import settings
+
+    path = settings.reports_dir / name
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.models.m1_churn.run`")
+    if path.suffix == ".json":
+        return json.loads(path.read_text())
+    import pandas as pd
+
+    return pd.read_csv(path)
+
+
+def check_benchmark_table() -> str:
+    """Eight models, PR-AUC leading, accuracy never the headline."""
+    table = _report("m1_benchmark.csv")
+
+    if len(table) < 8:
+        raise AssertionError(f"only {len(table)} models in the table; the config declares 8")
+    if table.columns[1] != "pr_auc":
+        raise AssertionError(f"{table.columns[1]!r} leads the table; PR-AUC must")
+    if "accuracy" in table.columns[:3].tolist():
+        raise AssertionError("accuracy is being reported as a headline")
+
+    best = table.iloc[0]
+    return (
+        f"{len(table)} models, best {best['model']} at PR-AUC {best['pr_auc']:.4f}, "
+        f"lift@1 {best['lift_at_decile_1']:.2f}, accuracy reported last"
+    )
+
+
+def check_calibration_improves() -> str:
+    """Brier must FALL after isotonic. If it does not, calibration is
+    decoration and "a 0.31 means 31%" is an unsupported claim."""
+    m = _report("m1_calibration.json")
+
+    if m["brier_calibrated"] > m["brier_raw"]:
+        raise AssertionError(f"Brier rose from {m['brier_raw']:.5f} to {m['brier_calibrated']:.5f}")
+    gap = abs(m["mean_predicted_calibrated"] - m["observed_rate"])
+    if gap > 0.01:
+        raise AssertionError(
+            f"calibrated mean {m['mean_predicted_calibrated']:.4f} against an observed "
+            f"{m['observed_rate']:.4f}: a {gap:.4f} gap is too wide to call calibrated"
+        )
+    return (
+        f"Brier {m['brier_raw']:.5f} -> {m['brier_calibrated']:.5f}, "
+        f"ECE {m['ece_raw']:.5f} -> {m['ece_calibrated']:.5f}, "
+        f"mean {m['mean_predicted_calibrated']:.4f} against observed {m['observed_rate']:.4f}"
+    )
+
+
+def check_leakage_suite_has_no_xfail() -> str:
+    """The Phase 4 gate the roadmap set: green with EVERY xfail deleted."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/leakage/",
+            "-q",
+            "--no-cov",
+            "-p",
+            "no:cacheprovider",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    lines = result.stdout.strip().splitlines()
+    tail = lines[-1] if lines else result.stderr[-200:]
+    if result.returncode != 0:
+        raise AssertionError(tail)
+    if "xfail" in tail:
+        raise AssertionError(f"an xfail marker remains: {tail}")
+    return tail
+
+
+def check_naive_vs_honest() -> str:
+    """The disclosure must show the inflated figures AND the corrected ones,
+    with the honest one lower. If the gap is not there, the argument is not."""
+    table = _report("m1_naive_vs_honest.csv")
+
+    naive = table.iloc[0]
+    honest = table.iloc[-1]
+    if honest["roc_auc"] >= naive["roc_auc"]:
+        raise AssertionError(
+            f"honest ROC-AUC {honest['roc_auc']:.4f} is not below naive "
+            f"{naive['roc_auc']:.4f}; the disclosure has nothing to disclose"
+        )
+    if honest["split"] != "temporal" or honest["leaky_field"] != "dropped":
+        raise AssertionError(f"the honest row is not honest: {honest.to_dict()}")
+
+    return (
+        f"naive {naive['accuracy']:.4f} acc / {naive['roc_auc']:.4f} ROC / "
+        f"{naive['pr_auc']:.4f} PR -> honest {honest['accuracy']:.4f} / "
+        f"{honest['roc_auc']:.4f} / {honest['pr_auc']:.4f}"
+    )
+
+
+def check_survival_is_held_out() -> str:
+    """Concordance for both arms, and the ladder boundaries.
+
+    An in-sample concordance flatters a forest far more than a penalised linear
+    model, so both are scored on rows neither has seen.
+    """
+    m = _report("m1b_survival.json")
+    c = m["concordance"]
+
+    for name, value in c.items():
+        if not 0.5 <= value <= 1.0:
+            raise AssertionError(f"{name} concordance {value:.4f} is outside [0.5, 1.0]")
+    if c["cox"] < 0.6:
+        raise AssertionError(f"cox concordance {c['cox']:.4f} is barely above chance")
+
+    boundaries = m["ladder_boundary_days"]
+    note = (
+        f"boundaries {boundaries}"
+        if boundaries
+        else "no boundaries (bootstrap disagrees -- correctly refused)"
+    )
+    return f"cox {c['cox']:.4f}, rsf {c['rsf']:.4f}, held out; {note}"
+
+
+def check_explanations_are_plain() -> str:
+    """Every score must carry a reason a marketing analyst can read. A
+    contribution rendered as `days_since_last_topup = 23, shap = +0.14` has
+    been annotated, not translated."""
+    from cvm.models.m1_churn.explain import to_plain_language
+
+    cases = [
+        ("days_since_last_topup", 23.0, 0.14),
+        ("leakage_score", 0.82, 0.09),
+        ("balance_zero_hours_30d", 310.0, 0.05),
+        ("a_brand_new_feature_30d", 4.0, -0.02),
+    ]
+    for feature, value, contribution in cases:
+        sentence = to_plain_language(feature, value, contribution)
+        if feature in sentence:
+            raise AssertionError(f"the raw column name leaked into: {sentence!r}")
+        if "shap" in sentence.lower():
+            raise AssertionError(f"jargon leaked into: {sentence!r}")
+        if not sentence.endswith("churn risk"):
+            raise AssertionError(f"no direction in: {sentence!r}")
+
+    return f"{len(cases)} renderings, no column names or SHAP values in any"
+
+
+def check_shap_attribution() -> str:
+    """Risk attributed to feature families, summing to 1.0 per subscriber."""
+    table = _report("m1_shap_attribution.csv")
+
+    numeric = table.drop(columns=["dominant_family"], errors="ignore")
+    totals = numeric.sum(axis=1)
+    if not ((totals - 1.0).abs() < 1e-6).all():
+        raise AssertionError(f"family shares do not sum to 1.0 (worst {totals.max():.4f})")
+
+    means = numeric.mean().sort_values(ascending=False)
+    top = ", ".join(f"{k} {v:.1%}" for k, v in means.head(3).items())
+    return f"{len(table):,} subscribers over {numeric.shape[1]} families ({top})"
+
+
+def check_model_artefact_loads() -> str:
+    """The serving artefact must exist and carry its column list. A model
+    without the training columns cannot align a serving batch."""
+    import joblib
+
+    from cvm.config import settings
+
+    path = settings.models_dir / "m1_churn.joblib"
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.models.m1_churn.run`")
+
+    bundle = joblib.load(path)
+    for key in ("model", "columns", "name"):
+        if key not in bundle:
+            raise AssertionError(f"the artefact has no {key!r}")
+    if not hasattr(bundle["model"], "predict_proba"):
+        raise AssertionError("the stored model cannot predict_proba")
+
+    return f"{bundle['name']} with {len(bundle['columns'])} columns, loads and scores"
+
+
+# ---------------------------------------------------------------------------
+# Phases 5-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -633,8 +823,14 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("feature families complete", check_feature_coverage),
     ],
     "4": [
-        ("benchmark table has 8 models", _pending("M1 not trained", "4")),
-        ("calibration improves Brier", _pending("M1 not trained", "4")),
+        ("benchmark table has 8 models", check_benchmark_table),
+        ("calibration improves Brier", check_calibration_improves),
+        ("leakage suite, zero xfail", check_leakage_suite_has_no_xfail),
+        ("naive vs honest disclosed", check_naive_vs_honest),
+        ("survival held out", check_survival_is_held_out),
+        ("explanations are plain language", check_explanations_are_plain),
+        ("SHAP attribution by family", check_shap_attribution),
+        ("serving artefact loads", check_model_artefact_loads),
     ],
     "5": [("BG/NBD validated on holdout", _pending("M2 not built", "5"))],
     "6": [("Qini on Criteo > 0", _pending("M3 not built", "6"))],

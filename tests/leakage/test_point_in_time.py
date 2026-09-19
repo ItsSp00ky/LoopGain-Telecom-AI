@@ -248,8 +248,69 @@ def test_uci_leaky_field_is_dropped_by_default():
         assert column in naive.columns, f"{column} missing from the naive reproduction"
 
 
-@pytest.mark.xfail(reason="M1 not trained yet", strict=False)
 def test_a_single_feature_cannot_reconstruct_the_label():
     """Sanity check against an undetected leak: no single feature should reach
-    a near-perfect AUC on its own."""
-    raise NotImplementedError("TODO(E2)")
+    a near-perfect AUC on its own.
+
+    THE BROADEST NET IN THE SUITE. Every other leakage test names a specific
+    field and checks it is absent, so each one only catches a leak someone
+    already thought of. This one names nothing: it ranks the whole matrix by
+    univariate AUC and fails if any column is suspiciously close to a perfect
+    predictor. A leak nobody anticipated shows up here as a single column doing
+    a job no single column should be able to do.
+
+    0.95 rather than 0.99, because the useful failure is the near-miss. A
+    column at 0.97 is not literally the label, and it is still a column that
+    makes the model look far better than it will be in production.
+
+    WHAT THIS TEST DOES NOT CATCH, measured rather than assumed. It catches
+    DETERMINISTIC reconstruction: `days_to_churn` scores 1.0000 and trips it
+    instantly. It does NOT catch `hazard_score`, which reaches only 0.8799 --
+    because the label is a Bernoulli DRAW from that hazard, so the probability
+    cannot perfectly separate outcomes it only governs in expectation. Lowering
+    the threshold to catch it would leave almost no margin over the strongest
+    legitimate driver (`days_since_last_topup`, 0.7471) and would start failing
+    on honest data.
+
+    So this is the second line and not the first. `test_label_artifacts_are_
+    excluded_from_features` catches every artefact we know the name of; this
+    one catches an unanticipated column that is near-deterministic. Neither
+    covers the other, which is why both exist.
+    """
+    import pandas as pd
+    from sklearn.metrics import roc_auc_score
+
+    from cvm.config import settings
+    from cvm.models.m1_churn.gradient_boosting import prepare_matrix
+
+    path = settings.feature_store_offline
+    if not path.exists():
+        pytest.skip(f"{path} does not exist; run `python -m cvm.features.run`")
+
+    frame = pd.read_parquet(path)
+    X, y = prepare_matrix(frame)
+    assert y is not None and 0 < y.mean() < 0.5
+
+    scores = {}
+    for column in X.columns:
+        values = X[column]
+        usable = values.notna()
+        # A column that is constant, or missing wherever the label varies, has
+        # no univariate AUC -- skipping it is correct, and counting it as 0.5
+        # would hide a column that is only present for churners.
+        if usable.sum() < 100 or values[usable].nunique() < 2:
+            continue
+        if y[usable].nunique() < 2:
+            continue
+        auc = roc_auc_score(y[usable], values[usable])
+        scores[column] = max(auc, 1 - auc)  # a perfectly INVERTED feature leaks too
+
+    assert scores, "no column was scorable, so this test proved nothing"
+
+    worst = max(scores, key=scores.get)
+    assert scores[worst] < 0.95, (
+        f"{worst} alone reaches AUC {scores[worst]:.4f}. A single feature that "
+        "nearly reconstructs the label is a leak, whether or not it is on the "
+        f"artefact list. Top five: "
+        f"{sorted(((v, k) for k, v in scores.items()), reverse=True)[:5]}"
+    )
