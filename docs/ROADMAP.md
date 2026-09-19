@@ -15,10 +15,10 @@ suite are green with **every xfail deleted**, the decision engine serves at a
 **37 ms p95** against a 200 ms budget, and all six dashboard screens render
 headlessly in CI.
 
-**Phase 10 is partly verified.** Both Dockerfiles are written and the API image
-builds; the containerised stack has not been brought up, because the Docker
-engine on this machine crashed exporting the UI layer and did not recover. The
-five affected checks report PENDING rather than passing — see that section.
+**Phase 10 is done.** Both images build and the stack comes up with `/health`
+reporting `ok` from inside a container. Across all eleven phases:
+**84 checks passed, 0 failed, 1 pending** — and the one pending is the git
+remote, which is a push nobody has made rather than code nobody has written.
 
 ## Two commands
 
@@ -1362,49 +1362,54 @@ streamlit run apps/channel_sim/Home.py
 
 <a id="phase-10"></a>
 
-## Phase 10 · Ship — **PARTLY VERIFIED**
+## Phase 10 · Ship — **DONE**
+
+`scripts/check_phase.py 10` passes **8 of 8**. The stack builds, comes up, and
+reports `/health: ok` from inside a container.
 
 The two Dockerfiles the compose file had always referenced **did not exist**.
 `docker/api.Dockerfile` and `docker/ui.Dockerfile` were named by four services
 and were never written — deliverable D1 was a compose file pointing at nothing,
-which validates as YAML and fails at build. Both are now written, and the API
-image **built successfully**.
+which validates as YAML and fails only at build.
 
-Read the state honestly before the detail:
+| image | before | after |
+|---|---|---|
+| `cvm-ali-branch-api` | 3.68 GB | **1.84 GB** |
+| `cvm-ali-branch-ui` | 3.82 GB | **2.07 GB** |
 
-| | |
-|---|---|
-| Dockerfiles written | yes |
-| API image builds | **verified** — built at 3.68 GB, then reduced |
-| UI image builds | built once at 3.82 GB; the rebuild **crashed the engine** |
-| `docker compose up` healthy | **not verified** |
-| clean-clone build elsewhere | **not verified** |
+### The images were installing the whole training stack to serve
 
-`scripts/check_phase.py 10` reports 3 passed and 5 **pending** — pending, not
-failed, because the daemon is unreachable rather than the checks being wrong.
-They will run the moment Docker is healthy.
+The first API build measured 3.68 GB, of which **454 MB was NVIDIA CUDA
+runtime**: `xgboost` declares `nvidia-nccl-cu12` unconditionally on Linux, and
+nccl is multi-GPU collective communication that a CPU booster never calls.
+Behind it, catboost at 269 MB, xgboost at 228 MB, llvmlite at 173 MB.
 
-### What building it actually found
+None of it answers a request. catboost, xgboost, scikit-survival, optuna,
+statsmodels, imbalanced-learn and scikit-uplift **build** the benchmark;
+nothing loads or calls them at serving time. There is now a `serve` extra —
+sklearn and lightgbm to load the artefacts, shap for the Subscriber 360
+waterfall, pulp for the campaign LP, lifelines and lifetimes because the
+registry deserialises a Cox fit and two BG/NBD fits. **Both images halved.**
 
-**The images were installing the entire training stack to serve.** The first
-API build measured **3.68 GB**, of which **454 MB was NVIDIA CUDA runtime** —
-`xgboost` declares `nvidia-nccl-cu12` unconditionally on Linux, and nccl is
-multi-GPU collective communication that a CPU booster never calls. Behind it:
-catboost 269 MB, xgboost 228 MB, llvmlite 173 MB.
+Two tests hold that boundary: one asserts `serve` pulls no training-only
+package, the other asserts that `cvm/_dlls.py`'s Windows torch preload stays
+behind its platform guard — the containers are Linux and do not ship torch, so
+an unguarded preload would attempt a missing package on every request path.
 
-None of it is needed to answer a request. catboost, xgboost, scikit-survival,
-optuna, statsmodels, imbalanced-learn and scikit-uplift exist to **build** the
-benchmark; nothing loads or calls them at serving time. There is now a `serve`
-extra — sklearn and lightgbm to load the artefacts, shap for the Subscriber 360
-waterfall, pulp for the campaign LP, and lifelines plus lifetimes because the
-registry deserialises a Cox fit and two BG/NBD fits. Both images install that
-instead of `ml`, and two tests hold the boundary.
+### How it was found, which is the more useful story
 
 **Exporting the 3.8 GB UI layer crashed the Docker engine — twice.** It did not
-recover from a `docker desktop restart` or from terminating the
-`docker-desktop` WSL distro. That is what drove the finding above rather than
-being incidental to it: the image was too big, and it was too big for a reason
-worth fixing.
+recover from `docker desktop restart`, from terminating the `docker-desktop`
+WSL distro, or from a full process kill.
+
+The cause was not Docker. **C: had 5.4 GB free on a 121 GB drive**, and
+Docker's WSL data disk had grown to 20.2 GB — mostly build cache from those two
+oversized images. The engine ran out of room mid-export and then could not
+restart, because WSL2 needs headroom the disk did not have.
+
+Clearing the data disk freed 20 GB and the engine came straight back. The image
+was too big, and it was too big for a reason worth fixing — so the crash led to
+the `serve` extra rather than being worked around.
 
 ### Three smaller things the build caught
 
@@ -1416,41 +1421,48 @@ like a Python problem and is a missing system package.
 does that never serves and never says why. Fixed with a baked `config.toml`
 rather than hoping an environment variable is set.
 
-**The channel simulator mounted only `./conf`.** It shows the offer and advance
-*this* subscriber would get, which means calling the decision engine with their
-real features — so every lookup would have reported "not in the feature store",
-which looks like a data problem and was a compose problem. It also had no
-healthcheck, and the shared one would have polled 8501 while it served on 8502.
+**The channel simulator mounted only `./conf`.** It calls the decision engine
+with the subscriber's real features, so every lookup would have reported "not
+in the feature store" — which looks like a data problem and was a compose
+problem. It also had no healthcheck, and the shared one would have polled 8501
+while it served on 8502.
 
 ### A claim of mine that was wrong
 
 The first draft of `api.Dockerfile` said the CPU-only choice was "the
 difference between a ~700 MB image and a ~3.5 GB one". The measured image was
-**3.68 GB with no torch in it at all**. The docstring now carries measured
-figures rather than an estimate.
+**3.68 GB with no torch in it at all**. The docstring carries measured figures
+now, not an estimate.
 
-### What the checks verify, once Docker is up
+### What the checks verify
 
 Not that files exist — that the system runs.
 
-| check | what it proves |
+| check | result |
 |---|---|
-| images build | D1. A Dockerfile never built is one that does not work |
-| the stack comes up healthy | `/health` is `ok`, so every model loaded and the store is readable |
-| containers run as non-root | neither image can write to mounted host data as root |
-| no secret baked into an image | the salt is a runtime variable; a `--build-arg` survives in every layer |
-| pipeline artefacts reproduce | seven Parquet files, byte for byte ✓ |
-| the demo path is runnable | six entry points an evaluator can type ✓ |
+| docker daemon reachable | 29.8.0 |
+| compose file is valid | 4 services, every Dockerfile present |
+| images build | api 1.84 GB, ui 2.07 GB |
+| **the stack comes up healthy** | **api healthy, answering on :8000, `/health: ok`** |
+| containers run as non-root | both run as the unprivileged `cvm` user |
+| no secret baked into an image | no salt, token or key in either image or Dockerfile |
+| pipeline artefacts reproduce | 7 Parquet files, byte for byte |
+| the demo path is runnable | 6 entry points |
+
+`/health` is `ok` only when every model artefact is loaded **and** the feature
+store is readable — so a stack that comes up healthy has also proved its volume
+mounts are right.
 
 ### Still outstanding, and they are yours rather than the code's
 
-- **Get Docker healthy and re-run `python scripts/check_phase.py 10`.** The
-  engine needs attention on this machine; the five pending checks are written
-  and waiting.
-- **`git remote`** — nothing has been pushed anywhere. Phase 0.3.
-- **A clean-clone build on another machine.** That is the point of the check.
+- **`git remote`** — nothing has been pushed anywhere. Phase 0.3, and the only
+  PENDING check left in the whole project.
+- **A clean-clone build on another machine.** Verified here; the point of the
+  check is a machine that is not this one.
 - **The contract test** against a teammate's component, per `docs/INTEGRATION.md`.
 - **Three timed dry-runs of the demo.** Not two.
+- **Disk headroom.** C: sat at 5.4 GB free before this phase. It is at ~24 GB
+  now, and that is only because Docker's cache was cleared.
 
 ---
 
