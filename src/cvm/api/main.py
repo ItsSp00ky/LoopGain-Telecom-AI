@@ -36,6 +36,28 @@ logging.basicConfig(
 log = logging.getLogger("cvm.api")
 
 
+def _connect_store():
+    """READ-ONLY, and None rather than an exception when it is absent.
+
+    A missing store makes /health report degraded, which is recoverable and
+    visible. Refusing to boot would take down the endpoints that do not need
+    it, and a DuckDB file that is mid-write when the API starts is a normal
+    thing to survive rather than a reason to fail.
+    """
+    if not settings.feature_store.exists():
+        log.warning(
+            "feature store %s is absent; /health will report degraded", settings.feature_store
+        )
+        return None
+    try:
+        import duckdb
+
+        return duckdb.connect(str(settings.feature_store), read_only=True)
+    except Exception as exc:  # a locked or half-written file must not stop startup
+        log.error("could not open the feature store read-only: %s", exc)
+        return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load models once at startup, not per request.
@@ -46,11 +68,10 @@ async def lifespan(app: FastAPI):
     seed = seed_everything()
     log.info("Starting AI CVM Suite API v%s (env=%s, seed=%d)", __version__, settings.env, seed)
 
-    # TODO(E4): populate app.state from cvm.models.registry once M1/M2/M4 land.
-    #   app.state.models = load_registry(settings.artifact_dir / "models")
-    #   app.state.feature_store = duckdb.connect(settings.feature_store, read_only=True)
-    app.state.models = {}
-    app.state.feature_store = None
+    from cvm.models.registry import load_registry
+
+    app.state.models = load_registry(settings.models_dir)
+    app.state.feature_store = _connect_store()
     app.state.started_at = time.time()
 
     yield

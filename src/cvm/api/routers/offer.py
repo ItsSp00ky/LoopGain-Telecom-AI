@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from cvm.api.deps import subscriber_features
 from cvm.api.schemas import OfferRequest, OfferResponse
+from cvm.decision.guardrails import GuardrailBreach
 
 router = APIRouter(tags=["offer"])
 
@@ -22,9 +24,17 @@ async def next_best_offer(payload: OfferRequest) -> OfferResponse:
     will actually use it, discount budget is converted into off-peak capacity
     rather than a headline price cut that permanently erodes ARPU.
     """
-    # TODO(E4): from cvm.decision.pricing import decide_offer
-    #           return decide_offer(payload)
-    raise HTTPException(status_code=501, detail="M3 pricing engine not implemented yet.")
+    from cvm.decision.pricing import decide_offer
+
+    try:
+        return decide_offer(payload, subscriber_features(str(payload.subscriber_id)))
+    except GuardrailBreach as exc:
+        # A breach reaching here is a bug, not a decision: `decide_offer` runs
+        # the guardrails with raise_on_breach=False and returns NO_ACTION. 422
+        # rather than 500 so the detail is visible to the caller.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/price/quote", response_model=OfferResponse)
@@ -39,5 +49,9 @@ async def price_quote(payload: OfferRequest) -> OfferResponse:
             status_code=422,
             detail="bundle_id is required for a quote. Use /offer/next-best instead.",
         )
-    # TODO(E4): from cvm.decision.pricing import quote_bundle
-    raise HTTPException(status_code=501, detail="M3 pricing engine not implemented yet.")
+    from cvm.decision.pricing import quote_bundle
+
+    try:
+        return quote_bundle(payload, subscriber_features(str(payload.subscriber_id)))
+    except (GuardrailBreach, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

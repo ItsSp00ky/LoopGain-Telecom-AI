@@ -7,16 +7,23 @@ Replaces allocation rules that gate on the subscriber being nearly out of money
 and then size the advance by "consumption", with
 min(f(PD), g(tier), h(CLV), affordability).
 
-The objective function is SUBSCRIBER SOLVENCY, not recovery yield. A 5 LYD data
-advance against a 3 LYD smallest recharge card cannot be cleared in one top-up;
-the debt persists and blocks re-subscription, locking the subscriber out of the
-service they reached for. Every safety guard in conf/advance.yaml is mandatory.
+The objective function is SUBSCRIBER SOLVENCY, not recovery yield. The 5 LYD
+data advance is exactly the size of the 5 LYD smallest recharge card, so
+clearing it consumes the whole top-up and returns the subscriber to zero: the
+minimum recharge buys nothing and the rational move is not to make it. A
+deferred recharge on a prepaid line is where silent churn starts. Every safety
+guard in conf/advance.yaml is mandatory.
+
+(An earlier version of this docstring argued the debt EXCEEDED the card and
+locked the subscriber out. That rested on a 3 LYD card and is retired -- see
+decision/advance_limit.py for the full note.)
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from cvm.api.deps import subscriber_features
 from cvm.api.schemas import AdvanceLimitRequest, AdvanceLimitResponse
 
 router = APIRouter(tags=["advance"])
@@ -30,6 +37,9 @@ async def advance_limit(payload: AdvanceLimitRequest) -> AdvanceLimitResponse:
     reason protects the line; a generous limit the subscriber cannot settle
     destroys it.
     """
-    # TODO(E2/E4): from cvm.decision.advance_limit import decide_limit
-    #              return decide_limit(payload)
-    raise HTTPException(status_code=501, detail="M4 advance engine not implemented yet.")
+    from cvm.decision.advance_limit import decide_limit
+
+    try:
+        return decide_limit(payload, subscriber_features(str(payload.subscriber_id)))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

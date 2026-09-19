@@ -1420,7 +1420,235 @@ def check_advance_decisions_landed() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Phases 8-10 -- declared now, so the check exists before the code does
+# Phase 8 -- the decision engine
+# ---------------------------------------------------------------------------
+
+
+def _client():
+    from fastapi.testclient import TestClient
+
+    from cvm.api.main import app
+
+    return TestClient(app)
+
+
+def _a_real_subscriber() -> str:
+    import pandas as pd
+
+    from cvm.config import settings
+
+    path = settings.feature_store_offline
+    if not path.exists():
+        raise Pending(f"{path.name} does not exist; run `python -m cvm.features.run`")
+    return str(pd.read_parquet(path, columns=["subscriber_id_hashed"]).iloc[0, 0])
+
+
+def check_endpoints_stop_returning_501() -> str:
+    """The decision endpoints answer rather than announcing they are unbuilt."""
+    subscriber = _a_real_subscriber()
+    cases = [
+        ("/v1/offer/next-best", {"subscriber_id": subscriber, "channel": "api"}),
+        ("/v1/price/quote", {"subscriber_id": subscriber, "bundle_id": "MO_20"}),
+        ("/v1/advance/limit", {"subscriber_id": subscriber, "product": "rasid_fi_waqtuh"}),
+    ]
+    with _client() as client:
+        results = {}
+        for path, payload in cases:
+            response = client.post(path, json=payload)
+            results[path] = response.status_code
+            if response.status_code != 200:
+                raise AssertionError(
+                    f"{path} returned {response.status_code}: {response.text[:200]}"
+                )
+    return f"{len(results)} endpoints returning 200: {', '.join(results)}"
+
+
+def check_health_is_ok() -> str:
+    """Every model loaded AND the feature store readable. A degraded API that
+    reports ok is worse than one that reports nothing."""
+    with _client() as client:
+        body = client.get("/health").json()
+
+    missing = [k for k, v in body["models_loaded"].items() if not v]
+    if missing:
+        raise AssertionError(f"not loaded: {missing}")
+    if not body["feature_store_reachable"]:
+        raise AssertionError("the feature store is not reachable")
+    if body["status"] != "ok":
+        raise AssertionError(f"status is {body['status']}")
+    return f"{len(body['models_loaded'])} models loaded, feature store reachable"
+
+
+def check_every_offer_is_explainable() -> str:
+    """An offer the system cannot explain is one it should not have made.
+
+    Every response must carry reason codes, a customer-facing sentence, a
+    decision-log id, and the full list of constraints CONSIDERED -- not only
+    the ones that bound.
+    """
+    subscriber = _a_real_subscriber()
+    with _client() as client:
+        body = client.post(
+            "/v1/offer/next-best", json={"subscriber_id": subscriber, "channel": "api"}
+        ).json()
+
+    if not body["reason_codes"]:
+        raise AssertionError("no reason codes -- an unexplainable offer")
+    if not body["customer_facing_reason_ar"] or not body["customer_facing_reason_en"]:
+        raise AssertionError("no customer-facing reason")
+    if not body["decision_log_id"]:
+        raise AssertionError("not logged, so not auditable and not replayable")
+
+    considered = {c["name"] for c in body["constraints"]}
+    required = {"margin_floor", "clv_ceiling", "cannibalisation", "fairness"}
+    if not required <= considered:
+        raise AssertionError(f"guardrails not recorded: {sorted(required - considered)}")
+
+    binding = [c["name"] for c in body["constraints"] if c["binding"]]
+    return (
+        f"{body['offer_id']} at {body['price_lyd']:.2f} LYD via {body['instrument']}; "
+        f"{len(considered)} guardrails considered, binding {binding or 'none'}"
+    )
+
+
+def check_no_action_is_a_real_outcome() -> str:
+    """Most of the value in this system is in the offers it does not make. A
+    run where every subscriber gets an offer means the uplift filter and the
+    guardrails are not doing anything."""
+    import pandas as pd
+
+    from cvm.config import settings
+
+    ids = pd.read_parquet(settings.feature_store_offline, columns=["subscriber_id_hashed"])
+    sample = ids["subscriber_id_hashed"].astype(str).head(40).tolist()
+
+    outcomes: dict[str, int] = {}
+    with _client() as client:
+        for subscriber in sample:
+            body = client.post(
+                "/v1/offer/next-best", json={"subscriber_id": subscriber, "channel": "api"}
+            ).json()
+            key = f"{body['offer_id']}|{body['instrument']}"
+            outcomes[key] = outcomes.get(key, 0) + 1
+
+    no_action = sum(v for k, v in outcomes.items() if k.startswith("NO_ACTION"))
+    if no_action == 0:
+        raise AssertionError(
+            "every one of 40 subscribers got an offer. Either the uplift filter is not "
+            "running or the guardrails are not binding -- both mean the engine is "
+            "spending where it should not."
+        )
+    if no_action == len(sample):
+        raise AssertionError("no subscriber got an offer; the engine is refusing everything")
+    return f"{no_action} of {len(sample)} declined; outcomes {outcomes}"
+
+
+def check_the_budget_is_never_exceeded() -> str:
+    """Swept across budgets rather than spot-checked at one."""
+    import numpy as np
+    import pandas as pd
+
+    from cvm.decision.budget_lp import allocate, campaign_summary
+
+    rng = np.random.default_rng(606)
+    n = 400
+    candidates = pd.DataFrame(
+        {
+            "expected_margin_lyd": rng.gamma(2, 20, n),
+            "discount_cost_lyd": rng.gamma(2, 3, n),
+            "uplift": rng.random(n) * 0.1,
+        }
+    )
+    for budget in (0.0, 100.0, 1_000.0, 144_000.0):
+        allocation = allocate(candidates, budget_lyd=budget)
+        spent = float(allocation.loc[allocation["selected"], "discount_cost_lyd"].sum())
+        if spent > budget + 1e-6:
+            raise AssertionError(f"allocated {spent:.2f} against a {budget:.2f} budget")
+
+    summary = campaign_summary(allocate(candidates, budget_lyd=1_000.0))
+    return (
+        f"4 budgets respected; at 1,000 LYD it treats {summary['selected']} of "
+        f"{summary['candidates']} for {summary['cost_lyd']:.0f}, saving "
+        f"{summary['saving_versus_blanket_lyd']:.0f} against a blanket campaign"
+    )
+
+
+def check_a_decision_replays() -> str:
+    """ "Why did this subscriber get 15 LYD and not 25?" must be answerable
+    months later, from the log alone."""
+    from cvm.decision import decision_log
+
+    subscriber = _a_real_subscriber()
+    with _client() as client:
+        body = client.post(
+            "/v1/offer/next-best", json={"subscriber_id": subscriber, "channel": "api"}
+        ).json()
+
+    result = decision_log.replay(body["decision_log_id"])
+    if not result["reproduced"]:
+        raise AssertionError(f"the decision does not replay: {result['verdict']}")
+    return f"{body['decision_log_id'][:8]} replays: {result['verdict']}"
+
+
+def check_replay_does_not_corrupt_config() -> str:
+    """An audit function that mutates live pricing config is worse than none.
+
+    The first version swapped weights into the CACHED config dict and restored
+    them in a finally -- but the saved reference and the dict being cleared
+    were the same object, so every later caller priced with no weights at all.
+    """
+    from cvm.config import load_conf
+    from cvm.decision import decision_log
+
+    before = dict(load_conf("pricing")["discount_weights"])
+    if not before:
+        raise AssertionError("the discount weights are already empty")
+
+    subscriber = _a_real_subscriber()
+    with _client() as client:
+        body = client.post(
+            "/v1/offer/next-best", json={"subscriber_id": subscriber, "channel": "api"}
+        ).json()
+    decision_log.replay(body["decision_log_id"])
+
+    after = dict(load_conf("pricing")["discount_weights"])
+    if after != before:
+        raise AssertionError(f"replay changed the live weights: {before} -> {after}")
+    return f"{len(before)} weights unchanged after a replay"
+
+
+def check_serving_is_inside_the_latency_budget() -> str:
+    """200 ms p95 on one CPU container. The early-warning version.
+
+    Reading the OFFLINE parquet per request measured 292 ms for a single
+    subscriber; the indexed online store is what this is for.
+    """
+    import time
+
+    import numpy as np
+    import pandas as pd
+
+    from cvm.config import settings
+
+    ids = pd.read_parquet(settings.feature_store_offline, columns=["subscriber_id_hashed"])
+    sample = ids["subscriber_id_hashed"].astype(str).head(25).tolist()
+
+    with _client() as client:
+        client.post("/v1/offer/next-best", json={"subscriber_id": sample[0], "channel": "api"})
+        timings = []
+        for subscriber in sample:
+            start = time.perf_counter()
+            client.post("/v1/offer/next-best", json={"subscriber_id": subscriber, "channel": "api"})
+            timings.append((time.perf_counter() - start) * 1000)
+
+    p95 = float(np.percentile(timings, 95))
+    if p95 > 200:
+        raise AssertionError(f"p95 is {p95:.0f} ms against a 200 ms budget")
+    return f"p95 {p95:.0f} ms over {len(timings)} calls, median {np.median(timings):.0f} ms"
+
+
+# ---------------------------------------------------------------------------
+# Phases 9-10 -- declared now, so the check exists before the code does
 # ---------------------------------------------------------------------------
 
 
@@ -1511,8 +1739,17 @@ PHASES: dict[str, list[tuple[str, Callable[[], str]]]] = {
         ("reject inference shifts sanely", check_reject_inference_shifts_but_does_not_swamp),
         ("advance decisions landed", check_advance_decisions_landed),
     ],
-    "8": [("endpoints return 200 not 501", _pending("decision engine not built", "8"))],
-    "9": [("/health reports ok", _pending("models not loaded", "9"))],
+    "8": [
+        ("endpoints return 200 not 501", check_endpoints_stop_returning_501),
+        ("health reports ok", check_health_is_ok),
+        ("every offer is explainable", check_every_offer_is_explainable),
+        ("no action is a real outcome", check_no_action_is_a_real_outcome),
+        ("budget never exceeded", check_the_budget_is_never_exceeded),
+        ("a decision replays", check_a_decision_replays),
+        ("replay leaves config alone", check_replay_does_not_corrupt_config),
+        ("p95 inside 200 ms", check_serving_is_inside_the_latency_budget),
+    ],
+    "9": [("Streamlit surfaces render", _pending("dashboard not built", "9"))],
     "10": [("docker compose up", _pending("not attempted", "10"))],
 }
 

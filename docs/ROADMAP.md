@@ -1,16 +1,20 @@
 # Roadmap
 
-**19 functions left, in a chain that cannot be reordered.** This document is
-the order, and after every step a command that tells you whether you got it
-right. If a check fails, do not move on — every layer below inherits the
-mistake, and the expensive failures here are the silent ones.
+**Every declared function is implemented — 342 of 342.** What remains is not
+code stubs but the two things that turn a pipeline into a demo: the Streamlit
+surfaces (phase 9) and shipping it (phase 10).
 
-**Phases 1 to 7 are written and verified.** Layers 1, 2 and 3 are at 100%, and
-so are all four models; the whole project is at **93%**. Phase 2's quality gate
-passes, uplift is validated on Criteo's real randomised arms at **Qini 0.0771**,
-and **both the leakage suite and the guardrail suite are green with every xfail
-deleted**. **Next is phase 8 — the decision engine**, which is where the four
-models become one recommendation.
+This document is the order, and after every step a command that tells you
+whether you got it right. If a check fails, do not move on — every layer below
+inherits the mistake, and the expensive failures here are the silent ones.
+
+**Phases 1 to 8 are written and verified**, and the function burn-down is at
+**100%**. The quality gate passes, uplift is validated on Criteo's real
+randomised arms at **Qini 0.0771**, both the leakage suite and the guardrail
+suite are green with **every xfail deleted**, and the decision engine serves
+all three endpoints at a **37 ms p95** against a 200 ms budget.
+
+**Next is phase 9 — the surfaces.** The engine works; nobody can see it yet.
 
 ## Two commands
 
@@ -1139,71 +1143,106 @@ pytest tests/unit/test_m4_advance.py -q
 
 <a id="phase-8"></a>
 
-## Phase 8 · Decision engine — 23 functions, 2–3 days
+## Phase 8 · Decision engine — **DONE**
 
-The guardrails are already built and tested. This phase is the pieces around
-them: the pricing function, the LP, the ladder, the off-peak simulation, the
-decision log, and the model registry.
+The four models become one recommendation. `scripts/check_phase.py 8` passes
+8 of 8, `/health` reports **ok** with 5 of 5 models loaded, and the three
+decision endpoints return 200 instead of 501.
 
-| | File | Functions |
+### What the engine decides
+
+Over 40 subscribers:
+
+| outcome | count |
+|---|---|
+| **NO_ACTION** | **18** |
+| MO_20 via off-peak data | 16 |
+| MO_20 via on-net minutes | 5 |
+| MO_20 via price discount | 1 |
+
+**45% get no offer at all**, and that is the system working rather than
+failing. Most of the value here is in the offers it does not make: sleeping
+dogs are excluded outright, and anyone whose `uplift × CLV − cost` is negative
+is declined before a price is even computed. A run where every subscriber got
+an offer would mean the uplift filter and the guardrails were doing nothing.
+
+Only one subscriber in forty got a headline price cut. The rest of the treated
+population got capacity — off-peak data or on-net minutes — which costs almost
+nothing on an idle sector and leaves the published price sheet intact.
+
+### Serving latency
+
+**p95 37 ms**, median 35 ms, against a 200 ms budget.
+
+The first version read the offline Parquet per request and measured **292 ms
+for a single subscriber** — a full 100,000-row scan to answer one lookup, and
+linear in the base. The online DuckDB store is one row per subscriber with a
+unique index on the id, which is exactly what it exists for.
+
+### Two bugs, one of which corrupted live config
+
+**`replay` was emptying the pricing weights for the whole process.** It swapped
+the recorded weights into `load_conf("pricing")` and restored them in a
+`finally` — but `load_conf` is cached, so the saved reference and the dict
+being cleared were **the same object**. The restore put back what the clear had
+just emptied, and every later caller priced with no weights at all. An audit
+function that corrupts live pricing config is worse than one that does not
+exist. Replay now passes weights through the features dict; nothing global
+moves, and there is a regression test.
+
+**PuLP emitted one deprecation warning per decision variable** — 2,358 of them
+in a single test run, which is how a real warning gets missed. Switched to
+`problem.add_variable`, which is the PuLP 4.0 API. Down to 8.
+
+### A finding that needs a decision, not a fix
+
+**The tier ceiling dominates the discount formula.** The three positive weights
+sum to 0.90, so `d(i,b)` spans roughly [−0.20, 0.90] — but the tier ceilings
+are 0.05 to 0.20. Measured over uniform random inputs:
+
+| tier | clips at `d_max` | lands strictly inside |
 |---|---|---|
-| 1 | `models/registry.py` | 2 |
-| 2 | `decision/pricing.py` | 4 |
-| 3 | `decision/offpeak.py` | 3 |
-| 4 | `decision/budget_lp.py` | 2 |
-| 5 | `decision/ladder.py` | 3 |
-| 6 | `decision/advance_limit.py` | 6 |
-| 7 | `decision/decision_log.py` | 3 |
+| bronze | **96.8%** | 1.9% |
+| platinum | **80.9%** | 17.7% |
 
-**First, the phase check** — it will report PEND until this phase lands, then
-PASS:
+So for most subscribers the formula reduces to `d(i,b) = d_max(tier(i))` and
+the four weighted terms express nothing. The personalisation is real in the
+code and almost never visible in the output.
+
+This is **not** a bug — `conf/pricing.yaml` specifies `clip(..., 0, d_max)` and
+the code does that. The weights and the ceilings were evidently chosen on
+different scales. Scaling the formula **by** `d_max` instead of clipping **at**
+it would let all four terms express themselves inside each tier's allowance,
+and would change what every subscriber is charged. That is a pricing-policy
+decision rather than a refactor, so it is flagged here and documented in
+`compute_discount` rather than changed quietly.
+
+### Auditability, which is a commitment rather than a feature
+
+Every decision — including every NO_ACTION — writes its inputs, the weights as
+they were at the time, every constraint **considered** (not only those that
+bound), the reason codes and the outcome. `replay` re-runs a logged decision
+twice, once under the recorded weights and once under today's, and reports
+which of the three cases it is: nothing changed, the config moved, or the code
+moved. Reporting only "differs" would leave an auditor to work that out by hand.
+
+Storing the weights separately from the inputs is what makes "why did we decide
+that **then**" answerable, as opposed to "what would we decide now".
+
+### Verify it yourself
 
 ```bash
 python scripts/check_phase.py 8
 ```
 
-**Check 1** — the endpoints stop returning 501:
+Expect 8 passed, 0 failed.
 
 ```bash
-python -c "
-from fastapi.testclient import TestClient
-from cvm.api.main import app
-c = TestClient(app)
-for path, payload in [('/v1/offer/next-best', {'subscriber_id':'a'*64,'channel':'api'}),
-                      ('/v1/advance/limit', {'subscriber_id':'a'*64,'product':'rasid_fi_waqtuh'})]:
-    r = c.post(path, json=payload)
-    print(f'{path:<24} {r.status_code}')
-    assert r.status_code == 200, r.text
-"
+pytest tests/unit/test_decision.py -q
 ```
 
-**Check 2** — every offer carries the constraint that bound it. An offer the
-system cannot explain is one it should not have made:
-
-```bash
-python -c "
-from fastapi.testclient import TestClient
-from cvm.api.main import app
-r = TestClient(app).post('/v1/offer/next-best', json={'subscriber_id':'a'*64,'channel':'api'})
-b = r.json()
-print('offer:', b['offer_id'], '| price:', b['price_lyd'])
-print('binding:', [c['name'] for c in b['applied_constraints'] if c['binding']])
-assert b['reason_codes'], 'no reason codes -- unexplainable offer'
-"
-```
-
-**Check 3** — a cohort run respects the budget and the guard rejects
-candidates. The rejection counts are the most persuasive thing in the demo:
-
-```bash
-python -c "
-from cvm.decision.budget_lp import allocate
-r = allocate(budget_lyd=144_000)
-print('allocated:', round(r['cost_lyd'], 2), 'of 144000')
-print('rejected by guardrail:', r['rejections'])
-assert r['cost_lyd'] <= 144_000
-"
-```
+35 tests. Two sweep rather than spot-check: the margin floor is checked across
+the full churn range, and the budget is checked at four budgets including zero.
 
 ---
 
