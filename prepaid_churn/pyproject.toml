@@ -1,0 +1,39 @@
+[project]
+name = "prepaid-churn"
+version = "0.1.0"
+description = "Churn risk model for prepaid telecom subscribers - Team Loop Gain (Samsung Innovation Campus Capstone)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "lightgbm",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pandera",
+    "pyarrow",
+    "scikit-learn",
+    "shap",
+]
+
+[project.scripts]
+churn = "prepaid_churn.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

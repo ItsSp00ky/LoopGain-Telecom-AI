@@ -1,0 +1,57 @@
+# Instructions for Claude sessions on the prepaid churn module
+
+Read this first, then [TICKETS.md](TICKETS.md) (start with its Handoff section), then [docs/decisions.md](docs/decisions.md).
+
+## Context
+
+- Samsung Innovation Campus (SIC) capstone, Team Loop Gain, repo `ItsSp00ky/LoopGain-Telecom-AI`.
+- This folder is the churn module: a churn risk model for **prepaid** telecom subscribers, aimed at the Libyan market (Libyana, Al-Madar).
+- Taha and a teammate work on it together, each with their own Claude session.
+  The repo is the only shared memory: anything decided in a chat must be written into TICKETS.md or docs/decisions.md.
+- The older `customer_churn_prediction/` folder is Ahmed's earlier module.
+  It was audited and is not reused (see decision 1); do not edit it or build on it.
+
+## Hard rules
+
+- Work on branch `tahaDev`.
+  Do not pull or merge `main`, and do not push, unless Taha says so.
+- The raw Kaggle files in `data/raw/` are committed on purpose (decision 9); do not remove them.
+  Never commit `data/processed/` or `artifacts/`, and never add another dataset without a decision entry.
+- No leakage: features may only use months up to and including the window's "current month"; month 9 never enters features.
+- Model selection, calibration and thresholds use validation customers only.
+  The test customers are evaluated once, after everything is frozen.
+- Do not reopen settled decisions in TICKETS.md without writing a new entry in docs/decisions.md that explains why.
+- Prefer the simplest thing that works; no new infrastructure (tracking servers, feature stores, containers) without a decision entry.
+- Ask before implementing anything not covered by a ticket.
+
+## Writing style
+
+- Markdown: one full sentence per line.
+- Never use the em dash character; use a plain dash.
+- Commit messages: no AI co-author lines.
+
+## Working on code
+
+- Install [uv](https://docs.astral.sh/uv/), then from this folder: `uv sync`.
+- `uv run churn --help` lists the pipeline commands.
+- Before calling a ticket done: `uv run ruff check`, `uv run ruff format --check`, `uv run pytest`.
+- Code in `src/prepaid_churn/` as pure, testable functions; the CLI in `cli.py` stays thin.
+- Tests use the hand-made frame in `tests/conftest.py` or new small frames, never the real dataset.
+
+## Map
+
+| Path | What |
+|---|---|
+| `src/prepaid_churn/data.py` | Paths, loading, monthly column naming (`split_month`, `monthly_columns`) |
+| `src/prepaid_churn/labels.py` | Inactivity rules (usage-based label, recharge-based check) |
+| `src/prepaid_churn/profile.py` | T1 profiling functions and report |
+| `src/prepaid_churn/cli.py` | `churn` command |
+| `reports/` | Generated reports with aggregate numbers (committed) |
+| `data/raw/` | `train.csv`, `test.csv`, `data_dictionary.csv` from Kaggle (committed) |
+
+## End of every session
+
+1. Update the Handoff section at the top of TICKETS.md: status, blockers, next steps, open questions, date.
+2. Update each touched ticket's Owner, Status and Findings.
+3. Add any new decision, with its reason, to docs/decisions.md.
+4. Run lint, format check and tests, and say in the handoff if anything is red.

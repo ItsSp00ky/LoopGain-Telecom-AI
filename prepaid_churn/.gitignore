@@ -1,0 +1,7 @@
+# Raw data in data/raw/ is committed on purpose (docs/decisions.md, decision 9).
+# Processed data is rebuilt from it by the pipeline.
+data/processed/*
+!data/processed/.gitkeep
+
+# Trained model bundles
+artifacts/
