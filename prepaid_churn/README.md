@@ -34,6 +34,9 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn contract` | T2 | Regenerates `docs/data_contract.md` from the code |
 | `uv run churn build-dataset [--high-value]` | T4 | Validates, cleans and builds train, validation and test windows in `data/processed/` |
 | `uv run churn train` | T6 | Trains logistic regression and LightGBM into `artifacts/models/` |
+| `uv run churn evaluate` | T7 | Calibrates and freezes the champion on validation, then scores the test month once |
+
+Full pipeline from a fresh clone: `uv sync`, then `build-dataset`, `train` and `evaluate`.
 
 ## Development
 

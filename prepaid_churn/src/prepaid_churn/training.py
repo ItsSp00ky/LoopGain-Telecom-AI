@@ -86,10 +86,12 @@ def predict(model, frame: pd.DataFrame) -> np.ndarray:
 
 
 def metrics(y_true, probability) -> dict[str, float]:
+    """Ranking metrics are NaN when a slice holds only one class; the rest still work."""
+    both_classes = len(np.unique(y_true)) == 2
     return {
-        "roc_auc": roc_auc_score(y_true, probability),
-        "pr_auc": average_precision_score(y_true, probability),
-        "log_loss": log_loss(y_true, probability),
+        "roc_auc": roc_auc_score(y_true, probability) if both_classes else np.nan,
+        "pr_auc": average_precision_score(y_true, probability) if both_classes else np.nan,
+        "log_loss": log_loss(y_true, probability, labels=[0, 1]),
         "brier": brier_score_loss(y_true, probability),
         "mean_probability": float(np.mean(probability)),
         "churn_rate": float(np.mean(y_true)),

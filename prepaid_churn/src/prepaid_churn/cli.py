@@ -73,6 +73,32 @@ def run_train(args: argparse.Namespace) -> None:
     print(f"Models written to {model_dir}, report in {report}")
 
 
+def run_evaluate(args: argparse.Namespace) -> None:
+    import datetime
+
+    import joblib
+    import pandas as pd
+
+    from prepaid_churn.evaluation import evaluation_report, freeze
+
+    variant = args.data_dir.name
+    model_dir = MODELS_DIR / variant
+    models = {}
+    for name in ("logistic_regression", "lightgbm"):
+        path = model_dir / f"{name}.joblib"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} not found. Run `uv run churn train` first.")
+        models[name] = joblib.load(path)
+    validation = pd.read_parquet(args.data_dir / "validation.parquet")
+    test = pd.read_parquet(args.data_dir / "test.parquet")
+
+    champion, choices = freeze(models, validation, datetime.date.today().isoformat())
+    joblib.dump(champion, model_dir / "champion.joblib")
+    report = REPORTS_DIR / f"evaluation_{variant}.md"
+    report.write_text(evaluation_report(champion, choices, models, test), encoding="utf-8")
+    print(f"Champion frozen in {model_dir / 'champion.joblib'}, report in {report}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="churn",
@@ -109,6 +135,12 @@ def build_parser() -> argparse.ArgumentParser:
     train = commands.add_parser("train", help="Train the baseline and LightGBM (ticket T6).")
     train.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
     train.set_defaults(handler=run_train)
+
+    evaluate = commands.add_parser(
+        "evaluate", help="Calibrate, freeze choices, then score the test window once (ticket T7)."
+    )
+    evaluate.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
+    evaluate.set_defaults(handler=run_evaluate)
 
     return parser
 

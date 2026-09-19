@@ -74,6 +74,8 @@ def population() -> pd.DataFrame:
     """200 cleaned customers: 50 copies of the four hand-made ones, with distinct ids.
 
     Recharge amounts grow with the copy number, so a top-30% filter has something to cut.
+    In every other copy customer 0, who stays active, churns in month 9, so the test
+    window has churners among eligible customers.
     """
     from prepaid_churn.clean import clean
     from prepaid_churn.schema import validate
@@ -83,6 +85,7 @@ def population() -> pd.DataFrame:
     for copy in range(50):
         frame = base.copy()
         frame["id"] = base["id"] + 4 * copy
+        frame.loc[0, "churn_probability"] = copy % 2
         for month in MONTHS:
             frame[f"total_rech_amt_{month}"] = 10 * (copy + 1)
         copies.append(frame)

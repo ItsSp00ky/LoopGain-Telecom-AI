@@ -89,7 +89,8 @@ def test_datasets_follow_the_windows_and_eligibility(population):
     assert len(datasets["train"]) == 140
     # Half the customers are silent in month 8, so test keeps only the active half.
     assert len(datasets["test"]) == 15
-    assert datasets["test"][LABEL].eq(0).all()
+    # Only customers 0 and 2 are active in month 8; some copies of customer 0 churn in month 9.
+    assert set(datasets["test"][LABEL]) == {0, 1}
     assert list(datasets["train"].columns) == list(datasets["test"].columns)
 
 
