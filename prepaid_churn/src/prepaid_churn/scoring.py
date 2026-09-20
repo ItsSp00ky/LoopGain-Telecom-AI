@@ -220,11 +220,12 @@ def top_reasons(x: pd.DataFrame, contribution: np.ndarray) -> list[list[str | No
     """Up to REASON_COUNT factors that raise each customer's risk the most, as sentences."""
     order = np.argsort(-contribution, axis=1, kind="stable")[:, :REASON_COUNT]
     features = x.columns.to_numpy()
+    labels = {feature: feature_label(feature) for feature in features}
     values = x.to_numpy()
     reasons = []
     for row, columns in enumerate(order):
         texts = [
-            f"{feature_label(features[c])}: {format_value(features[c], values[row, c])}"
+            f"{labels[features[c]]}: {format_value(features[c], values[row, c])}"
             for c in columns
             if contribution[row, c] > 0
         ]
@@ -257,13 +258,14 @@ def score(export: pd.DataFrame, bundle: Bundle, scored_at: str | None = None) ->
     reasons = [[SILENT_REASON] + [None] * (REASON_COUNT - 1) for _ in range(len(x))]
     if active.any():
         champion = bundle.champion
-        probability[active] = champion.predict(x[active])
+        active_features = x[active]
+        probability[active] = champion.predict(active_features)
         band[active] = risk_band(
             probability[active], champion.high_threshold, champion.medium_threshold
         )
         for position, texts in zip(
             np.flatnonzero(active),
-            top_reasons(x[active], contributions(champion.model, x[active])),
+            top_reasons(active_features, contributions(champion.model, active_features)),
             strict=True,
         ):
             reasons[position] = texts

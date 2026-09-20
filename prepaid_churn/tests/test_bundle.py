@@ -1,5 +1,6 @@
 import json
 
+import joblib
 import numpy as np
 import pytest
 
@@ -83,4 +84,45 @@ def test_a_bundle_that_cannot_predict_is_refused(bundle, tmp_path):
 
 def test_missing_bundle_names_the_command(tmp_path):
     with pytest.raises(FileNotFoundError, match="churn bundle"):
+        load_bundle(tmp_path)
+
+
+def test_an_incomplete_gate_is_refused(trained, passing_gate):
+    del passing_gate["thresholds"]["capture"]
+    with pytest.raises(BundleError, match="four success thresholds"):
+        build_bundle(trained["champion"], passing_gate, trained["datasets"]["validation"], "now")
+
+
+def test_missing_library_versions_stop_before_unpickling(bundle, tmp_path):
+    save_bundle(bundle, tmp_path)
+    _edit_manifest(tmp_path, libraries={})
+    (tmp_path / MODEL_FILE).unlink()
+    with pytest.raises(BundleError, match="library versions"):
+        load_bundle(tmp_path)
+
+
+def test_reordered_manifest_features_are_refused(bundle, tmp_path):
+    save_bundle(bundle, tmp_path)
+    _edit_manifest(tmp_path, features=bundle.features[::-1])
+    with pytest.raises(BundleError, match="features"):
+        load_bundle(tmp_path)
+
+
+def test_changed_risk_thresholds_are_refused(bundle, tmp_path):
+    save_bundle(bundle, tmp_path)
+    _edit_manifest(tmp_path, risk_thresholds={"high": 0.99, "medium": 0.98})
+    with pytest.raises(BundleError, match="thresholds"):
+        load_bundle(tmp_path)
+
+
+def test_changed_model_file_is_refused_before_unpickling(bundle, tmp_path, monkeypatch):
+    save_bundle(bundle, tmp_path)
+    with (tmp_path / MODEL_FILE).open("ab") as output:
+        output.write(b"different model")
+
+    def unexpected_load(*args, **kwargs):
+        pytest.fail("a mismatched model must not be unpickled")
+
+    monkeypatch.setattr(joblib, "load", unexpected_load)
+    with pytest.raises(BundleError, match="checksum"):
         load_bundle(tmp_path)

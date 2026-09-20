@@ -49,3 +49,10 @@ def test_negative_arpu_is_kept(raw):
 def test_cleaning_is_idempotent(raw):
     once = clean(validate(raw))
     pd.testing.assert_frame_equal(clean(once), once)
+
+
+def test_extra_derived_columns_cannot_override_raw_activity(raw):
+    expected = clean(validate(raw))
+    raw["no_voice_record_8"] = 99
+    raw["days_since_last_rech_8"] = -999
+    pd.testing.assert_frame_equal(clean(validate(raw)), expected)

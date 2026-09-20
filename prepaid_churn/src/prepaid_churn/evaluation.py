@@ -148,16 +148,19 @@ def freeze(models: dict, validation: pd.DataFrame, chosen_at: str) -> tuple[Cham
     """Calibrate every model on validation, pick the champion by PR-AUC, set thresholds."""
     y = validation[LABEL]
     choices = {}
+    probabilities = {}
     for name, model in models.items():
-        calibrator, scores = choose_calibrator(predict(model, validation), y)
-        calibrated = calibrator.transform(predict(model, validation))
+        raw = predict(model, validation)
+        calibrator, scores = choose_calibrator(raw, y)
+        calibrated = calibrator.transform(raw)
+        probabilities[name] = calibrated
         choices[name] = {
             "calibrator": calibrator,
             "calibration_log_loss": scores,
             "metrics": metrics(y, calibrated),
         }
     best = max(choices, key=lambda name: choices[name]["metrics"]["pr_auc"])
-    calibrated = choices[best]["calibrator"].transform(predict(models[best], validation))
+    calibrated = probabilities[best]
     champion = Champion(
         name=best,
         model=models[best],
@@ -177,6 +180,8 @@ def success_thresholds(y, probability, baseline_probability=None) -> dict:
     model already won, so the third check has nothing to beat.
     """
     y, probability = np.asarray(y), np.asarray(probability)
+    if set(np.unique(y)) != {0, 1}:
+        raise ValueError("Release checks need both churners and non-churners.")
     rate = float(y.mean())
     capture = float(top_share_metrics(probability, y, (CAPTURE_SHARE,))["recall"].iloc[0])
     pr_auc = float(average_precision_score(y, probability))

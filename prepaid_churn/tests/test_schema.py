@@ -97,3 +97,41 @@ def test_contract_document_is_current():
     assert CONTRACT_PATH.read_text(encoding="utf-8") == contract_markdown(), (
         "Run `uv run churn contract` to regenerate docs/data_contract.md."
     )
+
+
+@pytest.mark.parametrize("column", ["aon", "total_rech_num_7", "churn_probability"])
+def test_fractional_integers_are_rejected_before_coercion(raw, column):
+    raw[column] = raw[column].astype(float)
+    raw.loc[0, column] = 0.5
+    assert column in _problems(raw)
+
+
+@pytest.mark.parametrize("column", ["arpu_6", "total_og_mou_7", "vol_2g_mb_8"])
+@pytest.mark.parametrize("value", [np.inf, -np.inf])
+def test_non_finite_numbers_are_rejected(raw, column, value):
+    raw[column] = raw[column].astype(float)
+    raw.loc[0, column] = value
+    assert column in _problems(raw)
+
+
+def test_blank_identifiers_are_rejected(raw):
+    raw["id"] = raw["id"].astype(str)
+    raw.loc[0, "id"] = "  "
+    assert "id" in _problems(raw)
+
+
+@pytest.mark.parametrize("date", ["6/29/2014", "6/30/2015"])
+def test_month_end_must_be_one_calendar_month_end(raw, date):
+    raw.loc[0, "last_date_of_month_6"] = date
+    assert "month end" in _problems(raw)
+
+
+def test_recharge_year_must_match_month_end(raw):
+    raw.loc[0, "date_of_last_rech_6"] = "6/15/2015"
+    assert "recharge dates" in _problems(raw)
+
+
+def test_feature_months_must_share_a_year(raw):
+    for column in ("last_date_of_month_8", "date_of_last_rech_8", "date_of_last_rech_data_8"):
+        raw[column] = raw[column].str.replace("2014", "2015")
+    assert "same year" in _problems(raw)

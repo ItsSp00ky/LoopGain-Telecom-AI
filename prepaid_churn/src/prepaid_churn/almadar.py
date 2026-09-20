@@ -221,12 +221,32 @@ def validate_market(facts: dict) -> dict:
             problems.append(f"- {name}: status must be one of {', '.join(STATUSES)}")
         if not table.get("source"):
             problems.append(f"- {name}: source is missing")
+    for name, field in (("arpu", "monthly_lyd"), ("reference_spend", "mean_monthly_recharge")):
+        table = facts.get(name, {})
+        if not isinstance(table, dict) or not _positive_number(table.get(field)):
+            problems.append(f"- {name}.{field}: must be a finite positive number")
+    cards = facts.get("recharge_cards", {})
+    if not isinstance(cards, dict) or not _valid_cards(cards.get("values_lyd")):
+        problems.append("- recharge_cards.values_lyd: must be a non-empty list of positive cards")
     if problems:
         raise InvalidCatalogueError(
             f"The Almadar market facts break their rules ({len(problems)} problems):\n"
             + "\n".join(problems)
         )
     return facts
+
+
+def _positive_number(value) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and np.isfinite(value)
+        and value > 0
+    )
+
+
+def _valid_cards(cards) -> bool:
+    return isinstance(cards, list) and bool(cards) and all(_positive_number(card) for card in cards)
 
 
 def load_market(path: str | Path = MARKET_PATH) -> dict:
@@ -244,6 +264,7 @@ VIEW_COLUMNS = (ID, "monthly_spend_lyd", "usual_card_lyd", "bundle_held", "bundl
 
 def lyd_rate(market: dict) -> float:
     """LYD per unit of the source currency, so the reference customer spends the Almadar ARPU."""
+    validate_market(market)
     return market["arpu"]["monthly_lyd"] / market["reference_spend"]["mean_monthly_recharge"]
 
 
@@ -255,6 +276,10 @@ def _recharge(frame: pd.DataFrame, prefix: str) -> pd.Series:
 
 def nearest_card(amount_lyd: pd.Series, cards: list[float]) -> pd.Series:
     """The recharge card closest to each amount (the smaller card on a tie); empty stays empty."""
+    if not _valid_cards(cards):
+        raise InvalidCatalogueError(
+            "The recharge cards must be a non-empty list of positive values."
+        )
     cards = np.sort(np.asarray(cards, dtype=float))
     values = amount_lyd.to_numpy(dtype=float)
     nearest = cards[np.abs(values[:, None] - cards[None, :]).argmin(axis=1)]
@@ -263,6 +288,8 @@ def nearest_card(amount_lyd: pd.Series, cards: list[float]) -> pd.Series:
 
 def _package_for(amount_lyd: pd.Series, family: pd.DataFrame) -> np.ndarray:
     """The dearest package of a family the amount pays for, or the cheapest one if none."""
+    if family.empty:
+        raise InvalidCatalogueError("The Almadar view needs both monthly and daily offer families.")
     family = family.sort_values("price_lyd")
     position = np.searchsorted(family["price_lyd"].to_numpy(), amount_lyd.to_numpy(), "right")
     return family["offer_id"].to_numpy()[np.clip(position - 1, 0, len(family) - 1)]

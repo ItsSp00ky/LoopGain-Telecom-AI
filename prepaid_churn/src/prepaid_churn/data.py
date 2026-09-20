@@ -26,7 +26,8 @@ def load_raw(path: str | Path) -> pd.DataFrame:
         raise FileNotFoundError(
             f"{path} not found. Download train.csv as described in README.md (section Data)."
         )
-    return pd.read_csv(path)
+    # Identifiers are opaque: inference would drop leading zeros and treat "NA" as missing.
+    return pd.read_csv(path, converters=dict.fromkeys(ID_COLUMNS, str))
 
 
 def split_month(column: str) -> tuple[str, int | None]:

@@ -38,3 +38,12 @@ def test_id_column(raw):
 def test_load_raw_missing_file_explains_download(tmp_path):
     with pytest.raises(FileNotFoundError, match="README"):
         load_raw(tmp_path / "train.csv")
+
+
+def test_load_raw_preserves_identifiers(tmp_path):
+    source = tmp_path / "export.csv"
+    source.write_text("id,mobile_number,aon\n001,0007,30\nNA,NULL,40\n", "utf-8")
+    loaded = load_raw(source)
+    assert loaded["id"].tolist() == ["001", "NA"]
+    assert loaded["mobile_number"].tolist() == ["0007", "NULL"]
+    assert loaded["aon"].tolist() == [30, 40]

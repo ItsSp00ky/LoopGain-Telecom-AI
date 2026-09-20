@@ -40,7 +40,7 @@ def flag_no_voice_record(df: pd.DataFrame, months=FEATURE_MONTHS) -> pd.DataFram
     df = df.copy()
     for month in months:
         flag = column_name(NO_VOICE_FLAG, month)
-        if flag not in df.columns:
+        if flag not in df.columns or column_name(MONTH_END, month) in df.columns:
             voice = [column_name(base, month) for base in VOICE_BLOCK]
             df[flag] = df[voice].isna().all(axis=1).astype(int)
     return df

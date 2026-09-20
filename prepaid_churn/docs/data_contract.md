@@ -40,6 +40,10 @@ Extra columns are allowed and ignored.
 - The data block (Data recharges, Data revenue, Pack user flags, Last data recharge date) is either complete or entirely missing in a month.
 - `date_of_last_rech` is missing exactly when `total_rech_num` is 0.
 - Every month has at least one row with `last_date_of_month`.
+- Month end dates agree on one calendar month end; recharge dates use its year.
+- Feature months belong to the same year.
+- Numeric values are finite; whole-number columns cannot contain fractions.
+- Subscriber identifiers cannot be blank; CSV loading preserves them as text.
 
 Missing values in both blocks mean zero activity; cleaning (T3) turns them into 0.
 

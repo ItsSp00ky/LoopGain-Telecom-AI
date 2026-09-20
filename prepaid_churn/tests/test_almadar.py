@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -256,3 +258,26 @@ def test_almadar_view_command(raw, tmp_path):
     main(["almadar-view", "--input", str(source), "--output", str(output), "--report", str(report)])
     assert len(pd.read_csv(output)) == len(raw)
     assert report.read_text(encoding="utf-8").startswith("# T18 Almadar view")
+
+
+@pytest.mark.parametrize("value", [0, -1, np.inf, np.nan, "500", True])
+def test_invalid_currency_scale_is_rejected(value):
+    market = deepcopy(MARKET)
+    market["reference_spend"]["mean_monthly_recharge"] = value
+    with pytest.raises(InvalidCatalogueError, match="reference_spend"):
+        lyd_rate(market)
+
+
+@pytest.mark.parametrize("cards", [[], [0, 5], [np.inf], ["5"]])
+def test_invalid_recharge_cards_are_rejected(cards):
+    with pytest.raises(InvalidCatalogueError, match="recharge cards"):
+        nearest_card(pd.Series([10.0]), cards)
+
+
+def test_missing_offer_family_has_a_clear_error():
+    from prepaid_churn.windows import window_features
+
+    frame = window_features(build_population(), WINDOW_B)
+    offers = load_offers()
+    with pytest.raises(InvalidCatalogueError, match="monthly and daily"):
+        bundle_held(frame, 0.08, offers[offers["family_en"] != "Daily offers"])

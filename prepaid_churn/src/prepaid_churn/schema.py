@@ -8,6 +8,7 @@ operator export (for example Libyana or Al-Madar) is usable when it passes
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 import pandera.pandas as pa
 from pandera.errors import SchemaErrors
@@ -175,12 +176,19 @@ def _date_in_month(month: int) -> pa.Check:
 
 
 def _column(kind: str, nullable: bool, month: int) -> pa.Column:
+    finite = pa.Check(np.isfinite, name="finite number")
     if kind == "amount":
-        return pa.Column(float, pa.Check.ge(0), nullable=nullable, coerce=True)
+        return pa.Column(float, [finite, pa.Check.ge(0)], nullable=nullable, coerce=True)
     if kind == "count":
-        return pa.Column(int, pa.Check.ge(0), nullable=nullable, coerce=True)
+        # Validate before casting to int: pandas otherwise silently truncates 0.5 to 0.
+        return pa.Column(
+            float,
+            [finite, pa.Check.ge(0), pa.Check(lambda s: s.mod(1).eq(0), name="whole number")],
+            nullable=nullable,
+            coerce=True,
+        )
     if kind == "signed":
-        return pa.Column(float, nullable=nullable, coerce=True)
+        return pa.Column(float, finite, nullable=nullable, coerce=True)
     if kind == "flag":
         return pa.Column(float, pa.Check.isin([0, 1]), nullable=nullable, coerce=True)
     return pa.Column(nullable=nullable, checks=_date_in_month(month))
@@ -218,14 +226,46 @@ def _month_end_present(month: int) -> pa.Check:
     return pa.Check(check, name=f"month end date present in month {month}")
 
 
+def _month_dates(month: int) -> pa.Check:
+    end = column_name("last_date_of_month", month)
+    recharges = [
+        column_name(base, month) for base in ("date_of_last_rech", "date_of_last_rech_data")
+    ]
+
+    def check(df: pd.DataFrame) -> bool:
+        if not {end, *recharges} <= set(df.columns):
+            return True
+        ends = parse_dates(df[end]).dropna()
+        if ends.empty:
+            return True  # the month-end presence check reports this
+        if ends.nunique() != 1 or not ends.dt.is_month_end.all():
+            return False
+        year = ends.iloc[0].year
+        return all(parse_dates(df[column]).dropna().dt.year.eq(year).all() for column in recharges)
+
+    return pa.Check(
+        check, name=f"one calendar month end and matching recharge dates in month {month}"
+    )
+
+
+def _same_year(months) -> pa.Check:
+    columns = [column_name("last_date_of_month", month) for month in months]
+
+    def check(df: pd.DataFrame) -> bool:
+        dates = [parse_dates(df[column]).dropna() for column in columns if column in df.columns]
+        return not dates or pd.concat(dates).dt.year.nunique() <= 1
+
+    return pa.Check(check, name="feature months belong to the same year")
+
+
 def build_schema(months=FEATURE_MONTHS, labeled: bool = False) -> pa.DataFrameSchema:
     columns = {
-        ID: pa.Column(unique=True),  # a number or text: operators may export a salted hash
-        TENURE: pa.Column(int, pa.Check.ge(0), coerce=True),
+        ID: pa.Column(checks=pa.Check(lambda s: s.astype(str).str.strip().ne("")), unique=True),
+        TENURE: _column("count", False, 0),
     }
     if labeled:
-        columns[LABEL_COLUMN] = pa.Column(int, pa.Check.isin([0, 1]), coerce=True)
-    checks = []
+        columns[LABEL_COLUMN] = pa.Column(float, pa.Check.isin([0, 1]), coerce=True)
+    checks = [_same_year(months)]
     for month in months:
         for g in GROUPS:
             for base in g.bases:
@@ -235,6 +275,7 @@ def build_schema(months=FEATURE_MONTHS, labeled: bool = False) -> pa.DataFrameSc
             _missing_together(DATA_BLOCK, month, "data block"),
             _recharge_date_matches_count(month),
             _month_end_present(month),
+            _month_dates(month),
         ]
     return pa.DataFrameSchema(columns, checks=checks, strict=False)
 
@@ -258,11 +299,21 @@ def validate(df: pd.DataFrame, months=FEATURE_MONTHS, labeled: bool | None = Non
     if labeled is None:
         labeled = LABEL_COLUMN in df.columns
     try:
-        return build_schema(months, labeled).validate(df, lazy=True)
+        validated = build_schema(months, labeled).validate(df, lazy=True)
     except SchemaErrors as errors:
         raise InvalidExportError(
             summarize_failures(errors.failure_cases, "The export does not match the data contract")
         ) from None
+    integers = [TENURE] + [
+        column_name(base, month)
+        for month in months
+        for g in GROUPS
+        if g.kind == "count"
+        for base in g.bases
+    ]
+    if labeled:
+        integers.append(LABEL_COLUMN)
+    return validated.astype(dict.fromkeys(integers, int))
 
 
 def contract_markdown(months=FEATURE_MONTHS) -> str:
@@ -317,6 +368,10 @@ def contract_markdown(months=FEATURE_MONTHS) -> str:
         "missing in a month.",
         "- `date_of_last_rech` is missing exactly when `total_rech_num` is 0.",
         "- Every month has at least one row with `last_date_of_month`.",
+        "- Month end dates agree on one calendar month end; recharge dates use its year.",
+        "- Feature months belong to the same year.",
+        "- Numeric values are finite; whole-number columns cannot contain fractions.",
+        "- Subscriber identifiers cannot be blank; CSV loading preserves them as text.",
         "",
         "Missing values in both blocks mean zero activity; cleaning (T3) turns them into 0.",
         "",

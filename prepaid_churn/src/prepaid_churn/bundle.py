@@ -31,6 +31,7 @@ MANIFEST_FILE = "manifest.json"
 MODEL_FILE = "model.joblib"
 # Pickled models are only guaranteed to load and predict under the versions that wrote them.
 LIBRARIES = ("scikit-learn", "lightgbm", "numpy", "pandas")
+GATE_CHECKS = {"capture", "better_than_chance", "better_than_baseline", "calibration"}
 
 
 class BundleError(RuntimeError):
@@ -61,18 +62,26 @@ def library_versions() -> dict[str, str]:
     return {name: version(name) for name in LIBRARIES}
 
 
+def check_gate(gate: dict) -> None:
+    if set(gate.get("thresholds", {})) != GATE_CHECKS:
+        raise BundleError("The release gate must contain all four success thresholds.")
+    failed = [name for name, check in gate["thresholds"].items() if check.get("passed") is not True]
+    if failed or gate.get("passed") is not True:
+        raise BundleError(
+            f"The champion failed its release gate ({', '.join(failed)}); it cannot be bundled."
+        )
+
+
 def build_bundle(champion: Champion, gate: dict, examples: pd.DataFrame, created_at: str) -> Bundle:
     """Package a gated champion; `examples` are model-ready rows (the first is the sample)."""
     from prepaid_churn.training import feature_columns
 
-    failed = [name for name, check in gate["thresholds"].items() if not check["passed"]]
-    if failed or not gate["passed"]:
-        raise BundleError(
-            f"The champion failed its release gate ({', '.join(failed)}); it cannot be bundled."
-        )
+    check_gate(gate)
     if (gate["champion"], gate["chosen_at"]) != (champion.name, champion.chosen_at):
         raise BundleError("The release gate belongs to another champion; run `churn evaluate`.")
     features = feature_columns(examples)
+    if examples.empty:
+        raise BundleError("The bundle needs at least one example row for its smoke check.")
     sample = examples[features].iloc[[0]].reset_index(drop=True)
     digest = hashlib.sha256(pickle.dumps(champion)).hexdigest()[:8]
     manifest = {
@@ -98,8 +107,14 @@ def build_bundle(champion: Champion, gate: dict, examples: pd.DataFrame, created
 def save_bundle(bundle: Bundle, directory: str | Path) -> Path:
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / MANIFEST_FILE).write_text(json.dumps(bundle.manifest, indent=2), "utf-8")
-    joblib.dump({"champion": bundle.champion, "sample": bundle.sample}, directory / MODEL_FILE)
+    # Publish the manifest last. An interrupted overwrite then fails the checksum check
+    # instead of loading a different model under the old version and risk thresholds.
+    model_path = directory / MODEL_FILE
+    joblib.dump({"champion": bundle.champion, "sample": bundle.sample}, model_path)
+    with model_path.open("rb") as model_file:
+        checksum = hashlib.file_digest(model_file, "sha256").hexdigest()
+    manifest = bundle.manifest | {"model_sha256": checksum}
+    (directory / MANIFEST_FILE).write_text(json.dumps(manifest, indent=2), "utf-8")
     return directory
 
 
@@ -121,7 +136,26 @@ def load_bundle(directory: str | Path) -> Bundle:
     manifest_path = directory / MANIFEST_FILE
     if not manifest_path.exists():
         raise FileNotFoundError(f"{manifest_path} not found. Run `uv run churn bundle` first.")
-    manifest = json.loads(manifest_path.read_text("utf-8"))
+    try:
+        manifest = json.loads(manifest_path.read_text("utf-8"))
+    except (ValueError, UnicodeError) as error:
+        raise BundleError("The bundle manifest is not valid JSON; rebuild it.") from error
+    if not isinstance(manifest, dict):
+        raise BundleError("The bundle manifest must be a JSON object; rebuild it.")
+    required = {
+        "version",
+        "champion",
+        "chosen_at",
+        "calibration",
+        "risk_thresholds",
+        "features",
+        "contract_version",
+        "libraries",
+        "release_gate",
+        "sample_probability",
+    }
+    if missing := required - manifest.keys():
+        raise BundleError(f"The bundle manifest is missing fields: {sorted(missing)}; rebuild it.")
     problems = [
         f"{name} {built} (installed: {installed})"
         for name, built in manifest["libraries"].items()
@@ -133,9 +167,33 @@ def load_bundle(directory: str | Path) -> Bundle:
             + ", ".join(problems)
             + ". Run `uv sync` with the lockfile it was built with, or rebuild the bundle."
         )
+    if set(manifest["libraries"]) != set(LIBRARIES):
+        raise BundleError("The bundle must record all required library versions; rebuild it.")
     if manifest["contract_version"] != contract_version():
         raise BundleError("The bundle was built for another data contract; rebuild it.")
-    payload = joblib.load(directory / MODEL_FILE)
+    check_gate(manifest["release_gate"])
+    model_path = directory / MODEL_FILE
+    if not model_path.exists():
+        raise BundleError("The bundle model file is missing; rebuild it.")
+    with model_path.open("rb") as model_file:
+        checksum = hashlib.file_digest(model_file, "sha256").hexdigest()
+    if manifest.get("model_sha256") != checksum:
+        raise BundleError("The bundle model checksum is missing or mismatched; rebuild it.")
+    payload = joblib.load(model_path)
     bundle = Bundle(manifest, payload["champion"], payload["sample"])
     smoke_check(bundle)
+    champion = bundle.champion
+    if bundle.features != list(bundle.sample.columns):
+        raise BundleError("The bundle manifest features do not match its sample columns.")
+    thresholds = {"high": champion.high_threshold, "medium": champion.medium_threshold}
+    if manifest["risk_thresholds"] != thresholds:
+        raise BundleError("The bundle manifest risk thresholds do not match its champion.")
+    identity = (champion.name, champion.chosen_at)
+    gate = manifest["release_gate"]
+    if (
+        (manifest["champion"], manifest["chosen_at"]) != identity
+        or (gate["champion"], gate["chosen_at"]) != identity
+        or manifest["calibration"] != champion.calibrator.method
+    ):
+        raise BundleError("The bundle manifest and release gate do not match its champion.")
     return bundle

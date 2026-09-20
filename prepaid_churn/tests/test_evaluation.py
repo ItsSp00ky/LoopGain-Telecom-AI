@@ -127,3 +127,26 @@ def test_each_success_threshold_can_fail():
 def test_a_baseline_champion_has_nothing_to_beat():
     y, probability = _ranked(churners_on_top=8)
     assert success_thresholds(y, probability)["better_than_baseline"]["passed"]
+
+
+@pytest.mark.parametrize("label", [0, 1])
+def test_release_checks_require_both_classes(label):
+    with pytest.raises(ValueError, match="both churners and non-churners"):
+        success_thresholds(np.full(20, label), np.full(20, 0.1))
+
+
+def test_freeze_predicts_each_model_once(trained, monkeypatch):
+    from prepaid_churn import evaluation
+
+    original = evaluation.predict
+    calls = []
+
+    def counted(model, frame):
+        calls.append(model)
+        return original(model, frame)
+
+    monkeypatch.setattr(evaluation, "predict", counted)
+    champion, _ = freeze(trained["models"], trained["datasets"]["validation"], "2026-09-19")
+    assert len(calls) == len(trained["models"])
+    assert champion.name == trained["champion"].name
+    assert champion.high_threshold == trained["champion"].high_threshold
