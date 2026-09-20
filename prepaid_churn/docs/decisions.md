@@ -334,3 +334,20 @@ Rules that follow from the review:
   An operator hashes phone numbers with a secret salt before export, the module never receives a phone number, and the API rejects IDs shaped like one (T15).
 - **Access control:** the chatbot and the copilot use separate API keys, each limited to its own endpoints (T15).
 - **Human approval:** unchanged from decision 14.
+
+## 18. Review delivery on Ali_Branch, with the frozen modelling choices preserved
+
+Date: 2026-09-20.
+
+Ali requested a comprehensive review of `tahaDev`, with all commits and the push going only to `Ali_Branch`.
+After being told that the branches have unrelated histories, he explicitly chose to replace the tracked contents of `Ali_Branch` with the reviewed `tahaDev` project.
+This supersedes decision 15's instruction to leave that destination branch untouched for this delivery.
+The old CVM work remains in Git history; it is not ported into this tree.
+The source reviewed is `tahaDev` commit `bfb28ab`.
+
+T21 records this review; [../../CODE_REVIEW.md](../../CODE_REVIEW.md) records the findings and validation.
+The changes preserve the model families, features, split policy, calibration selection, risk thresholds and business assumptions.
+No model choice was made from test outcomes and no real-data test evaluation was repeated.
+The stricter export checks preserve all model features for valid existing exports.
+The generated input contract changes its fingerprint, so an older bundle must be rebuilt with `churn bundle` from its existing champion and gate, without running `churn evaluate` again.
+New bundle manifests also carry a model-file checksum and are checked against the stored feature order and thresholds.

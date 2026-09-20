@@ -18,8 +18,9 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 
 ## Hard rules
 
-- Work on branch `tahaDev`.
-  Do not pull or merge `main`, and do not push, unless Taha says so.
+- This review delivery lives on `Ali_Branch`, based on `tahaDev` (decision 18).
+  Do not commit or push to `tahaDev` from this checkout.
+  Do not pull or merge `main`.
 - The raw Kaggle files in `data/raw/` are committed on purpose (decision 9); do not remove them.
   Never commit `data/processed/` or `artifacts/`, and never add another dataset without a decision entry.
 - No leakage: features may only use months up to and including the window's "current month"; month 9 never enters features.
@@ -28,7 +29,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
   That evaluation happened on 2026-09-19 (T7); never change a model, feature or threshold because of test results.
 - Do not reopen settled decisions in TICKETS.md without writing a new entry in docs/decisions.md that explains why.
 - Prefer the simplest thing that works; no new infrastructure (tracking servers, feature stores, containers) without a decision entry.
-- Ask before implementing anything not covered by a ticket.
+- Ask before implementing anything not covered by a ticket or an explicit user request.
 - Never merge `Ali_Branch` with git; port pieces by hand, log each one in `docs/ali_branch_merge.md`, and credit Ali in the commit with `Co-authored-by: ali-margem <ali.m.margem@gmail.com>`.
 - No LLM in any path that sets an offer, a price or a credit limit; the chatbot and copilot only read (decision 17).
 

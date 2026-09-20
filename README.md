@@ -8,6 +8,9 @@
 
 An integrated suite of Artificial Intelligence systems engineered for telecommunications providers. Developed by **Team Loop Gain** as part of the **Samsung Innovation Campus (SIC) Capstone Project**, this platform addresses critical telecom operational challenges across customer retention, customer support automation, and infrastructure planning.
 
+The active prepaid customer module is [`prepaid_churn/`](prepaid_churn/).
+The `Ali_Branch` review delivery follows `tahaDev`; see [CODE_REVIEW.md](CODE_REVIEW.md) for implemented fixes, validation and the limitations of the historical subsystem claims below.
+
 ---
 
 ## 👥 Team Loop Gain

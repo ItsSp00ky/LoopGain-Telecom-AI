@@ -9,7 +9,21 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-19 by Taha + Claude (T16, T8 and T18 done; branch pushed for Ali).
+**Last updated:** 2026-09-20 for Ali (T21 code and logic review).
+
+**Current review delivery**
+
+- Work on `Ali_Branch` for this delivery; do not commit or push to `tahaDev` (decision 18).
+- T21 fixes export validation, identifier preservation, bundle consistency and repeated inference.
+- Validation: 170 prepaid tests, lint and formatting pass; 21 geospatial tests pass.
+- Both raw exports pass validation, and their model features are unchanged in both windows.
+- The frozen model and the spent test window are unchanged.
+- Rebuild old bundles with `uv run churn bundle` using the existing champion and gate, because the input contract fingerprint and bundle integrity checks changed.
+- Findings and remaining work are in [../CODE_REVIEW.md](../CODE_REVIEW.md).
+- The next product work remains T10 and T11, followed by T15 and T20.
+
+The following is the original 2026-09-19 handoff for rebuilding the source branch.
+Its branch instructions are superseded by the current review delivery above.
 
 **For Ali: how to continue from here**
 
@@ -663,6 +677,32 @@ Scope:
 Acceptance:
 - The example client works against a running service, following the README.
 - The chatbot and copilot owners confirm in this ticket's Findings that the responses give them what they need.
+
+## T21 - Code and logic review
+
+**Owner:** Ali (review requested and implemented with Codex)
+**Status:** Done
+**Depends on:** T2, T3, T7, T8
+
+Scope:
+- Review `tahaDev` and deliver fixes only on `Ali_Branch`, preserving the source coding style and methodology (decision 18).
+- Fix invalid input acceptance, identifier corruption, stale derived flags and bundle consistency checks.
+- Remove redundant prediction work without changing calibrated outputs or frozen choices.
+- Review GIS and the legacy modules, implement independent correctness/performance fixes and document modelling follow-ups.
+
+Acceptance:
+- Synthetic regressions reproduce the original defects and pass after the fixes.
+- Lint, format checks and the full prepaid test suite pass.
+- GIS tests pass, and batched density queries match the original counts.
+- Valid real exports retain the same model features in both windows.
+- Findings, benchmark limits and bundle migration steps are documented in [../CODE_REVIEW.md](../CODE_REVIEW.md).
+
+Findings:
+- 170 prepaid tests and 21 GIS tests pass; lint and formatting are green.
+- The stricter schema accepts both committed raw exports, with identical model features.
+- Calibration uses two model prediction calls instead of five; the focused density benchmark is 4.00 times faster.
+- The frozen champion choices and real-data test results are unchanged.
+- No new infrastructure, dependencies or business logic were introduced.
 
 ## Future work (needs real operator data)
 
