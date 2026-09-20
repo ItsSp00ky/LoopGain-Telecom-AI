@@ -27,7 +27,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 2 | Almadar catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/almadar/offers.csv`, `data/almadar/market.toml`, `src/prepaid_churn/almadar.py` | T16 | Done |
 | 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Done (the idea; a linear rate replaces the quantile map) |
 | 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | `src/prepaid_churn/bundle.py`, `src/prepaid_churn/scoring.py` | T8 | Done |
-| 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | T10 | T10 | Planned |
+| 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | `src/prepaid_churn/value.py`, `src/prepaid_churn/segmentation.py` | T10 | Done (adapted design, training-frozen cutoffs) |
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | T11 | T11 | Planned |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | T15 | T15 | Planned |
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Planned |
@@ -95,3 +95,15 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Checked the handover path first: a fresh clone of `tahaDev`, `uv sync` and the six pipeline commands rebuilt everything in about a minute, with a byte-identical champion, the same bundle version (`lightgbm-2026-09-19-ef9430fb`), identical scores and Almadar view, no changed report, and all tests green.
 - Wrote "For Ali: how to continue from here" at the top of the Handoff in `TICKETS.md`, with a first message for his Claude session, and brought `README.md` up to date.
 - Suggested split, for Taha and Ali to confirm: Ali on T10 and T11, Taha on T15 and T20.
+
+### Step 7 - T10 value tiers on Ali_Branch (2026-09-20)
+
+- Read `src/cvm/features/rfm_le.py` and `src/cvm/models/m2_value/segmentation.py` from commit `06890f6`.
+- Adapted the five prepaid dimensions, reverse recency scoring and the rules-versus-clusters comparison to the existing two-month upGrad windows.
+- Replaced batch percentile ranks with saved training cutoffs so a subscriber's tier is stable when scored alone or in a different batch.
+- Used the recorded recharge amounts, tenure and observed service breadth; did not port synthetic lifetime-spend, continuity or recharge-regularity proxies.
+- Preserved tied values and neutral constant dimensions, and kept missing-value handling in the existing data contract.
+- K-Means uses a bounded silhouette sample, Ward a 300-row sample, and PCA only a visualization role.
+- No synthetic population result or natural-segment claim was carried over.
+- The 12-month revenue formula and hazard sensitivities are explicit scenario assumptions (decision 19).
+- Work is committed only to the authorized `Ali_Branch` delivery; decision 18 supersedes the original branch handoff.

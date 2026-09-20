@@ -43,6 +43,9 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
 | `uv run churn almadar-view [--input <file>]` | T18 | Shows every customer in Almadar money and packages; writes `reports/almadar_view.md` |
+| `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
+| `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
+| `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
 
 Full pipeline from a fresh clone, about a minute (the processed data, models and scores are git-ignored and rebuilt):
 
@@ -60,7 +63,38 @@ uv run churn almadar-view
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
 The Almadar packages and market facts are in `data/almadar/` ([docs/almadar.md](docs/almadar.md)).
 
-## Development
+## Value tiers without new operator data
+
+The T10 layer uses the existing upGrad behaviour and the assumed T18 LYD conversion.
+From `prepaid_churn/`, with the locked environment installed:
+
+```bash
+uv run churn build-dataset
+uv run churn fit-tiers
+uv run churn tiers --tiers-only
+```
+
+`fit-tiers` reads only `data/processed/all/train.parquet`, using window A (months 6 and 7).
+The existing customer split stays unchanged; the value layer never reads labels or validation/test parquet files.
+`artifacts/tiers/tiers.json` freezes dimension and composite cutoffs, the LYD rate and a content-based version.
+Keep that artifact when scoring future exports; never refit on the scored batch.
+Missing activity follows the input contract, tied customers stay together, and every valid subscriber gets one tier.
+Already-silent subscribers receive a tier too, but no risk-based revenue estimate.
+
+With the existing gated churn bundle available, run:
+
+```bash
+uv run churn tiers
+```
+
+This scores the same input export with T8, then adds `value_tier`, dimension scores and `value_12m_base_lyd` with low/high sensitivity scenarios.
+It does not train, recalibrate or reevaluate the churn model.
+No real churn bundle is committed; `--tiers-only` allows value work on a fresh checkout without repeating the spent test evaluation.
+The 12-month amounts assume a constant monthly churn hazard and spend, and are explicitly revenue scenarios rather than validated CLV, profit or causal offer savings.
+Their assumptions and the training-only rules-versus-clusters comparison are in [reports/tiers.md](reports/tiers.md).
+The CSV columns are defined in [docs/output_contract.md](docs/output_contract.md).
+
+## Development checks
 
 ```bash
 uv run ruff check

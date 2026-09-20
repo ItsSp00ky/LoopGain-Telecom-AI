@@ -9,18 +9,24 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-20 for Ali (T21 code and logic review).
+**Last updated:** 2026-09-20 for Ali (T10 value tiers after the T21 review).
 
 **Current review delivery**
 
 - Work on `Ali_Branch` for this delivery; do not commit or push to `tahaDev` (decision 18).
 - T21 fixes export validation, identifier preservation, bundle consistency and repeated inference.
-- Validation: 170 prepaid tests, lint and formatting pass; 21 geospatial tests pass.
+- T21 validation: 170 prepaid tests and 21 geospatial tests passed.
+- T10 adds frozen value tiers, an explicit 12-month revenue scenario, and a training-only clustering comparison.
+- T10 validation: 202 prepaid tests, lint, formatting and the locked offline environment check pass.
+- Fitted tiers on 45,858 active training customers; assigned one tier to each of 30,000 unlabeled customers.
+- The clustering result is weak (best silhouette 0.2766 at k=2); five value tiers remain a reporting convention.
+- Run `uv run churn fit-tiers`, then `uv run churn tiers --tiers-only` without a churn bundle, or `uv run churn tiers` with the existing gated bundle.
+- This checkout has no real churn bundle: the 30,000-row run contains tiers and explicitly unavailable risk-based values; the full bundle-to-scenario path is covered by hand-made integration tests.
 - Both raw exports pass validation, and their model features are unchanged in both windows.
 - The frozen model and the spent test window are unchanged.
 - Rebuild old bundles with `uv run churn bundle` using the existing champion and gate, because the input contract fingerprint and bundle integrity checks changed.
 - Findings and remaining work are in [../CODE_REVIEW.md](../CODE_REVIEW.md).
-- The next product work remains T10 and T11, followed by T15 and T20.
+- T10 is complete; the next product work is T11 offers with human approval, followed by T15 and T20.
 
 The following is the original 2026-09-19 handoff for rebuilding the source branch.
 Its branch instructions are superseded by the current review delivery above.
@@ -77,7 +83,7 @@ Its branch instructions are superseded by the current review delivery above.
 1. T16 Almadar catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract (done).
 3. T18 Almadar view of the real customers (done).
-4. T10 value tiers, then T11 offers with human approval.
+4. T10 value tiers (done), then T11 offers with human approval.
 5. T15 integration service, then T20 integration check with the chatbot and copilot.
    Suggested split, for Taha and Ali to confirm: Ali takes T10 and T11 (his value and offer engine designs), and Taha takes T15 and T20 (the chatbot, copilot and integration are his in the action plan).
    T15 can start with `/health`, `/catalogue` and `/portfolio/summary` before T11 exists.
@@ -424,8 +430,8 @@ Acceptance:
 
 ## T10 - Value tiers (syllabus Ch 6)
 
-**Owner:**
-**Status:** Todo
+**Owner:** Ali (implementation with Codex)
+**Status:** Done
 **Depends on:** T8, T18
 
 Scope:
@@ -443,6 +449,20 @@ Acceptance:
 - Every customer gets exactly one tier.
 - Tiers are computed without the label month.
 - Plots and the comparison are in `reports/tiers.md`.
+
+Findings (2026-09-20):
+- Adapted Ali's five-dimension prepaid RFM and exploratory clustering design to the existing two-month windows (decision 19; port log step 7).
+- Training-frozen dimension and composite cutoffs, the T18 LYD rate and a version fingerprint are saved in `artifacts/tiers/tiers.json`.
+- Ties are preserved, constant dimensions stay neutral, and a subscriber receives the same output alone, reordered or in a batch.
+- The full `churn tiers` path extends the T8 output using the same export and a gated bundle; `--tiers-only` explicitly leaves risk-dependent scenarios unavailable.
+- Already-silent customers receive a tier but no invented probability or value estimate.
+- The 12-month revenue scenarios and hazard sensitivities are documented assumptions, not validated CLV or measured offer savings.
+- The training fit uses 45,858 customers; every one of the 30,000 unlabeled export customers receives one of the five tiers.
+- K-Means selects k=2 with silhouette 0.2766, showing weak separation; adjusted Rand agreement with tiers is 0.2702.
+- `reports/tiers.md` contains the comparison, training cutoffs, illustrative value scenarios, PCA plot and sampled Ward dendrogram.
+- Tests cover absent/invalid inputs, ties, missing activity, silent customers, ID preservation, artifact corruption, future-field exclusion, single-customer consistency and CLI integration.
+- 202 prepaid tests pass; lint, format and locked offline sync pass.
+- No churn model was retrained, no real-data test evaluation was repeated, and no raw or customer-level artifact was added to Git.
 
 ## T11 - Retention decision layer
 

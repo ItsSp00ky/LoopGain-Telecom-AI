@@ -14,6 +14,8 @@ MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 BUNDLE_DIR = PROJECT_ROOT / "artifacts" / "bundle"
 SCORES_PATH = PROJECT_ROOT / "artifacts" / "scores" / "scores.csv"
 VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
+TIER_MODEL_PATH = PROJECT_ROOT / "artifacts" / "tiers" / "tiers.json"
+TIERS_PATH = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
 # Kaggle's unlabeled customers: never used for evaluation, so they stand in for "this month's base".
 RAW_SCORE_PATH = PROJECT_ROOT / "data" / "raw" / "test.csv"
 GATE_FILE = "gate.json"
@@ -159,6 +161,37 @@ def run_almadar_view(args: argparse.Namespace) -> None:
     print(f"Almadar view of {len(view)} customers in {args.output}, summary in {args.report}")
 
 
+def run_fit_tiers(args: argparse.Namespace) -> None:
+    import pandas as pd
+
+    from prepaid_churn.almadar import load_market
+    from prepaid_churn.segmentation import compare_clusters, tiers_report, write_cluster_plots
+    from prepaid_churn.value import apply_tiers, fit_tiers, save_tiers
+
+    train = pd.read_parquet(args.train)
+    model = fit_tiers(train, load_market())
+    comparison = compare_clusters(apply_tiers(train, model))
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    write_cluster_plots(comparison, args.report.parent)
+    args.report.write_text(tiers_report(train, model, comparison), encoding="utf-8")
+    save_tiers(model, args.output)
+    print(f"Tier artifact {model.version} in {args.output}, comparison in {args.report}")
+
+
+def run_tiers(args: argparse.Namespace) -> None:
+    from prepaid_churn.bundle import load_bundle
+    from prepaid_churn.value import load_tiers, tier_export
+
+    model = load_tiers(args.model)
+    bundle = None if args.tiers_only else load_bundle(args.bundle)
+    result = tier_export(load_raw(args.input), model, bundle)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    result.to_csv(args.output, index=False, encoding="utf-8")
+    counts = result["value_tier"].value_counts().to_dict()
+    print(f"{len(result)} subscribers assigned tiers with {model.version}: {counts}")
+    print(f"Output: {args.output}; value status: {result['value_status'].value_counts().to_dict()}")
+
+
 def run_output_contract(args: argparse.Namespace) -> None:
     from prepaid_churn.scoring import output_contract_markdown
 
@@ -238,6 +271,28 @@ def build_parser() -> argparse.ArgumentParser:
     view.add_argument("--report", type=Path, default=REPORTS_DIR / "almadar_view.md")
     view.set_defaults(handler=run_almadar_view)
 
+    fit_tiers = commands.add_parser(
+        "fit-tiers", help="Freeze value cutoffs on training window A and compare clusters (T10)."
+    )
+    fit_tiers.add_argument("--train", type=Path, default=PROCESSED_DIR / "all" / "train.parquet")
+    fit_tiers.add_argument("--output", type=Path, default=TIER_MODEL_PATH)
+    fit_tiers.add_argument("--report", type=Path, default=REPORTS_DIR / "tiers.md")
+    fit_tiers.set_defaults(handler=run_fit_tiers)
+
+    tiers = commands.add_parser(
+        "tiers", help="Add frozen value tiers and 12-month scenarios (T10)."
+    )
+    tiers.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
+    tiers.add_argument("--model", type=Path, default=TIER_MODEL_PATH)
+    tiers.add_argument("--bundle", type=Path, default=BUNDLE_DIR)
+    tiers.add_argument("--output", type=Path, default=TIERS_PATH)
+    tiers.add_argument(
+        "--tiers-only",
+        action="store_true",
+        help="Do not load a churn bundle; leave value scenarios empty and label risk unavailable.",
+    )
+    tiers.set_defaults(handler=run_tiers)
+
     output_contract = commands.add_parser(
         "output-contract", help="Write the subscriber output contract document (ticket T8)."
     )
@@ -251,6 +306,7 @@ def main(argv: list[str] | None = None) -> None:
     from prepaid_churn.almadar import InvalidCatalogueError
     from prepaid_churn.bundle import BundleError
     from prepaid_churn.schema import InvalidExportError
+    from prepaid_churn.value import ValueModelError
 
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -259,5 +315,11 @@ def main(argv: list[str] | None = None) -> None:
         return
     try:
         args.handler(args)
-    except (FileNotFoundError, InvalidExportError, BundleError, InvalidCatalogueError) as error:
+    except (
+        FileNotFoundError,
+        InvalidExportError,
+        BundleError,
+        InvalidCatalogueError,
+        ValueModelError,
+    ) as error:
         parser.exit(1, f"error: {error}\n")

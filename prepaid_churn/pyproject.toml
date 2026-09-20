@@ -12,6 +12,7 @@ dependencies = [
     "pandera",
     "pyarrow",
     "scikit-learn",
+    "scipy",
 ]
 
 [project.scripts]

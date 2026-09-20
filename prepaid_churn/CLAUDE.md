@@ -62,6 +62,8 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/evaluation.py` | T7 calibration, frozen `Champion`, test report |
 | `src/prepaid_churn/bundle.py` | T8 model bundle: build, save, load with version and smoke checks |
 | `src/prepaid_churn/scoring.py` | T8 `score`, plain-language reasons, output contract (`OUTPUT_COLUMNS`) |
+| `src/prepaid_churn/value.py` | T10 training-frozen tiers, versioned artifact, 12-month revenue scenarios and output extension |
+| `src/prepaid_churn/segmentation.py` | T10 training-only K-Means comparison, sampled Ward dendrogram, PCA plots and report |
 | `src/prepaid_churn/almadar.py` | T16 Almadar catalogue and market facts (loading, rules, check against the operator file); T18 `almadar_view` |
 | `data/processed/` | Built by `churn build-dataset` (git-ignored) |
 | `artifacts/models/` | Built by `churn train` (git-ignored) |

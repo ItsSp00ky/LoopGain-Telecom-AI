@@ -649,6 +649,7 @@ dependencies = [
     { name = "pandera" },
     { name = "pyarrow" },
     { name = "scikit-learn" },
+    { name = "scipy" },
 ]
 
 [package.dev-dependencies]
@@ -666,6 +667,7 @@ requires-dist = [
     { name = "pandera" },
     { name = "pyarrow" },
     { name = "scikit-learn" },
+    { name = "scipy" },
 ]
 
 [package.metadata.requires-dev]

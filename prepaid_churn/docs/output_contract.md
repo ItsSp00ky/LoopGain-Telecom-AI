@@ -5,7 +5,8 @@ Do not edit it by hand.
 
 `uv run churn score` and the Python function `prepaid_churn.scoring.score` write one row per subscriber of an export that passes the data contract (`docs/data_contract.md`).
 The file is CSV in UTF-8.
-Later tickets add the value tier (T10) and the recommended offer (T11) to the same rows.
+`churn tiers` adds value tiers and scenario estimates (T10) to these same rows.
+The recommended offer follows in T11.
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -24,3 +25,36 @@ Later tickets add the value tier (T10) and the recommended offer (T11) to the sa
 - `churn_probability` is empty exactly when `risk_band` is `already_silent`.
 - Reasons name a factor and its value, for example `Days since the last recharge: 23`; only factors that raise the risk are listed.
 - The customer chatbot never shows `churn_probability` or the reasons to a customer (decision 17); they are for employees and the retention team.
+
+## Value extension (T10)
+
+`uv run churn tiers` scores the same export with the gated churn bundle and appends the following columns, using the artifact from `uv run churn fit-tiers`.
+Every subscriber receives one tier, including those already silent.
+The tier artifact has its own version and never changes churn predictions.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `recency` | nonnegative number | Days since airtime or data recharge; censored at the two-month window length when none is observed. |
+| `frequency` | nonnegative number | Mean monthly airtime plus data recharge count. |
+| `monthly_spend_lyd` | nonnegative number | Mean monthly recharge at the frozen T18 assumed LYD rate; not observed Almadar revenue. |
+| `tenure` | nonnegative number | Age-on-network snapshot in days. |
+| `engagement` | integer 0 to 4 | Count of voice, data, packs and roaming used in either feature month. |
+| `recency_score` | integer 1 to 5 | Training-frozen recency quintile score; larger is better, constant training dimensions stay at 3. |
+| `frequency_score` | integer 1 to 5 | Training-frozen frequency quintile score; larger is better, constant training dimensions stay at 3. |
+| `monetary_score` | integer 1 to 5 | Training-frozen monetary quintile score; larger is better, constant training dimensions stay at 3. |
+| `tenure_score` | integer 1 to 5 | Training-frozen tenure quintile score; larger is better, constant training dimensions stay at 3. |
+| `engagement_score` | integer 1 to 5 | Training-frozen engagement quintile score; larger is better, constant training dimensions stay at 3. |
+| `value_score` | number 1 to 5 | Equal-weight mean of the five dimension scores. |
+| `value_tier` | `very_low`, `low`, `medium`, `high`, `very_high` | Training-frozen quintile of value_score; ties stay in the lower interval. |
+| `tier_version` | text | Version fingerprint of cutoffs, rate and fit metadata. |
+| `expected_months_12m` | number 0 to 12; may be empty | Sum of (1-p)^m over month ends m=1..12, assuming constant monthly churn hazard p. |
+| `value_12m_low_lyd` | nonnegative number; may be empty | 12-month revenue scenario with monthly hazard multiplied by 1.5. |
+| `value_12m_base_lyd` | nonnegative number; may be empty | 12-month revenue scenario with monthly hazard multiplied by 1. |
+| `value_12m_high_lyd` | nonnegative number; may be empty | 12-month revenue scenario with monthly hazard multiplied by 0.5. |
+| `value_status` | `scenario`, `already_silent` or `risk_unavailable` | Whether a risk-based value scenario is available; missing values are not zero. |
+
+`--tiers-only` writes `subscriber_id` and these value columns without loading a churn bundle; active subscribers get `risk_unavailable` and empty scenario fields.
+Already-silent subscribers always have empty scenario fields.
+The 12-month amounts are revenue scenarios, not validated CLV, profit or offer savings.
+Low/high are sensitivities to multiplying monthly churn hazard by 1.5/0.5, clipped to [0,1]; they are not confidence intervals.
+See [../reports/tiers.md](../reports/tiers.md) for assumptions and the training comparison.

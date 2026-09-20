@@ -295,7 +295,8 @@ def output_contract_markdown() -> str:
         "`uv run churn score` and the Python function `prepaid_churn.scoring.score` write one "
         "row per subscriber of an export that passes the data contract (`docs/data_contract.md`).",
         "The file is CSV in UTF-8.",
-        "Later tickets add the value tier (T10) and the recommended offer (T11) to the same rows.",
+        "`churn tiers` adds value tiers and scenario estimates (T10) to these same rows.",
+        "The recommended offer follows in T11.",
         "",
         "| Column | Type | Meaning |",
         "|---|---|---|",
@@ -309,6 +310,30 @@ def output_contract_markdown() -> str:
         "`Days since the last recharge: 23`; only factors that raise the risk are listed.",
         "- The customer chatbot never shows `churn_probability` or the reasons to a customer "
         "(decision 17); they are for employees and the retention team.",
+        "",
+    ]
+    from prepaid_churn.value import VALUE_COLUMNS
+
+    lines += [
+        "## Value extension (T10)",
+        "",
+        "`uv run churn tiers` scores the same export with the gated churn bundle and appends "
+        "the following columns, using the artifact from `uv run churn fit-tiers`.",
+        "Every subscriber receives one tier, including those already silent.",
+        "The tier artifact has its own version and never changes churn predictions.",
+        "",
+        "| Column | Type | Meaning |",
+        "|---|---|---|",
+        *(f"| `{c.name}` | {c.kind} | {c.meaning} |" for c in VALUE_COLUMNS),
+        "",
+        "`--tiers-only` writes `subscriber_id` and these value columns without loading a "
+        "churn bundle; active subscribers get `risk_unavailable` and empty scenario fields.",
+        "Already-silent subscribers always have empty scenario fields.",
+        "The 12-month amounts are revenue scenarios, not validated CLV, profit or offer savings.",
+        "Low/high are sensitivities to multiplying monthly churn hazard by 1.5/0.5, "
+        "clipped to [0,1]; they are not confidence intervals.",
+        "See [../reports/tiers.md](../reports/tiers.md) for assumptions "
+        "and the training comparison.",
         "",
     ]
     return "\n".join(lines)

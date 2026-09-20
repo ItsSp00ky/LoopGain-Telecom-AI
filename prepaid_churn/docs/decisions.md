@@ -351,3 +351,42 @@ No model choice was made from test outcomes and no real-data test evaluation was
 The stricter export checks preserve all model features for valid existing exports.
 The generated input contract changes its fingerprint, so an older bundle must be rebuilt with `churn bundle` from its existing champion and gate, without running `churn evaluate` again.
 New bundle manifests also carry a model-file checksum and are checked against the stored feature order and thresholds.
+
+## 19. Frozen value tiers and explicit revenue scenarios before operator data
+
+Date: 2026-09-20.
+
+Ali asked to continue with improvements that do not depend on an operator export, starting with T10.
+We adapt the five dimensions and clustering comparison from Ali's original prepaid RFM work, using only fields present in the real upGrad data.
+We do not infer recharge regularity, lifetime spend, continuity, SMS or credit behaviour that this export cannot establish.
+Recency is the more recent of airtime and data recharges; frequency is the average monthly sum of their separately recorded counts.
+The count is a proxy because the monthly aggregates cannot deduplicate overlapping events.
+Monetary uses the existing T18 recharge definition and LYD conversion; tenure retains T4's extraction-snapshot limitation.
+Engagement counts use of voice, data, packs and roaming over the two feature months.
+
+Dimension quintiles and the equal-weight composite tier cutoffs are fitted once on the active training customers in window A.
+This is unsupervised value preprocessing, independent of T7's validation-only model selection and risk thresholds.
+Recency is negated before ranking so a recent recharge scores higher.
+Ties go to the lower interval and never split by customer order; proportions may differ from 20% and some tiers can be empty.
+A constant training dimension carries no ranking information and stays at neutral score 3.
+Missing activity blocks are cleaned under the existing contract; other missing or invalid measures fail explicitly.
+The cutoffs and monetary rate are saved together with a content-derived version, so serving never learns from its batch or a changed market file.
+
+The 12-month scenario sums survival at the next 12 month ends: `sum((1-p)^m, m=1..12)`.
+It assumes constant monthly hazard p and spend, no reactivation, no growth, no discounting and no margin adjustment.
+The one-month usage-inactivity probability has not been validated as a 12-month revenue hazard.
+Multiplying it by 1.5 and 0.5 (clipped to [0,1]) gives low/high value sensitivities, not confidence intervals.
+The outputs are revenue scenarios, never validated CLV, profit or causal offer savings; T11 must preserve that distinction.
+Already-silent customers have no probability and no scenario amount, even when they still recharge.
+
+`churn fit-tiers` reads training parquet only and writes the artifact and clustering comparison.
+`churn tiers` applies it and scores the same export with the existing gated churn bundle, avoiding stale risk joins.
+`--tiers-only` explicitly omits churn scoring, leaves scenario values empty and marks active customers `risk_unavailable`.
+This lets a fresh checkout use T10 without rebuilding or reevaluating the frozen churn model.
+
+Clusters remain an exploratory check, separate from serving tiers and retention decisions.
+K-Means fits scaled dimension scores on training customers only, searches k=2..8 with seed 42 and 10 starts, and selects by silhouette on one fixed sample of at most 2,000.
+PCA plots at most 2,000 rows and Ward linkage at most 300; no subscriber identifiers enter the committed plots.
+The report states that the tiers are a reporting convention and that discretized scores can themselves create apparent clusters.
+SciPy is now declared directly because the dendrogram uses it; its already-locked version and all other package versions remain unchanged.
+The frozen churn model, feature definitions, evaluation reports and spent test window are untouched.
