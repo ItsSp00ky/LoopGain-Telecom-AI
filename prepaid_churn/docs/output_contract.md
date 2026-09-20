@@ -6,7 +6,7 @@ Do not edit it by hand.
 `uv run churn score` and the Python function `prepaid_churn.scoring.score` write one row per subscriber of an export that passes the data contract (`docs/data_contract.md`).
 The file is CSV in UTF-8.
 `churn tiers` adds value tiers and scenario estimates (T10) to these same rows.
-The recommended offer follows in T11.
+`churn decide` adds a proposed retention offer (T11), subject to a separate named review.
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -58,3 +58,30 @@ Already-silent subscribers always have empty scenario fields.
 The 12-month amounts are revenue scenarios, not validated CLV, profit or offer savings.
 Low/high are sensitivities to multiplying monthly churn hazard by 1.5/0.5, clipped to [0,1]; they are not confidence intervals.
 See [../reports/tiers.md](../reports/tiers.md) for assumptions and the training comparison.
+
+## Retention proposals and release (T11)
+
+`churn decide` writes `proposals.json`, an immutable input/policy/catalogue/decision snapshot plus a review-event list, and `decisions.csv`, a derived view.
+It preserves risk and value columns and adds the fields below.
+Every subscriber appears once, including holdouts and customers receiving no offer.
+
+| Column | Meaning |
+|---|---|
+| `bundle_held` | T18 mapped catalogue bundle or `PAYG`, not an observed subscription. |
+| `holdout` | Reproducible seeded random holdout; never receives an offer. |
+| `recommended_offer_id` | Catalogue offer ID or `NO_OFFER`; proposals are not releases. |
+| `offer_reason_en`, `offer_reason_ar` | English and Arabic decision reasons. |
+| `decision_code` | Positive value, budget, holdout, low risk, already silent, unavailable risk, no eligible offer, or nonpositive value. |
+| `status` | `proposed`, `no_offer`, `approved` or `rejected`; decide never approves. |
+| `expected_cost_lyd` | Estimated delivery cost; zero for no offer. |
+| `expected_net_value_lyd` | Assumed retained revenue less delivery cost; not profit. |
+| `share_saved` | Assumed share of churners saved by the proposed product. |
+| `policy_version`, `campaign_id` | Fingerprints of policy and full proposal snapshot. |
+| `reviewer`, `reviewed_at`, `review_note` | Named review, UTC timestamp and optional note. |
+
+`churn approve` reads the authoritative `proposals.json`, never an editable CSV.
+Only approved rows enter `released.csv`, with subscriber ID, offer ID, bilingual reasons, status, reviewer, review time, note and campaign ID; no risk or monetary fields are released.
+Rejected and unreviewed proposals cannot enter that file.
+`--tiers-only` supports a readiness run without a churn bundle and proposes no offers.
+Effects and costs are assumptions in `data/almadar/retention.toml`; [../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.
+Local reviewer names are an audit record, not authentication; access control belongs to T15.

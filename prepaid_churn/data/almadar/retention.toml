@@ -1,0 +1,18 @@
+# T11 planning assumptions, not measured retention effects or audited margins.
+[policy]
+status = "assumption"
+source = "T11 planning defaults, decision 20; no operator campaign outcomes available"
+budget_lyd = 1000.0
+max_value_fraction = 0.15
+holdout_fraction = 0.10
+seed = 42
+share_saved = 0.05
+offpeak_share_saved = 0.10
+base_monthly_offer_id = "MO_20"
+preferred_offer_id = "SABAH_1"
+
+[delivery_cost]
+status = "estimate"
+source = "T16 market.toml delivery_cost, originally Ali_Branch conf/catalogue.yaml"
+share_of_price_metered = 0.25
+share_of_price_unlimited = 0.35

@@ -390,3 +390,67 @@ PCA plots at most 2,000 rows and Ward linkage at most 300; no subscriber identif
 The report states that the tiers are a reporting convention and that discretized scores can themselves create apparent clusters.
 SciPy is now declared directly because the dendrogram uses it; its already-locked version and all other package versions remain unchanged.
 The frozen churn model, feature definitions, evaluation reports and spent test window are untouched.
+
+## 20. Retention proposals with explicit assumptions and a separate review step
+
+Date: 2026-09-20.
+
+Ali requested T11 after completing the frozen value layer, without waiting for operator data.
+The decision engine uses T8 risk, T10 value and T18's inferred held bundle from the same raw export.
+It does not fit models, join stale risk CSVs, invent probabilities or reevaluate the spent test window.
+The catalogue remains the action space, plus an explicit `NO_OFFER` outcome.
+All interventions are bonus grants of existing products, not personalized price discounts.
+
+All T11 policy and delivery-cost assumptions are in `data/almadar/retention.toml`.
+Defaults: 1,000 LYD campaign budget, 15% of the base T10 value as the per-customer campaign cap, approximately 10% holdout and seed 42.
+Delivery estimates start from T16: 25% of catalogue price for metered products and 35% for unlimited products.
+The assumed share of churners saved is 5% for ordinary bonuses and 10% for the preferred morning product, `SABAH_1`.
+That off-peak advantage is a planning assumption, not a measured response or network-cost finding.
+Changing the assumption can change the winning offer; no effect is learned from the available churn labels.
+The report lists every parameter and every product's estimated cost and assumed effect beside the results.
+The net-value formula is `p * share_saved * value_12m_base_lyd - delivery_cost`.
+It inherits T10's unvalidated 12-month revenue assumptions and is neither audited profit nor causal uplift.
+
+Guardrails apply before allocation:
+- Already-silent, unscored, low-risk and held-out subscribers get no proposal.
+- A bonus must include a service the subscriber used in the two feature months.
+- 5G/network-specific and shared-family products are excluded because coverage, device and membership eligibility are unavailable.
+- For customers mapped to monthly bundles above `MO_20` (35 LYD), every cheaper unlimited bonus is blocked, regardless of risk.
+- Offer delivery cost must fit the per-customer campaign cap, and expected net value must be positive.
+
+The cap covers this campaign only; no annual cumulative limit is claimed without a cross-campaign spending ledger.
+The morning product's 06:00-11:00 restriction is included in both Arabic and English reasons.
+The source export cannot establish off-peak preference, incremental usage or actual Almadar subscriptions.
+Each customer gets the best feasible candidate by assumed net value, with preference then offer ID as tie-breaks.
+Greedy allocation ranks customers by that net value, then subscriber ID, skipping a best candidate that does not fit the remaining budget.
+This is not a globally optimal knapsack solver and does not replace an unaffordable candidate with a smaller alternative.
+Delivery costs round up to integer dirhams and the budget rounds down.
+
+The comparison spends exactly the targeted spend in expectation, not merely the same maximum budget.
+Untargeted allocation assigns the same inclusion probability to all feasible active, scored, non-holdout subscribers, including low-risk and nonpositive-value candidates.
+Risk-only allocation orders the same pool by churn probability, with a fractional last inclusion probability when needed to match spend.
+Both use the same per-customer candidates and retain relevance, eligibility, value-cap and cannibalisation constraints.
+Fractional expected counts exist only in the report, never in the executable proposals.
+The comparison measures the assumptions' consequences; a randomized campaign is still required to measure real effects.
+
+A seeded SHA-256 lottery produces reproducible holdouts independent of row order or batch size.
+The realized holdout is approximately 10%, not a forced exact row count.
+The holdout is retained in the campaign snapshot and never receives an offer.
+
+`churn decide` writes proposals and an empty release file in a new campaign directory.
+The authoritative JSON stores inputs, policy, catalogue, decisions and a content fingerprint, plus review events.
+CSV files are derived views and are never trusted as review inputs.
+`churn approve` requires a named reviewer; it can approve or reject selected pending IDs or all pending proposals.
+Only approved rows reach `released.csv`, which omits internal risk and monetary fields.
+Each event records subscriber, reviewer, UTC time, decision, optional note and campaign fingerprint.
+Duplicate reviews, unknown IDs and attempts to review no-offer or holdout rows fail without partial changes.
+An exclusive local lock prevents concurrent review writes; JSON is replaced atomically before derived files are refreshed.
+After an interruption, `--refresh` regenerates derived files without approving other pending rows.
+The CLI does not revoke a released offer or send/provision one.
+Checksums detect accidental changes; local files and reviewer names are not an authentication boundary, which remains T15 work.
+
+This checkout has no real gated churn bundle, so the committed report is an explicit `--tiers-only` readiness run over all 30,000 unlabeled customers.
+It records 27,582 active customers without risk, 2,418 already-silent customers, 2,965 holdout assignments, zero proposals and zero spend.
+Those zero results support no campaign-effectiveness claim.
+The positive-proposal and approval paths are verified with hand-made unit and integration inputs, including the existing synthetic test bundle.
+No real customer campaign was approved or released during implementation.

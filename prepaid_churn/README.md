@@ -46,6 +46,8 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
+| `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes `reports/decisions.md`; releases nothing |
+| `uv run churn approve --proposals <file> --reviewer <name>` | T11 | Approves pending proposals and exports approved rows only; `--reject` records rejection |
 
 Full pipeline from a fresh clone, about a minute (the processed data, models and scores are git-ignored and rebuilt):
 
@@ -93,6 +95,48 @@ No real churn bundle is committed; `--tiers-only` allows value work on a fresh c
 The 12-month amounts assume a constant monthly churn hazard and spend, and are explicitly revenue scenarios rather than validated CLV, profit or causal offer savings.
 Their assumptions and the training-only rules-versus-clusters comparison are in [reports/tiers.md](reports/tiers.md).
 The CSV columns are defined in [docs/output_contract.md](docs/output_contract.md).
+
+## Retention proposals and human review
+
+T11 uses the real catalogue, frozen risk and value outputs, and explicitly assumed costs and retention effects from `data/almadar/retention.toml`.
+It grants catalogue products as bonuses, without changing retail prices.
+With the existing gated churn bundle available:
+
+```bash
+uv run churn decide --budget 1000 --output-dir artifacts/campaigns/campaign-001
+```
+
+Inspect `artifacts/campaigns/campaign-001/decisions.csv` before reviewing.
+The authoritative `proposals.json` stores the input rows, catalogue and policy snapshots, decisions and later review events.
+Editing a CSV cannot approve an offer.
+Each campaign needs a new output directory so earlier decisions and approvals are preserved.
+
+Approve or reject a specific pending subscriber, or omit `--subscriber-id` to review all pending proposals:
+
+```bash
+uv run churn approve --proposals artifacts/campaigns/campaign-001/proposals.json --reviewer "Reviewer name" --subscriber-id "0001" --note "Reviewed"
+uv run churn approve --proposals artifacts/campaigns/campaign-001/proposals.json --reviewer "Reviewer name" --subscriber-id "0002" --reject --note "Not suitable"
+```
+
+Repeat `--subscriber-id` for multiple subscribers.
+Only approved rows enter `released.csv`; pending, rejected, holdout and no-offer rows never enter it.
+`review_log.jsonl` records each decision with reviewer, UTC time, note and campaign fingerprint.
+Reviews resolve pending proposals once; changing a reviewed decision requires a new campaign, and this CLI does not revoke already released offers.
+`--refresh` rebuilds derived CSV and log files from the authoritative JSON after an interrupted write, without reviewing any pending rows.
+A named reviewer is still required for that command.
+The files are local review bookkeeping, not authenticated identity or a sending service; access control belongs to T15.
+
+Without a real churn bundle, run the explicit readiness mode:
+
+```bash
+uv run churn decide --tiers-only --output-dir artifacts/campaigns/readiness-001
+```
+
+This produces one decision row per subscriber, with no offers and unavailable risk estimates.
+The committed [retention report](reports/decisions.md) records the 30,000-customer readiness run, all cost/effect assumptions, and the equal-spend comparison.
+Zero proposals in that run are not evidence of campaign effectiveness.
+The full positive-proposal, budget, holdout and approval paths are tested on hand-made data.
+No real-data churn evaluation needs to be repeated for T11.
 
 ## Development checks
 

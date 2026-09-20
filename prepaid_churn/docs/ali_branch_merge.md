@@ -28,7 +28,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Done (the idea; a linear rate replaces the quantile map) |
 | 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | `src/prepaid_churn/bundle.py`, `src/prepaid_churn/scoring.py` | T8 | Done |
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | `src/prepaid_churn/value.py`, `src/prepaid_churn/segmentation.py` | T10 | Done (adapted design, training-frozen cutoffs) |
-| 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | T11 | T11 | Planned |
+| 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/almadar/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | T15 | T15 | Planned |
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Planned |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | T14 | T14 | Planned |
@@ -107,3 +107,15 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - No synthetic population result or natural-segment claim was carried over.
 - The 12-month revenue formula and hazard sensitivities are explicit scenario assumptions (decision 19).
 - Work is committed only to the authorized `Ali_Branch` delivery; decision 18 supersedes the original branch handoff.
+
+### Step 8 - T11 retention proposals and review on Ali_Branch (2026-09-20)
+
+- Read `conf/pricing.yaml`, `src/cvm/decision/guardrails.py`, `budget_lp.py` and `decision_log.py` at `06890f6`.
+- Adapted catalogue-only actions, the held-bundle cannibalisation guard, value cap, budget allocation, equal-spend comparison and replayable decision snapshots.
+- Followed the current T11 ticket's greedy allocation instead of adding an LP solver or infrastructure.
+- Used declared saved-share assumptions with the frozen churn model and T10 revenue scenario, not Ali's generated uplift or CLV results.
+- Kept catalogue prices unchanged and implemented bonuses, including the existing morning product with its stated hours.
+- Added reproducible holdout assignment, Arabic/English reasons, named approve/reject events and approved-only release.
+- Did not port demographic pricing, simulated peak-load evidence, hazard-derived ladders or claims about annual spending without a ledger.
+- The real-export report records unavailable risk and zero proposals because this checkout has no gated real bundle; positive paths are exercised only by hand-made tests.
+- Decision 20 records the assumptions and limitations; T15 still owns authenticated shared access.

@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-20 for Ali (T10 value tiers after the T21 review).
+**Last updated:** 2026-09-20 for Ali (T11 retention proposals and named review).
 
 **Current review delivery**
 
@@ -26,7 +26,12 @@ Update this section at the end of every working session.
 - The frozen model and the spent test window are unchanged.
 - Rebuild old bundles with `uv run churn bundle` using the existing champion and gate, because the input contract fingerprint and bundle integrity checks changed.
 - Findings and remaining work are in [../CODE_REVIEW.md](../CODE_REVIEW.md).
-- T10 is complete; the next product work is T11 offers with human approval, followed by T15 and T20.
+- T11 is implemented: catalogue bonuses, spend and cannibalisation guards, deterministic holdout, equal-spend comparisons and named approve/reject commands.
+- T11 validation: 247 prepaid tests, lint and formatting pass; the 30,000-row readiness run creates no offers without a gated churn bundle.
+- The readiness report records 27,582 active rows with unavailable risk, 2,418 silent rows and 2,965 holdout assignments; all proposals and releases remain empty.
+- Positive recommendations, partial/all reviews, rejected-row exclusion, review locking and interrupted-write recovery are covered by hand-made tests.
+- Run `churn decide` with the existing gated bundle for risk-based proposals, or `churn decide --tiers-only` for readiness; choose a new campaign output directory on each run.
+- T10 and T11 are complete; the next product work is T15 authenticated integration service, followed by T20 integration checks.
 
 The following is the original 2026-09-19 handoff for rebuilding the source branch.
 Its branch instructions are superseded by the current review delivery above.
@@ -83,7 +88,7 @@ Its branch instructions are superseded by the current review delivery above.
 1. T16 Almadar catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract (done).
 3. T18 Almadar view of the real customers (done).
-4. T10 value tiers (done), then T11 offers with human approval.
+4. T10 value tiers and T11 offers with human approval (done).
 5. T15 integration service, then T20 integration check with the chatbot and copilot.
    Suggested split, for Taha and Ali to confirm: Ali takes T10 and T11 (his value and offer engine designs), and Taha takes T15 and T20 (the chatbot, copilot and integration are his in the action plan).
    T15 can start with `/health`, `/catalogue` and `/portfolio/summary` before T11 exists.
@@ -466,8 +471,8 @@ Findings (2026-09-20):
 
 ## T11 - Retention decision layer
 
-**Owner:**
-**Status:** Todo
+**Owner:** Ali (implementation with Codex)
+**Status:** Done
 **Depends on:** T8, T10, T16, T18
 
 Scope:
@@ -499,6 +504,23 @@ Acceptance:
 - Holdout assignment is random, reproducible with a seed, and never receives an offer.
 - Tests show that unapproved or rejected proposals never appear in the released campaign file, and that every approval is logged with a reviewer name.
 - `reports/decisions.md` states every assumption next to the results, including the equal-spend comparison.
+
+Findings (2026-09-20):
+- `retention.py` follows the existing pure-function and thin-CLI patterns, adapting Ali's guardrails, budget comparison and decision-log design (decision 20; port log step 8).
+- `data/almadar/retention.toml` declares the budget, per-customer campaign cap, holdout, saved-share assumptions and delivery-cost estimates in one file.
+- Decisions use the same raw export for gated risk, frozen value and the mapped held bundle; no model is trained or reevaluated.
+- Only positive-value catalogue bonuses can be proposed; no offer is explicit for low risk, inactivity, unavailable risk, holdout, guard failures, nonpositive value and budget exhaustion.
+- Cheap unlimited products are blocked above the 35 LYD base monthly rung; unknown 5G and family eligibility also excludes a product.
+- Costs and budgets use integer dirhams, with conservative rounding; allocation is deterministic greedy net-value ordering.
+- The report compares untargeted and risk-only allocation at the exact targeted spend in expectation, with fractional counts only in diagnostic baselines.
+- Seeded hash holdouts are stable across ordering and batches; 2,965 of the 30,000 real export rows were assigned to holdout.
+- `campaign.py` stores input, catalogue, policy and proposal snapshots with a fingerprint, plus named review events.
+- `churn approve` reviews selected IDs or all pending proposals, supports rejection and notes, and releases only approved rows without internal risk/value fields.
+- CSV edits cannot approve offers, reviews are serialized with a lock, JSON writes are atomic, and `--refresh` recovers derived files without approving pending rows.
+- All 30,000 real-export rows received a decision; the report is explicitly a no-bundle readiness run with zero offers and no effectiveness claim.
+- 247 prepaid tests, lint and formatting pass; tests use hand-made data, including the full bundle-to-decision path and positive approval/rejection scenarios.
+- No real customer campaign was approved, sent or released; no customer-level artifacts were committed.
+- Local reviewer names are not authentication, and caps are per campaign rather than annual; T15 and a future spending ledger must address those boundaries before shared operational use.
 
 ## T12 - Sequence benchmark (syllabus Ch 8, Ch 9 RNN)
 

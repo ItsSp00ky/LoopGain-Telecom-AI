@@ -16,6 +16,7 @@ SCORES_PATH = PROJECT_ROOT / "artifacts" / "scores" / "scores.csv"
 VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
 TIER_MODEL_PATH = PROJECT_ROOT / "artifacts" / "tiers" / "tiers.json"
 TIERS_PATH = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
+CAMPAIGN_DIR = PROJECT_ROOT / "artifacts" / "campaigns" / "retention"
 # Kaggle's unlabeled customers: never used for evaluation, so they stand in for "this month's base".
 RAW_SCORE_PATH = PROJECT_ROOT / "data" / "raw" / "test.csv"
 GATE_FILE = "gate.json"
@@ -192,6 +193,52 @@ def run_tiers(args: argparse.Namespace) -> None:
     print(f"Output: {args.output}; value status: {result['value_status'].value_counts().to_dict()}")
 
 
+def run_decide(args: argparse.Namespace) -> None:
+    from dataclasses import replace
+
+    from prepaid_churn.almadar import load_offers
+    from prepaid_churn.bundle import load_bundle
+    from prepaid_churn.campaign import build_campaign, save_campaign
+    from prepaid_churn.retention import decision_inputs, load_policy, propose
+    from prepaid_churn.retention_report import decisions_report
+    from prepaid_churn.value import load_tiers
+
+    offers, policy = load_offers(), load_policy(args.policy)
+    if args.budget is not None:
+        policy = replace(policy, budget_lyd=args.budget)
+    model = load_tiers(args.model)
+    bundle = None if args.tiers_only else load_bundle(args.bundle)
+    inputs = decision_inputs(load_raw(args.input), model, bundle, offers)
+    decisions, comparison = propose(inputs, offers, policy)
+    campaign = build_campaign(inputs, decisions, comparison, offers, policy)
+    path = save_campaign(campaign, args.output_dir)
+    report = decisions_report(decisions, comparison, offers, policy)
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(report, encoding="utf-8")
+    print(f"{decisions['status'].eq('proposed').sum()} proposals in {path}; none are approved.")
+    print(f"Decision report: {args.report}")
+
+
+def run_approve(args: argparse.Namespace) -> None:
+    from prepaid_churn.campaign import released_campaign, review_file
+    from prepaid_churn.retention import RetentionError
+
+    if args.refresh and (args.subscriber_id or args.reject or args.note):
+        raise RetentionError("--refresh cannot be combined with review actions or a note.")
+    reviewed = review_file(
+        args.proposals,
+        args.reviewer,
+        "rejected" if args.reject else "approved",
+        [] if args.refresh else args.subscriber_id,
+        args.note,
+    )
+    print(
+        f"{len(reviewed['reviews'])} reviews logged; "
+        f"{len(released_campaign(reviewed))} approved rows in "
+        f"{args.proposals.parent / 'released.csv'}"
+    )
+
+
 def run_output_contract(args: argparse.Namespace) -> None:
     from prepaid_churn.scoring import output_contract_markdown
 
@@ -201,6 +248,8 @@ def run_output_contract(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from prepaid_churn.retention import POLICY_PATH
+
     parser = argparse.ArgumentParser(
         prog="churn",
         description="Churn risk model for prepaid telecom subscribers.",
@@ -293,6 +342,45 @@ def build_parser() -> argparse.ArgumentParser:
     )
     tiers.set_defaults(handler=run_tiers)
 
+    decide = commands.add_parser(
+        "decide", help="Propose budgeted retention bonuses for review (T11)."
+    )
+    decide.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
+    decide.add_argument("--model", type=Path, default=TIER_MODEL_PATH)
+    decide.add_argument("--bundle", type=Path, default=BUNDLE_DIR)
+    decide.add_argument("--policy", type=Path, default=POLICY_PATH)
+    decide.add_argument(
+        "--budget", type=float, default=None, help="Override campaign budget in LYD."
+    )
+    decide.add_argument("--output-dir", type=Path, default=CAMPAIGN_DIR)
+    decide.add_argument("--report", type=Path, default=REPORTS_DIR / "decisions.md")
+    decide.add_argument(
+        "--tiers-only",
+        action="store_true",
+        help="Readiness run without churn risk; proposes no offers.",
+    )
+    decide.set_defaults(handler=run_decide)
+
+    approve = commands.add_parser(
+        "approve", help="Record a named review and release approvals (T11)."
+    )
+    approve.add_argument("--proposals", type=Path, required=True)
+    approve.add_argument("--reviewer", required=True)
+    approve.add_argument(
+        "--subscriber-id",
+        action="append",
+        default=None,
+        help="Review this pending subscriber; repeat, or omit for all pending.",
+    )
+    approve.add_argument("--reject", action="store_true", help="Reject instead of approving.")
+    approve.add_argument("--note", default="")
+    approve.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Rebuild release and log views without reviewing any pending rows.",
+    )
+    approve.set_defaults(handler=run_approve)
+
     output_contract = commands.add_parser(
         "output-contract", help="Write the subscriber output contract document (ticket T8)."
     )
@@ -305,6 +393,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     from prepaid_churn.almadar import InvalidCatalogueError
     from prepaid_churn.bundle import BundleError
+    from prepaid_churn.retention import RetentionError
     from prepaid_churn.schema import InvalidExportError
     from prepaid_churn.value import ValueModelError
 
@@ -321,5 +410,6 @@ def main(argv: list[str] | None = None) -> None:
         BundleError,
         InvalidCatalogueError,
         ValueModelError,
+        RetentionError,
     ) as error:
         parser.exit(1, f"error: {error}\n")
