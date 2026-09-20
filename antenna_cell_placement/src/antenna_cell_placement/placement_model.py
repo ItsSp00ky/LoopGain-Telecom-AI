@@ -250,8 +250,9 @@ def train_suitability_model(
         verbose=-1,
     )
     champion_model.fit(X, y)
-    joblib.dump(champion_model, SUITABILITY_MODEL_PATH)
-    print(f"Saved Champion Placement Suitability Model to: {SUITABILITY_MODEL_PATH}")
+    model_path = output_dir / SUITABILITY_MODEL_PATH.name
+    joblib.dump(champion_model, model_path)
+    print(f"Saved Champion Placement Suitability Model to: {model_path}")
 
     # Generate Evaluation Visualizations
     # 1. ROC Curve
@@ -314,10 +315,11 @@ def train_suitability_model(
         "features": SUITABILITY_FEATURE_COLS,
     }
 
-    with open(MODEL_METRICS_PATH, "w") as f:
+    metrics_path = reports_dir / MODEL_METRICS_PATH.name
+    with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"Saved benchmark metrics to: {MODEL_METRICS_PATH}")
+    print(f"Saved benchmark metrics to: {metrics_path}")
     return metrics
 
 
@@ -334,6 +336,7 @@ def train_equipment_recommender(
     - Tier 3: Urban_HighCapacity_Macro (multi-carrier LTE-A, >=40MHz bandwidth)
     - Tier 4: Micro_Cell_Offload (small cell / hotspot in high density)
     """
+    output_dir.mkdir(parents=True, exist_ok=True)
     df = df_sites_enriched.copy()
 
     # Define target equipment tier from empirical data
@@ -376,15 +379,16 @@ def train_equipment_recommender(
     clf_eq = RandomForestClassifier(n_estimators=200, max_depth=8, random_state=42)
     clf_eq.fit(X, y)
 
-    joblib.dump(clf_eq, EQUIPMENT_MODEL_PATH)
-    print(f"Saved Equipment Recommendation Model to: {EQUIPMENT_MODEL_PATH}")
+    model_path = output_dir / EQUIPMENT_MODEL_PATH.name
+    joblib.dump(clf_eq, model_path)
+    print(f"Saved Equipment Recommendation Model to: {model_path}")
 
     # Accuracy
     acc = accuracy_score(y, clf_eq.predict(X))
     print(f"Equipment Recommendation In-Sample Accuracy: {acc:.4f}")
 
     return {
-        "equipment_model_path": str(EQUIPMENT_MODEL_PATH),
+        "equipment_model_path": str(model_path),
         "accuracy": round(float(acc), 4),
         "classes": sorted(list(clf_eq.classes_)),
     }

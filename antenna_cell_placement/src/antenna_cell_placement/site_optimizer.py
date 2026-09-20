@@ -27,6 +27,32 @@ from antenna_cell_placement.feature_engineering import GeospatialFeatureExtracto
 from antenna_cell_placement.placement_model import SUITABILITY_FEATURE_COLS
 
 
+RECOMMENDATION_COLUMNS = [
+    "recommendation_rank",
+    "canonical_latitude",
+    "canonical_longitude",
+    "municipality_name",
+    "nearest_settlement_name",
+    "deployment_priority_score",
+    "geospatial_priority_score",
+    "placement_suitability_score",
+    "cloudflare_regional_demand_score",
+    "cloudflare_priority_factor",
+    "cloudflare_http_requests_share_52w_pct",
+    "cloudflare_annual_traffic_growth_52w_pct",
+    "cloudflare_data_available",
+    "recommended_equipment_tier",
+    "recommended_rf_bands",
+    "recommended_bandwidth",
+    "recommended_operator_strategy",
+    "population_density_1km",
+    "population_sum_5km",
+    "dist_to_nearest_site_m",
+    "dist_to_nearest_road_m",
+    "elevation_m",
+]
+
+
 class CellSiteOptimizer:
     """
     Evaluates geospatial candidate locations across Libya to recommend
@@ -97,9 +123,16 @@ class CellSiteOptimizer:
         Scans candidate grid across Libya, filters for coverage gaps,
         runs AI suitability inference, and returns ranked recommendations.
         """
+        if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k <= 0:
+            raise ValueError("top_k must be a positive integer")
+        if (not np.isfinite([min_gap_distance_m, min_population_5km]).all()
+                or min_gap_distance_m < 0 or min_population_5km < 0):
+            raise ValueError("Minimum distance and population must be finite and non-negative")
         print("Generating candidate search grid across Libyan populated regions and highway corridors...")
         cand_lons, cand_lats = self.generate_candidate_grid(step_km=4.0)
         print(f"Generated {len(cand_lons)} candidate evaluation points.")
+        if not cand_lons:
+            return export_recommendations(pd.DataFrame(columns=RECOMMENDATION_COLUMNS))
 
         print("Extracting multi-layer geospatial features for candidate locations...")
         df_candidates = self.extractor.extract_features(cand_lons, cand_lats, is_existing_site=False)
@@ -114,12 +147,8 @@ class CellSiteOptimizer:
         print(f"Identified {len(df_gaps)} coverage gap candidates meeting demographic criteria.")
 
         if df_gaps.empty:
-            print("No gaps found matching strict criteria. Relaxing distance threshold to 2000m...")
-            mask_gap = (
-                (df_candidates["dist_to_nearest_site_m"] >= 2000.0) &
-                (df_candidates["population_sum_5km"] >= 200.0)
-            )
-            df_gaps = df_candidates[mask_gap].copy()
+            print("No gaps found matching the requested criteria.")
+            return export_recommendations(pd.DataFrame(columns=RECOMMENDATION_COLUMNS))
 
         # Run AI Suitability Predictor
         X_cand = df_gaps[SUITABILITY_FEATURE_COLS]
@@ -215,52 +244,36 @@ class CellSiteOptimizer:
         df_recommendations["recommendation_rank"] = range(1, len(df_recommendations) + 1)
 
         # Reorder columns for presentation
-        display_cols = [
-            "recommendation_rank",
-            "canonical_latitude",
-            "canonical_longitude",
-            "municipality_name",
-            "nearest_settlement_name",
-            "deployment_priority_score",
-            "geospatial_priority_score",
-            "placement_suitability_score",
-            "cloudflare_regional_demand_score",
-            "cloudflare_priority_factor",
-            "cloudflare_http_requests_share_52w_pct",
-            "cloudflare_annual_traffic_growth_52w_pct",
-            "cloudflare_data_available",
-            "recommended_equipment_tier",
-            "recommended_rf_bands",
-            "recommended_bandwidth",
-            "recommended_operator_strategy",
-            "population_density_1km",
-            "population_sum_5km",
-            "dist_to_nearest_site_m",
-            "dist_to_nearest_road_m",
-            "elevation_m",
-        ]
-        df_recommendations = df_recommendations[display_cols]
+        df_recommendations = df_recommendations[RECOMMENDATION_COLUMNS]
 
-        # Supplementary cell evidence is for review, not confirmed mast coverage.
-        from antenna_cell_placement.opencellid import annotate_candidates
-        df_recommendations = annotate_candidates(df_recommendations)
+        return export_recommendations(df_recommendations)
 
-        # Export CSV
-        RECOMMENDATIONS_CSV.parent.mkdir(parents=True, exist_ok=True)
-        df_recommendations.to_csv(RECOMMENDATIONS_CSV, index=False)
-        print(f"Exported Top {len(df_recommendations)} Recommendations to: {RECOMMENDATIONS_CSV}")
 
-        # Also export GeoJSON
-        rec_geojson_path = REPORTS_DIR / "recommended_cell_placements.geojson"
-        gdf_rec = gpd.GeoDataFrame(
-            df_recommendations,
-            geometry=[Point(lon, lat) for lon, lat in zip(df_recommendations["canonical_longitude"], df_recommendations["canonical_latitude"])],
-            crs=CRS_WGS84
-        )
+def export_recommendations(df_recommendations: pd.DataFrame) -> pd.DataFrame:
+    """Write the current result, including empty results so old recommendations cannot linger."""
+    # Supplementary cell evidence is for review, not confirmed mast coverage.
+    from antenna_cell_placement.opencellid import annotate_candidates
+    df_recommendations = annotate_candidates(df_recommendations)
+
+    # Export CSV
+    RECOMMENDATIONS_CSV.parent.mkdir(parents=True, exist_ok=True)
+    df_recommendations.to_csv(RECOMMENDATIONS_CSV, index=False)
+    print(f"Exported Top {len(df_recommendations)} Recommendations to: {RECOMMENDATIONS_CSV}")
+
+    # Also export GeoJSON
+    rec_geojson_path = REPORTS_DIR / "recommended_cell_placements.geojson"
+    gdf_rec = gpd.GeoDataFrame(
+        df_recommendations,
+        geometry=[Point(lon, lat) for lon, lat in zip(df_recommendations["canonical_longitude"], df_recommendations["canonical_latitude"])],
+        crs=CRS_WGS84
+    )
+    if df_recommendations.empty:
+        rec_geojson_path.write_text('{"type": "FeatureCollection", "features": []}\n', encoding="utf-8")
+    else:
         gdf_rec.to_file(rec_geojson_path, driver="GeoJSON")
-        print(f"Exported Recommendations GeoJSON to: {rec_geojson_path}")
+    print(f"Exported Recommendations GeoJSON to: {rec_geojson_path}")
 
-        return df_recommendations
+    return df_recommendations
 
 
 def run_optimizer_pipeline() -> pd.DataFrame:
