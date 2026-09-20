@@ -1,0 +1,13 @@
+category,metric_name,value,unit
+Device Type,mobile,67.23586,percentage
+Device Type,desktop,32.758436,percentage
+Device Type,other,0.005703,percentage
+Traffic Actor,human,81.711871,percentage
+Traffic Actor,bot,18.288129,percentage
+HTTP Protocol Version,HTTP/2,58.610234,percentage
+HTTP Protocol Version,HTTP/3,29.353602,percentage
+HTTP Protocol Version,HTTP/1.x,12.036164,percentage
+IP Protocol Version,IPv4,97.474676,percentage
+IP Protocol Version,IPv6,2.525324,percentage
+Traffic Classification,HTTP,84.312205,percentage
+Traffic Classification,OTHER,15.687795,percentage

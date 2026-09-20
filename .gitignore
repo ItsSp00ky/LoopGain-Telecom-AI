@@ -1,110 +1,41 @@
-# ---------------------------------------------------------------------------
-# AI CVM Suite — .gitignore
-# Rule of thumb: code, config and docs are tracked. Data, models and secrets
-# are not. If a teammate cannot regenerate it with `pwsh tasks.ps1 pipeline`,
-# it belongs in a release artefact, not in git.
-# ---------------------------------------------------------------------------
-
-# --- Secrets ---------------------------------------------------------------
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-secrets/
-conf/local/
-
-# --- Data (see data/README.md for how to re-fetch every source) ------------
-data/**
-!data/**/
-!data/**/.gitkeep
-!data/README.md
-
-# --- Model artefacts, experiment tracking ----------------------------------
-artifacts/**
-!artifacts/**/
-!artifacts/**/.gitkeep
-mlruns/
-mlartifacts/
-*.pkl
-*.joblib
-*.h5
-*.keras
-*.onnx
-*.pt
-*.pth
-*.safetensors
-*.ckpt
-checkpoints/
-
-# --- Vector store ----------------------------------------------------------
-.chroma/
-chroma_db/
-*.faiss
-
-# --- DuckDB / Parquet local stores -----------------------------------------
-*.duckdb
-*.duckdb.wal
-*.db-shm
-*.db-wal
-
-# --- Python ----------------------------------------------------------------
+# Python cache and build
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
 build/
 dist/
+wheels/
 *.egg-info/
-.eggs/
-pip-wheel-metadata/
+.installed.cfg
+*.egg
 
-# --- Virtual environments --------------------------------------------------
+# Virtual environments
 .venv/
-venv/
 env/
+venv/
 ENV/
-.conda/
 
-# --- Testing / coverage / linting ------------------------------------------
+# Testing & Linting
 .pytest_cache/
 .coverage
-.coverage.*
-coverage.xml
 htmlcov/
-.ruff_cache/
 .mypy_cache/
-.hypothesis/
+.ruff_cache/
 
-# --- Notebooks -------------------------------------------------------------
-.ipynb_checkpoints/
-# nbstripout (see .pre-commit-config.yaml) strips outputs on commit.
-# Never commit a notebook containing subscriber-level output.
-
-# --- Reports generated at runtime ------------------------------------------
-evidently_reports/
-locust_reports/
-profiling/
-
-# --- IDE / OS --------------------------------------------------------------
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/launch.json
+# Jupyter & IDEs
+.ipynb_checkpoints
+.vscode/
 .idea/
 *.swp
-Thumbs.db
-Desktop.ini
-$RECYCLE.BIN/
+*.swo
+
+# OS & System artifacts
 .DS_Store
+Thumbs.db
+*:Zone.Identifier
 
-# --- Docs build ------------------------------------------------------------
-docs/_build/
-site/
-
-# --- Temp ------------------------------------------------------------------
-tmp/
-scratch/
+# Scratch profiling logs
 *.log
-*.tmp
+dataset_profiles.txt
+*.zip

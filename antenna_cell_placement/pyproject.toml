@@ -1,0 +1,41 @@
+[project]
+name = "antenna-cell-placement"
+version = "0.1.0"
+description = "AI Geospatial Cellular Antenna Placement Optimization - Team Loop Gain (Samsung Innovation Campus Capstone)"
+readme = "README.md"
+authors = [
+    { name = "Ahmed Gali", email = "ahmed.gali.info@gmail.com" },
+    { name = "Taha Elkhazmi", email = "Elkhazmittt@gmail.com" },
+    { name = "Mahmoud Almabrouk", email = "mahmab90@gmail.com" },
+    { name = "Maher Alqadhi", email = "maher9maher9@gmail.com" },
+    { name = "Mohamed Khalaf", email = "moha.khalaf@uot.edu.ly" },
+    { name = "Ali Marghem", email = "al.marghem@uot.edu.ly" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "folium>=0.19.4",
+    "geopandas>=1.0.1",
+    "joblib>=1.4.2",
+    "lightgbm>=4.5.0",
+    "matplotlib>=3.9.2",
+    "numpy>=2.0.0",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.2",
+    "pyarrow>=25.0.1",
+    "pyproj>=3.6.1",
+    "rasterio>=1.3.10",
+    "requests>=2.32.3",
+    "rich>=13.8.0",
+    "scikit-learn>=1.5.1",
+    "scipy>=1.14.1",
+    "seaborn>=0.13.2",
+    "shapely>=2.0.6",
+    "xgboost>=2.1.1",
+]
+
+[project.scripts]
+antenna-placement = "antenna_cell_placement.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"

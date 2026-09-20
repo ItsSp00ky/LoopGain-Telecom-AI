@@ -1,0 +1,44 @@
+{
+  "assessment_date": "2026-09-13",
+  "source": "Cloudflare Radar traffic/ly regional dataset supplied in data/cloudflare_radar_libya",
+  "regional_records": 22,
+  "ocha_admin2_mapping_coverage": "22/22",
+  "usefulness": {
+    "suitability_classifier": "not accepted",
+    "recommendation_demand_prior": "accepted",
+    "reason": "Regional HTTP traffic is useful demand context but is not radio coverage ground truth. Direct classifier inclusion did not generalize better to unseen municipalities."
+  },
+  "classifier_ablation": {
+    "features_tested": [
+      "http_requests_share_52w_pct",
+      "annual_stability_score_52w",
+      "annual_traffic_growth_52w_pct"
+    ],
+    "random_stratified_5_fold": {
+      "baseline_roc_auc": 0.9862463357,
+      "with_cloudflare_roc_auc": 0.9864247754,
+      "delta_roc_auc": 0.0001784397,
+      "baseline_brier": 0.0379474455,
+      "with_cloudflare_brier": 0.0372983450
+    },
+    "municipality_held_out_5_fold": {
+      "baseline_roc_auc": 0.9833089362,
+      "with_cloudflare_roc_auc": 0.9818403783,
+      "delta_roc_auc": -0.0014685579,
+      "baseline_brier": 0.0400677351,
+      "with_cloudflare_brier": 0.0397721886
+    }
+  },
+  "independent_demand_evidence": {
+    "spearman_http_share_vs_existing_site_count": 0.6947432366,
+    "note": "Correlation supports demand relevance but is not causal proof and is not an out-of-sample placement metric."
+  },
+  "applied_ranking_policy": {
+    "signal": "52-week regional HTTP request share percentile",
+    "priority_factor_formula": "0.9 + 0.2 * regional_percentile",
+    "maximum_influence": "+/-10%",
+    "classifier_features_changed": false,
+    "model_artifact_retrained": false,
+    "missing_data_behavior": "neutral factor 1.0"
+  }
+}

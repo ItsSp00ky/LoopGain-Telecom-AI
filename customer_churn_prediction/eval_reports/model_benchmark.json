@@ -1,0 +1,51 @@
+{
+  "dataset": "Maven Telecom Customer Churn",
+  "champion": "XGBoost",
+  "cuda_enabled": true,
+  "metrics": {
+    "Logistic Regression": {
+      "cv_roc_auc_mean": 0.9164,
+      "cv_roc_auc_std": 0.0106,
+      "test_roc_auc": 0.9087,
+      "test_pr_auc": 0.8057,
+      "test_accuracy": 0.8118,
+      "test_precision": 0.6245,
+      "test_recall": 0.8449,
+      "test_f1": 0.7182,
+      "test_brier_score": 0.1251
+    },
+    "Random Forest": {
+      "cv_roc_auc_mean": 0.9276,
+      "cv_roc_auc_std": 0.0086,
+      "test_roc_auc": 0.9233,
+      "test_pr_auc": 0.8497,
+      "test_accuracy": 0.8452,
+      "test_precision": 0.6986,
+      "test_recall": 0.7995,
+      "test_f1": 0.7456,
+      "test_brier_score": 0.1077
+    },
+    "LightGBM": {
+      "cv_roc_auc_mean": 0.9395,
+      "cv_roc_auc_std": 0.0059,
+      "test_roc_auc": 0.9278,
+      "test_pr_auc": 0.856,
+      "test_accuracy": 0.846,
+      "test_precision": 0.7021,
+      "test_recall": 0.7941,
+      "test_f1": 0.7453,
+      "test_brier_score": 0.1006
+    },
+    "XGBoost": {
+      "cv_roc_auc_mean": 0.9385,
+      "cv_roc_auc_std": 0.0064,
+      "test_roc_auc": 0.928,
+      "test_pr_auc": 0.8561,
+      "test_accuracy": 0.8437,
+      "test_precision": 0.7079,
+      "test_recall": 0.7647,
+      "test_f1": 0.7352,
+      "test_brier_score": 0.1002
+    }
+  }
+}

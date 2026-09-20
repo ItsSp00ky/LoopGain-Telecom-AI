@@ -1,0 +1,80 @@
+# Almadar Aljadid market facts used by the module (ticket T16, decision 16).
+# The packages themselves are in offers.csv; docs/almadar.md explains both files.
+#
+# Every table has a status and a source:
+#   confirmed  - stated in an operator document in data/almadar/source/, or a public fact
+#   measured   - computed from the data in this repo
+#   reported   - stated by a teammate, with no document in the repo yet
+#   assumption - a team estimate: replace it with operator data or defend it in the report
+#   estimate   - a number a calculation needs that nobody outside the operator knows
+# Money is in Libyan dinars (LYD); 1 LYD = 1000 dirham.
+
+[operator]
+status = "confirmed"
+source = "Public MCC-MNC numbering for Libya"
+name = "Almadar Aljadid"
+name_ar = "المدار الجديد"
+mcc = 606
+mnc = "01"
+competitor = "Libyana"
+
+[recharge_cards]
+status = "reported"
+source = "Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1)"
+values_lyd = [5, 10, 20, 40, 100]
+
+[payg]
+status = "confirmed"
+source = "source/Pay-as-you-go tariffs.md"
+voice_onnet_first_3_minutes_lyd = 0.090
+voice_onnet_after_3_minutes_lyd_per_minute = 0.050
+voice_to_libyana_lyd_per_minute = 0.090
+voice_to_landline_lyd_per_minute = 0.040
+sms_local_lyd = 0.050
+sms_international_lyd = 0.250
+data_lyd_per_mb = 0.025
+
+[airtime_advance]
+status = "confirmed"
+source = "source/translated_service_details.md"
+name_ar = "رصيد في وقته"
+name_en = "Credit in its time"
+ussd = ["*140#", "*140*5#"]
+denominations_lyd = [1, 3, 5]
+max_balance_to_subscribe_lyd = 0.5
+recovered_at = "first recharge"
+auto_settle_after_hours = 48
+note = "The operator chooses the denomination 'according to the subscriber's consumption' and does not publish the rule."
+
+[data_advance]
+status = "confirmed"
+source = "source/translated_internet_service_details.md"
+name_ar = "نت في وقته"
+name_en = "Net in its time (Emergency Net)"
+ussd = ["*000#"]
+price_lyd = 5.0
+data_gb = 2
+validity_hours = 72
+max_balance_to_subscribe_lyd = 1.0
+max_remaining_quota_mb = 250
+recovered_at = "first recharge or incoming balance transfer"
+note = "Not available while the balance is negative, so it cannot be combined with an unpaid airtime advance."
+
+[arpu]
+status = "assumption"
+source = "Team estimate in Ali_Branch conf/market.yaml (2026-09-18): just above the base monthly bundle, Net 20 at 35 LYD; chosen by Taha for T18 on 2026-09-19"
+monthly_lyd = 40.0
+
+# T18 turns the source currency into LYD with one fixed rate: arpu.monthly_lyd divided by
+# this mean, so the average active customer spends exactly the Almadar ARPU.
+# The rate never depends on the batch being viewed.
+[reference_spend]
+status = "measured"
+source = "data/raw/train.csv, month 8: mean airtime plus data recharge of the 64,509 customers active that month"
+mean_monthly_recharge = 537.17
+
+[delivery_cost]
+status = "estimate"
+source = "Ali_Branch conf/catalogue.yaml; not operator data, so no margin built on it may be presented as audited"
+share_of_price_metered = 0.25
+share_of_price_unlimited = 0.35

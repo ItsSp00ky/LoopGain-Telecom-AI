@@ -1,0 +1,33 @@
+[project]
+name = "customer-churn-prediction"
+version = "0.1.0"
+description = "Customer Churn Prediction & Retention Discount Engine - Team Loop Gain (Samsung Innovation Campus Capstone)"
+readme = "README.md"
+authors = [
+    { name = "Ahmed Gali", email = "ahmed.gali.info@gmail.com" },
+    { name = "Taha Elkhazmi", email = "Elkhazmittt@gmail.com" },
+    { name = "Mahmoud Almabrouk", email = "mahmab90@gmail.com" },
+    { name = "Maher Alqadhi", email = "maher9maher9@gmail.com" },
+    { name = "Mohamed Khalaf", email = "moha.khalaf@uot.edu.ly" },
+    { name = "Ali Marghem", email = "al.marghem@uot.edu.ly" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "joblib>=1.6.0",
+    "lightgbm>=4.7.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.5",
+    "rich>=15.0.0",
+    "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
+    "xgboost>=3.4.1",
+]
+
+[project.scripts]
+customer-churn-prediction = "customer_churn_prediction:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
