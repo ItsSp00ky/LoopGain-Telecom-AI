@@ -747,8 +747,8 @@ Findings (`reports/almadar_view.md`, rules in `docs/almadar.md`):
 
 ## T19 - Emergency credit advice
 
-**Owner:**
-**Status:** Todo
+**Owner:** Ali
+**Status:** In progress
 **Depends on:** T16, T18
 
 Why: Almadar's two emergency credit products (an airtime advance of 1, 3 or 5 LYD and a 5 LYD data advance) are the most Libyan part of Ali's work, and a safe limit can be set from real recharge behaviour.
