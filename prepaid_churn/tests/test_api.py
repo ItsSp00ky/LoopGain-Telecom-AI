@@ -1,0 +1,400 @@
+import json
+from dataclasses import replace
+
+import pandas as pd
+import pytest
+from fastapi.testclient import TestClient
+
+from prepaid_churn.almadar import load_offers
+from prepaid_churn.api import (
+    API_KEY_HEADER,
+    CHATBOT_KEY_VARIABLE,
+    COPILOT_KEY_VARIABLE,
+    ApiKeys,
+    build_app,
+    create_app,
+    keys_from_environment,
+)
+from prepaid_churn.bundle import save_bundle
+from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
+from prepaid_churn.cli import build_parser
+from prepaid_churn.privacy import pseudonymize
+from prepaid_churn.retention import load_policy, propose
+from prepaid_churn.service import (
+    ServiceConfigurationError,
+    ServicePaths,
+    load_state,
+)
+
+STAMP = "2026-09-20T12:00:00+00:00"
+CHATBOT_KEY = "chatbot-key-for-the-tests-only"
+COPILOT_KEY = "copilot-key-for-the-tests-only"
+
+
+@pytest.fixture
+def keys():
+    return ApiKeys(CHATBOT_KEY, COPILOT_KEY)
+
+
+@pytest.fixture
+def offers():
+    return load_offers()
+
+
+@pytest.fixture
+def policy():
+    return replace(load_policy(), holdout_fraction=0.0)
+
+
+@pytest.fixture
+def customers():
+    """Four hand-made subscribers, one of whom has the literal ID "NA"."""
+    return pd.DataFrame(
+        {
+            "subscriber_id": ["0001", "0002", "NA", "0004"],
+            "churn_probability": [0.5, 0.4, 0.3, 0.2],
+            "risk_band": ["high"] * 4,
+            "value_tier": ["high"] * 4,
+            "value_status": ["scenario"] * 4,
+            "value_12m_base_lyd": [100.0] * 4,
+            "bundle_held": ["PAYG"] * 4,
+            "uses_voice": [True] * 4,
+            "uses_data": [True] * 4,
+        }
+    )
+
+
+@pytest.fixture
+def portfolio():
+    """A bundle-backed export: risk and value are both present."""
+    return pd.DataFrame(
+        {
+            "subscriber_id": ["0001", "0002", "NA", "0004"],
+            "churn_probability": [0.5, 0.4, 0.3, None],
+            "risk_band": ["high", "high", "medium", "already_silent"],
+            "value_tier": ["high", "high", "medium", "very_low"],
+            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
+            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
+            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
+            "scored_at": [STAMP] * 4,
+        }
+    )
+
+
+@pytest.fixture
+def served(tmp_path, bundle, customers, offers, policy, portfolio):
+    """A state loaded the way the real service loads it.
+
+    Subscriber 0001 is approved, 0002 is rejected, and "NA" and 0004 stay unreviewed, so
+    every case the chatbot has to treat the same way is present at once.
+    """
+    save_bundle(bundle, tmp_path / "bundle")
+    decisions, comparison = propose(customers, offers, policy)
+    campaign = build_campaign(customers, decisions, comparison, offers, policy, STAMP)
+    campaign = review_campaign(campaign, "Ali Marghem", "approved", ["0001"], reviewed_at=STAMP)
+    campaign = review_campaign(campaign, "Ali Marghem", "rejected", ["0002"], reviewed_at=STAMP)
+    campaign_path = save_campaign(campaign, tmp_path / "campaign")
+    portfolio_path = tmp_path / "tiers.csv"
+    portfolio.to_csv(portfolio_path, index=False)
+    return load_state(
+        ServicePaths(
+            bundle_dir=tmp_path / "bundle",
+            portfolio_path=portfolio_path,
+            campaign_path=campaign_path,
+        )
+    )
+
+
+@pytest.fixture
+def client(served, keys):
+    return TestClient(create_app(served, keys))
+
+
+def chatbot(client, url):
+    return client.get(url, headers={API_KEY_HEADER: CHATBOT_KEY})
+
+
+def copilot(client, url):
+    return client.get(url, headers={API_KEY_HEADER: COPILOT_KEY})
+
+
+# ---------------------------------------------------------------------------
+# /health
+# ---------------------------------------------------------------------------
+
+
+def test_health_needs_no_key_and_says_what_is_being_served(client, bundle):
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    assert body["bundle_loaded"] is True
+    assert body["smoke_prediction_passed"] is True
+    assert body["model_version"] == bundle.version
+    assert body["problems"] == []
+    outputs = body["latest_outputs"]
+    assert outputs["subscribers_in_portfolio"] == 4
+    assert outputs["approved_offers"] == 1  # the rejected and unreviewed rows are not here
+    assert outputs["scored_at"] == STAMP
+    assert outputs["campaign_created_at"] == STAMP
+
+
+def test_health_reports_degraded_rather_than_pretending(tmp_path, keys):
+    """An empty checkout is the normal state before the pipeline has been run."""
+    state = load_state(
+        ServicePaths(
+            bundle_dir=tmp_path / "missing",
+            portfolio_path=tmp_path / "missing.csv",
+            campaign_path=tmp_path / "missing.json",
+        )
+    )
+    body = TestClient(create_app(state, keys)).get("/health").json()
+    assert body["status"] == "degraded"
+    assert body["bundle_loaded"] is False
+    assert body["smoke_prediction_passed"] is False
+    assert len(body["problems"]) == 2  # the bundle and the portfolio; no campaign is not a fault
+    assert body["latest_outputs"]["approved_offers"] == 0
+
+
+# ---------------------------------------------------------------------------
+# /catalogue
+# ---------------------------------------------------------------------------
+
+
+def test_the_chatbot_gets_every_package_with_its_collection_date(client, offers):
+    body = chatbot(client, "/catalogue").json()
+    assert body["count"] == len(offers)
+    assert {row["offer_id"] for row in body["offers"]} == set(offers["offer_id"])
+    assert all(row["collected"] for row in body["offers"])
+    assert all(row["operator"] == "Almadar Aljadid" for row in body["offers"])
+    morning = next(row for row in body["offers"] if row["offer_id"] == "SABAH_1")
+    assert (morning["valid_from_hour"], morning["valid_to_hour"]) == (6, 11)
+
+
+# ---------------------------------------------------------------------------
+# /subscribers/{id}/retention
+# ---------------------------------------------------------------------------
+
+
+def test_an_approved_offer_reaches_the_chatbot_with_the_package(client):
+    body = chatbot(client, "/subscribers/0001/retention").json()
+    assert body["subscriber_id"] == "0001"
+    assert body["recommended_offer_id"] == "SABAH_1"
+    assert "06:00-11:00" in body["offer_reason_en"]
+    assert "06:00-11:00" in body["offer_reason_ar"]
+    assert body["reviewed_at"] == STAMP
+    assert body["offer"]["name_en"]
+    assert body["offer"]["name_ar"]
+    assert body["offer"]["price_lyd"] == 1
+
+
+@pytest.mark.parametrize(
+    ("subscriber_id", "why"),
+    [
+        ("0002", "a reviewer rejected it"),
+        ("NA", "nobody reviewed it"),
+        ("0004", "nobody reviewed it"),
+        ("0009", "there is no proposal at all"),
+    ],
+)
+def test_only_an_approved_offer_is_ever_returned(client, subscriber_id, why):
+    response = chatbot(client, f"/subscribers/{subscriber_id}/retention")
+    assert response.status_code == 404, why
+    # The same answer for every case, so the customer is not told an offer was refused.
+    assert response.json()["detail"] == "No approved retention offer for this subscriber."
+
+
+def test_the_chatbot_is_never_told_a_churn_probability(client, served, keys):
+    """Two layers have to fail before a probability could leak, so both are exercised."""
+    body = chatbot(client, "/subscribers/0001/retention").json()
+    assert not {"churn_probability", "risk_band", "value_tier"} & set(body)
+
+    # Even if the released frame grew a risk column, the response model drops it.
+    leaky = served.approved.copy()
+    leaky["churn_probability"] = 0.87
+    leaky["value_12m_base_lyd"] = 100.0
+    leaky_client = TestClient(create_app(replace(served, approved=leaky), keys))
+    text = json.dumps(chatbot(leaky_client, "/subscribers/0001/retention").json())
+    assert "0.87" not in text
+    assert "churn" not in text
+    assert "probability" not in text
+
+
+def test_the_reviewer_name_stays_inside_the_operator(client):
+    """The chatbot speaks to the customer; which employee approved the campaign is ours."""
+    text = json.dumps(chatbot(client, "/subscribers/0001/retention").json())
+    assert "Ali Marghem" not in text
+    assert "reviewer" not in text
+
+
+@pytest.mark.parametrize(
+    "number",
+    ["0912345678", "+218912345678", "091 234 5678", "091-234-5678", "0945678901"],
+)
+def test_an_id_shaped_like_a_phone_number_is_refused(client, number):
+    response = chatbot(client, f"/subscribers/{number}/retention")
+    assert response.status_code == 422
+    assert "pseudonymous" in response.json()["detail"]
+
+
+def test_a_pseudonymous_id_is_looked_up_rather_than_refused(client):
+    """A salted digest must not trip the phone-number check, or nothing works."""
+    digest = pseudonymize("0912345678", "a-salt-long-enough-to-use")
+    assert chatbot(client, f"/subscribers/{digest}/retention").status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# /portfolio/summary
+# ---------------------------------------------------------------------------
+
+
+def test_the_copilot_gets_the_portfolio_with_the_model_evidence(client, bundle):
+    body = copilot(client, "/portfolio/summary").json()
+    assert body["model_version"] == bundle.version
+    assert body["subscribers"] == 4
+    assert body["risk_available"] is True
+    assert body["scored_at"] == STAMP
+    bands = {group["name"]: group for group in body["by_risk_band"]}
+    assert [group["name"] for group in body["by_risk_band"]] == ["high", "medium", "already_silent"]
+    assert bands["high"]["customers"] == 2
+    assert set(body["success_thresholds"]) == {
+        "capture",
+        "better_than_chance",
+        "better_than_baseline",
+        "calibration",
+    }
+    assert body["test_metrics"]
+    assert body["release_gate_passed"] is True
+
+
+def test_lyd_at_risk_is_weighted_by_each_customer_s_risk(client):
+    """40,000 customers at 5% risk are not 40,000 values at risk (Ali's cohort note)."""
+    bands = {
+        group["name"]: group
+        for group in copilot(client, "/portfolio/summary").json()["by_risk_band"]
+    }
+    assert bands["high"]["lyd_at_risk"] == pytest.approx(100 * 0.5 + 80 * 0.4)
+    assert bands["high"]["lyd_at_risk"] != pytest.approx(180.0)  # not the unweighted value
+    assert bands["already_silent"]["lyd_at_risk"] == pytest.approx(0.0)
+    assert bands["high"]["monthly_spend_lyd"] == pytest.approx(70.0)
+
+
+def test_a_tiers_only_export_reports_risk_as_unavailable_not_as_zero(served, keys, portfolio):
+    """This checkout has no real bundle, so `churn tiers --tiers-only` is the normal case."""
+    tiers_only = portfolio.drop(columns=["churn_probability", "risk_band", "scored_at"])
+    tiers_only["value_12m_base_lyd"] = None
+    tiers_only["value_status"] = "risk_unavailable"
+    client = TestClient(create_app(replace(served, portfolio=tiers_only), keys))
+    body = copilot(client, "/portfolio/summary").json()
+    assert body["risk_available"] is False
+    assert body["by_risk_band"] == []
+    assert [group["name"] for group in body["by_value_tier"]] == ["high", "medium", "very_low"]
+    assert all(group["lyd_at_risk"] is None for group in body["by_value_tier"])
+    assert body["by_value_tier"][0]["customers"] == 2
+
+
+def test_the_portfolio_is_unavailable_rather_than_empty_when_nothing_was_scored(served, keys):
+    client = TestClient(create_app(replace(served, portfolio=None), keys))
+    response = copilot(client, "/portfolio/summary")
+    assert response.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# Access control
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("url", ["/catalogue", "/subscribers/0001/retention", "/portfolio/summary"])
+def test_no_key_and_an_unknown_key_are_both_refused(client, url):
+    assert client.get(url).status_code == 401
+    assert client.get(url, headers={API_KEY_HEADER: "not-a-key-at-all-but-long"}).status_code == 401
+
+
+@pytest.mark.parametrize("url", ["/catalogue", "/subscribers/0001/retention"])
+def test_the_copilot_key_is_not_accepted_on_chatbot_endpoints(client, url):
+    response = copilot(client, url)
+    assert response.status_code == 403
+    assert "chatbot" in response.json()["detail"]
+
+
+def test_the_chatbot_key_is_not_accepted_on_copilot_endpoints(client):
+    """A leaked chatbot key must not open the portfolio."""
+    response = chatbot(client, "/portfolio/summary")
+    assert response.status_code == 403
+    assert "copilot" in response.json()["detail"]
+
+
+def test_the_service_refuses_to_start_without_both_keys():
+    for environ in ({}, {CHATBOT_KEY_VARIABLE: CHATBOT_KEY}, {COPILOT_KEY_VARIABLE: COPILOT_KEY}):
+        with pytest.raises(ServiceConfigurationError, match="PREPAID_CHURN_"):
+            keys_from_environment(environ)
+
+
+def test_the_two_keys_must_differ_and_must_not_be_trivial():
+    with pytest.raises(ServiceConfigurationError, match="must differ"):
+        ApiKeys(CHATBOT_KEY, CHATBOT_KEY)
+    with pytest.raises(ServiceConfigurationError, match="at least"):
+        ApiKeys("short", COPILOT_KEY)
+
+
+def test_keys_are_read_from_the_environment():
+    keys = keys_from_environment(
+        {CHATBOT_KEY_VARIABLE: CHATBOT_KEY, COPILOT_KEY_VARIABLE: COPILOT_KEY}
+    )
+    assert keys.consumer(CHATBOT_KEY) == "chatbot"
+    assert keys.consumer(COPILOT_KEY) == "copilot"
+    assert keys.consumer("something else entirely") is None
+
+
+# ---------------------------------------------------------------------------
+# The service as a whole
+# ---------------------------------------------------------------------------
+
+
+def test_the_service_has_no_write_path(client):
+    """Nothing may be created, changed or approved through the API (ticket T15)."""
+    methods = {
+        method
+        for path in client.app.openapi()["paths"].values()
+        for method in path
+        if method != "parameters"
+    }
+    assert methods == {"get"}
+
+
+def test_the_openapi_page_documents_every_endpoint(client):
+    paths = client.app.openapi()["paths"]
+    assert set(paths) == {
+        "/health",
+        "/catalogue",
+        "/subscribers/{subscriber_id}/retention",
+        "/portfolio/summary",
+    }
+    assert client.get("/docs").status_code == 200
+
+
+def test_build_app_reads_the_keys_from_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv(CHATBOT_KEY_VARIABLE, CHATBOT_KEY)
+    monkeypatch.setenv(COPILOT_KEY_VARIABLE, COPILOT_KEY)
+    paths = ServicePaths(
+        bundle_dir=tmp_path / "missing",
+        portfolio_path=tmp_path / "missing.csv",
+        campaign_path=tmp_path / "missing.json",
+    )
+    assert TestClient(build_app(paths)).get("/health").json()["status"] == "degraded"
+
+
+def test_build_app_refuses_to_start_without_keys(tmp_path, monkeypatch):
+    """Failing here beats loading a bundle and then serving it without access control."""
+    monkeypatch.delenv(CHATBOT_KEY_VARIABLE, raising=False)
+    monkeypatch.delenv(COPILOT_KEY_VARIABLE, raising=False)
+    paths = ServicePaths(
+        bundle_dir=tmp_path / "missing",
+        portfolio_path=tmp_path / "missing.csv",
+        campaign_path=tmp_path / "missing.json",
+    )
+    with pytest.raises(ServiceConfigurationError, match="PREPAID_CHURN_"):
+        build_app(paths)
+
+
+def test_serve_is_a_churn_command():
+    args = build_parser().parse_args(["serve", "--port", "9001"])
+    assert (args.command, args.port, args.host) == ("serve", 9001, "127.0.0.1")

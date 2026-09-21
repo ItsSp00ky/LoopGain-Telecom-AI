@@ -454,3 +454,59 @@ It records 27,582 active customers without risk, 2,418 already-silent customers,
 Those zero results support no campaign-effectiveness claim.
 The positive-proposal and approval paths are verified with hand-made unit and integration inputs, including the existing synthetic test bundle.
 No real customer campaign was approved or released during implementation.
+
+## 21. A read-only integration service, with separate keys per consumer
+
+Date: 2026-09-21.
+
+Ali took T15 after T10 and T11, so the chatbot and the copilot have something to call.
+The module already had two generated contracts and an approved-only release file; what it did not have was a way for another team's service to reach them over the network.
+Decision 10 said an HTTP service would be built only when a teammate's service needed to call us, and the team platform (decision 17) is now that need.
+
+FastAPI, uvicorn and httpx are added to the dependencies.
+This is the first dependency added since the module was built, so it is recorded here rather than treated as routine.
+FastAPI earns its place for one reason beyond routing: the response models generate the OpenAPI page at `/docs`, so the integration documentation is produced by the same code that answers the request and cannot drift from it.
+That is the rule the input and output contracts already follow.
+uvicorn runs the app for `churn serve`, and httpx is a test-only dependency that FastAPI's test client requires.
+No container, no process manager, no database and no message queue were added; the service is one command that reads files.
+
+The service has no write path at all.
+Every route is a GET, a test asserts that the generated OpenAPI document contains no other method, and nothing can be created, changed or approved through it.
+An offer appears only after a named reviewer approved it with `churn approve` (decision 14), and no language model sits anywhere in the path (decision 17).
+
+The approved campaign is read from the authoritative `proposals.json` and filtered through `released_campaign`, not from the derived `released.csv`.
+T11 made the JSON the authority so that editing a CSV could not approve an offer, and a service that served the CSV would have handed that authority straight back.
+A campaign that fails validation serves no offers at all rather than falling back to the derived file.
+
+Access control uses one key per consumer, sent in the `X-API-Key` header and compared in constant time.
+Each key is accepted only on its own endpoints: the chatbot key opens `/catalogue` and `/subscribers/{id}/retention`, the copilot key opens `/portfolio/summary`, and either key on the other's endpoint is refused with 403.
+A leaked chatbot key therefore cannot read the portfolio.
+Both keys come from the environment, have no default and no development fallback, must be at least 24 characters and must differ from each other; the service refuses to start otherwise.
+This closes the boundary that decision 20 left open, where local reviewer names were explicitly not an authentication boundary.
+It is transport-level access control between two trusted internal services, not per-user authorization, and it assumes the service is not exposed to the public internet.
+
+`/health` takes no key.
+A liveness probe has no secret to offer, and the response holds only versions, counts and timestamps, never customer data.
+It reports "ok" only when the bundle predicts its stored sample row and there is a portfolio to summarise, because a degraded service that reports "ok" leads the copilot to quote numbers from an export that is not there.
+Loaded and usable are reported separately, following Ali's serving lesson that an artefact which deserialises is not an artefact that predicts.
+
+The chatbot is never told a churn probability, a risk band or a value figure, and the response model forbids any field that is not declared.
+It is also not told the reviewer's name: the chatbot speaks to the customer, and which employee approved a campaign is not the customer's business.
+A rejected proposal, an unreviewed proposal, a subscriber with no proposal and a subscriber with no campaign all return the same 404 with the same message, so nobody can infer that an offer was considered and refused.
+
+Identifiers are pseudonymous by contract, and an ID shaped like a Libyan mobile number is refused with 422 rather than looked up.
+The pattern and a `pseudonymize` helper are ported from `Ali_Branch`'s `src/cvm/ingest/hashing.py` into `src/prepaid_churn/privacy.py` (port log step 9).
+Ali's three corrections to the naive pattern are kept with their reasons, and a test hashes 500 identifiers to show that the service's own digests never trip the check.
+The helper requires a salt of at least 16 characters, because an unsalted digest of a nine-digit number is reversed by hashing every number in the range.
+
+`lyd_at_risk` is the 12-month value weighted by each customer's churn probability, so it is an expected loss under the T10 scenario assumptions rather than the value of everyone in a band.
+Reporting the unweighted sum would inflate the copilot's headline by an order of magnitude, which is the mistake Ali's own cohort endpoint documented.
+When an export carries no risk estimate the figure is null, never zero, and `risk_available` says so.
+The success thresholds and test metrics travel with the summary from the bundle's release gate, so the copilot quotes the frozen T7 evaluation rather than anything recomputed at request time.
+
+Every output is loaded once at startup and held in a frozen state.
+An endpoint that opened a file per request would eventually read a campaign that `churn approve` was halfway through rewriting.
+The cost is that a newly approved campaign is served only after a restart; `/health` reports the campaign fingerprint and load time so an operator can see exactly what is being served.
+
+The service was run against this checkout on 2026-09-21.
+It reports degraded with no bundle, serves all 57 catalogue packages, summarises the 30,000-row tiers-only export with `risk_available` false and every `lyd_at_risk` null, and returns zero approved offers, because no real campaign has been approved.

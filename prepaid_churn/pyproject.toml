@@ -5,6 +5,7 @@ description = "Churn risk model for prepaid telecom subscribers - Team Loop Gain
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi",
     "lightgbm",
     "matplotlib",
     "numpy",
@@ -13,6 +14,7 @@ dependencies = [
     "pyarrow",
     "scikit-learn",
     "scipy",
+    "uvicorn",
 ]
 
 [project.scripts]
@@ -20,6 +22,7 @@ churn = "prepaid_churn.cli:main"
 
 [dependency-groups]
 dev = [
+    "httpx",
     "pytest",
     "ruff",
 ]

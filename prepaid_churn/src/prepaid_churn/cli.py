@@ -239,6 +239,22 @@ def run_approve(args: argparse.Namespace) -> None:
     )
 
 
+def run_serve(args: argparse.Namespace) -> None:
+    import uvicorn
+
+    from prepaid_churn.api import build_app
+    from prepaid_churn.service import ServicePaths
+
+    paths = ServicePaths(
+        bundle_dir=args.bundle,
+        portfolio_path=args.portfolio,
+        campaign_path=args.campaign_dir / "proposals.json",
+    )
+    app = build_app(paths)
+    print(f"Serving {args.host}:{args.port}; the OpenAPI page is at /docs.")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+
+
 def run_output_contract(args: argparse.Namespace) -> None:
     from prepaid_churn.scoring import output_contract_markdown
 
@@ -387,6 +403,21 @@ def build_parser() -> argparse.ArgumentParser:
     output_contract.add_argument("--output", type=Path, default=OUTPUT_CONTRACT_PATH)
     output_contract.set_defaults(handler=run_output_contract)
 
+    serve = commands.add_parser(
+        "serve",
+        help="Serve the released outputs to the chatbot and the copilot (ticket T15).",
+        description=(
+            "Read-only HTTP service. Set PREPAID_CHURN_CHATBOT_KEY and "
+            "PREPAID_CHURN_COPILOT_KEY first; neither has a default."
+        ),
+    )
+    serve.add_argument("--bundle", type=Path, default=BUNDLE_DIR)
+    serve.add_argument("--portfolio", type=Path, default=TIERS_PATH)
+    serve.add_argument("--campaign-dir", type=Path, default=CAMPAIGN_DIR)
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.set_defaults(handler=run_serve)
+
     return parser
 
 
@@ -395,6 +426,7 @@ def main(argv: list[str] | None = None) -> None:
     from prepaid_churn.bundle import BundleError
     from prepaid_churn.retention import RetentionError
     from prepaid_churn.schema import InvalidExportError
+    from prepaid_churn.service import ServiceConfigurationError
     from prepaid_churn.value import ValueModelError
 
     parser = build_parser()
@@ -411,5 +443,6 @@ def main(argv: list[str] | None = None) -> None:
         InvalidCatalogueError,
         ValueModelError,
         RetentionError,
+        ServiceConfigurationError,
     ) as error:
         parser.exit(1, f"error: {error}\n")

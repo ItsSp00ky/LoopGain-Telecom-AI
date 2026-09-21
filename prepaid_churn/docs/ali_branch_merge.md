@@ -29,7 +29,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | `src/prepaid_churn/bundle.py`, `src/prepaid_churn/scoring.py` | T8 | Done |
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | `src/prepaid_churn/value.py`, `src/prepaid_churn/segmentation.py` | T10 | Done (adapted design, training-frozen cutoffs) |
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/almadar/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
-| 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | T15 | T15 | Planned |
+| 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | `src/prepaid_churn/api.py`, `src/prepaid_churn/service.py`, `src/prepaid_churn/privacy.py` | T15 | Done (adapted design, four read-only endpoints and per-consumer keys) |
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Planned |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | T14 | T14 | Planned |
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | T9 | T9 | Planned |
@@ -119,3 +119,18 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Did not port demographic pricing, simulated peak-load evidence, hazard-derived ladders or claims about annual spending without a ledger.
 - The real-export report records unavailable risk and zero proposals because this checkout has no gated real bundle; positive paths are exercised only by hand-made tests.
 - Decision 20 records the assumptions and limitations; T15 still owns authenticated shared access.
+
+### Step 9 - T15 integration service on Ali_Branch (2026-09-21)
+
+- Read `src/cvm/api/main.py`, `deps.py`, `schemas.py`, the health, cohort, offer and subscriber routers, and `src/cvm/ingest/hashing.py` at `06890f6`.
+- Ported the MSISDN pattern and the salted SHA-256 hash into `src/prepaid_churn/privacy.py`, keeping Ali's three corrections and the reasons he recorded for each.
+  His version hashed whole frames and read the salt from a settings object; this one takes the salt as an argument and keeps only the two functions T15 needs.
+- Adapted the shape of his API: response models as the integration contract, `/health` reporting each artefact separately, and the read-only cohort idea behind `/portfolio/summary`.
+- Took his cohort lesson that revenue at risk is value weighted by churn probability, not the value of everyone who matched.
+- Took his serving lesson, already applied in T8, that an artefact which deserialises is not an artefact that predicts, and reported loaded and usable separately.
+- Did not port the feature store, DuckDB, the online/offline store split, the per-request feature read, CORS, the request-id middleware, the latency budget or the `/score`, `/offer`, `/advance` and `/cohort/query` endpoints.
+  Those either belong to models this module does not have, or would give the service a way to compute a decision, which T15 explicitly forbids.
+- Added what `Ali_Branch` did not have: per-consumer API keys enforced per endpoint, a refusal to start without them, the phone-number check on the request path, and an approved-only offer lookup.
+- Ali's API had no authentication and allowed every CORS origin outside production; that part was not carried over.
+- Decision 21 records the new dependencies, the access-control boundary and the reporting rules.
+

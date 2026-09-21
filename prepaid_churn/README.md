@@ -48,6 +48,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
 | `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes `reports/decisions.md`; releases nothing |
 | `uv run churn approve --proposals <file> --reviewer <name>` | T11 | Approves pending proposals and exports approved rows only; `--reject` records rejection |
+| `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |
 
 Full pipeline from a fresh clone, about a minute (the processed data, models and scores are git-ignored and rebuilt):
 
@@ -137,6 +138,37 @@ The committed [retention report](reports/decisions.md) records the 30,000-custom
 Zero proposals in that run are not evidence of campaign effectiveness.
 The full positive-proposal, budget, holdout and approval paths are tested on hand-made data.
 No real-data churn evaluation needs to be repeated for T11.
+
+## Integration service for the chatbot and copilot
+
+The chatbot and the copilot call this service; they never import the package or read its files.
+It is read-only: every route is a GET, and nothing can be created, changed or approved through it.
+An offer appears only after a named reviewer approved it with `churn approve`.
+
+Both API keys are required and have no default, so set them first:
+
+```bash
+export PREPAID_CHURN_CHATBOT_KEY="<a long random string>"
+export PREPAID_CHURN_COPILOT_KEY="<a different long random string>"
+uv run churn serve
+```
+
+On Windows PowerShell, use `$env:PREPAID_CHURN_CHATBOT_KEY = "..."` instead of `export`.
+
+| Endpoint | Key | What it returns |
+|---|---|---|
+| `GET /health` | none | Whether the bundle loads and predicts, and which outputs are being served |
+| `GET /catalogue` | chatbot | Every Almadar package with its collection date |
+| `GET /subscribers/{id}/retention` | chatbot | The approved offer and its reason, or 404; never a churn probability |
+| `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test metrics |
+
+Each key is accepted only on its own endpoints, so a leaked chatbot key cannot read the portfolio.
+Subscriber IDs are pseudonymous: an ID shaped like a Libyan mobile number is refused, and `prepaid_churn.privacy.pseudonymize` is the supported way for an operator to hash numbers before exporting them.
+The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the other teams.
+
+Outputs are read once when the service starts, so restart it after a new `churn approve` release.
+`/health` reports the campaign it is holding, so you can see what is being served.
+Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null, which is the state of this checkout.
 
 ## Development checks
 

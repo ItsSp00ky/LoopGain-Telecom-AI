@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-20 for Ali (T11 retention proposals and named review).
+**Last updated:** 2026-09-21 for Ali (T15 integration service).
 
 **Current review delivery**
 
@@ -31,7 +31,14 @@ Update this section at the end of every working session.
 - The readiness report records 27,582 active rows with unavailable risk, 2,418 silent rows and 2,965 holdout assignments; all proposals and releases remain empty.
 - Positive recommendations, partial/all reviews, rejected-row exclusion, review locking and interrupted-write recovery are covered by hand-made tests.
 - Run `churn decide` with the existing gated bundle for risk-based proposals, or `churn decide --tiers-only` for readiness; choose a new campaign output directory on each run.
-- T10 and T11 are complete; the next product work is T15 authenticated integration service, followed by T20 integration checks.
+- T15 is implemented: a read-only FastAPI service with four endpoints, one API key per consumer and a phone-number check on subscriber IDs.
+- T15 validation: 299 prepaid tests, lint and formatting pass; 52 of those tests are new.
+- `fastapi`, `uvicorn` and `httpx` are the first dependencies added since the module was built; decision 21 records why.
+- Start it with `uv run churn serve` after setting `PREPAID_CHURN_CHATBOT_KEY` and `PREPAID_CHURN_COPILOT_KEY`; neither has a default and the service refuses to start without both.
+- The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the chatbot and copilot owners.
+- Run against this checkout on 2026-09-21: `/health` reports degraded with no bundle, `/catalogue` serves all 57 packages, `/portfolio/summary` summarises 30,000 subscribers with `risk_available` false, and no offer is released because none was approved.
+- Outputs are read once at startup, so restart the service after a new `churn approve` release; `/health` shows which campaign is being served.
+- T10, T11 and T15 are complete; the next product work is T20 integration checks with the chatbot and copilot owners, which needs Taha and the other owners rather than code alone.
 
 The following is the original 2026-09-19 handoff for rebuilding the source branch.
 Its branch instructions are superseded by the current review delivery above.
@@ -89,9 +96,9 @@ Its branch instructions are superseded by the current review delivery above.
 2. T8 model bundle, batch scoring and the output contract (done).
 3. T18 Almadar view of the real customers (done).
 4. T10 value tiers and T11 offers with human approval (done).
-5. T15 integration service, then T20 integration check with the chatbot and copilot.
-   Suggested split, for Taha and Ali to confirm: Ali takes T10 and T11 (his value and offer engine designs), and Taha takes T15 and T20 (the chatbot, copilot and integration are his in the action plan).
-   T15 can start with `/health`, `/catalogue` and `/portfolio/summary` before T11 exists.
+5. T15 integration service (done, Ali), then T20 integration check with the chatbot and copilot.
+   The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
+   T20 still belongs with Taha and the other owners, because its acceptance needs them to confirm the responses give them what they need.
 6. T14 demo app and T9 documentation.
 7. After the MVP works end to end: T17, T19, T12 and T13.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
@@ -581,7 +588,7 @@ Acceptance:
 ## T15 - Integration service for the chatbot and copilot
 
 **Owner:** Ali
-**Status:** In progress
+**Status:** Done
 **Depends on:** T8, T11
 
 Part of the MVP (decision 17): the chatbot and copilot call this service; they never import the package or read its files.
@@ -601,6 +608,22 @@ Scope:
 Acceptance:
 - Tests call every endpoint with FastAPI's test client, including with a wrong key and with a phone-number ID.
 - A test shows the chatbot endpoint never returns a churn probability or an unapproved offer.
+
+Findings (2026-09-21):
+- `service.py` holds the pure read-only state and the four payload builders; `api.py` is the thin FastAPI layer; `privacy.py` is the ported identifier check.
+- Every route is a GET, and a test asserts the generated OpenAPI document contains no other method, so the service has no write path.
+- Approved offers are read from the authoritative `proposals.json` through `released_campaign`, never from the derived `released.csv`, so a hand-edited CSV still cannot publish an offer.
+- One key per consumer in the `X-API-Key` header, compared in constant time; the copilot key is refused on chatbot endpoints and the chatbot key on `/portfolio/summary`.
+- Both keys come from the environment with no default, must be at least 24 characters and must differ; the service refuses to start otherwise (decision 21).
+- `/health` needs no key, reports bundle loaded and smoke prediction separately, and is `ok` only when the bundle predicts and a portfolio exists.
+- The chatbot response model forbids undeclared fields, and omits the churn probability, the risk band, every value figure and the reviewer's name.
+- Rejected, unreviewed, unproposed and unknown subscribers all return the same 404 message, so no one can infer that an offer was considered and refused.
+- An ID shaped like a Libyan mobile number is refused with 422; a salted SHA-256 digest is looked up normally, checked over 500 generated digests.
+- `lyd_at_risk` is value weighted by churn probability, and is null rather than zero when an export carries no risk estimate.
+- 52 new tests; 299 prepaid tests, lint and formatting pass.
+- Run against this checkout on 2026-09-21: degraded with no bundle, all 57 packages served, 30,000 subscribers summarised with `risk_available` false, zero approved offers.
+- Limitations: outputs are loaded once, so a new release is served after a restart; the keys are service-to-service access control, not per-user authorization, and assume the service is not exposed publicly.
+- T20 still owns `docs/integration.md`, the example client and the walkthrough with the chatbot and copilot owners.
 
 ## T16 - Almadar catalogue and market facts
 
