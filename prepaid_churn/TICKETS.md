@@ -580,8 +580,8 @@ Acceptance:
 
 ## T15 - Integration service for the chatbot and copilot
 
-**Owner:**
-**Status:** Todo
+**Owner:** Ali
+**Status:** In progress
 **Depends on:** T8, T11
 
 Part of the MVP (decision 17): the chatbot and copilot call this service; they never import the package or read its files.
