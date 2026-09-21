@@ -676,3 +676,43 @@ What was not added, although the walkthrough asked for it:
   A read-only service should not become the place where campaigns are watched; `churn approve` and the demo app own that.
 
 Each one is written in [integration.md](integration.md) with its reason, so a consumer asks instead of building a workaround.
+
+## 27. Keras on the torch backend, and why SDV stays out of this environment
+
+Date: 2026-09-22.
+
+T12 asks for a Keras LSTM and decision 8 puts the syllabus experiments in a separate `experiments` dependency group, so the module a teammate clones stays small.
+Both still hold, with one change and one exception.
+
+The change: Keras runs on the torch backend instead of TensorFlow.
+T13 needs SDV, SDV needs CTGAN and CTGAN needs torch, so installing TensorFlow as well would put two deep learning runtimes in one repository to run two small experiments.
+Keras 3 is the same Keras either way; the LSTM code does not know which backend is under it.
+
+The exception: SDV is not in the group.
+It caps pandas below 3, and adding it to the lock downgraded pandas from 3.0.5 to 2.3.3 for the whole project, including the default environment.
+That is not a small thing here: the frozen bundle records the library versions it was built with and refuses to load under different ones (T8), so the downgrade broke `churn score`, `churn decide` and the service in one command.
+The module stays on pandas 3, and T13 runs in its own environment (decision 28).
+
+So `uv sync` installs what it always did, `uv sync --group experiments` adds Keras and torch for T12, and neither touches the versions the champion was frozen with.
+A run of the full pipeline after the group was added reproduced bundle `lightgbm-2026-09-19-ef9430fb` and every committed report unchanged.
+
+## 28. The LSTM loses, and that is the T12 result
+
+Date: 2026-09-22.
+
+The benchmark ran once on the frozen test window, calibrated the same way as T7 and scored with the same metrics: PR-AUC 0.2326 against LightGBM's 0.3477 and the logistic regression baseline's 0.2770, capture at 10% of 0.4941 against 0.6152.
+It fails two of the four success thresholds of decision 13 and would not be released.
+
+This is the expected answer and it is worth stating plainly rather than tuning until it looks better.
+A window here is two monthly steps.
+The movement between two points is a subtraction, the T5 features hand that subtraction to LightGBM directly, and the LSTM has to learn it from two steps and about 400 churners in the training split.
+A recurrent layer earns its place when there is a history to remember, and two steps is not a history.
+
+What was deliberately not done: no architecture search, no threshold moved, no second look at the test window.
+The architecture, the epochs and the calibrator were chosen on validation customers, and the frozen champion was not retrained or reconsidered (decision 6).
+Tuning an experiment against the test set until it beats the champion is exactly the mistake the split design exists to prevent, and the grade for this chapter does not depend on the LSTM winning.
+
+`Ali_Branch` reached the same conclusion from the other side: its API once returned an `lstm_churn_probability` beside the main score, and its own integration document records that the field and the benchmark arm were removed because "M1 is a single gradient-boosting model family now".
+Two independent efforts on this data dropped the recurrent model for the same reason.
+
+The honest caveat travels with the result in [../reports/sequence_benchmark.md](../reports/sequence_benchmark.md): with six or twelve months per customer, or with call-detail records instead of monthly totals, the comparison is worth running again.

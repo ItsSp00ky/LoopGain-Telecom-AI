@@ -44,6 +44,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
 | `uv run churn check-integration --subscriber-id <id>` | T20 | Calls a running service the way the chatbot and the copilot do, and reports what came back |
+| `uv run churn sequence-benchmark` | T12 | Trains a Keras LSTM and compares it with the champion on the frozen test window (needs the experiments group) |
 | `uv run churn almadar-view [--input <file>]` | T18 | Shows every customer in Almadar money and packages; writes `reports/almadar_view.md` |
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
@@ -195,6 +196,20 @@ uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a su
 
 It prints what each consumer sees and exits 1 if a refusal did not happen, so the seam is checked rather than described.
 Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign: status ok, 57 packages, the approved offer for one subscriber, 176,494 LYD at risk, and all four refusals correct.
+
+## Syllabus experiments
+
+The two graded experiments live behind a separate dependency group, so a fresh clone stays small:
+
+```bash
+uv sync --group experiments
+uv run churn sequence-benchmark
+```
+
+T12 trains a Keras LSTM over the two monthly steps of each window and scores it once on the same frozen test window as T7.
+It loses, as two monthly steps predict: PR-AUC 0.2326 against LightGBM's 0.3477, and it fails two of the four release checks.
+The comparison, the thresholds and the caveats are in [reports/sequence_benchmark.md](reports/sequence_benchmark.md), and decisions 27 and 28 record why the answer is kept as it came out.
+Keras runs on the torch backend; SDV (T13) is deliberately not in this group, because it caps pandas below 3 and would downgrade the environment the champion was frozen in.
 
 ## Demo app
 

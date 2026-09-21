@@ -274,6 +274,37 @@ def run_serve(args: argparse.Namespace) -> None:
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
+def run_sequence_benchmark(args: argparse.Namespace) -> None:
+    import joblib
+    import pandas as pd
+
+    from prepaid_churn.sequence import MODEL_NAME, benchmark, benchmark_report
+
+    datasets = {}
+    for name in ("train", "validation", "test"):
+        path = args.data_dir / f"{name}.parquet"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} not found. Run `uv run churn build-dataset` first.")
+        datasets[name] = pd.read_parquet(path)
+    model_dir = MODELS_DIR / args.data_dir.name
+    gate_path = model_dir / GATE_FILE
+    if not gate_path.exists():
+        raise FileNotFoundError(f"{gate_path} not found. Run `uv run churn evaluate` first.")
+    gate = json.loads(gate_path.read_text("utf-8"))
+    baseline_path = model_dir / "logistic_regression.joblib"
+    result = benchmark(
+        datasets, gate, joblib.load(baseline_path) if baseline_path.exists() else None, args.seed
+    )
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(benchmark_report(result, gate, datasets), encoding="utf-8")
+    champion = gate.get("champion", "the champion")
+    champion_pr_auc = gate.get("test_metrics", {}).get(champion, {}).get("pr_auc")
+    print(
+        f"{MODEL_NAME} test PR-AUC {result['test_metrics']['pr_auc']:.4f} against {champion} "
+        f"{champion_pr_auc:.4f}; report in {args.report}"
+    )
+
+
 def run_check_integration(args: argparse.Namespace) -> None:
     import os
 
@@ -479,6 +510,20 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=8000)
     serve.set_defaults(handler=run_serve)
 
+    sequence = commands.add_parser(
+        "sequence-benchmark",
+        help="Compare a Keras LSTM with the champion on the frozen test (ticket T12).",
+        description=(
+            "Trains an LSTM over the two monthly steps of each window, calibrates it on "
+            "validation customers and scores the frozen test window once. Needs the "
+            "experiments group: `uv sync --group experiments`."
+        ),
+    )
+    sequence.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
+    sequence.add_argument("--report", type=Path, default=REPORTS_DIR / "sequence_benchmark.md")
+    sequence.add_argument("--seed", type=int, default=42)
+    sequence.set_defaults(handler=run_sequence_benchmark)
+
     check_integration = commands.add_parser(
         "check-integration",
         help="Call a running service the way the chatbot and the copilot do (ticket T20).",
@@ -518,6 +563,7 @@ def main(argv: list[str] | None = None) -> None:
         args.handler(args)
     except (
         FileNotFoundError,
+        ImportError,
         InvalidExportError,
         BundleError,
         InvalidCatalogueError,

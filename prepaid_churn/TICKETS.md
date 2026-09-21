@@ -583,7 +583,7 @@ Findings (2026-09-20):
 ## T12 - Sequence benchmark (syllabus Ch 8, Ch 9 RNN)
 
 **Owner:** Taha + Claude
-**Status:** In progress
+**Status:** Done
 **Depends on:** T7
 
 Scope:
@@ -594,6 +594,17 @@ Scope:
 
 Acceptance:
 - `reports/sequence_benchmark.md` with the comparison table and a written verdict.
+
+Findings (2026-09-22, `reports/sequence_benchmark.md`):
+- `uv run churn sequence-benchmark` trains the LSTM, calibrates it on validation customers and scores the frozen test window once; it takes about 20 seconds on a laptop CPU.
+- The LSTM reads the two monthly steps as a sequence of 53 measures plus tenure, and the T5 features are deliberately withheld from it: they are the movement between the months, which is what the sequence model is supposed to derive.
+- Result: PR-AUC 0.2326 against LightGBM's 0.3477 and logistic regression's 0.2770; capture at 10% 0.4941 against the champion's 0.6152; calibration is fine (0.0016 off).
+  It fails two of the four release checks and would not be released (decision 28).
+- Keras runs on the torch backend rather than TensorFlow, because T13's CTGAN needs torch anyway; `uv sync --group experiments` installs both (decision 27).
+- SDV is deliberately not in that group: it caps pandas below 3 and downgraded the whole project, which broke the frozen bundle's version check.
+- The run reproduces: seeded through `keras.utils.set_random_seed`, and two runs wrote a byte-identical report on this machine.
+- 6 new tests, one of which is skipped when the experiments group is not installed; 396 prepaid tests pass.
+  The Keras and torch deprecation warnings in the test output come from those libraries, not from this module.
 
 ## T13 - Synthetic data experiment (syllabus Ch 9 GAN)
 
