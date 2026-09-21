@@ -274,6 +274,35 @@ def run_serve(args: argparse.Namespace) -> None:
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
+def run_check_integration(args: argparse.Namespace) -> None:
+    import os
+
+    from prepaid_churn.api import CHATBOT_KEY_VARIABLE, COPILOT_KEY_VARIABLE
+    from prepaid_churn.client import check
+    from prepaid_churn.service import ServiceConfigurationError
+
+    keys = {name: os.environ.get(name, "") for name in (CHATBOT_KEY_VARIABLE, COPILOT_KEY_VARIABLE)}
+    missing = [name for name, key in keys.items() if not key]
+    if missing:
+        raise ServiceConfigurationError(
+            f"Set {' and '.join(missing)} to the keys the service was started with. "
+            "The check calls each endpoint with both keys, so it needs both."
+        )
+    result = check(
+        args.url,
+        keys[CHATBOT_KEY_VARIABLE],
+        keys[COPILOT_KEY_VARIABLE],
+        args.subscriber_id,
+    )
+    print(result.text)
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(result.text + "\n", encoding="utf-8")
+        print(f"Written to {args.output}")
+    if result.failures:
+        raise SystemExit(1)
+
+
 def run_output_contract(args: argparse.Namespace) -> None:
     from prepaid_churn.scoring import output_contract_markdown
 
@@ -450,12 +479,31 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=8000)
     serve.set_defaults(handler=run_serve)
 
+    check_integration = commands.add_parser(
+        "check-integration",
+        help="Call a running service the way the chatbot and the copilot do (ticket T20).",
+        description=(
+            "Runs the example client of `client.py` against a running service, including "
+            "the refusals every consumer has to handle, and prints what came back. Set "
+            "the same two keys the service was started with."
+        ),
+    )
+    check_integration.add_argument("--url", default="http://127.0.0.1:8000")
+    check_integration.add_argument(
+        "--subscriber-id",
+        required=True,
+        help="A subscriber to look up; one with no approved offer shows the 404 path.",
+    )
+    check_integration.add_argument("--output", type=Path, default=None)
+    check_integration.set_defaults(handler=run_check_integration)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     from prepaid_churn.almadar import InvalidCatalogueError
     from prepaid_churn.bundle import BundleError
+    from prepaid_churn.client import ServiceError
     from prepaid_churn.retention import RetentionError
     from prepaid_churn.schema import InvalidExportError
     from prepaid_churn.service import ServiceConfigurationError
@@ -476,5 +524,6 @@ def main(argv: list[str] | None = None) -> None:
         ValueModelError,
         RetentionError,
         ServiceConfigurationError,
+        ServiceError,
     ) as error:
         parser.exit(1, f"error: {error}\n")

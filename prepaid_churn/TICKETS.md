@@ -9,11 +9,45 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-21 for Ali (T15 service, T14 demo app, T9 documentation, T19 emergency credit).
+**Last updated:** 2026-09-21 by Taha + Claude (Ali's branch taken into `tahaDev`, T20 delivered).
 
-**Current review delivery**
+**Where the module is now**
 
-- Work on `Ali_Branch` for this delivery; do not commit or push to `tahaDev` (decision 18).
+- **One branch.** Ali built his delivery on top of `tahaDev` `bfb28ab`, so `tahaDev` was fast-forwarded to `Ali_Branch` `ae38840` instead of porting 9,000 lines by hand (decision 24).
+  Both of us work on `tahaDev` from here; `Ali_Branch` stays as the record and is not worked on.
+- **Ali's delivery was checked here before it was taken**: 379 tests, lint and formatting green, and a full rebuild that reproduced bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef` with no committed report changed.
+  His review of our files (identifiers read as text, stricter export and bundle checks, one calibration prediction instead of three) moves no model, feature or threshold, which that rebuild proves.
+- **The MVP is complete end to end**: T16, T8, T18, T10, T11, T15, T14, T9, T19 and now T20.
+- **T20 is delivered except for the part that needs people.**
+  [docs/integration.md](docs/integration.md) is the guide for the chatbot, copilot, network ML and antenna owners; `src/prepaid_churn/client.py` is the example client they copy; `churn check-integration` runs it against a live service and checks the four refusals.
+  Its acceptance needs those owners to say the responses give them what they need, so the ticket stays open until they do.
+- **Validation of T20 here**: 388 prepaid tests, lint and formatting pass; 9 of those tests are new, and no dependency was added.
+  The check was run against a real service on 2026-09-21 holding the 30,000-subscriber base, a campaign with two approved offers and one rejected: status ok, 57 packages, the approved offer returned, 176,494 LYD at risk, and all four refusals correct.
+- **What is left:** the owners' confirmation for T20, then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
+
+**For Ali: what changed on our side**
+
+1. Your branch is now our branch.
+   Taha reviewed your thirteen commits, checked them on his machine, and fast-forwarded `tahaDev` to `ae38840`; decision 24 says why that replaces the hand-porting rule of decision 15.
+   Work on `tahaDev` from now on: `git pull --rebase` before you start, claim a ticket by writing your name in its Owner field, push when it is done.
+   Nothing of yours was dropped, rewritten or renamed.
+2. We took T20, the last MVP item, because the action plan gives Taha the chatbot, the copilot and the integration.
+   New files: `docs/integration.md`, `src/prepaid_churn/client.py`, `tests/test_client.py`, and the `churn check-integration` command.
+   Your `docs/INTEGRATION.md` at `06890f6` is where the shape came from, and your six grounding rules are kept nearly word for word; step 14 of [docs/ali_branch_merge.md](docs/ali_branch_merge.md) lists what was adapted and what was not.
+3. Two things we found while using your work, neither of them a bug in it:
+   - `churn decide` overwrites the committed `reports/decisions.md`, so running the documented command dirties a tracked file that records your readiness run.
+     We restored it with `git checkout` rather than committing the new one.
+     Worth a `--report` flag or a campaign-local path.
+   - `test_api.py` and `test_demo.py` each build their own copy of the same four subscribers, and `tests/test_client.py` now makes three.
+     If you touch those fixtures, moving them into `conftest.py` would be a good small cleanup; we left them alone rather than editing your tests.
+4. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
+5. Your Claude can start from this, in the repo:
+
+   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and added T20. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 and 25 in `prepaid_churn/docs/decisions.md`, and steps 13 and 14 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
+
+**Ali's delivery log (2026-09-20 and 2026-09-21)**
+
+- Delivered on `Ali_Branch` under decision 18; that delivery is finished and decision 24 supersedes its branch instruction.
 - T21 fixes export validation, identifier preservation, bundle consistency and repeated inference.
 - T21 validation: 170 prepaid tests and 21 geospatial tests passed.
 - T10 adds frozen value tiers, an explicit 12-month revenue scenario, and a training-only clustering comparison.
@@ -61,36 +95,7 @@ Update this section at the end of every working session.
 - T20 is the last MVP item and needs Taha and the chatbot and copilot owners rather than code alone.
 - **T12 and T13 are graded:** decision 8 says SIC grades syllabus coverage, and Ch 8, Ch 9 RNN (T12) and Ch 9 GAN (T13) are the two chapters still uncovered. T17 covers no chapter.
 
-The following is the original 2026-09-19 handoff for rebuilding the source branch.
-Its branch instructions are superseded by the current review delivery above.
-
-**For Ali: how to continue from here**
-
-1. Work on `tahaDev`, not on `Ali_Branch` (which stays untouched as the record of your work, decision 15).
-   A fresh clone is simplest: `git clone -b tahaDev https://github.com/ItsSp00ky/LoopGain-Telecom-AI.git`.
-   Never pull or merge `main` into it.
-2. Install [uv](https://docs.astral.sh/uv/); no conda is needed.
-   Python 3.12 is pinned in `.python-version`, and `uv sync` installs it.
-3. From `prepaid_churn/`, rebuild the git-ignored data, models and scores (about a minute):
-
-   ```bash
-   uv sync
-   uv run churn build-dataset
-   uv run churn train
-   uv run churn evaluate --chosen-at 2026-09-19
-   uv run churn bundle
-   uv run churn score
-   uv run churn almadar-view
-   ```
-
-   It was checked on a fresh clone on 2026-09-19: the bundle must be `lightgbm-2026-09-19-ef9430fb`, and `git status` must show no changed report.
-   `--chosen-at 2026-09-19` keeps the freeze date; this rebuild reproduces the frozen choices and changes no model, feature or threshold.
-4. Start your Claude session in the repo with this message:
-
-   > I am Ali, Taha's teammate on the customer module. We now work together on branch `tahaDev` in `prepaid_churn/`. Read `prepaid_churn/CLAUDE.md`, then the Handoff section of `prepaid_churn/TICKETS.md`, then decisions 15 to 17 in `prepaid_churn/docs/decisions.md` and `prepaid_churn/docs/ali_branch_merge.md`, which explain how my `Ali_Branch` work was combined. Rebuild the artifacts with the commands in the Handoff and check the bundle version. Then tell me which ticket is next and wait for my go before writing code.
-
-5. Two people on one branch: run `git pull --rebase` before you start, claim a ticket by writing your name in its **Owner** field and pushing that change first, keep commits small, push when a ticket is done, and update this Handoff at the end of each session.
-6. Please answer the open questions below that name you.
+The rebuild commands and the fresh-clone check that used to sit here are in [README.md](README.md); the branch instructions above replace the 2026-09-19 ones.
 
 **Status**
 - T0 to T7 are done: the churn model is trained, calibrated and evaluated once on the test month (`reports/evaluation_all.md`).
@@ -107,29 +112,37 @@ Its branch instructions are superseded by the current review delivery above.
 - T16 is done: `data/almadar/` holds all 57 Almadar packages and the market facts, each with a status (`docs/almadar.md`).
 - T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
-- A fresh clone of `tahaDev` rebuilds everything and reproduces the champion byte for byte (checked on 2026-09-19).
+- A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
+- T20 is done apart from its acceptance: the guide, the example client and `churn check-integration` exist and were run against a live service; the chatbot and copilot owners have not confirmed yet.
+- `tahaDev` now also carries Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`; they are Ali's work, and the team has to see them before anything reaches `main`.
 
 **Blocked on**
-- Nothing.
+- T20's acceptance: the chatbot and copilot owners have to read [docs/integration.md](docs/integration.md), call the service with `churn check-integration`, and say in the T20 Findings whether the responses give them what they need.
+  Nothing else waits on it; the code is written and tested.
 
 **Next steps, in order (the MVP path from decision 17)**
 1. T16 Almadar catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract (done).
 3. T18 Almadar view of the real customers (done).
 4. T10 value tiers and T11 offers with human approval (done).
-5. T15 integration service (done, Ali), then T20 integration check with the chatbot and copilot.
+5. T15 integration service (done, Ali), then T20 integration check (done here, Taha + Claude, apart from the owners' confirmation).
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
-   T20 still belongs with Taha and the other owners, because its acceptance needs them to confirm the responses give them what they need.
 6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
-7. After the MVP works end to end: T19 (done, Ali), then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
+7. The MVP now works end to end: T19 (done, Ali), then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
+   T12 and T13 are the next work worth doing, and they are graded; whoever picks one writes their name in its Owner field first.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
-- **Ali's agreement:** Ali should read decisions 15 to 17 and `docs/ali_branch_merge.md`, and say if he disagrees with anything taken or left out.
+- **Ali's agreement:** answered in practice on 2026-09-20, when Ali adopted this tree as his baseline and built on it (decision 18).
+  He should still say whether he disagrees with anything decisions 15 to 17 took or left out, and now also with decisions 24 and 25.
 - **Folder name:** the module now covers more than churn; rename `prepaid_churn/` (for example to `cvm/`, like Ali's package) once Ali agrees.
 - **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
 - **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) from his catalogue without a recorded reason; ask whether they are still sold (`docs/almadar.md`).
 - **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
+- **`churn decide` overwrites a committed report:** it rewrites `reports/decisions.md`, so running the documented command leaves a tracked file dirty.
+  Ali's call: a `--report` path, or write it beside the campaign.
+- **The two graded experiments:** T12 (sequence benchmark) and T13 (synthetic data) are the last syllabus chapters uncovered, and nobody owns either.
+  Taha and Ali should split them.
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
   We use the upGrad prepaid data instead (decisions 1 and 5), because the IBM data is fictional and postpaid.
   Taha should tell the team leader so the action plan matches the work.
@@ -787,8 +800,8 @@ Findings (2026-09-21):
 
 ## T20 - Integration check with the team platform
 
-**Owner:**
-**Status:** Todo
+**Owner:** Taha + Claude
+**Status:** In review (the guide, the client and the check are done; the owners have not confirmed)
 **Depends on:** T15
 
 Why: the final goal is one platform (decision 17), and `Ali_Branch` noted that nobody had ever called its API from the other side.
@@ -806,6 +819,19 @@ Scope:
 Acceptance:
 - The example client works against a running service, following the README.
 - The chatbot and copilot owners confirm in this ticket's Findings that the responses give them what they need.
+
+Findings (2026-09-21):
+- [docs/integration.md](docs/integration.md) is written for four owners at once: it says why the seam is HTTP rather than an import, how to start the service, what each endpoint answers with real captured responses, the six grounding rules for components that use a language model, which files a retriever may index and which it may never touch, and what this module would need from network ML.
+- Every example in it was captured from a running service, not written by hand; the guide is checked against the live OpenAPI document by a test, so a route or a key it misses fails the suite.
+- `src/prepaid_churn/client.py` is the example, written to be copied rather than imported: standard library only, keys and base URL as arguments, no dependency added on either side (decision 25).
+- `churn check-integration --url <url> --subscriber-id <id>` runs it and prints what each consumer sees, including the four refusals: the copilot's endpoint with the chatbot key (403), a chatbot endpoint with the copilot key (403), no key at all (401) and an ID shaped like a Libyan phone number (422).
+  It exits 1 when a refusal did not happen.
+- Run on 2026-09-21 against a service holding the 30,000-subscriber base, the gated bundle and a campaign with two approved offers and one rejected: status ok, 57 packages, `SABAH_1` returned for subscriber 70008 with its Arabic reason, 176,494 LYD at risk across the bands, 4 of 4 success thresholds passed, and every refusal correct.
+- The contract test starts the real app on a real port and calls it over a socket, rather than in process as `test_api.py` does, because the seam is the thing this ticket proves.
+- 9 new tests; 388 prepaid tests, lint and formatting pass.
+- The network ML contract is keyed by the pseudonymous subscriber ID rather than by `cell_id` as `Ali_Branch` had it, because this module never sees a cell; it also states that adding any such field means a new frozen champion, so it is a version 2 change.
+- For the antenna and cell placement owners the honest answer is that we have nothing per cell to give; the guide says so rather than implying a join that nobody can make.
+- **Still open:** the walkthrough itself. Taha owns the chatbot and the copilot in the action plan, and the acceptance needs him and the other owners to call the service and answer in this section.
 
 ## T21 - Code and logic review
 

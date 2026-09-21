@@ -43,6 +43,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn bundle` | T8 | Packages a champion that passed its release gate into `artifacts/bundle/` |
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
+| `uv run churn check-integration --subscriber-id <id>` | T20 | Calls a running service the way the chatbot and the copilot do, and reports what came back |
 | `uv run churn almadar-view [--input <file>]` | T18 | Shows every customer in Almadar money and packages; writes `reports/almadar_view.md` |
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
@@ -178,6 +179,21 @@ The OpenAPI page at `/docs` is generated from the response models, so it is the 
 Outputs are read once when the service starts, so restart it after a new `churn approve` release.
 `/health` reports the campaign it is holding, so you can see what is being served.
 Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null, which is the state of this checkout.
+
+## Integration guide for the other components
+
+[docs/integration.md](docs/integration.md) is the guide for the chatbot, copilot, network ML and antenna owners.
+It has the endpoints with real responses, the grounding rules for the components that use a language model, which documents the copilot may index, and the field contract for the per-subscriber network quality this module would need from network ML.
+
+`src/prepaid_churn/client.py` is the worked example, written to be copied into their repositories: it uses only the standard library, so it adds no dependency on either side.
+With a service running, the check calls every endpoint and every refusal a consumer has to handle:
+
+```bash
+uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a subscriber>
+```
+
+It prints what each consumer sees and exits 1 if a refusal did not happen, so the seam is checked rather than described.
+Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign: status ok, 57 packages, the approved offer for one subscriber, 176,494 LYD at risk, and all four refusals correct.
 
 ## Demo app
 

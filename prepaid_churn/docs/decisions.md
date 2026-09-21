@@ -594,3 +594,51 @@ This base tops up often and in very small amounts: the median typical top-up is 
 The smallest advance needs a top-up of at least 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing at all.
 The flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, although the operator offers it to anyone whose balance is low enough.
 Those shares are computed on real upGrad behaviour from another market and are not a claim about Libyan customers.
+
+## 24. One branch again: `tahaDev` carries both efforts
+
+Date: 2026-09-21.
+
+Decision 15 said Ali's work would be ported by hand and never merged with git.
+The reason was that `Ali_Branch` was an orphan: no commit in common with this branch, a different project in its tree, and root-level files that a merge would have dropped into this repository.
+That reason ended on 2026-09-20, when Ali adopted `tahaDev` `bfb28ab` as his tree (decision 18) and built his review, T10, T11, T15, T14, T9 and T19 on top of it.
+`Ali_Branch` is now thirteen commits ahead of `tahaDev` and shares its whole history, so the two branches can be joined by a fast-forward, with no merge commit and no conflict to resolve.
+
+Checked before taking it, on Taha's machine:
+
+- The tree of Ali's baseline commit `22aefc8` is identical to `bfb28ab`, byte for byte (`git diff` is empty, same tree hash `a428bfe3`), so nothing of ours was silently replaced.
+- 379 tests, `ruff check` and `ruff format --check` pass.
+- The full pipeline rebuilds from the committed data in about a minute and reproduces the frozen champion: bundle `lightgbm-2026-09-19-ef9430fb`, tiers `tiers-v1-cd15525cb3ef`, and `git status` clean afterwards, so no committed report moved.
+
+So `tahaDev` was fast-forwarded to `Ali_Branch` instead of re-typing 9,000 verified lines by hand.
+Hand-porting still governs anything from Ali's original CVM tree at `06890f6` and earlier, which remains unrelated history; the port table in [ali_branch_merge.md](ali_branch_merge.md) is still the record for that.
+
+From here there is one branch.
+Both of us work on `tahaDev`, claim a ticket by writing a name in its Owner field, and pull before starting.
+`Ali_Branch` stays where it is as the record of how the two efforts met; it is not deleted and not worked on.
+Decision 18's instruction to deliver on `Ali_Branch` ended with that delivery.
+
+One consequence Taha has to know about: Ali's review also fixed Ahmed's `antenna_cell_placement/` module and added `CODE_REVIEW.md` at the repository root, so those changes are now on `tahaDev` too.
+They are Ali's work, reviewed by nobody in this module, and they belong to Ahmed's module.
+Nothing goes to `main` without the team agreeing, and those files are the first thing to raise when it does.
+
+## 25. The example client is copied, not imported, and needs nothing installed
+
+Date: 2026-09-21.
+
+T20 asks for an example client, and the obvious thing would be a small package the chatbot and the copilot import.
+That would rebuild the coupling the service exists to prevent (decision 21): a consumer that imports our code is pinned to our Python version, our dependencies and our release day, and can reach past the endpoints into the functions behind them.
+
+`src/prepaid_churn/client.py` is therefore written to be copied into the consumer's own repository.
+It uses only the standard library, so it adds no dependency here and none there, and it takes the base URL and the keys as arguments rather than reading our configuration.
+`httpx` stays a test-only dependency.
+
+It duplicates exactly one thing from the service, the `X-API-Key` header name, because a copy living in another repository has nothing to import.
+`tests/test_client.py` compares the two constants, so the duplication cannot drift silently.
+
+`churn check-integration` runs that client against a running service and prints what every consumer sees, including the four refusals: the wrong key on each side, no key at all, and an ID shaped like a Libyan phone number.
+It exits 1 when a refusal did not happen, so the seam is checked by a command rather than by reading a document and trusting it.
+The contract test starts the real app on a real port and runs the same client against it, rather than calling the app in process as `test_api.py` does, because the thing T20 is meant to prove is the seam and not the app.
+
+What the example deliberately does not do: no retry, no backoff, no connection pooling, no caching and no authentication flow.
+Each consumer's own framework has those, and an offer must not be cached anyway (decision 14 and the grounding rules in [integration.md](integration.md)).

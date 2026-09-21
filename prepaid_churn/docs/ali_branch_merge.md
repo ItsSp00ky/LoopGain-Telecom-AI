@@ -13,7 +13,9 @@ Add a dated entry to the step log for every step, and keep the port table curren
 
 ## Rules for porting
 
-- Port by hand, never with `git merge` (the branch has unrelated history and root-level files).
+- Port by hand from Ali's original tree at `06890f6` and earlier, never with `git merge`: that history is unrelated to this branch and carries root-level files.
+- This no longer applies to `Ali_Branch` after 2026-09-20.
+  Ali adopted this tree as his baseline (decision 18), so his later commits are ordinary commits on this history and were taken by fast-forward (decision 24).
 - Every port names its source path in the table below and in the commit message.
 - Commits that port Ali's work credit him with `Co-authored-by: ali-margem <ali.m.margem@gmail.com>`.
 - Ported code follows this module's rules (CLAUDE.md): pure functions, thin CLI, small hand-made test frames, real data only.
@@ -30,7 +32,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | `src/prepaid_churn/value.py`, `src/prepaid_churn/segmentation.py` | T10 | Done (adapted design, training-frozen cutoffs) |
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/almadar/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | `src/prepaid_churn/api.py`, `src/prepaid_churn/service.py`, `src/prepaid_churn/privacy.py` | T15 | Done (adapted design, four read-only endpoints and per-consumer keys) |
-| 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Planned |
+| 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Done (adapted to the four endpoints; his six grounding rules kept) |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | `docs/model_card.md` | T9 | Done (adapted structure, filled from the committed reports) |
 | 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | T17 | T17 | Planned |
@@ -173,3 +175,25 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Did not carry over any number he measured on his generated population.
 - Decision 23 records the rule, the adaptation, the sensitivity and what was deliberately left out.
 
+### Step 13 - Taking Ali's branch into `tahaDev` (2026-09-21, Taha + Claude)
+
+- Fetched `Ali_Branch` only; `main` was not fetched.
+  It had moved from `06890f6` to `ae38840`, thirteen commits, 65 files and about 9,000 added lines.
+- Read every commit before touching anything: the baseline swap, the T21 review, T10, T11, T15, T14, T9 and T19.
+- Confirmed the branches can be joined honestly: `22aefc8`, Ali's baseline, has exactly the tree of `bfb28ab`, and `bfb28ab` is an ancestor of `ae38840`.
+- Verified his delivery here before taking it: 379 tests, lint and format green, and a full rebuild that reproduced bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef` with no committed report changed.
+- Fast-forwarded `tahaDev` to `ae38840`; decision 24 records why this replaces hand-porting for his later work.
+- Checked what his review changed in our files: identifiers read as text, stricter export and bundle checks, one calibration prediction reused instead of three, and the Almadar market values validated.
+  None of it moves a model, a feature or a threshold, which the byte-identical rebuild confirms.
+- Noted for Taha: the fast-forward also brings Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`.
+
+### Step 14 - T20 integration guide, example client and check (2026-09-21, Taha + Claude)
+
+- Read `docs/INTEGRATION.md` at `06890f6` and kept its shape: why a service and not an import, health before the first call, the endpoint table, two rules for every call, a worked example per consumer, the grounding rules, what the copilot may index, and what this module needs from network ML.
+- Kept all six of Ali's grounding rules almost unchanged, because they were the strongest thing in his document and they answer the instructor's question about why no language model decides anything.
+- Rewrote every example against the four endpoints this module actually serves, with real responses captured from a running service rather than invented ones.
+- Adapted his network ML field contract: his was keyed by `cell_id` for a model that had cell features, and ours is keyed by the pseudonymous subscriber ID, because this module never sees a cell and the subscriber-to-cell mapping is the operator's.
+  Stated plainly that adding any such field means a new frozen champion, so it is a version 2 change.
+- Added what his document did not have: which files a retriever may index and which it may never touch, and a command that checks the seam instead of a document that describes it.
+- Did not port `docs/integration/copilot_starter/`: it is scaffolding for the copilot itself, which is a different component and Taha's in the action plan.
+- Decision 25 records why the example client is copied rather than imported and uses no dependency.
