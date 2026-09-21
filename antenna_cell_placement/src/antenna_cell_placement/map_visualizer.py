@@ -1,28 +1,26 @@
-"""
-Interactive Leaflet/Folium geospatial visualization for Libyan cell sites and AI placement recommendations.
-"""
+"""Interactive review map for source sites and proposed placements."""
 
-from pathlib import Path
 from html import escape
+from pathlib import Path
+
 import folium
-from folium.plugins import MarkerCluster, FeatureGroupSubGroup
-import pandas as pd
+from folium.plugins import MarkerCluster
 import geopandas as gpd
+import h3
+import pandas as pd
 
 from antenna_cell_placement.config import (
-    CLEANED_PHYSICAL_SITES_CSV,
-    RECOMMENDATIONS_CSV,
-    CLEANED_MAP_HTML,
-    REPORTS_DIR,
     ADMIN1_GEOJSON_PATH,
-    ROADS_SHP_PATH,
-    POP_PLACES_GEOJSON_PATH,
     CRS_PROJECTED_LIBYA,
+    POP_PLACES_GEOJSON_PATH,
+    RECOMMENDATIONS_CSV,
+    RECOMMENDATIONS_MAP_HTML,
+    ROADS_SHP_PATH,
 )
 
 
-def add_local_basemap(m: folium.Map):
-    """Embed geographic context without requests to a public tile server."""
+def add_local_basemap(map_: folium.Map) -> None:
+    """Embed geographic context without a public tile-server dependency."""
     boundaries = gpd.read_file(ADMIN1_GEOJSON_PATH)[["adm1_name", "geometry"]]
     boundaries = boundaries.to_crs(CRS_PROJECTED_LIBYA)
     boundaries.geometry = boundaries.geometry.simplify(150, preserve_topology=True)
@@ -30,12 +28,14 @@ def add_local_basemap(m: folium.Map):
     folium.GeoJson(
         boundaries.to_crs("EPSG:4326").to_json(),
         style_function=lambda _: {
-            "color": "#94a3b8", "weight": 1.5,
-            "fillColor": "#f5f1e7", "fillOpacity": 1,
+            "color": "#94a3b8",
+            "weight": 1.5,
+            "fillColor": "#f5f1e7",
+            "fillOpacity": 1,
         },
         interactive=False,
     ).add_to(base)
-    base.add_to(m)
+    base.add_to(map_)
 
     roads = gpd.read_file(ROADS_SHP_PATH)[["geometry"]].to_crs(CRS_PROJECTED_LIBYA)
     roads.geometry = roads.geometry.simplify(100, preserve_topology=True)
@@ -45,221 +45,210 @@ def add_local_basemap(m: folium.Map):
         style_function=lambda _: {"color": "#c49553", "weight": 1.2, "opacity": 0.7},
         interactive=False,
     ).add_to(road_layer)
-    road_layer.add_to(m)
+    road_layer.add_to(map_)
 
-    places = gpd.read_file(POP_PLACES_GEOJSON_PATH).to_crs("EPSG:4326")
     settlements = folium.FeatureGroup(name="Settlement labels (embedded)")
-    for _, place in places.iterrows():
+    for _, place in gpd.read_file(POP_PLACES_GEOJSON_PATH).to_crs("EPSG:4326").iterrows():
         name = escape(str(place["featurename_en"]))
         folium.Marker(
             [place.geometry.y, place.geometry.x],
             icon=folium.DivIcon(
                 html=f'<span class="settlement-label">{name}</span>',
-                icon_size=(150, 16), icon_anchor=(-5, 8),
+                icon_size=(150, 16),
+                icon_anchor=(-5, 8),
             ),
         ).add_to(settlements)
-    settlements.add_to(m)
-    m.get_root().header.add_child(folium.Element('''<style>
-        .leaflet-container { background: #dcecf2 !important; }
-        .settlement-label { font: 11px Arial, sans-serif; color: #334155;
-            white-space: nowrap; text-shadow: 1px 1px white, -1px -1px white,
-            1px -1px white, -1px 1px white; }
-    </style>'''))
-    m.get_root().html.add_child(folium.Element('''
-        <div style="position:fixed;bottom:5px;left:10px;z-index:9999;
-                    background:white;padding:4px;font:11px Arial,sans-serif">
-        Embedded basemap: UN OCHA boundaries, roads and settlements.
-        No map tile service required.</div>'''))
+    settlements.add_to(map_)
+    map_.get_root().header.add_child(
+        folium.Element(
+            """<style>
+            .leaflet-container { background: #dcecf2 !important; }
+            .settlement-label { font: 11px Arial, sans-serif; color: #334155;
+                white-space: nowrap; text-shadow: 1px 1px white, -1px -1px white,
+                1px -1px white, -1px 1px white; }
+            </style>"""
+        )
+    )
 
 
 def generate_interactive_map(
-    sites_csv: Path = CLEANED_PHYSICAL_SITES_CSV,
     recommendations_csv: Path = RECOMMENDATIONS_CSV,
-    output_html: Path = CLEANED_MAP_HTML,
-    report_html: Path = REPORTS_DIR / "libya_cell_coverage_map.html"
+    output_html: Path = RECOMMENDATIONS_MAP_HTML,
 ) -> Path:
-    """
-    Generates high-performance interactive Leaflet HTML maps displaying:
-    - Cleaned existing physical cell sites (color-coded by technology and operator)
-    - AI-recommended new cell site placements with popup intelligence
-    """
-    print("Loading cleaned physical sites and AI recommendations...")
-    df_sites = pd.read_csv(sites_csv)
-    df_recs = pd.read_csv(recommendations_csv) if recommendations_csv.exists() else None
+    """Generate one map containing source evidence and proposed placements."""
+    from antenna_cell_placement.data_cleaning import clean_pipeline
 
-    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
-    from antenna_cell_placement.opencellid import load_cells, annotate_candidates
-    cells = None
-    if OPENCELLID_RAW_PATH.exists():
-        cells, _, _ = load_cells(OPENCELLID_RAW_PATH)
-        if df_recs is not None:
-            df_recs = annotate_candidates(df_recs, cells)
-
-    # Center map on Libya
-    center_lat = 30.5
-    center_lon = 17.5
-    m = folium.Map(
-        location=[center_lat, center_lon],
-        zoom_start=6,
-        tiles=None,
-        control_scale=True
+    _, sites = clean_pipeline()
+    recommendations = (
+        pd.read_csv(recommendations_csv) if recommendations_csv.exists() else pd.DataFrame()
     )
-    add_local_basemap(m)
 
-    # 1. Feature Groups for Existing Sites
-    fg_lte = folium.FeatureGroup(name="4G LTE Sites (Existing)")
-    fg_multitech = folium.FeatureGroup(name="Multi-Technology Co-sited (Existing)")
-    fg_umts = folium.FeatureGroup(name="3G UMTS / HSPA+ (Existing)")
-    fg_gsm = folium.FeatureGroup(name="2G GSM / EDGE (Existing)")
+    map_ = folium.Map(location=[30.5, 17.5], zoom_start=6, tiles=None, control_scale=True)
+    add_local_basemap(map_)
+    _add_source_sites(map_, sites)
+    _add_opencellid(map_)
+    _add_building_h3_context(map_, recommendations)
+    _add_proposed_placements(map_, recommendations)
+    folium.LayerControl(collapsed=False).add_to(map_)
+    output_html.parent.mkdir(parents=True, exist_ok=True)
+    map_.save(output_html)
+    print(f"Saved placement-review map to: {output_html}")
+    return output_html
 
-    for _, row in df_sites.iterrows():
-        lat = row["canonical_latitude"]
-        lon = row["canonical_longitude"]
-        techs = str(row["technologies"])
-        ops = str(row["operators"])
-        bw = row.get("total_bandwidth_mhz", 0.0)
-        pop_1k = row.get("population_density_1km", 0.0)
-        elev = row.get("elevation_m", 0.0)
 
-        # Style by technology
-        if row.get("is_multi_tech", 0) == 1:
-            color = "#2563eb"  # Blue
-            target_fg = fg_multitech
-            icon_name = "tower-broadcast"
-        elif "LTE" in techs:
-            color = "#16a34a"  # Green
-            target_fg = fg_lte
-            icon_name = "signal"
-        elif "UMTS" in techs:
-            color = "#9333ea"  # Purple
-            target_fg = fg_umts
-            icon_name = "wifi"
-        else:
-            color = "#f59e0b"  # Amber
-            target_fg = fg_gsm
-            icon_name = "broadcast-tower"
-
-        popup_html = f"""
-        <div style="font-family: Arial, sans-serif; min-width: 200px;">
-            <h4 style="margin: 0 0 6px; color: #1e293b;">Physical Site #{row['physical_site_id']}</h4>
-            <p style="margin: 2px 0;"><b>Technologies:</b> {techs}</p>
-            <p style="margin: 2px 0;"><b>Operators:</b> {ops}</p>
-            <p style="margin: 2px 0;"><b>Total Bandwidth:</b> {bw} MHz</p>
-            <p style="margin: 2px 0;"><b>Antennas:</b> {row['radio_tower_count']}</p>
-            <p style="margin: 2px 0;"><b>Coordinates:</b> {lat:.4f}, {lon:.4f}</p>
-        </div>
-        """
-
+def _add_source_sites(map_: folium.Map, sites: pd.DataFrame) -> None:
+    layers = {
+        "multi": folium.FeatureGroup(name="Multi-technology source sites"),
+        "LTE": folium.FeatureGroup(name="4G LTE source sites"),
+        "UMTS": folium.FeatureGroup(name="3G UMTS source sites"),
+        "GSM": folium.FeatureGroup(name="2G GSM source sites"),
+    }
+    colors = {"multi": "#2563eb", "LTE": "#16a34a", "UMTS": "#9333ea", "GSM": "#f59e0b"}
+    for _, site in sites.iterrows():
+        technologies = str(site["technologies"])
+        category = "multi" if site["is_multi_tech"] else next(
+            (rat for rat in ["LTE", "UMTS", "GSM"] if rat in technologies), "GSM"
+        )
+        bandwidth = (
+            f"{site['total_bandwidth_mhz']} MHz"
+            if pd.notna(site["total_bandwidth_mhz"])
+            else "Not supplied"
+        )
+        popup = (
+            f"<b>Source-derived physical site #{site['physical_site_id']}</b><br>"
+            f"Technologies: {escape(technologies)}<br>"
+            f"Operators: {escape(str(site['operators']))}<br>"
+            f"Observed bandwidth: {bandwidth}"
+        )
         folium.CircleMarker(
-            location=[lat, lon],
+            [site["canonical_latitude"], site["canonical_longitude"]],
             radius=4.5,
+            color=colors[category],
+            fill=True,
+            fill_opacity=0.75,
+            popup=folium.Popup(popup, max_width=300),
+        ).add_to(layers[category])
+    for layer in layers.values():
+        layer.add_to(map_)
+
+
+def _add_opencellid(map_: folium.Map) -> None:
+    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
+    from antenna_cell_placement.opencellid import load_cells
+
+    if not OPENCELLID_RAW_PATH.exists():
+        return
+    cells, _, _ = load_cells(OPENCELLID_RAW_PATH)
+    for operator, subset in cells.groupby("operator"):
+        layer = folium.FeatureGroup(name=f"OpenCellID estimates: {operator}", show=False)
+        cluster = MarkerCluster().add_to(layer)
+        for _, cell in subset.iterrows():
+            popup = (
+                f"<b>OpenCellID estimated cell - {escape(operator)}</b><br>"
+                f"{escape(cell['radio'])}; area {cell['area']}; cell {cell['cell']}<br>"
+                f"Measurements: {cell['samples']}<br>Last observed: {cell['updated_utc']}<br>"
+                f"Estimated source range: {cell['range']} m<br>"
+                "Not a verified mast or coverage footprint."
+            )
+            folium.Marker(
+                [cell["lat"], cell["lon"]], popup=folium.Popup(popup, max_width=320)
+            ).add_to(cluster)
+        layer.add_to(map_)
+
+
+def _add_proposed_placements(map_: folium.Map, recommendations: pd.DataFrame) -> None:
+    if recommendations.empty:
+        return
+    layer = folium.FeatureGroup(name="Proposed placements")
+    for _, proposal in recommendations.iterrows():
+        review = (
+            "Nearby recent OpenCellID observation; manual review required."
+            if bool(proposal.get("opencellid_review_required", False))
+            else "No nearby recent OpenCellID observation; coverage remains unverified."
+        )
+        landcover_review = (
+            "Mixed/coastal land-cover context; manual review required."
+            if bool(proposal.get("worldcover_review_required", False))
+            else "WorldCover H3 context passed the automated screening checks."
+        )
+        building_context = (
+            f"Mapped OSM buildings in H3 unit: {int(proposal['osm_building_count_h3']):,}"
+            if pd.notna(proposal.get("osm_building_count_h3"))
+            else "Mapped building context unavailable."
+        )
+        building_review = (
+            "Mapped-building context conflicts with built-up evidence; manual review required."
+            if bool(proposal.get("osm_building_review_required", False))
+            else ""
+        )
+        osm_context = (
+            "Selected OSM review context: "
+            f"hospital {proposal['osm_hospital_nearest_distance_m'] / 1000.0:.1f} km; "
+            f"higher education {proposal['osm_higher_education_nearest_distance_m'] / 1000.0:.1f} km; "
+            f"aviation {proposal['osm_aviation_nearest_distance_m'] / 1000.0:.1f} km; "
+            f"industrial land use {proposal['osm_industrial_nearest_distance_m'] / 1000.0:.1f} km."
+            if bool(proposal.get("osm_selected_context_available", False))
+            else "Selected OSM review context unavailable."
+        )
+        popup = (
+            f"<b>Proposed placement #{proposal['recommendation_rank']}</b><br>"
+            f"Municipality: {escape(str(proposal['municipality_name']))}<br>"
+            f"H3 resolution 7: {escape(str(proposal.get('h3_r7', 'Unavailable')))}<br>"
+            f"Planning priority: {proposal['planning_priority_score']:.2f}<br>"
+            f"Reasons: {escape(str(proposal['reason_codes']))}<br>"
+            f"5 km population: {int(proposal['population_sum_5km']):,}<br>"
+            f"Known-site gap: {proposal['dist_to_nearest_site_m'] / 1000.0:.2f} km<br>"
+            f"Point land cover: {escape(str(proposal.get('worldcover_class_name', 'Unavailable')))}<br>"
+            f"H3 dominant land cover: {escape(str(proposal.get('worldcover_h3_dominant_class_name', 'Unavailable')))}<br>"
+            f"{building_context}<br>{escape(building_review)}<br>"
+            f"{escape(osm_context)}<br>"
+            f"{review}<br>{landcover_review}"
+        )
+        folium.CircleMarker(
+            [proposal["canonical_latitude"], proposal["canonical_longitude"]],
+            radius=8,
+            color="#b91c1c",
+            weight=2.5,
+            fill=True,
+            fill_color="#ef4444",
+            fill_opacity=0.9,
+            popup=folium.Popup(popup, max_width=340),
+        ).add_to(layer)
+    layer.add_to(map_)
+
+
+def _add_building_h3_context(
+    map_: folium.Map,
+    recommendations: pd.DataFrame,
+) -> None:
+    """Show mapped-building context for each shortlisted planning unit."""
+    required = {"h3_r7", "osm_building_count_h3", "osm_building_coverage_ratio_h3"}
+    if recommendations.empty or not required.issubset(recommendations.columns):
+        return
+    layer = folium.FeatureGroup(name="Mapped buildings by H3 unit", show=False)
+    for _, row in recommendations.drop_duplicates("h3_r7").iterrows():
+        if pd.isna(row["h3_r7"]) or pd.isna(row["osm_building_count_h3"]):
+            continue
+        count = int(row["osm_building_count_h3"])
+        ratio = float(row["osm_building_coverage_ratio_h3"])
+        color = "#0f766e" if count else "#a16207"
+        coordinates = [
+            [latitude, longitude]
+            for latitude, longitude in h3.cell_to_boundary(str(row["h3_r7"]))
+        ]
+        folium.Polygon(
+            locations=coordinates,
             color=color,
+            weight=1.5,
             fill=True,
             fill_color=color,
-            fill_opacity=0.75,
-            popup=folium.Popup(popup_html, max_width=300),
-            tooltip=f"Site #{row['physical_site_id']} ({techs}) - {ops}"
-        ).add_to(target_fg)
-
-    fg_multitech.add_to(m)
-    fg_lte.add_to(m)
-    fg_umts.add_to(m)
-    fg_gsm.add_to(m)
-
-    if cells is not None:
-        for operator, subset in cells.groupby("operator"):
-            layer = folium.FeatureGroup(name=f"OpenCellID estimates: {operator}", show=False)
-            cluster = MarkerCluster().add_to(layer)
-            for _, cell in subset.iterrows():
-                popup = (
-                    f"<b>OpenCellID estimated cell — {escape(operator)}</b><br>"
-                    f"{escape(cell['radio'])}; area {cell['area']}; cell {cell['cell']}<br>"
-                    f"Measurements: {cell['samples']}<br>Last observed: {cell['updated_utc']}<br>"
-                    f"Source estimated range: {cell['range']} m<br>"
-                    "Estimated cell location; not a verified mast or coverage footprint."
-                )
-                folium.Marker([cell['lat'], cell['lon']], popup=folium.Popup(popup, max_width=320),
-                              tooltip=f"OpenCellID: {operator} {cell['radio']}").add_to(cluster)
-            layer.add_to(m)
-        m.get_root().html.add_child(folium.Element(
-            '<div style="position:fixed;bottom:25px;left:10px;z-index:9999;background:white;padding:5px">'
-            'Cell observations: <a href="https://opencellid.org/">OpenCellID</a></div>'
-        ))
-
-    # 2. Feature Group for AI Placement Recommendations
-    if df_recs is not None and not df_recs.empty:
-        fg_recs = folium.FeatureGroup(name="⭐ AI Recommended Placements (Top 50)")
-
-        for _, row in df_recs.iterrows():
-            lat = row["canonical_latitude"]
-            lon = row["canonical_longitude"]
-            rank = row["recommendation_rank"]
-            muni = row["municipality_name"]
-            place = row["nearest_settlement_name"]
-            score = row["placement_suitability_score"]
-            tier = row["recommended_equipment_tier"]
-            bands = row["recommended_rf_bands"]
-            pop_5k = row["population_sum_5km"]
-            gap_m = row["dist_to_nearest_site_m"]
-            p_score = row["deployment_priority_score"]
-
-            review_text = ""
-            if "opencellid_review_required" in row:
-                distance = row.get("opencellid_recent_distance_m")
-                proximity = f"{distance / 1000:.2f} km" if pd.notna(distance) else "No eligible observations"
-                status = "Review nearby cell evidence" if row['opencellid_review_required'] else "No recent cell within 3 km; coverage unverified"
-                review_text = f"<p><b>OpenCellID:</b> {proximity}. {status}.</p>"
-            radar_text = ""
-            if row.get("cloudflare_data_available", False):
-                radar_text = (
-                    "<p><b>Cloudflare regional demand:</b> "
-                    f"{row['cloudflare_http_requests_share_52w_pct']:.3f}% of 52-week "
-                    f"HTTP requests (priority factor {row['cloudflare_priority_factor']:.3f}).</p>"
-                )
-            rec_popup = f"""
-            <div style="font-family: Arial, sans-serif; min-width: 250px;">
-                <div style="background: #dc2626; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
-                    ⭐ AI Recommended Placement Rank #{rank}
-                </div>
-                <p style="margin: 6px 0 3px;"><b>Municipality:</b> {muni} ({place})</p>
-                <p style="margin: 3px 0;"><b>Suitability Score:</b> <span style="color: #16a34a; font-weight: bold;">{score:.4f}</span></p>
-                <p style="margin: 3px 0;"><b>Priority Score:</b> {p_score}</p>
-                <p style="margin: 3px 0;"><b>Equipment Tier:</b> {tier}</p>
-                <p style="margin: 3px 0;"><b>Recommended Bands:</b> {bands}</p>
-                <p style="margin: 3px 0;"><b>5km Population Served:</b> {int(pop_5k):,} people</p>
-                <p style="margin: 3px 0;"><b>Nearest Tower Gap:</b> {gap_m / 1000.0:.2f} km</p>
-                {radar_text}
-                {review_text}
-                <p style="margin: 3px 0;"><b>Coordinates:</b> {lat:.4f}, {lon:.4f}</p>
-            </div>
-            """
-
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=8,
-                color="#b91c1c",
-                weight=2.5,
-                fill=True,
-                fill_color="#ef4444",
-                fill_opacity=0.9,
-                popup=folium.Popup(rec_popup, max_width=320),
-                tooltip=f"Rank #{rank}: {muni} ({place}) - Score: {score:.2f}"
-            ).add_to(fg_recs)
-
-        fg_recs.add_to(m)
-
-    # Layer control
-    folium.LayerControl(collapsed=False).add_to(m)
-
-    output_html.parent.mkdir(parents=True, exist_ok=True)
-    m.save(output_html)
-    print(f"Saved interactive map to: {output_html}")
-
-    report_html.parent.mkdir(parents=True, exist_ok=True)
-    m.save(report_html)
-    print(f"Saved interactive master report map to: {report_html}")
-
-    return output_html
+            fill_opacity=0.18,
+            tooltip=(
+                f"Mapped buildings: {count:,}; "
+                f"footprint coverage: {100.0 * ratio:.2f}%"
+            ),
+        ).add_to(layer)
+    layer.add_to(map_)
 
 
 if __name__ == "__main__":

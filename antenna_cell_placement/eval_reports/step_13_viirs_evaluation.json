@@ -1,0 +1,168 @@
+{
+  "after_experiment": {
+    "production_export_changed": false,
+    "shortlist_count": 50,
+    "viirs_fields": 9
+  },
+  "artifact_test": {
+    "artifact_promotion_pct": 0.0,
+    "hypothetical_top10_promotions": 5,
+    "promotions_within_5km_known_gas_flare": 0
+  },
+  "before": {
+    "shortlist_count": 50,
+    "viirs_fields": 0
+  },
+  "checks": {
+    "artifact_false_promotion_pass": true,
+    "geographic_holdout_improvement": null,
+    "independent_activity_or_kpi_labels_available": false,
+    "production_scores_and_ranks_unchanged": true,
+    "shortlist_coverage_pass": true,
+    "temporal_stability_pass": true
+  },
+  "coverage": {
+    "shortlist_count": 50,
+    "shortlist_coverage_pct": 98.0,
+    "valid_after_flare_exclusion": 49,
+    "valid_before_flare_exclusion": 50,
+    "water_candidates_excluded": 0,
+    "within_known_flare_exclusion": 1
+  },
+  "decision": "exclude VIIRS from runtime scoring and outputs: independent activity/KPI labels are unavailable, so incremental holdout improvement cannot be shown",
+  "limitations": [
+    "Night lights are a demand proxy, not observed mobile traffic, coverage, or service quality.",
+    "The four-month median reduces transient influence but is not an active-fire mask.",
+    "The official 2024 gas-flare catalog supports a 5 km exclusion but cannot identify every industrial light source.",
+    "Monthly zero radiance is used only when cloud-free coverage meets the declared threshold; unsupported pixels remain missing.",
+    "No independent activity, operator KPI, or reviewed planning labels exist for holdout validation."
+  ],
+  "question": "Does night activity identify demand missed by population and buildings?",
+  "redundancy": {
+    "spearman_log_radiance_vs_log_building_density": 0.5036792401390449,
+    "spearman_log_radiance_vs_log_population_5km": 0.3652644201295723
+  },
+  "source": {
+    "crs": "EPSG:4326",
+    "dataset": "VIIRS DNB monthly cloud-free composites",
+    "documentation_url": "https://registry.opendata.aws/wb-light-every-night/",
+    "gas_flare_catalog": {
+      "documentation_url": "https://eogdata.mines.edu/products/vnf/global_gas_flare.html",
+      "libya_subset": {
+        "bytes": 3595,
+        "filename": "libya_gas_flares_2024.csv",
+        "rows": 183,
+        "sha256": "4a9956df3c3d95b46db565a2f63821fb6553aa2bf860b1b2a42e9177cd1ef8af"
+      },
+      "producer": "Earth Observation Group",
+      "source_record": {
+        "bytes": 12148996,
+        "filename": "2024_global_gas_flares.kml",
+        "sha256": "69496f8ea065f81919e22e5845c049cf3f1bdae35674411592c3d704debc13b1"
+      },
+      "source_url": "https://eogdata.mines.edu/global_flare_data/2024_flare_summary_v20250730_j01.kml",
+      "year": 2024
+    },
+    "libya_bounds": [
+      9.389968185999976,
+      19.508045193000157,
+      25.150619506999988,
+      33.16519841100012
+    ],
+    "license": "ODbL-1.0",
+    "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
+    "nominal_resolution_arc_seconds": 15,
+    "periods": [
+      "202401",
+      "202404",
+      "202407",
+      "202410"
+    ],
+    "processing": "Remote COG range reads crop each source to the supplied Libya boundary bounding box. No radiance resampling or value substitution is performed.",
+    "products": [
+      {
+        "cloudfree_count": {
+          "bytes": 1533410,
+          "filename": "viirs_202401_cloudfree_count.tif",
+          "sha256": "497c5cf19e63837377a0ac57395b125e4a9ea21269235c1bf025be180ada428c"
+        },
+        "coverage_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202401_ops/DNB_npp_20240101-20240131_global_ecm-slcorr_v10_ops.n_cf.tif",
+        "month": "202401",
+        "radiance": {
+          "bytes": 27208895,
+          "filename": "viirs_202401_radiance.tif",
+          "sha256": "13d7a862fe4f9726a560f7e0bfafe78a31f9b02b1f1cc57c12569cf761c2223c"
+        },
+        "radiance_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202401_ops/DNB_npp_20240101-20240131_global_ecm-slcorr_v10_ops.avg_rade9.tif"
+      },
+      {
+        "cloudfree_count": {
+          "bytes": 1947275,
+          "filename": "viirs_202404_cloudfree_count.tif",
+          "sha256": "a6ebc9d9ee520b28f8aee855aaee6c723aadf5ae4631cfec514244357e3f040f"
+        },
+        "coverage_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202404_ops/DNB_npp_20240401-20240430_global_ecm-slcorr_v10_ops.n_cf.tif",
+        "month": "202404",
+        "radiance": {
+          "bytes": 27609131,
+          "filename": "viirs_202404_radiance.tif",
+          "sha256": "6bef8d1561d941073babc72c0d7a54353175dd98569ff047f6ec15571160cb59"
+        },
+        "radiance_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202404_ops/DNB_npp_20240401-20240430_global_ecm-slcorr_v10_ops.avg_rade9.tif"
+      },
+      {
+        "cloudfree_count": {
+          "bytes": 658796,
+          "filename": "viirs_202407_cloudfree_count.tif",
+          "sha256": "104e37e63d99afc7b75f8835918b7bde9a52ab32880fcea0ae3fef4e64cadbe0"
+        },
+        "coverage_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202407_ops/DNB_npp_20240701-20240731_global_ecm-slcorr_v10_ops.n_cf.tif",
+        "month": "202407",
+        "radiance": {
+          "bytes": 27632703,
+          "filename": "viirs_202407_radiance.tif",
+          "sha256": "aa481cc7e088633fe9d524232869985af7b5ac1e988531a930943aa7a7f2c5fa"
+        },
+        "radiance_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202407_ops/DNB_npp_20240701-20240731_global_ecm-slcorr_v10_ops.avg_rade9.tif"
+      },
+      {
+        "cloudfree_count": {
+          "bytes": 1119905,
+          "filename": "viirs_202410_cloudfree_count.tif",
+          "sha256": "31a4be041293120fb8c5a2c49e086b08c80a05b688c79f34e645bb04e3facb1b"
+        },
+        "coverage_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202410_ops/DNB_npp_20241001-20241031_global_ecmslcfg_v10_ops.n_cf.tif",
+        "month": "202410",
+        "radiance": {
+          "bytes": 28477987,
+          "filename": "viirs_202410_radiance.tif",
+          "sha256": "2db1da88b889e3be453966400910ffb5f2bd1ec248daf8af8fdd2cc50d4983a6"
+        },
+        "radiance_source_url": "https://globalnightlight.s3.amazonaws.com/composites/npp_202410_ops/DNB_npp_20241001-20241031_global_ecmslcfg_v10_ops.avg_rade9.tif"
+      }
+    ],
+    "radiance_units": "nW/cm^2/sr",
+    "retrieved_utc": "2026-09-21T09:16:15.833443+00:00",
+    "source": "World Bank Light Every Night public AWS bucket",
+    "upstream_producer": "Earth Observation Group, Payne Institute for Public Policy"
+  },
+  "status": "remove",
+  "step": 13,
+  "temporal_stability": {
+    "median_spearman": 0.9660007683442183,
+    "selected_month_spearman": {
+      "202401_to_202404": 0.9652804456396465,
+      "202404_to_202407": 0.9660007683442183,
+      "202407_to_202410": 0.9816793529374437
+    }
+  },
+  "thresholds": {
+    "gas_flare_exclusion_radius_km": 5.0,
+    "hypothetical_nightlight_weight": 0.1,
+    "maximum_artifact_promotion_pct": 5.0,
+    "minimum_cloud_free_observations_per_month": 3,
+    "minimum_shortlist_coverage_pct": 95.0,
+    "minimum_temporal_spearman": 0.75,
+    "minimum_valid_months": 3
+  }
+}

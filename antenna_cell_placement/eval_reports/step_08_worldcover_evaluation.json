@@ -1,0 +1,61 @@
+{
+  "acceptance": {
+    "eligible_area_coverage_at_least_98_pct": true,
+    "independent_reference_agreement_at_least_90_pct": false,
+    "rf_validation_improved_for_clutter_use": false,
+    "zero_water_candidates_after_screening": true
+  },
+  "after": {
+    "eligible_candidate_count": 3720,
+    "generated_candidate_count": 22317,
+    "shortlist_count": 50,
+    "shortlist_review_required_count": 5,
+    "water_candidates_remaining": 0
+  },
+  "before": {
+    "eligible_candidate_count": 3725,
+    "generated_candidate_count": 22317,
+    "shortlist_count": 50,
+    "water_candidates_not_screened": 5
+  },
+  "checks": {
+    "eligible_candidate_point_coverage_pct": 100.0,
+    "independent_reference_agreement_pct": null,
+    "independent_reference_sample_available": false,
+    "mean_rank_displacement_for_common_candidates": 0.0,
+    "national_tile_footprint_coverage_pct": 100.0,
+    "priority_scores_unchanged_for_common_candidates": true,
+    "rf_truth_available": false,
+    "rf_validation_improvement": null,
+    "shortlist_h3_minimum_coverage_pct": 99.8057,
+    "top_k_overlap_pct": 100.0,
+    "water_candidates_after_screening": 0,
+    "water_candidates_before_screening": 5
+  },
+  "decision": "keep WorldCover for deterministic water screening and review context; independent class validation remains pending",
+  "limitations": [
+    "WorldCover screens observed 2021 surface class; it does not establish buildability.",
+    "No independent pre-labeled Libya reference sample is supplied, so the 90% agreement gate is pending.",
+    "No RF truth is supplied, so WorldCover is excluded from the priority score and RF clutter model.",
+    "Mixed or coastal H3 cells are flagged for review rather than automatically rejected."
+  ],
+  "question": "Does land cover improve clutter and buildability screening?",
+  "runtime_seconds": {
+    "baseline_feature_extraction": 4.29716111200014,
+    "baseline_selection": 0.058208729999932984,
+    "source_hash_verification": 0.17761332800000673,
+    "worldcover_point_extraction_incremental": 3.2781308690000515,
+    "worldcover_selection_and_h3_context": 0.19422880000001896
+  },
+  "software_and_dataset": {
+    "dataset": "ESA WorldCover 10 m 2021 v200",
+    "doi": "https://doi.org/10.5281/zenodo.7254221",
+    "license": "CC-BY-4.0",
+    "manifest_verified": true,
+    "source_base_url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map",
+    "tile_count": 27,
+    "total_bytes": 237710490
+  },
+  "status": "review-only",
+  "step": 8
+}

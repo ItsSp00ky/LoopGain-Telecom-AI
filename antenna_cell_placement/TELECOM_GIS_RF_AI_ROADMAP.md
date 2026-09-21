@@ -1,1209 +1,500 @@
-# Telecom GIS, RF, and AI Planning Roadmap
+# Telecom GIS, RF, and AI Roadmap
 
 ## Purpose
 
-This document explains how to evolve the current antenna placement project into a production-ready, AI-assisted telecom GIS and RF planning platform for Libya.
+This roadmap evolves the current Libya GIS screening pipeline into a telecom planning system through sequential evidence gates. A new dataset or model is retained only after a reproducible comparison shows what it improved.
 
-The current project already has a strong base:
+The dataset-only refactor and Steps 0-7 established the current baseline. Steps 8-11 evaluated land cover and selected OpenStreetMap evidence. Step 12 rejected Ookla runtime integration because shortlist coverage failed. Step 13 rejected VIIRS runtime integration because independent incremental validation was unavailable. Later sources remain **proposed** until their own gate is run; downloading a source does not by itself make it accepted evidence.
 
-- Existing Libyan telecom cell/site data
-- Cleaned physical site locations
-- SRTM elevation / height files for Libya
-- WorldPop population data
-- Roads and administrative boundaries
-- Machine learning models for site suitability and equipment tier recommendation
-- GeoJSON, CSV, and HTML map outputs
+**Current position (2026-09-21):** Step 7 is accepted. Steps 8, 9, and selected Step 11 families are reversible `review-only` layers. Step 10, the Step 11 port proxy, and Step 12 have `remove` decisions. Step 13 is next; Steps 14-20 remain pending in the order below.
 
-The next step is to make the system more like real telecom planning software. The goal is not only to predict good tower locations, but to explain why a site is needed, validate it with RF physics, recommend antenna specifications, and produce engineering reports that telecom companies can trust.
+## Non-Negotiable Rules
 
-## Main Principle
+- Declared source datasets are the only evidence inputs; every externally acquired source must pass its roadmap gate before broader use.
+- Generated coordinates are allowed only as clearly labeled candidate placements.
+- Synthetic labels, fabricated measurements, guessed operators, assumed equipment, and rule-created training targets are prohibited.
+- Missing data remains visible and cannot silently become zero or an asserted fact.
+- A planning priority is not a probability, RF prediction, or deployment decision.
+- Every source has provenance, license, snapshot date, checksum, schema, units, CRS, and quality report.
+- Every integration is reversible. The baseline pipeline must still run without the experimental source.
+- Dataset files are never considered useful merely because they were downloaded.
 
-Machine learning should identify where investment is needed.
+## Gate Protocol Used by Every Step
 
-GIS, RF analysis, and optimization should determine where the exact site should be placed.
+Each step creates an evaluation record under a versioned report directory. The record contains:
 
-In other words:
+1. **Question:** the planning uncertainty the source or tool is expected to reduce.
+2. **Before:** a frozen baseline run using the same candidates, boundaries, configuration, and existing sources.
+3. **Download record:** source URL or provider, license, release/snapshot date, retrieval date, checksum, byte size, and raw path.
+4. **Quality profile:** schema, CRS, resolution, geographic coverage, temporal coverage, duplicates, invalid geometry, nodata, and outliers.
+5. **Integration:** deterministic transformations with units and missing-data flags.
+6. **After:** the same evaluation run with only the proposed source or stage added.
+7. **Improvement check:** named metric, baseline value, treatment value, delta, and confidence or sensitivity where appropriate.
+8. **Acceptance criterion:** a threshold written before viewing the result.
+9. **Decision:** `keep`, `review-only`, `revise`, or `remove`, with a reason.
 
-```text
-ML finds the priority area.
-GIS and RF planning choose the deployable antenna site.
-```
+An integration cannot be marked complete without both the baseline and treatment reports. A failed experiment is removed from scoring but its report can remain as evidence.
 
-The final product should not only say:
+## Common Evaluation Set
 
-```text
-AI thinks this location is suitable.
-```
+Create one stable evaluation package before adding sources:
 
-It should say:
+- a fixed Libya boundary and candidate grid or H3 index;
+- stratified samples for dense urban, suburban, settlement, road-corridor, rural, desert, mountain, border, and coast contexts;
+- known-coordinate fixtures for distance and raster sampling;
+- source availability masks;
+- a baseline recommendation file with score components and reason codes;
+- expert-reviewed candidate cases when reviewers become available;
+- geographic holdouts that prevent nearby locations from appearing in both calibration and evaluation.
 
-```text
-This area has high demand, weak existing coverage, good road access,
-terrain advantage, low overlap with existing sites, and acceptable LOS/backhaul.
+Until independent labels exist, improvement means better source completeness, internal consistency, geographic discrimination, rank stability, or agreement with an independent supplied reference. It must not be reported as predictive accuracy.
 
-Recommended configuration:
-35 m tower, 3 sectors, B20 + B3, azimuths 40 / 160 / 280,
-4 degree downtilt, expected strong coverage gain.
-```
+## Step 0: Freeze the Dataset-Only Baseline
 
-## Recommended Open-Source Stack
+**Status:** current implementation target.
 
-### 1. Current Project
+Remove synthetic training examples, rule-created equipment labels, unmarked bandwidth assumptions, guessed operator defaults, and stale model-dependent outputs. Establish the explainable `planning_priority_score` and export every component.
 
-Keep the current Python project as the AI and geospatial intelligence core.
+**Before:** the legacy model workflow and its generated-label artifacts.
 
-Current role:
+**After check:**
 
-- Clean telecom site data
-- Extract population, road, terrain, and site-density features
-- Train suitability models
-- Rank candidate locations
-- Recommend high-level equipment tiers
-- Generate maps and reports
+| Metric | Acceptance criterion |
+| --- | --- |
+| Generated rows in observed-data exports | 0 |
+| Generated records outside candidate outputs | 0 |
+| Public probability/equipment claims without observed targets | 0 |
+| Same inputs/configuration produce identical scores and ranks | 100% |
+| Candidate rows with component values, availability flags, and reason codes | 100% |
+| Unknown operator/bandwidth/tower type preserved as unknown | 100% in controlled fixtures |
 
-Future role:
+**Decision:** required. Do not proceed while prohibited generated evidence remains active.
 
-- Generate priority areas
-- Generate candidate sites
-- Call RF planning tools
-- Rank candidates using AI + RF + business constraints
-- Produce final planning reports
+## Step 1: Validate the Project-Provided Cellular Observations
 
-### 2. H3 Geographic Grid
+**Dataset:** `Libyan_cells_dataset/cells.sqlite3` and `cells.json`.
+**Status:** current; no download required.
 
-Use H3 hexagons as the main planning unit.
+Treat rows as observations. Document identity keys for each radio technology. Keep any spatial clustering as an inferred site reference, never a verified mast inventory.
 
-Instead of evaluating only points, divide Libya into H3 cells. Each H3 hexagon becomes one sample in the planning dataset.
+**Before:** raw row and field profile.
+**After:** validated observations, quarantine table, deduplicated radio identities, and optional inferred clusters.
 
-Each H3 zone can contain:
+**Improvement check:**
 
-- Population
-- Building count
-- Building density
-- Average building height
-- Road density
-- POI density
-- Land cover percentages
-- Terrain elevation
-- Terrain slope
-- Terrain roughness
-- Nearest existing site distance
-- Site density within 1 km, 3 km, 5 km, and 10 km
-- Cloudflare regional activity
-- Ookla speed / latency if available
-- Network KPI indicators if operator data becomes available
+- invalid and quarantined rows have explicit reasons;
+- duplicate identity count decreases without collapsing geographically incompatible records;
+- within-identity coordinate spread is reported before and after;
+- operator, bandwidth, and tower-type unknown rates are unchanged unless supplied evidence resolves them;
+- manual review of a stratified identity sample finds no cross-region merges.
 
-H3 helps the project produce:
+**Acceptance criterion:** 100% lineage from retained rows to raw rows, zero silent imputations, zero reviewed cross-region collisions, and all distance calculations pass known-pair tests.
 
-- Demand maps
-- Underserved area maps
-- Expansion priority maps
-- Planning zones
-- Aggregated reports per municipality or region
+**Keep/remove decision:** keep the cleaned observation layer if accepted. Remove any clustering rule that cannot meet the sample review.
 
-### 3. GRASS-RaPlaT
+## Step 2: Revalidate WorldPop
 
-GRASS-RaPlaT should be the main open-source RF planning engine.
+**Dataset:** supplied WorldPop population raster under `data/external/`.
+**Status:** current.
 
-Use it for:
+**Question:** does the raster add a useful population proxy to candidate prioritization?
 
-- Terrain-aware coverage simulation
-- Sector coverage prediction
-- Antenna height evaluation
-- Azimuth evaluation
-- Downtilt evaluation
-- Path loss calculation
-- Multi-site coverage aggregation
-- Coverage overlap analysis
-- Population-covered calculations
+**Before:** run the fixed candidates with the population component disabled.
+**After:** enable local and catchment population features.
 
-Why it fits:
+**Improvement check:**
 
-- It is designed for radio planning.
-- It works with GIS raster terrain data.
-- It supports cellular-style sector planning.
-- It is closer to traditional RF planning workflows used by telecom engineers.
+- valid-pixel coverage within inhabited boundary/settlement test areas;
+- nodata and out-of-bounds counts remain separate from true zero;
+- positive association between populated-place class or supplied settlement importance and catchment population;
+- change in top-k geographic distribution and score-component coverage;
+- expert review of candidates promoted only by population.
 
-It should be used as the main replacement for the mathematical RF layer found in commercial planning tools such as Pathloss, Atoll, Planet, or Mentum.
+**Acceptance criterion:** at least 95% valid coverage at settlement fixtures, zero nodata-to-zero conversions, correct raster units/aggregation, and no regression in deterministic output.
 
-### 4. SPLAT!
+**Decision:** keep as a demand proxy if accepted; revise preprocessing if coverage/units fail; remove from scoring if it cannot distinguish known settlement contexts.
 
-SPLAT! should be used as a supporting tool, not the main planning engine.
+## Step 3: Revalidate the Supplied Elevation Data
 
-Use it for:
+**Datasets:** active elevation raster under `data/external/dem/` and supplied HGT tiles under `data/Libya_SRTM/`.
+**Status:** current; the active source must be declared.
 
-- Point-to-point terrain profiles
-- Line-of-sight checks
-- Fresnel zone clearance
-- Microwave backhaul feasibility
-- HAAT calculations
-- Longley-Rice / ITM terrain path loss checks
+**Question:** does terrain data provide complete, coherent screening evidence?
 
-Good questions SPLAT! can answer:
+**Before:** fixed candidates without terrain components.
+**After:** add elevation, slope, roughness, and local prominence only where valid.
 
-```text
-Can this candidate site see the nearest backhaul point?
-Is the path blocked by terrain?
-Is microwave backhaul realistic?
-Does the candidate have good height above average terrain?
-```
+**Improvement check:**
 
-### 5. PostGIS
+- Libya coverage and missing-tile map;
+- agreement between overlapping active-raster and HGT samples;
+- elevation ranges and discontinuities at tile edges;
+- rank changes caused by terrain alone;
+- known mountain/coastal/desert fixture behavior.
 
-Use PostGIS as the production geospatial database.
+**Acceptance criterion:** at least 98% valid coverage of eligible candidates, no unexplained seam larger than a pre-registered elevation tolerance, and zero nodata-to-zero conversions.
 
-Store:
+**Decision:** select one documented active terrain source. Keep the second as an independent comparison or remove it from runtime to avoid duplicate complexity.
 
-- Existing sites
-- Cells
-- Sectors
-- Antenna configurations
-- H3 planning zones
-- Terrain-derived features
-- Population features
-- Land cover features
-- Candidate sites
-- RF simulation outputs
-- Coverage rasters
-- Coverage polygons
-- Scenario results
-- Network KPI history if available
+## Step 4: Revalidate Roads, Boundaries, and Settlements
 
-PostGIS is important because telecom companies need persistent, queryable, auditable planning data.
+**Datasets:** supplied vector layers under `data/external/roads/` and `data/external/admin_boundaries/`.
+**Status:** current.
 
-### 6. QGIS
+**Question:** do these layers add reliable access and reporting context?
 
-Use QGIS for engineering review and validation.
+**Before:** candidates without road-distance or place attribution.
+**After:** add projected road distance, municipality, and nearest settlement.
 
-QGIS can help with:
+**Improvement check:**
 
-- Inspecting data layers
-- Checking terrain and coverage
-- Reviewing candidate locations
-- Exporting professional maps
-- Comparing planning scenarios
-- Manually validating suspicious recommendations
+- valid-geometry rate, duplicate rate, CRS, and national coverage;
+- known-point municipality and settlement attribution;
+- road-distance error at hand-checked fixtures;
+- number of candidates excluded or demoted by stated access limits;
+- boundary-edge ambiguity count.
 
-### 7. GeoServer or QGIS Server + MapLibre
+**Acceptance criterion:** 100% known-point attribution fixtures pass, at least 99% valid geometries after documented repair, and road-distance tolerance passes all fixtures.
 
-Use these tools for a production web GIS interface.
+**Decision:** keep road access and place labels when accepted. Do not treat road proximity as proof of legal access, power, fiber, or road condition.
 
-Recommended setup:
+## Step 5: Integrate OpenCellID `606.csv` as Review Evidence
+
+**Dataset:** supplied `data/606.csv`.
+**Status:** current.
+
+The exact schema is:
 
 ```text
-PostGIS
-  -> GeoServer or QGIS Server
-  -> MapLibre web map
-  -> Planning dashboard
+radio,mcc,net,area,cell,unit,lon,lat,range,samples,changeable,created,updated,averageSignal
 ```
 
-The dashboard should allow planners to:
+`unit` is PSC for UMTS or PCI for LTE and is empty for GSM/CDMA. `range` is an estimated range, not a coverage polygon or accuracy radius. `changeable` is deprecated and always 1. `averageSignal` is deprecated and always 0 and must never be interpreted as signal evidence.
 
-- View existing sites
-- View coverage gaps
-- View demand heatmaps
-- View underserved areas
-- Toggle population, roads, terrain, land cover, and buildings
-- Click a recommended candidate site
-- See antenna specs and RF validation
-- Export a planning report
+**Question:** does OpenCellID add independent observations that improve candidate review?
 
-## Tools To Avoid As First Production Core
+**Before:** candidate report without OpenCellID proximity.
+**After:** add validated, deduplicated cell proximity and review flags without changing observed-site counts or the core priority score.
 
-### Sionna RT
+**Improvement check:**
 
-Sionna RT is powerful, but it should not be the first production RF engine for this project.
+- exact 14-column schema acceptance and invalid-row quarantine;
+- retained, duplicate, timestamp-valid, and review-eligible counts;
+- distances between OpenCellID cells and project-provided site references;
+- candidates newly flagged for review;
+- operator-specific distance availability without forced attribution;
+- manual review of near and far cases.
 
-It is better for:
+**Acceptance criterion:** 100% schema/identity fixtures pass, 100% rejected rows have reasons, no cell is counted as a physical mast, and candidate score/rank remains unchanged when the layer is configured as review-only.
 
-- Advanced research
-- 5G/6G digital twins
-- GPU ray tracing
-- Dense urban 3D simulation
-- Differentiable wireless simulation
-- Future AI optimization experiments
+**Decision:** keep as review-only evidence if quality is adequate. Revise recency/sample policies when the snapshot changes. Remove it from operational review if temporal or geographic coverage is too weak, while preserving the source report.
 
-Reasons to delay it:
+## Step 6: Reassess Cloudflare Regional Context
 
-- It needs detailed 3D scenes.
-- It needs building geometry and material assumptions.
-- It is more complex to calibrate.
-- It is GPU-heavy.
-- It is not the easiest path for Libya-wide planning.
+**Dataset:** supplied files under `data/cloudflare_radar_libya/`.
+**Status:** current, optional.
 
-Keep it as a future advanced module, especially for dense areas like Tripoli, Benghazi, and Misrata.
+**Question:** does coarse regional Internet activity add information beyond population and settlement context?
 
-### pycraf
+**Before:** baseline priority without Cloudflare.
+**After:** add mapped regional fields and, only if justified, a bounded context adjustment.
 
-pycraf is useful for ITU-R propagation calculations, especially point/path analysis, but it should not be the main cellular planning platform.
+**Improvement check:**
 
-Use it later if needed for:
+- one-to-one municipality mapping and temporal completeness;
+- spatial uniqueness: national constants must not enter a location score;
+- top-k rank displacement and municipality concentration;
+- sensitivity across several small bounds, including zero influence;
+- agreement with future independent KPI or reviewer labels.
 
-- ITU-R P.452 path calculations
-- Interference studies
-- Atmospheric attenuation
-- Specialized regulatory-style calculations
+**Acceptance criterion:** all region mappings resolve uniquely, missing regions remain flagged, maximum rank influence stays within the configured bound, and the source improves an independent review/KPI metric when one exists.
 
-Do not make it the main multi-sector planning engine.
+**Decision:** keep as descriptive context now. Add it to scoring only after independent improvement is demonstrated; missing context stays missing and has no scoring effect.
 
-## Datasets To Add
+## Step 7: Establish H3 Planning Units
 
-The current project already includes useful core datasets. The next production upgrade should add more real-world planning layers.
+**Input:** no new evidence dataset; H3 is a spatial index.
+**Status:** accepted on 2026-09-19 using H3 4.5.0.
 
-### 1. ESA WorldCover
+Build reproducible hexagonal planning units and aggregate active evidence with area-aware methods.
 
-Priority: very high.
+**Before:** point/grid candidate workflow.
+**After:** H3 demand, evidence availability, and priority layers.
 
-Use it for RF clutter and land cover.
+**Improvement check:** national coverage, polygon-boundary leakage, conservation of population totals within tolerance, runtime, repeatability, and rank stability across adjacent H3 resolutions.
 
-Features:
+**Acceptance criterion:** no gaps/overlaps inside the planning boundary, aggregate population conservation within 1%, and documented resolution sensitivity.
 
-- Built-up percentage
-- Bare land percentage
-- Cropland percentage
-- Vegetation percentage
-- Water percentage
-- Tree cover percentage
+**Measured result:** resolution 7 created 266,955 national planning units and assigned all 50 shortlisted candidates to distinct primary units. Its resolution 6 parent created 38,498 national units and consolidated the shortlist into 35 reporting units. Four-sample, area-weighted allocation of the supplied WorldPop density raster produced 100% sampled national coverage, effectively zero population conservation error, and an identical allocation digest on repeat. Candidate scores and ranks were unchanged. Direct point indexing at resolutions 7 and 6 agreed for 92% of shortlisted points; hierarchical resolution 6 parents are therefore used for reproducible rollups, and the 8% boundary sensitivity is retained in the report. The strengthened exact polygon check measured 0% internal gap, 0% overlap, and 1.4828% edge-cell leakage before clipping at resolution 6. It also detected and removed one duplicate cell returned across boundary parts rather than silently counting it twice.
 
-Why it matters:
+**Decision:** keep H3 for indexing, aggregation, and reporting. It remains outside the priority formula. Evidence: `eval_reports/step_07_h3_evaluation.json`.
 
-- RF behaves differently in urban, desert, vegetation, and water areas.
-- Coverage range and losses depend on clutter type.
-- It improves both demand estimation and RF planning.
+## Step 8: Download and Test ESA WorldCover
 
-### 2. Microsoft Global Building Footprints
+**Dataset:** ESA WorldCover.
+**Status:** evaluated on 2026-09-19; retained as `review-only`.
 
-Priority: very high.
+**Question:** does land cover improve clutter and buildability screening?
 
-Use it for:
+**Before:** accepted Step 7 baseline without land cover.
+**After:** add class proportions per planning unit and candidate.
 
-- Building count
-- Built-up ratio
-- Building density
-- Average building area
-- Urban footprint detection
+**Improvement metric:** valid Libya coverage, class agreement on stratified visual/reference samples, candidates correctly screened from water or unsuitable surface, and later RF error reduction by clutter class.
 
-Why it matters:
+**Acceptance criterion:** at least 98% eligible-area coverage, at least 90% agreement on the pre-labeled sample, zero water candidates after screening, and measurable RF validation improvement when RF truth exists.
 
-- Population data alone misses commercial and industrial demand.
-- Building density helps identify real developed areas.
-- It helps distinguish empty land from actual urban expansion.
+**Implementation:** downloaded the 27 official ESA WorldCover 2021 v200 Cloud Optimized GeoTIFF tiles intersecting Libya (237,710,490 bytes total). `data/external/worldcover_2021/manifest.json` records every URL, byte size, SHA-256 digest, ETag, retrieval date, license, DOI, CRS, resolution, and class legend. Raw TIFFs remain local and ignored by Git. Candidate point classes are sampled in WGS84, confirmed class 80 water points are ineligible, and area-weighted class proportions are computed only for shortlisted H3 resolution 7 cells. Mixed or coastal cells are flagged for review rather than rejected. WorldCover does not affect `planning_priority_score`.
 
-### 3. Microsoft Building Density and Height
+**Measured result:** all 27 manifest files passed size and SHA-256 verification. Tile footprints covered 100% of the supplied Libya boundary, all 3,725 otherwise eligible candidates had a valid class, and the minimum valid classified area across shortlisted H3 cells was 99.8057%. The screen removed five water points from the eligible pool (3,725 to 3,720) and left zero point-class water candidates. The top 50 stayed identical with zero rank displacement and unchanged scores. Five shortlisted land points in mixed/coastal H3 contexts were explicitly flagged for review. Incremental WorldCover point sampling took 3.88 seconds for 22,317 generated candidates in the final measured run; shortlist selection plus H3 land-cover context took 0.19 seconds versus 0.07 seconds for baseline selection.
 
-Priority: high.
+**Tests completed:** 28 automated tests passed, including tile naming, water/land/missing-state separation, deterministic area-weighted H3 proportions, source-manifest tamper detection, strict water exclusion, exact H3 topology, population conservation, OpenCellID schema behavior, missing-data preservation, and deterministic scoring. The live gate also regenerated the placement CSV/GeoJSON and was followed by map regeneration.
 
-Use it for:
+**Decision:** keep WorldCover for deterministic water screening and review context only. The 90% independent class-agreement criterion cannot be tested because no pre-labeled Libya reference sample is provided, and RF improvement cannot be tested because no RF truth is available. Therefore Step 8 is not accepted for suitability scoring, buildability claims, or RF clutter modeling. Evidence: `eval_reports/step_08_worldcover_evaluation.json`.
 
-- Average building height
-- Building height variation
-- Vertical density
-- Urban canyon risk
-- Capacity demand estimation
+## Step 9: Download and Test Building Footprints
 
-Why it matters:
+**Dataset:** contributor-mapped OpenStreetMap building outlines from the Geofabrik Libya snapshot `libya-260919-free.gpkg.zip`, licensed under ODbL 1.0.
+**Status:** implemented as `review-only`; source downloaded, verified, profiled, and integrated without changing scores or ranks.
 
-- High-rise areas create more demand.
-- Tall buildings affect RF propagation.
-- Dense vertical urban areas may need small cells or capacity layers.
+**Question:** do observed building footprints improve built-up demand and constructability context?
 
-### 4. OpenStreetMap
+**Before:** Step 8 baseline with review-only WorldCover screening and no building data.
+**After:** building count, footprint area, density, and built-up ratio.
 
-Priority: high.
+**Improvement metric:** coverage by municipality, geometry validity, precision/recall on stratified imagery/reference samples, correlation with settled areas, and expert preference for top-k candidate ordering.
 
-Use it for:
+**Acceptance criterion:** at least 95% coverage of the target inhabited area, at least 90% valid geometry after documented repair, and at least a 5 percentage-point improvement over population-only classification of the pre-labeled built-up sample.
 
-- Roads
-- POIs
-- Hospitals
-- Universities
-- Schools
-- Airports
-- Ports
-- Commercial zones
-- Industrial zones
-- Residential areas
-- Power/fiber/backhaul proxies where available
+**Implementation:** the exact dated archive and extracted GeoPackage are stored locally under `data/external/osm_libya_2026_09_19/`; `manifest.json` records source URL, snapshot date, retrieval date, hashes, byte sizes, CRS, layer, license, and attribution. The runtime reads only the building geometries near shortlisted H3 cells through the GeoPackage spatial index. It exports mapped building count, footprint area, coverage ratio, density, observation state, source availability, and review state. A missing mapped outline remains “not observed,” never “no building.” Microsoft and Google footprint products were excluded because their published methods describe machine-generated footprints, which conflict with this project's no-generated-evidence rule.
 
-Why it matters:
+**Measured result:** the source contains 1,268,052 input features. Geometry validation retained 1,267,982 polygon rows after removing 84 exact duplicate geometries; all retained geometry was valid after repair. Every municipality had at least one mapped building, but only 70 of 78 supplied populated places (89.74%) had a mapped building within 1 km, below the 95% gate. Of the top 50 candidates, 43 H3 units contained mapped footprints and seven did not. The treatment preserved every score and rank exactly (Spearman rank correlation 1.0). National profiling took 12.18 seconds, shortlist spatial loading 3.85 seconds, and H3 context aggregation 0.10 seconds in the final recorded run.
 
-- POIs identify demand that population data may miss.
-- Roads help with buildability and drive coverage.
-- Industrial/commercial areas often need capacity during working hours.
+**Tests completed:** 33 automated tests passed after integration. Building-specific tests cover deterministic equal-area aggregation, missing-outline semantics, single-coordinate assessment without a precomputed H3 land-cover summary, invalid-geometry repair, exact duplicate removal, and manifest size/hash tamper detection. The live gate verified the archive and GeoPackage hashes, regenerated CSV/GeoJSON outputs, recorded seven no-outline review cases, and confirmed that prohibited model/equipment fields were absent.
 
-### 5. Ookla Open Data
+**Decision:** retain the source only as mapped-building review context. The inhabited-area threshold failed and no independent labeled built-up sample exists, so classification improvement cannot be measured. Do not use missing footprints as negative evidence, do not alter the priority score, and do not infer buildability. Evidence: `eval_reports/step_09_buildings_evaluation.json`.
 
-Priority: highly desirable.
+## Step 10: Download and Test Building Height
 
-Use it for:
+**Dataset:** explicit `height=*` tags in the dated Geofabrik Libya OpenStreetMap PBF snapshot `libya-260919.osm.pbf`.
+**Status:** evaluated and removed from runtime use.
 
-- Download speed
-- Upload speed
-- Latency
-- Test count
-- Device count
-- Poor performance zones
+**Question:** does vertical form improve capacity-demand or clutter screening beyond footprints?
 
-Why it matters:
+**Before:** Step 9 review-only footprint baseline.
+**After:** audit-only parsed height values, units, distribution, source metadata, and geographic coverage. No height fields were added to recommendations.
 
-- It helps detect areas where users experience weak network quality.
-- It can validate underserved-area predictions.
+**Improvement metric:** spatial coverage, comparison with independent known-height samples, reduction in RF residual by urban morphology, and incremental reviewer/KPI value beyond footprint density.
 
-Important note:
+**Acceptance criterion:** at least 50% national footprint coverage, at least 95% municipality coverage, median absolute error at most 3 m on an independent reference, and demonstrated RF/KPI improvement beyond the footprint baseline.
 
-Ookla coverage in Libya should be checked before making it a hard dependency.
+**Implementation:** downloaded the exact 76,584,743-byte dated PBF and recorded its SHA-256 digest, HTTP metadata, snapshot, license, attribution, and source policy in `height_manifest.json`. Only explicit `height=*` values are parsed. Metres and explicitly declared imperial units are supported, values outside 1-500 m are rejected, and `building:levels=*` is counted only for coverage auditing. Floor counts are never converted into height. Machine-learned and remotely inferred height products remain excluded under the generated-evidence rule.
 
-### 6. VIIRS Night Lights
+**Measured result:** 3,050 building objects carried an explicit height tag; 3,042 parsed into plausible values, for 0.2399% coverage of the 1,268,052 mapped footprints. Valid heights appeared in 19 of 22 municipalities (86.36%) and in zero of the 50 shortlisted H3 cells. The median was 4 m and the 90th percentile 12 m. None of the valid values declared `source:height`. The raw snapshot contained 104,841 `building:levels` tags, but none was converted into metres. No independent height sample or RF/KPI truth was available. Source verification and profiling took 8.14 seconds in the final recorded gate.
 
-Priority: optional / experimental.
+**Tests completed:** 37 automated tests passed. Height-specific tests cover exact tag extraction, metre and imperial-unit parsing, plausible-range rejection, preservation of missing provenance, and manifest metadata/size/hash tamper detection. The live gate confirmed the recommendation file remained unchanged.
 
-Use it for:
+**Decision:** `remove` building height from runtime outputs and scoring. Every coverage and validation criterion failed. Retain only the provenance manifest and `eval_reports/step_10_building_height_evaluation.json` as audit evidence.
 
-- Economic activity proxy
-- Night activity
-- Urban activity intensity
+## Step 11: Download and Test OpenStreetMap
 
-Why it matters:
+**Dataset:** a dated Libya OpenStreetMap extract with attribution and license metadata.
+**Status:** evaluated on 2026-09-21; selected families retained as `review-only`.
 
-- Some areas may have high activity but weak population estimates.
-- It can help detect commercial and industrial activity.
+**Question:** do POIs, land use, and infrastructure tags add useful local context beyond supplied roads and settlements?
 
-Keep it only if testing shows that it improves the model.
+**Before:** Step 9 footprint baseline with Step 10 height excluded.
+**After:** selected, documented OSM feature families such as hospitals, universities, airports, ports, industrial areas, power, and backhaul proxies.
 
-### 7. FABDEM
+**Improvement metric:** tag completeness by region, duplication against existing roads, known-POI recall, candidate rank impact, and manual review of candidates promoted by sparse tags.
 
-Priority: useful upgrade.
+**Acceptance criterion:** each enabled feature family passes its own completeness test, improves a pre-labeled planning case set, and does not penalize regions merely because mapping activity is low.
 
-Use it for:
+**Implementation:** the gate reuses the checksum-verified Step 9 GeoPackage. It validates and deduplicates selected objects, converts polygon features to representative points, and adds per-family H3 resolution 7 counts, observation flags, and spherical nearest-feature distances. Each family has a pre-registered minimum feature count and municipality-coverage threshold. None affects eligibility, score, or rank.
 
-- Bare-earth elevation
-- Slope
-- Terrain roughness
-- Relative elevation
+**Measured result:** all 3,497 retained geometries were valid after removing 10 duplicate family/object rows. Hospitals retained 893 features with 100% municipality coverage; higher education retained 799 with 100%; aviation retained 87 with 90.91%; and industrial land use retained 1,706 with 100%. The port candidate contained only 12 ferry-terminal records in one municipality (4.55% coverage). All 50 candidates received source context, and score and rank values were identical before and after integration (Spearman 1.0). No independent labeled planning case set is available, so predictive improvement remains unmeasured.
 
-Why it matters:
+**Tests completed:** 40 automated tests passed. Step 11 tests cover deterministic output, input non-mutation, rank preservation, representative-point handling for polygons, observation-only zero semantics, and required candidate fields. The live gate verified the source manifest and regenerated recommendation artifacts.
 
-- It can improve terrain calculations compared with noisy elevation data.
-- It is useful for RF line-of-sight and candidate siting.
+**Decision:** retain hospitals, higher education, aviation, and industrial land use as review-only context. Remove the ferry-terminal port proxy from runtime because regional completeness failed. Do not combine the families into a generic POI score, interpret missing mapping as absence, or add any family to ranking without independent planning/KPI validation. Evidence: `eval_reports/step_11_osm_context_evaluation.json`.
 
-Because the project already has Libya SRTM files, FABDEM is an enhancement, not an immediate blocker.
+## Step 12: Download and Test Ookla Open Data
 
-## Main Outputs To Build
+**Dataset:** Ookla open performance tiles, subject to availability and license.
+**Status:** evaluated on 2026-09-21; removed from runtime.
 
-The production platform should generate five major outputs.
+**Question:** can measured speed, latency, and test density provide independent service-quality evidence?
 
-### 1. Unified Network GIS Map
+**Before:** priority without performance observations.
+**After:** spatially and temporally aggregated metrics with test-count support and uncertainty.
 
-This map should show:
+**Improvement metric:** Libya tile coverage, tests/devices per unit, temporal stability, agreement with independent drive tests/KPIs, and improvement in identifying reviewed underserved areas.
 
-- Existing sites
-- Cells/sectors
-- Operators
-- Technologies
-- Bands
-- Population
-- Roads
-- Terrain
-- Buildings
-- Land cover
-- H3 planning zones
-- Candidate sites
+**Acceptance criterion:** pre-register minimum sample density, require coverage across target regions, and require improvement on a geographic holdout of independent service-quality labels. Units below support thresholds remain missing.
 
-### 2. Telecom Demand Map
+**Implementation:** downloaded the official 2025 Q2, Q3, Q4, and 2026 Q1 mobile shapefile archives and recorded URL, size, SHA-256, ETag, last-modified timestamp, license, attribution, and retrieval time. A reproducible downloader extracts tile centroids inside the supplied Libya boundary into a compact GeoPackage. The gate requires at least five tests and three devices per tile-quarter, at least two supported quarters per H3 resolution 7 unit, at least 50% municipality coverage, and at least 25% shortlist coverage. Test counts may be summed; device counts are never summed as unique people or national devices.
 
-This map estimates where telecom demand is high.
+**Measured result:** the Libya subset contains 24,979 tile-quarter rows with 100% valid geometry, no duplicate quarter/quadkey rows, and one invalid metric row. Only 4,426 rows met the support threshold; 20,552 valid rows were below it. Supported observations reached 490 H3 units in any quarter, while 294 units met the two-quarter requirement and covered 20 of 22 municipalities (90.91%). Only 3 of 50 shortlisted candidate units (6%) met that requirement. Adjacent-quarter municipality download-speed Spearman correlations were 0.5702, 0.3113, and 0.4792, with a 0.4792 median. The treatment preserved every score and rank exactly. No independent drive-test or operator KPI labels were available.
 
-Demand can come from:
+**Tests completed:** 44 automated tests passed. Step 12 tests cover support thresholds, test-weighted speed and latency aggregation, non-mutation, explicit missingness for unsupported units, prohibition on device-count aggregation, required schema, and manifest tamper detection. The live gate verified all four global archives and the derived subset.
 
-- Population
-- Buildings
-- POIs
-- Cloudflare activity
-- Ookla activity
-- Night lights
-- Land use
-- Operator traffic KPIs if available
+**Decision:** `remove` Ookla fields from recommendations, assessment, maps, and scoring. Municipality coverage passed, but candidate coverage failed decisively and temporal stability was modest. Retain the downloader, local snapshot, and `eval_reports/step_12_ookla_evaluation.json` as reproducible audit evidence. Reassess only with a newer supported snapshot or independent drive-test/KPI labels.
 
-### 3. Underserved Area Map
+## Step 13: Download and Test VIIRS Night Lights
 
-This map identifies places where demand is high but service is weak.
+**Dataset:** monthly or annual VIIRS night-time lights composite.
+**Status:** evaluated on 2026-09-21; removed from runtime.
 
-Signals:
+**Question:** does night activity identify demand missed by population/buildings?
 
-- High demand
-- Few nearby sites
-- Long distance to nearest site
-- Poor Ookla speed or latency
-- High predicted congestion
-- Poor KPI performance if available
-- Low coverage probability from RF simulation
+**Before:** accepted demand-proxy baseline.
+**After:** radiance statistics after removing water, fires, and known artifacts where supported.
 
-### 4. Expansion Priority Map
+**Improvement metric:** incremental agreement with independent activity/KPI labels, collinearity with population/buildings, temporal stability, and false promotion of gas flares or industrial light sources.
 
-This map ranks areas from low to critical priority.
+**Acceptance criterion:** adds statistically and operationally meaningful holdout improvement, keeps artifact false-positive rate below a pre-registered threshold, and remains stable across selected months.
 
-Example labels:
+**Implementation:** the reproducible downloader uses range requests against official Cloud Optimized GeoTIFFs to retain only Libya bounding-box windows for January, April, July, and October 2024. Each radiance window is paired with its cloud-free observation-count raster. A pixel is supported only with at least three cloud-free observations in a month, and a candidate needs three supported months. Confirmed WorldCover water is ineligible. The median of selected months reduces transient influence. The official EOG 2024 flare catalog provides a 5 km gas-flare exclusion. The manifest records URLs, periods, units, bounds, license, sizes, and SHA-256 digests for 128,340,693 local bytes.
 
-```text
-Critical
-High
-Medium
-Low
-```
+**Measured result:** all 50 shortlist candidates had at least three supported months; one fell within 5 km of a catalogued flare, leaving 49 (98%) after artifact exclusion. Adjacent selected-month Spearman correlations were 0.9653, 0.9660, and 0.9817 (median 0.9660), above the 0.75 threshold. Log-radiance correlated 0.3653 with 5 km population and 0.5037 with mapped-building density. A pre-registered hypothetical 10% radiance weight promoted five candidates into the top 10; none was within 5 km of a known flare. The four-month median is not an active-fire mask, the flare catalog cannot label every industrial source, and no independent activity/KPI labels are available for a geographic holdout.
 
-The score should be explainable, not just a black-box model output.
+**Tests completed:** all 49 automated tests passed. Step 13 tests cover true zero versus unsupported pixels, water exclusion, geodesic flare distance, candidate schema, non-mutation, and manifest tamper detection.
 
-### 5. RF-Validated New Site Recommendation
+**Decision:** `remove` VIIRS from recommendations, assessment, maps, and scoring. Coverage, temporal stability, and the known-flare proxy pass, but the decisive incremental holdout-improvement criterion is untestable without independent labels. Retain the downloader, local snapshot, and `eval_reports/step_13_viirs_evaluation.json` as reproducible audit evidence. Redundancy or plausible correlation is not improvement.
 
-This is the final engineering output.
+## Step 14: Download and Test FABDEM
 
-Each recommended site should include:
+**Dataset:** FABDEM.
+**Status:** proposed; not downloaded.
 
-- Latitude and longitude
-- Municipality
-- Nearest settlement
-- Demand score
-- Underserved score
-- RF validation score
-- Final priority score
-- Recommended tower height
-- Recommended number of sectors
-- Recommended azimuths
-- Recommended downtilt
-- Recommended bands
-- Recommended bandwidth
-- Recommended antenna gain
-- Estimated coverage gain
-- Estimated population newly covered
-- Backhaul / LOS feasibility
-- Road access distance
-- Overlap with existing sites
-- Main reason codes
+**Question:** does a bare-earth DEM improve terrain and RF results over the accepted elevation source?
 
-## Planning Workflow
+**Before:** RF/terrain run using the selected current DEM.
+**After:** identical run with FABDEM.
 
-The improved workflow should be:
+**Improvement metric:** coverage, voids, tile seams, agreement with independent elevation checkpoints, line-of-sight changes, and geographic-holdout RF error.
 
-```text
-1. Load raw telecom sites and cells
-2. Clean and consolidate physical sites
-3. Load public GIS layers
-4. Convert Libya into H3 planning zones
-5. Aggregate features per H3 zone
-6. Train or apply demand model
-7. Train or apply underserved model
-8. Produce expansion priority map
-9. Select high-priority H3 zones
-10. Generate candidate points inside those zones
-11. Evaluate candidates with GIS constraints
-12. Simulate RF coverage with GRASS-RaPlaT
-13. Validate LOS/backhaul with SPLAT!
-14. Optimize antenna configuration
-15. Rank final sites
-16. Export map, CSV, GeoJSON, and planning report
-```
+**Acceptance criterion:** better checkpoint error and RF error without worse coverage or artifacts. Define the minimum error reduction before the test.
 
-## Scoring Models
+**Decision:** replace the active DEM only if it wins the controlled comparison. Otherwise remove from runtime and retain the report.
 
-### Demand Score
+## Step 15: Acquire Operator Asset and Configuration Data
 
-Demand score estimates where user demand is high.
+**Datasets:** verified site/sector inventory, antenna catalogue, azimuth, tilt, height, bands, bandwidth, power, feeder loss, and backhaul endpoints.
+**Status:** proposed; requires operator authorization.
 
-Example formula:
+**Question:** can the system progress from site-gap screening to engineering simulation?
 
-```text
-Demand Score =
-  0.30 * population_score
-+ 0.20 * building_density_score
-+ 0.15 * POI_score
-+ 0.15 * Cloudflare_activity_score
-+ 0.10 * night_lights_score
-+ 0.10 * Ookla_activity_score
-```
+**Before:** inferred site references and GIS priority only.
+**After:** versioned, access-controlled asset and sector layers with field-level provenance.
 
-If real operator traffic data becomes available, replace or improve the proxy score with actual traffic:
+**Improvement metric:** match rate to observed cells, required-field completeness, coordinate accuracy against surveyed samples, sector consistency, and age.
 
-```text
-DL_GB
-UL_GB
-RRC users
-PRB utilization
-Active users
-```
+**Acceptance criterion:** thresholds are agreed with RF engineers before ingestion; records below completeness/confidence thresholds remain excluded or explicitly uncertain.
 
-### Underserved Score
+**Decision:** keep secured authoritative fields. Never fill missing antenna or spectrum values with generic assumptions in production outputs.
 
-Underserved score identifies areas where demand is high but service is weak.
+## Step 16: Integrate RF Simulation
 
-Example formula:
+**Tools:** GRASS-RaPlaT for area coverage; SPLAT! or an accepted equivalent for terrain profile, LOS, and backhaul checks.
+**Status:** proposed.
 
-```text
-Underserved Score =
-  0.35 * demand_score
-+ 0.20 * nearest_site_gap_score
-+ 0.15 * low_site_density_score
-+ 0.15 * poor_speed_or_KPI_score
-+ 0.15 * population_per_site_score
-```
+Start with a reproducible link budget and propagation configuration based on supplied operator parameters. Record frequency, EIRP, antenna pattern, height, receiver assumptions, clutter, DEM, resolution, and software version.
 
-### RF Score
+**Before:** explainable GIS priority only.
+**After:** calibrated predictions such as RSRP/received power, best server, overlap, newly covered population, and LOS evidence.
 
-RF score validates whether a candidate site performs well physically.
+**Improvement metric:** median and 90th-percentile prediction error against geographically held-out drive-test points; coverage-threshold precision/recall; error by terrain/clutter/region; runtime.
 
-Example formula:
+**Acceptance criterion:** RF engineers pre-register tolerances. A reasonable starting target for review is median absolute RSRP error at or below 8 dB and 90th percentile at or below 15 dB, with no region consistently outside tolerance. These are acceptance proposals, not current results.
 
-```text
-RF Score =
-  coverage_gain
-+ population_newly_covered
-+ elevation_advantage
-+ LOS_backhaul_feasibility
-- coverage_overlap
-- terrain_obstruction
-- interference_risk
-- bad_land_cover_or_buildability
-```
+**Decision:** calibrate and revise until accepted. Do not publish RF-validated recommendations from an uncalibrated model.
 
-### Final Site Score
+## Step 17: Integrate Operator KPI and Drive-Test Evidence
 
-The final score should combine AI, GIS, RF, and business factors.
+**Datasets:** temporally aligned, privacy-safe RSRP, RSRQ, SINR, throughput, drops, accessibility, retainability, PRB utilization, active users, and traffic.
+**Status:** proposed; requires operator authorization and governance.
 
-Example formula:
+**Question:** do candidates target observed service or capacity problems?
 
-```text
-Final Site Score =
-  0.30 * AI_suitability
-+ 0.25 * newly_covered_population_score
-+ 0.20 * RF_coverage_quality
-+ 0.10 * low_interference_score
-+ 0.10 * buildability_score
-+ 0.05 * backhaul_feasibility
-```
+**Before:** GIS plus calibrated RF ranking.
+**After:** KPI-supported underserved and capacity-priority components.
 
-The exact weights should be calibrated using real operator feedback.
+**Improvement metric:** spatial/temporal coverage, sample support, agreement between predicted and measured weak-service areas, top-k precision against RF-engineer labels, and stability across time windows.
 
-## RF Calculations To Implement
+**Acceptance criterion:** minimum sample support and time alignment are defined before use; geographic holdout performance must beat the GIS+RF baseline; privacy and access controls pass review.
 
-### Free Space Path Loss
+**Decision:** keep KPI components only where supported. Do not turn missing KPI regions into low-demand or good-service regions.
 
-```text
-FSPL(dB) = 32.44 + 20log10(f_MHz) + 20log10(d_km)
-```
+After the evidence layer passes, test traffic/PRB forecasts and anomaly detection as separate models. Traffic forecasts must beat seasonal-naive and recent-value baselines on temporal and geographic holdouts. Anomaly alerts must be evaluated against independently recorded incidents or engineer labels with a pre-registered false-alert limit. Suggested actions such as load balancing, tilt review, carrier activation, backhaul improvement, or new-site study remain recommendations for an engineer; they are not automatic consequences of a forecast.
 
-Use this as a simple baseline check.
+## Step 18: Optimize Candidate and Sector Scenarios
 
-### Received Power
+**Input:** accepted GIS, RF, asset, and KPI stages.
+**Status:** proposed.
 
-```text
-Received Power =
-  EIRP
-+ receiver_gain
-- path_loss
-- cable_loss
-- clutter_loss
-- penetration_loss
-- body_loss
-```
+Generate candidate coordinates within high-priority planning units and test documented scenarios. Optimize measurable objectives such as newly covered population, weak-service reduction, overlap, interference, access, power/backhaul feasibility, and cost.
 
-For cellular planning, this can approximate RSRP or signal strength depending on the model.
+**Before:** independently ranked points.
+**After:** scenario portfolios with constraints, trade-off frontiers, and marginal benefit per site.
 
-### Noise Floor
+**Improvement metric:** gain over the greedy baseline on held-out scenarios, constraint violations, sensitivity to uncertain inputs, and reviewer acceptance.
 
-```text
-Noise(dBm) =
-  -174
-+ 10log10(bandwidth_Hz)
-+ noise_figure
-```
+**Acceptance criterion:** zero hard-constraint violations, measurable objective gain over baseline, and stable choices under pre-registered perturbations.
 
-### SINR
+**Decision:** keep the simplest optimizer that passes. Equipment and sector settings remain engineering outputs from supplied constraints, not learned guesses.
 
-```text
-SINR =
-  signal_power
-- 10log10(interference_power + noise_power)
-```
+## Step 19: Consider AI Only with Real Outcomes
 
-### Fresnel Zone
+**Eligible labels:** RF-engineer acceptance, acquisition success/failure, commissioned-site KPI improvement, calibrated measured coverage, or another independently observed outcome.
+**Status:** future.
 
-Use for microwave/backhaul and LOS checks.
+**Before:** explainable weighted baseline using the same evidence.
+**After:** candidate model trained without generated labels and evaluated on geographic and temporal holdouts.
 
-The first Fresnel zone radius should be checked along the terrain path. If terrain enters the Fresnel zone too much, the microwave link may be unreliable even if basic line-of-sight exists.
+**Improvement metric:** task-appropriate calibration and ranking metrics, performance by region, error analysis, stability, explanation quality, and operational reviewer benefit.
 
-### Height Above Average Terrain
+**Acceptance criterion:** pre-register a minimum improvement over the explainable baseline, pass calibration and fairness/geographic checks, and demonstrate value on untouched outcomes.
 
-```text
-HAAT =
-  antenna_ground_elevation
-+ antenna_height
-- average_surrounding_terrain_elevation
-```
+**Decision:** deploy only if it adds reproducible value. Otherwise retain the explainable baseline. Never train on generated negatives or rule-created equipment labels.
 
-This is important because a site on a hill can cover much more area than a site in a valley.
+## Step 20: Production Data and Review Platform
 
-## Propagation Models
+**Components:** PostGIS for versioned geospatial data, QGIS for engineering review, and GeoServer/QGIS Server plus MapLibre if a web interface is needed.
+**Status:** proposed.
 
-Use different propagation models depending on the planning scenario.
+**Before:** file-based local workflow.
+**After:** access-controlled, auditable scenario and review system.
 
-### Free Space
+**Improvement metric:** query/runtime targets, reproducible scenario rebuilds, lineage completeness, concurrent review, export integrity, recovery tests, and user-task completion time.
 
-Use for:
+**Acceptance criterion:** 100% source-to-output lineage, role-based access for restricted data, successful backup/restore exercise, deterministic rebuild of an accepted scenario, and no loss of units or missingness during export.
 
-- Baseline calculations
-- Open desert
-- Initial sanity checks
+**Decision:** adopt components only when scale or collaboration requires them. QGIS remains the engineering inspection surface regardless of web deployment.
 
-### Hata / Okumura-Hata
+## Score Evolution
 
-Use for:
+The score name communicates the evidence stage:
 
-- Macro cellular planning
-- Urban/suburban/rural LTE-style coverage
-- Fast wide-area estimation
+| Stage | Output | Meaning |
+| --- | --- | --- |
+| Current | `planning_priority_score` | Relative GIS screening priority |
+| After accepted RF gate | `rf_scenario_score` plus physical metrics | Comparison within a declared RF scenario |
+| After accepted KPI gate | `service_improvement_priority` | Priority supported by measured network evidence |
+| After accepted outcome model | model-specific calibrated output | Only the outcome defined by its real labels |
 
-### COST231-Hata
+Keep the component values even after later stages are added. A single opaque “AI suitability” field is not an acceptable final output.
 
-Use for:
+## Required Deliverables at Every Gate
 
-- Higher-frequency urban and suburban macro coverage
-- 1800 MHz / 2100 MHz style cellular planning
+- raw-source provenance manifest;
+- quality and missingness report;
+- baseline and treatment configuration;
+- before/after metric table;
+- geographic difference map;
+- rank-change and sensitivity report;
+- failed-case sample;
+- keep/review-only/revise/remove decision;
+- updated limitations and attribution;
+- tests for schema, units, missingness, and determinism.
 
-### Walfisch-Ikegami
-
-Use for:
-
-- Dense urban areas
-- Building-aware planning where building height/density is available
-
-### Longley-Rice / ITM
-
-Use for:
-
-- Terrain-aware rural and long-distance propagation
-- SPLAT! validation
-- Mountain/desert terrain checks
-
-### ITU-R P.452
-
-Use for:
-
-- Interference and point-path studies
-- Specialized microwave/regulatory-style analysis
-- Optional future pycraf integration
-
-## Antenna Specification Optimizer
-
-The platform should recommend practical antenna specifications.
-
-For each candidate site, evaluate combinations like:
-
-- Tower height: 20 m, 25 m, 30 m, 35 m, 40 m, 50 m
-- Sectors: 1, 2, 3, or 4 sectors
-- Azimuths: demand-facing directions
-- Mechanical downtilt: 0 to 8 degrees
-- Electrical downtilt: 0 to 8 degrees
-- Bands: B20, B8, B3, B1, and future NR bands if known
-- Bandwidth: 5, 10, 15, 20 MHz or carrier aggregation sets
-- Antenna gain: 15 to 18 dBi for macro panels
-- Transmit power / EIRP
-
-Example strategy:
-
-```text
-Urban high-capacity:
-3 sectors
-B3 + B1 + B20
-30 to 40 m height
-4 to 8 degree downtilt
-capacity-focused
-
-Suburban standard macro:
-3 sectors
-B3 + B20
-30 to 45 m height
-3 to 6 degree downtilt
-coverage and capacity balance
-
-Rural coverage macro:
-1 to 3 sectors
-B20 + B8
-40 to 60 m height
-0 to 4 degree downtilt
-long-range coverage
-
-Hotspot / small cell:
-1 sector or omni
-B3 / B1 / NR depending on spectrum
-low height
-high-demand POI area
-capacity-focused
-```
-
-## Network ML Integration
-
-If telecom companies provide internal KPI data, add a Network ML module.
-
-Initial KPI fields:
-
-- Cell ID
-- Site ID
-- Timestamp
-- DL traffic
-- UL traffic
-- DL PRB utilization
-- UL PRB utilization
-- Connected users / RRC users
-- DL throughput
-- UL throughput
-- Cell availability
-- RRC setup success rate
-- ERAB setup success rate
-- Drop rate
-- Handover success rate
-- RSRP
-- RSRQ
-- SINR
-- CQI
-- Interference
-- RAT
-- Band
-- EARFCN
-- Latitude
-- Longitude
-
-Network ML should produce:
-
-- 24-hour traffic forecast
-- 24-hour PRB forecast
-- Congestion prediction
-- Anomaly detection
-- Performance / QoE score
-- Geographic congestion heatmap
-- Suggested action
-
-Suggested actions:
-
-- Load balancing
-- Mobility parameter optimization
-- Downtilt or azimuth adjustment
-- Carrier activation
-- Add capacity to existing site
-- Add sector
-- Add small cell
-- Build new macro site
-
-Important:
-
-The system should not always recommend a new tower. Sometimes the best answer is cheaper:
-
-```text
-Change tilt
-Change azimuth
-Activate another carrier
-Improve backhaul
-Rebalance traffic
-Add a small cell
-Add a sector
-```
-
-## Combined Architecture
-
-```text
-TELECOM AI PLATFORM
-
-Data Layer:
-  PostGIS
-  Raster store
-  H3 planning zones
-  Site/cell database
-  KPI database
-
-GIS Feature Layer:
-  Population
-  Buildings
-  Terrain
-  Land cover
-  Roads
-  POIs
-  Cloudflare
-  Ookla
-  Night lights
-
-Network ML Layer:
-  Traffic forecast
-  PRB forecast
-  Anomaly detection
-  QoE score
-  Congestion prediction
-
-GIS ML Layer:
-  Demand map
-  Underserved map
-  Expansion priority map
-  Candidate area generation
-
-RF Planning Layer:
-  GRASS-RaPlaT coverage
-  SPLAT! LOS/backhaul
-  Path loss models
-  Terrain profiles
-
-Optimization Layer:
-  Site selection
-  Tower height
-  Azimuth
-  Downtilt
-  Band selection
-  Sector configuration
-
-Product Layer:
-  Web GIS dashboard
-  Scenario comparison
-  Planning reports
-  Employee copilot
-```
-
-## Production Dashboard Features
-
-The production app should include:
-
-- Interactive Libya map
-- Layer toggles
-- Existing sites and cells
-- Operator filters
-- RAT filters
-- Band filters
-- H3 demand map
-- H3 underserved map
-- H3 expansion priority map
-- Recommended candidate sites
-- RF coverage overlays
-- Terrain profile viewer
-- Backhaul LOS viewer
-- Scenario comparison
-- Candidate site detail panel
-- Export to CSV, GeoJSON, PDF, and engineering report
-
-Candidate detail panel should show:
-
-- Coordinates
-- Municipality
-- Nearest settlement
-- Demand score
-- Underserved score
-- AI suitability
-- RF score
-- Final priority
-- Population newly covered
-- Existing nearest sites
-- Overlap risk
-- Road access
-- Terrain elevation
-- Recommended antenna specs
-- Reason codes
-
-## Employee Copilot
-
-Later, add an internal employee copilot.
-
-It should answer questions like:
-
-```text
-Which areas in Benghazi need expansion?
-Why is this site recommended?
-Which cells are predicted to be congested tomorrow?
-Should we build a new site or add capacity to an existing site?
-Show me candidate sites near Misrata with good road access and low overlap.
-```
-
-The copilot should use controlled APIs, not direct unrestricted database access.
-
-It can combine:
-
-- GIS scores
-- RF results
-- Network KPIs
-- Forecasts
-- Anomaly scores
-- Planning documents
-- SOPs
-
-## Implementation Phases
-
-### Phase 1: H3 Planning Grid
-
-Goal:
-
-Convert Libya into H3 planning zones and aggregate current features per zone.
-
-Tasks:
-
-- Choose H3 resolution.
-- Assign existing sites to H3 cells.
-- Aggregate population per H3.
-- Aggregate road access per H3.
-- Aggregate terrain features per H3.
-- Calculate nearest site and site density per H3.
-
-Outputs:
-
-- H3 feature table
-- H3 GeoJSON
-- Initial demand and gap maps
-
-### Phase 2: Add Better GIS Data
-
-Goal:
-
-Add the missing high-value public datasets.
-
-Tasks:
-
-- Add ESA WorldCover.
-- Add Microsoft Building Footprints.
-- Add OpenStreetMap POIs and land use.
-- Test Ookla Open Data coverage for Libya.
-- Optionally test VIIRS Night Lights.
-- Optionally upgrade terrain with FABDEM.
-
-Outputs:
-
-- Enriched H3 feature table
-- Land cover / clutter features
-- Building and POI features
-
-### Phase 3: Demand and Underserved Models
-
-Goal:
-
-Train or calculate explainable scores for demand and underserved areas.
-
-Tasks:
-
-- Build demand score.
-- Build underserved score.
-- Compare rule-based scoring vs LightGBM/XGBoost.
-- Validate against known existing site distribution.
-- Validate against Ookla/KPI data if available.
-
-Outputs:
-
-- Demand map
-- Underserved map
-- Expansion priority map
-
-### Phase 4: Candidate Generation
-
-Goal:
-
-Generate candidate sites inside high-priority H3 zones.
-
-Tasks:
-
-- Sample candidate points near roads.
-- Avoid water and unsuitable land cover.
-- Prefer accessible terrain.
-- Avoid excessive closeness to existing sites.
-- Include candidate points around settlements, POIs, and road corridors.
-
-Outputs:
-
-- Candidate site list
-- Candidate site GeoJSON
-
-### Phase 5: RF Simulation With GRASS-RaPlaT
-
-Goal:
-
-Validate candidate sites with real RF planning models.
-
-Tasks:
-
-- Convert DEM and land cover to GRASS-compatible rasters.
-- Create antenna configuration templates.
-- Run coverage simulation per candidate and sector.
-- Produce predicted signal raster.
-- Aggregate sector/site coverage.
-- Calculate newly covered population.
-- Calculate overlap with existing coverage.
-
-Outputs:
-
-- Coverage rasters
-- Coverage polygons
-- RF score per candidate
-- Population covered per candidate
-
-### Phase 6: LOS and Backhaul Validation With SPLAT!
-
-Goal:
-
-Check whether candidate sites are practical for backhaul and terrain visibility.
-
-Tasks:
-
-- Generate terrain profiles to nearby existing sites, fiber routes, or hub candidates.
-- Check line-of-sight.
-- Check Fresnel clearance.
-- Calculate terrain obstruction.
-- Calculate HAAT.
-
-Outputs:
-
-- LOS result
-- Backhaul feasibility score
-- Terrain profile report
-
-### Phase 7: Antenna Specification Optimizer
-
-Goal:
-
-Recommend practical antenna parameters.
-
-Tasks:
-
-- Test multiple tower heights.
-- Test multiple azimuth sets.
-- Test multiple downtilt values.
-- Test bands and bandwidth options.
-- Choose the configuration with best final score.
-
-Outputs:
-
-- Recommended tower height
-- Recommended sectors
-- Recommended azimuths
-- Recommended downtilt
-- Recommended bands
-- Recommended bandwidth
-- Recommended antenna gain / EIRP
-
-### Phase 8: Production Storage and API
-
-Goal:
-
-Move from local files to production-style storage.
-
-Tasks:
-
-- Add PostGIS schema.
-- Store H3 zones.
-- Store sites, cells, sectors, candidates, and RF outputs.
-- Build API endpoints for map and recommendation access.
-- Add scenario IDs for planning experiments.
-
-Outputs:
-
-- Production geospatial database
-- Planning API
-- Scenario management
-
-### Phase 9: Web GIS Dashboard
-
-Goal:
-
-Build the planner-facing product.
-
-Tasks:
-
-- Build map interface.
-- Add layer controls.
-- Add candidate detail panel.
-- Add scenario comparison.
-- Add report export.
-- Add filters by operator, RAT, band, municipality, priority, and score.
-
-Outputs:
-
-- Telecom planning dashboard
-- Interactive RF/GIS maps
-- Exportable planning reports
-
-### Phase 10: Network ML Integration
-
-Goal:
-
-Integrate real operator KPIs when available.
-
-Tasks:
-
-- Ingest historical KPI data.
-- Forecast traffic and PRB.
-- Detect anomalies.
-- Calculate performance/QoE score.
-- Feed persistent problem areas into GIS planning.
-
-Outputs:
-
-- Congestion forecast
-- Anomaly map
-- Performance heatmap
-- Suggested planning action
-
-## Example Final Recommendation Report
-
-```text
-Recommended Site: South Benghazi Growth Area
-
-Coordinates:
-32.xxxx, 20.xxxx
-
-Reason:
-High population and building density, weak nearby site density,
-poor predicted service, good road access, and positive terrain prominence.
-
-Recommended Configuration:
-Tower height: 35 m
-Sectors: 3
-Azimuths: 40 / 160 / 280 degrees
-Bands: B20 800 MHz + B3 1800 MHz
-Bandwidth: 20 to 30 MHz
-Downtilt: 4 degrees
-Antenna gain: 17 dBi macro panel
-
-RF Validation:
-Good predicted B20 coverage
-Acceptable B3 capacity footprint
-Low terrain obstruction
-Medium overlap with existing cells
-Backhaul LOS available to nearest hub
-
-Expected Benefit:
-New population covered: 18,200
-Coverage gap reduced: 7.4 km
-Priority: Critical
-```
-
-## Business Value For Telecom Companies
-
-The system should help operators:
-
-- Reduce manual planning time
-- Find underserved areas faster
-- Prioritize investment objectively
-- Avoid building unnecessary towers
-- Improve CAPEX planning
-- Compare new site vs capacity expansion
-- Explain decisions to engineering and management
-- Produce auditable planning reports
-- Combine GIS, AI, RF, and network KPI data in one platform
-
-## Final Product Positioning
-
-Do not present the system as only:
-
-```text
-AI antenna placement model
-```
-
-Present it as:
-
-```text
-AI-assisted telecom GIS and RF planning platform for Libya.
-It detects demand, identifies underserved areas, validates candidate sites
-with RF physics, recommends antenna configurations, and generates
-engineering-ready planning reports.
-```
-
-This positioning is stronger because telecom companies need explainable, auditable, RF-backed planning decisions, not only ML predictions.
-
+The project advances one accepted gate at a time. This keeps improvements measurable and makes it possible to remove a weak dataset without destabilizing the rest of the planning pipeline.

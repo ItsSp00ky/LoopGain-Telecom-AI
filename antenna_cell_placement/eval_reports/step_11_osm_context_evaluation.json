@@ -1,0 +1,157 @@
+{
+  "after": {
+    "enabled_families": [
+      "hospital",
+      "higher_education",
+      "aviation",
+      "industrial"
+    ],
+    "selected_osm_context_fields": 13,
+    "shortlist_count": 50
+  },
+  "before": {
+    "selected_osm_context_fields": 0,
+    "shortlist_count": 50
+  },
+  "checks": {
+    "independent_planning_case_set_available": false,
+    "rank_stability_spearman": 1.0,
+    "scores_and_ranks_unchanged": true,
+    "source_available_for_all_candidates": true
+  },
+  "decision": "retain hospitals, higher education, aviation, and industrial land use as review-only context; remove the sparse ferry-terminal port proxy",
+  "family_results": {
+    "aviation": {
+      "decision_reason": "retained as review context; completeness thresholds passed, but no independent planning case labels are available",
+      "feature_count": 87,
+      "feature_count_pass": true,
+      "independent_reference_available": false,
+      "known_poi_recall": null,
+      "minimum_features": 20,
+      "minimum_municipality_coverage_pct": 50.0,
+      "municipalities_with_observation": 20,
+      "municipality_coverage_pass": true,
+      "municipality_coverage_pct": 90.9090909090909,
+      "named_feature_pct": 88.50574712643679,
+      "runtime_enabled": true,
+      "status": "review-only",
+      "valid_geometry_pass": true
+    },
+    "higher_education": {
+      "decision_reason": "retained as review context; completeness thresholds passed, but no independent planning case labels are available",
+      "feature_count": 799,
+      "feature_count_pass": true,
+      "independent_reference_available": false,
+      "known_poi_recall": null,
+      "minimum_features": 100,
+      "minimum_municipality_coverage_pct": 80.0,
+      "municipalities_with_observation": 22,
+      "municipality_coverage_pass": true,
+      "municipality_coverage_pct": 100.0,
+      "named_feature_pct": 75.59449311639548,
+      "runtime_enabled": true,
+      "status": "review-only",
+      "valid_geometry_pass": true
+    },
+    "hospital": {
+      "decision_reason": "retained as review context; completeness thresholds passed, but no independent planning case labels are available",
+      "feature_count": 893,
+      "feature_count_pass": true,
+      "independent_reference_available": false,
+      "known_poi_recall": null,
+      "minimum_features": 100,
+      "minimum_municipality_coverage_pct": 80.0,
+      "municipalities_with_observation": 22,
+      "municipality_coverage_pass": true,
+      "municipality_coverage_pct": 100.0,
+      "named_feature_pct": 75.47592385218364,
+      "runtime_enabled": true,
+      "status": "review-only",
+      "valid_geometry_pass": true
+    },
+    "industrial": {
+      "decision_reason": "retained as review context; completeness thresholds passed, but no independent planning case labels are available",
+      "feature_count": 1706,
+      "feature_count_pass": true,
+      "independent_reference_available": false,
+      "known_poi_recall": null,
+      "minimum_features": 100,
+      "minimum_municipality_coverage_pct": 80.0,
+      "municipalities_with_observation": 22,
+      "municipality_coverage_pass": true,
+      "municipality_coverage_pct": 100.0,
+      "named_feature_pct": 19.929660023446658,
+      "runtime_enabled": true,
+      "status": "review-only",
+      "valid_geometry_pass": true
+    },
+    "port": {
+      "decision_reason": "excluded from runtime because its regional completeness threshold failed",
+      "feature_count": 12,
+      "feature_count_pass": true,
+      "independent_reference_available": false,
+      "known_poi_recall": null,
+      "minimum_features": 10,
+      "minimum_municipality_coverage_pct": 25.0,
+      "municipalities_with_observation": 1,
+      "municipality_coverage_pass": false,
+      "municipality_coverage_pct": 4.545454545454546,
+      "named_feature_pct": 16.666666666666664,
+      "runtime_enabled": false,
+      "status": "remove",
+      "valid_geometry_pass": true
+    }
+  },
+  "limitations": [
+    "OpenStreetMap feature coverage reflects contributor activity and is not a complete inventory.",
+    "A zero H3 count means no selected feature was mapped in the source cell; it does not prove absence.",
+    "No independent labeled planning case set is supplied, so the context cannot enter ranking.",
+    "Feature proximity does not prove capacity, demand, access, ownership, or backhaul availability.",
+    "The ferry-terminal class is not an adequate national port inventory and is excluded from runtime."
+  ],
+  "quality": {
+    "duplicate_family_object_rows_removed": 10,
+    "input_rows": 3504,
+    "invalid_geometry_rows_after_repair": 0,
+    "invalid_geometry_rows_before_repair": 0,
+    "missing_or_empty_geometry_rows": 0,
+    "retained_features": 3497,
+    "valid_geometry_pct_after_repair": 100.0
+  },
+  "question": "Do selected OSM POI, transport, and land-use families add useful local context beyond supplied roads, settlements, and mapped buildings?",
+  "runtime_seconds": {
+    "selected_family_profile_and_load": 0.08326644699991448,
+    "source_hash_verification": 0.3300929559999304
+  },
+  "source": {
+    "attribution": "OpenStreetMap contributors",
+    "building_feature_count": 1268052,
+    "building_layer": "gis_osm_buildings_a_free",
+    "crs": "GEOGCS[\"WGS 84 (CRS84)\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Longitude\",EAST],AXIS[\"Latitude\",NORTH],AUTHORITY[\"OGC\",\"CRS84\"]]",
+    "dataset": "OpenStreetMap Libya building outlines via Geofabrik",
+    "files": [
+      {
+        "bytes": 187184805,
+        "filename": "libya-260919-free.gpkg.zip",
+        "sha256": "b20e45df66e7c810fbc88879f3adba57e13b85fb5ff02150ff6c6126b8754568"
+      },
+      {
+        "bytes": 401502208,
+        "filename": "libya-260919-free.gpkg",
+        "sha256": "79a2bb39ed9189bb8757f9553e5807de111b9b443117b0fb5df81fe9729c4bf5"
+      }
+    ],
+    "format_documentation": "https://download.geofabrik.de/osm-data-in-gis-formats-free.pdf",
+    "http": {
+      "etag": "b2836a5-65be24e555967",
+      "last_modified": "Sun, 20 Sep 2026 04:09:55 GMT"
+    },
+    "license": "ODbL-1.0",
+    "license_url": "https://www.openstreetmap.org/copyright",
+    "retrieved_utc": "2026-09-20T17:04:02.681517+00:00",
+    "snapshot_date": "2026-09-19",
+    "source_url": "https://download.geofabrik.de/africa/libya-260919-free.gpkg.zip"
+  },
+  "status": "review-only",
+  "step": 11
+}

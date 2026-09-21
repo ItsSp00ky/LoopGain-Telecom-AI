@@ -1,0 +1,136 @@
+{
+  "acceptance": {
+    "independent_median_absolute_error_at_most_3m": false,
+    "municipality_coverage_at_least_95_pct": false,
+    "national_building_height_coverage_at_least_50_pct": false,
+    "rf_or_kpi_improvement_demonstrated": false
+  },
+  "after": {
+    "height_fields_in_runtime_output": 0,
+    "runtime_integration_rejected": true,
+    "shortlist_count": 50
+  },
+  "before": {
+    "height_fields_in_runtime_output": 0,
+    "shortlist_count": 50
+  },
+  "checks": {
+    "independent_median_absolute_error_m": null,
+    "independent_reference_sample_available": false,
+    "recommendation_output_unchanged": true,
+    "rf_or_kpi_improvement": null,
+    "rf_or_kpi_truth_available": false
+  },
+  "coverage": {
+    "buildings_with_valid_explicit_height": 3042,
+    "municipalities_with_valid_height": 19,
+    "municipalities_with_valid_height_pct": 86.36363636363636,
+    "municipality_count": 22,
+    "national_building_height_coverage_pct": 0.23989552478920423,
+    "reference_building_footprint_count": 1268052,
+    "shortlist_h3_count": 50,
+    "shortlist_h3_with_valid_height": 0,
+    "shortlist_h3_with_valid_height_pct": 0.0,
+    "valid_height_counts_by_municipality": {
+      "Al Jabal Al Akhdar": 8,
+      "Al Jabal Al Gharbi": 8,
+      "Aljfara": 131,
+      "Aljufra": 25,
+      "Alkufra": 1,
+      "Almargeb": 237,
+      "Almarj": 0,
+      "Azzawya": 47,
+      "Benghazi": 40,
+      "Derna": 2,
+      "Ejdabia": 15,
+      "Ghat": 0,
+      "Misrata": 409,
+      "Murzuq": 0,
+      "Nalut": 1,
+      "Sebha": 1457,
+      "Sirt": 4,
+      "Tobruk": 19,
+      "Tripoli": 104,
+      "Ubari": 3,
+      "Wadi Ashshati": 1,
+      "Zwara": 528
+    }
+  },
+  "decision": "exclude building height from runtime outputs and scoring; explicit height coverage is sparse and no independent reference or RF truth is supplied",
+  "limitations": [
+    "Most explicit OSM height tags do not declare how the value was obtained.",
+    "OpenStreetMap contributor coverage is uneven and has no completeness mask.",
+    "No independent Libya height reference is supplied for error measurement.",
+    "No RF or KPI truth is supplied for testing added planning value.",
+    "Floor counts are not converted into height because that requires an assumption."
+  ],
+  "quality": {
+    "building_levels_tag_rows_profiled_only": 104841,
+    "duplicate_osm_objects_removed": 0,
+    "explicit_height_tag_rows": 3050,
+    "height_m_max": 200.0,
+    "height_m_median": 4.0,
+    "height_m_min": 1.0,
+    "height_m_p90": 12.0,
+    "height_parse_status_counts": {
+      "invalid_format": 1,
+      "metres": 3042,
+      "outside_plausible_range": 7
+    },
+    "height_source_declared_rows": 0,
+    "height_source_missing_rows": 3042,
+    "height_source_values": {},
+    "height_unit_counts": {
+      "metres": 3042
+    },
+    "invalid_geometry_rows": 0,
+    "valid_explicit_height_rows": 3042,
+    "valid_geometry_rows": 3042
+  },
+  "question": "Does independently supported vertical form improve planning context beyond mapped footprints?",
+  "runtime_seconds": {
+    "height_and_levels_profile": 8.082102855999892,
+    "source_hash_verification": 0.053789290000167966
+  },
+  "source": {
+    "attribution": "OpenStreetMap contributors",
+    "dataset": "Explicit OpenStreetMap building height tags via Geofabrik",
+    "file": {
+      "bytes": 76584743,
+      "filename": "libya-260919.osm.pbf",
+      "sha256": "43bb9fbf12e6331a606b433f74d7f806e8302e87933e3597b22e9b5ce4fdafcd"
+    },
+    "http": {
+      "etag": "4909727-65bde3f466952",
+      "last_modified": "Sat, 19 Sep 2026 23:19:22 GMT"
+    },
+    "license": "ODbL-1.0",
+    "license_url": "https://www.openstreetmap.org/copyright",
+    "osm_layer": "multipolygons",
+    "policy": {
+      "accepted": "explicit height tags",
+      "profile_only": "building:levels tags",
+      "prohibited": [
+        "floor-count-to-height conversion",
+        "machine-learned height",
+        "remotely inferred height"
+      ]
+    },
+    "reference_building_feature_count": 1268052,
+    "retrieved_utc": "2026-09-20T17:32:33.046971+00:00",
+    "snapshot_date": "2026-09-19",
+    "source_url": "https://download.geofabrik.de/africa/libya-260919.osm.pbf",
+    "tag_documentation": "https://wiki.openstreetmap.org/wiki/Key:height"
+  },
+  "source_policy": {
+    "accepted_for_audit": "explicit OpenStreetMap height tags only",
+    "excluded": [
+      "height inferred from building:levels",
+      "Microsoft machine-learned building height",
+      "other remotely inferred or generated height products"
+    ],
+    "reason": "The project prohibits generated evidence and has no supplied floor-height assumption or independent height labels."
+  },
+  "status": "remove",
+  "step": 10
+}

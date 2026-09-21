@@ -1,9 +1,7 @@
 """Regional digital-demand features derived from Cloudflare Radar data.
 
 Radar measures Internet traffic observed by Cloudflare, not mobile-radio demand or
-coverage.  Consequently these features are kept out of the suitability classifier
-and are exposed as a bounded, independent prior for ranking otherwise suitable
-deployment candidates.
+coverage. Consequently these features are exposed only as regional review context.
 """
 
 from pathlib import Path
@@ -55,7 +53,6 @@ OUTPUT_COLUMNS = [
     "cloudflare_annual_stability_score_52w",
     "cloudflare_annual_traffic_growth_52w_pct",
     "cloudflare_regional_demand_score",
-    "cloudflare_priority_factor",
     "cloudflare_data_available",
 ]
 
@@ -92,14 +89,10 @@ def load_regional_features(
     if (radar["http_requests_share_52w_pct"] < 0).any():
         raise ValueError("Cloudflare annual HTTP request shares cannot be negative")
 
-    # Percentile scaling prevents Tripoli's 54% share from overwhelming local
-    # population, terrain, accessibility, and coverage-gap evidence.
+    # The percentile is descriptive context only and does not affect ranking.
     radar["cloudflare_regional_demand_score"] = radar[
         "http_requests_share_52w_pct"
     ].rank(method="average", pct=True)
-    radar["cloudflare_priority_factor"] = (
-        0.9 + 0.2 * radar["cloudflare_regional_demand_score"]
-    )
     radar["cloudflare_data_available"] = True
 
     radar = radar.rename(
@@ -118,7 +111,7 @@ def add_regional_features(
     path: Path = CLOUDFLARE_REGIONAL_FEATURES_PATH,
     municipality_column: str = "municipality_name",
 ) -> pd.DataFrame:
-    """Add Radar context to locations, using a neutral factor when unavailable."""
+    """Add Radar context while preserving unavailable values as missing."""
     if municipality_column not in frame.columns:
         raise KeyError(f"Missing municipality column: {municipality_column}")
 
@@ -139,10 +132,4 @@ def add_regional_features(
     result["cloudflare_data_available"] = result[
         "cloudflare_data_available"
     ].fillna(False).astype(bool)
-    result["cloudflare_regional_demand_score"] = result[
-        "cloudflare_regional_demand_score"
-    ].fillna(0.5)
-    result["cloudflare_priority_factor"] = result[
-        "cloudflare_priority_factor"
-    ].fillna(1.0)
     return result

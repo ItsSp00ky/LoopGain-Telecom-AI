@@ -1,0 +1,73 @@
+{
+  "aggregation_warning": "Device counts are not unique across tiles or quarters and must not be summed as people or national unique devices.",
+  "attribution": "Speedtest by Ookla Global Fixed and Mobile Network Performance Maps, accessed 21 September 2026 from AWS; based on project analysis for 2025 Q2 through 2026 Q1. Ookla trademarks used under license.",
+  "dataset": "Speedtest by Ookla Global Mobile Network Performance Map Tiles",
+  "documentation_url": "https://github.com/teamookla/ookla-open-data",
+  "libya_subset": {
+    "bytes": 6369280,
+    "crs": "EPSG:4326",
+    "filename": "libya_mobile_performance_tiles.gpkg",
+    "rows": 24979,
+    "sha256": "5692ad32a96409c1af7b9ab4a99e06aac64c805e94e812848ef6b4f1c6101934"
+  },
+  "license": "CC-BY-NC-SA-4.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "periods": [
+    "2025Q2",
+    "2025Q3",
+    "2025Q4",
+    "2026Q1"
+  ],
+  "retrieved_utc": "2026-09-21T08:56:03.536734+00:00",
+  "schema": {
+    "avg_d_kbps": "average download speed in kilobits per second",
+    "avg_lat_ms": "average latency in milliseconds",
+    "avg_u_kbps": "average upload speed in kilobits per second",
+    "devices": "unique devices within the tile-quarter only",
+    "quadkey": "zoom-level 16 tile identifier",
+    "tests": "tests contributing to the tile-quarter"
+  },
+  "service_type": "mobile",
+  "source_files": [
+    {
+      "bytes": 134927377,
+      "etag": "036f6a125061ba1d8561656285b1e17d-17",
+      "filename": "2025-04-01_performance_mobile_tiles.zip",
+      "last_modified": "Thu, 03 Jul 2025 00:20:54 GMT",
+      "libya_rows": 5477,
+      "period": "2025Q2",
+      "sha256": "dbc4897e09381e5dfa6a897681364f164cce4882cb19fa7858b47c261038c652",
+      "url": "https://ookla-open-data.s3.amazonaws.com/shapefiles/performance/type=mobile/year=2025/quarter=2/2025-04-01_performance_mobile_tiles.zip"
+    },
+    {
+      "bytes": 131249667,
+      "etag": "ecd98416d7f226db4b34c0e1cd44bd8e-16",
+      "filename": "2025-07-01_performance_mobile_tiles.zip",
+      "last_modified": "Fri, 03 Oct 2025 00:22:01 GMT",
+      "libya_rows": 5318,
+      "period": "2025Q3",
+      "sha256": "4d7e13808009ee13afabf40d0e01c868e2ab81c4030d8f15c338a2e7773e0dc8",
+      "url": "https://ookla-open-data.s3.amazonaws.com/shapefiles/performance/type=mobile/year=2025/quarter=3/2025-07-01_performance_mobile_tiles.zip"
+    },
+    {
+      "bytes": 127055229,
+      "etag": "9693ad6be41d7156ab5ea25dceb91eca-16",
+      "filename": "2025-10-01_performance_mobile_tiles.zip",
+      "last_modified": "Sat, 03 Jan 2026 00:12:28 GMT",
+      "libya_rows": 6221,
+      "period": "2025Q4",
+      "sha256": "2b2e5d28e06471264051a49772e4f5cba665ca0458662ac6fece73c611897ff0",
+      "url": "https://ookla-open-data.s3.amazonaws.com/shapefiles/performance/type=mobile/year=2025/quarter=4/2025-10-01_performance_mobile_tiles.zip"
+    },
+    {
+      "bytes": 122125291,
+      "etag": "20f4432160aa718d1fbebd4237409bde-15",
+      "filename": "2026-01-01_performance_mobile_tiles.zip",
+      "last_modified": "Mon, 13 Apr 2026 19:04:46 GMT",
+      "libya_rows": 7963,
+      "period": "2026Q1",
+      "sha256": "d50cdcf5c0025db210729cc85598f11c2ce4384214b7fc82a010ff5ed3ce1f74",
+      "url": "https://ookla-open-data.s3.amazonaws.com/shapefiles/performance/type=mobile/year=2026/quarter=1/2026-01-01_performance_mobile_tiles.zip"
+    }
+  ]
+}

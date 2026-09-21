@@ -25,7 +25,18 @@ class OpenCellIDTests(unittest.TestCase):
             cells, _, report = self.load([self.row()], header)
             self.assertEqual(len(cells), 1)
             self.assertEqual(cells.iloc[0]['operator'], 'Libyana')
+            self.assertEqual(cells.iloc[0]['unit_semantics'], 'PCI')
+            self.assertTrue(cells.iloc[0]['range_is_estimated'])
             self.assertEqual(report['input_rows'], 1)
+            self.assertEqual(report['unexpected_changeable_values'], 0)
+            self.assertEqual(report['unexpected_average_signal_values'], 0)
+
+    def test_deprecated_columns_are_reported_but_not_decision_inputs(self):
+        cells, _, report = self.load([self.row(changeable=0, averageSignal=-75)])
+        self.assertEqual(len(cells), 1)
+        self.assertEqual(report['unexpected_changeable_values'], 1)
+        self.assertEqual(report['unexpected_average_signal_values'], 1)
+        self.assertTrue(cells.loc[0, 'review_eligible'])
 
     def test_identity_includes_operator_area_and_radio(self):
         rows = [self.row(), self.row(net=1), self.row(area=2), self.row(radio='UMTS'),

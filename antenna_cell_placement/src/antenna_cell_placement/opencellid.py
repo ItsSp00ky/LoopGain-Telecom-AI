@@ -1,17 +1,20 @@
-"""OpenCellID cell observations, kept separate from inferred physical mast sites."""
+"""Validate OpenCellID observations without treating them as mast or coverage truth."""
 
-import json
 from pathlib import Path
+from functools import lru_cache
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from pyproj import Transformer
 from scipy.spatial import cKDTree
+from shapely.geometry import Point
 
 from antenna_cell_placement.config import (
-    OPENCELLID_RAW_PATH, OPENCELLID_CLEANED_PATH, OPENCELLID_REPORT_PATH,
-    CLEANED_PHYSICAL_SITES_CSV, RECOMMENDATIONS_CSV, REPORTS_DIR,
-    LIBYA_BBOX, CRS_PROJECTED_LIBYA,
+    OPENCELLID_RAW_PATH,
+    ADMIN0_GEOJSON_PATH,
+    CRS_PROJECTED_LIBYA,
+    CRS_WGS84,
 )
 
 COLUMNS = 'radio mcc net area cell unit lon lat range samples changeable created updated averageSignal'.split()
@@ -21,11 +24,13 @@ IDENTITY = ['radio', 'mcc', 'net', 'area', 'cell']
 def load_cells(path: Path, as_of=None):
     """Read headerless or named exports; quarantine invalid identity/location rows.
 
-    Range is retained as source metadata, never used as a coverage radius or
-    positional accuracy. Review eligibility is a configurable-in-code heuristic,
-    not a measurement of confidence: >=2 samples and updated within 730 days.
+    ``unit`` is PSC for UMTS and PCI for LTE. ``range`` is an estimated source
+    value, not a coverage radius or accuracy. Deprecated ``changeable`` and
+    ``averageSignal`` are retained for provenance and excluded from decisions.
     """
     raw = pd.read_csv(path, header=None, dtype=str)
+    if raw.empty:
+        raise ValueError("OpenCellID input is empty")
     if raw.shape[1] != len(COLUMNS):
         raise ValueError(f'Expected 14 OpenCellID columns, found {raw.shape[1]}')
     if raw.iloc[0].str.strip().tolist() == COLUMNS:
@@ -39,10 +44,17 @@ def load_cells(path: Path, as_of=None):
     for col in ['mcc', 'net', 'area', 'cell']:
         valid &= df[col].notna() & np.isfinite(df[col]) & (df[col] >= 0) & (df[col] % 1 == 0)
     valid &= df['mcc'].eq(606)
-    valid &= df['lat'].between(LIBYA_BBOX['min_lat'], LIBYA_BBOX['max_lat'])
-    valid &= df['lon'].between(LIBYA_BBOX['min_lon'], LIBYA_BBOX['max_lon'])
+    valid &= df['lat'].between(-90, 90) & df['lon'].between(-180, 180)
+    inside_libya = pd.Series(False, index=df.index)
+    coordinate_rows = df['lat'].notna() & df['lon'].notna() & np.isfinite(df['lat']) & np.isfinite(df['lon'])
+    boundary = _libya_boundary()
+    inside_libya.loc[coordinate_rows] = [
+        boundary.covers(Point(lon, lat))
+        for lon, lat in zip(df.loc[coordinate_rows, 'lon'], df.loc[coordinate_rows, 'lat'])
+    ]
+    valid &= inside_libya
     rejected = raw.loc[~valid].copy()
-    rejected['rejection_reason'] = 'Invalid identity, non-606 MCC, or outside Libya bounding box'
+    rejected['rejection_reason'] = 'Invalid identity, non-606 MCC, invalid coordinate, or outside supplied Libya boundary'
     df = df.loc[valid].copy()
     for col in ['mcc', 'net', 'area', 'cell']:
         df[col] = df[col].astype('int64')
@@ -65,6 +77,8 @@ def load_cells(path: Path, as_of=None):
     df = df.sort_values(['timestamp_valid', 'updated', 'samples'], na_position='first', kind='stable')
     df = df.drop_duplicates(IDENTITY, keep='last').sort_values(IDENTITY).reset_index(drop=True)
     df['operator'] = df['net'].map({0: 'Libyana', 1: 'Al-Madar'}).fillna('Unknown')
+    df['unit_semantics'] = df['radio'].map({'UMTS': 'PSC', 'LTE': 'PCI'}).fillna('not_applicable')
+    df['range_is_estimated'] = True
     df['source'] = 'OpenCellID'
     report = {
         'source': str(path), 'as_of_utc': now.isoformat(),
@@ -74,11 +88,25 @@ def load_cells(path: Path, as_of=None):
         'radio_counts': df['radio'].value_counts().to_dict(),
         'invalid_timestamp_cells': int((~df['timestamp_valid']).sum()),
         'review_eligible_cells': int(df['review_eligible'].sum()),
+        'unexpected_changeable_values': int(df['changeable'].ne(1).fillna(True).sum()),
+        'unexpected_average_signal_values': int(df['averageSignal'].ne(0).fillna(True).sum()),
         'review_policy': 'At least 2 samples, valid timestamps, updated within 730 days; proximity is not proof of coverage.',
-        'spatial_scope': 'Libya bounding box; not a national boundary polygon.',
+        'column_semantics': {
+            'unit': 'PSC for UMTS, PCI for LTE; empty/not applicable for GSM and CDMA.',
+            'range': 'Estimated cell range in meters; not a coverage radius or positional accuracy.',
+            'changeable': 'Deprecated and excluded from decisions.',
+            'averageSignal': 'Deprecated and excluded from decisions.',
+        },
+        'spatial_scope': 'Supplied OCHA Libya admin-0 boundary.',
         'attribution': 'OpenCellID https://opencellid.org/; https://docs.opencellid.org/docs/downloads/database-format',
     }
     return df, rejected, report
+
+
+@lru_cache(maxsize=1)
+def _libya_boundary():
+    """Load the supplied national boundary once in WGS84."""
+    return gpd.read_file(ADMIN0_GEOJSON_PATH).to_crs(CRS_WGS84).geometry.union_all()
 
 
 def projected(lons, lats):
@@ -87,12 +115,23 @@ def projected(lons, lats):
 
 
 def annotate_candidates(candidates, cells=None):
-    """Add observation proximity for review without changing model inputs/ranks."""
+    """Add observation proximity for review without changing priority ranks."""
     result = candidates.copy()
+    distance_columns = [
+        'opencellid_any_distance_m',
+        'opencellid_recent_distance_m',
+        'opencellid_libyana_distance_m',
+        'opencellid_almadar_distance_m',
+    ]
+    for column in distance_columns:
+        result[column] = np.nan
+    result['opencellid_review_required'] = False
     if cells is None:
         if not OPENCELLID_RAW_PATH.exists():
             return result
         cells, _, _ = load_cells(OPENCELLID_RAW_PATH)
+    if result.empty:
+        return result
     coords = projected(result['canonical_longitude'], result['canonical_latitude'])
     eligible = cells[cells['review_eligible']].copy()
     groups = {'any': cells, 'recent': eligible,
@@ -100,7 +139,6 @@ def annotate_candidates(candidates, cells=None):
               'almadar': eligible[eligible['net'] == 1]}
     for label, subset in groups.items():
         col = f'opencellid_{label}_distance_m'
-        result[col] = np.nan
         if not subset.empty and len(result):
             tree = cKDTree(projected(subset['lon'], subset['lat']))
             distances, _ = tree.query(coords)
@@ -110,24 +148,7 @@ def annotate_candidates(candidates, cells=None):
 
 
 def import_pipeline(path: Path = OPENCELLID_RAW_PATH):
+    """Validate the supplied export and return its in-memory cells and report."""
     cells, rejected, report = load_cells(path)
-    if CLEANED_PHYSICAL_SITES_CSV.exists() and not cells.empty:
-        sites = pd.read_csv(CLEANED_PHYSICAL_SITES_CSV)
-        if not sites.empty:
-            tree = cKDTree(projected(sites['canonical_longitude'], sites['canonical_latitude']))
-            distances, _ = tree.query(projected(cells['lon'], cells['lat']))
-            cells['nearest_existing_site_m'] = np.round(distances, 1)
-            report['cells_within_50m_of_existing_site'] = int((distances <= 50).sum())
-            report['cells_over_3km_from_existing_site'] = int((distances > 3000).sum())
-    OPENCELLID_CLEANED_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    cells.to_csv(OPENCELLID_CLEANED_PATH, index=False)
-    rejected.to_csv(OPENCELLID_CLEANED_PATH.with_name('opencellid_rejected.csv'), index=False)
-    if RECOMMENDATIONS_CSV.exists():
-        reviewed = annotate_candidates(pd.read_csv(RECOMMENDATIONS_CSV), cells)
-        reviewed.to_csv(REPORTS_DIR / 'opencellid_recommendation_review.csv', index=False)
-        report['recommendations_reviewed'] = len(reviewed)
-        report['recommendations_near_recent_cells'] = int(reviewed['opencellid_review_required'].sum())
-    OPENCELLID_REPORT_PATH.write_text(json.dumps(report, indent=2) + '\n')
-    print(json.dumps(report, indent=2))
+    report['rejected_preview'] = rejected.head(5).to_dict(orient='records')
     return cells, report

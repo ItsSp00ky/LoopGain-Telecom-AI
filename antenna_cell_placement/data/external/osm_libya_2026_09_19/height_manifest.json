@@ -1,0 +1,30 @@
+{
+  "attribution": "OpenStreetMap contributors",
+  "dataset": "Explicit OpenStreetMap building height tags via Geofabrik",
+  "file": {
+    "bytes": 76584743,
+    "filename": "libya-260919.osm.pbf",
+    "sha256": "43bb9fbf12e6331a606b433f74d7f806e8302e87933e3597b22e9b5ce4fdafcd"
+  },
+  "http": {
+    "etag": "4909727-65bde3f466952",
+    "last_modified": "Sat, 19 Sep 2026 23:19:22 GMT"
+  },
+  "license": "ODbL-1.0",
+  "license_url": "https://www.openstreetmap.org/copyright",
+  "osm_layer": "multipolygons",
+  "policy": {
+    "accepted": "explicit height tags",
+    "profile_only": "building:levels tags",
+    "prohibited": [
+      "floor-count-to-height conversion",
+      "machine-learned height",
+      "remotely inferred height"
+    ]
+  },
+  "reference_building_feature_count": 1268052,
+  "retrieved_utc": "2026-09-20T17:32:33.046971+00:00",
+  "snapshot_date": "2026-09-19",
+  "source_url": "https://download.geofabrik.de/africa/libya-260919.osm.pbf",
+  "tag_documentation": "https://wiki.openstreetmap.org/wiki/Key:height"
+}

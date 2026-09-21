@@ -1,8 +1,4 @@
-# Keep generated reports and binary artifacts out of GitHub language statistics.
-data/cleaned/*.html linguist-generated=true
-data/cleaned/*.csv linguist-generated=true
+# Keep the permitted proposed-placement artifacts out of language statistics.
 eval_reports/*.html linguist-generated=true
 eval_reports/*.csv linguist-generated=true
 eval_reports/*.geojson linguist-generated=true
-models/*.joblib binary
-data/cleaned/*.parquet binary

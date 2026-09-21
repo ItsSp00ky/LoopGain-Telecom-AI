@@ -31,7 +31,7 @@ class CloudflareRadarTests(unittest.TestCase):
         self.assertEqual(len(CLOUDFLARE_TO_OCHA_MUNICIPALITY), 22)
         self.assertFalse(radar["municipality_name"].isna().any())
 
-    def test_join_and_bounded_priority_factor(self):
+    def test_join_and_regional_demand_context(self):
         with tempfile.TemporaryDirectory() as directory:
             enriched = add_regional_features(
                 pd.DataFrame({"municipality_name": ["Tripoli", "Benghazi"]}),
@@ -42,24 +42,23 @@ class CloudflareRadarTests(unittest.TestCase):
             enriched.loc[0, "cloudflare_regional_demand_score"],
             enriched.loc[1, "cloudflare_regional_demand_score"],
         )
-        self.assertTrue(enriched["cloudflare_priority_factor"].between(0.9, 1.1).all())
 
-    def test_missing_file_is_neutral(self):
+    def test_missing_file_stays_missing(self):
         result = add_regional_features(
             pd.DataFrame({"municipality_name": ["Tripoli"]}),
             Path("/tmp/does-not-exist-cloudflare-radar.csv"),
         )
         self.assertFalse(result.loc[0, "cloudflare_data_available"])
-        self.assertEqual(result.loc[0, "cloudflare_priority_factor"], 1.0)
+        self.assertTrue(pd.isna(result.loc[0, "cloudflare_regional_demand_score"]))
 
-    def test_unknown_municipality_is_neutral(self):
+    def test_unknown_municipality_stays_missing(self):
         with tempfile.TemporaryDirectory() as directory:
             result = add_regional_features(
                 pd.DataFrame({"municipality_name": ["Unknown"]}),
                 self.fixture(directory),
             )
         self.assertFalse(result.loc[0, "cloudflare_data_available"])
-        self.assertEqual(result.loc[0, "cloudflare_priority_factor"], 1.0)
+        self.assertTrue(pd.isna(result.loc[0, "cloudflare_regional_demand_score"]))
 
 
 if __name__ == "__main__":

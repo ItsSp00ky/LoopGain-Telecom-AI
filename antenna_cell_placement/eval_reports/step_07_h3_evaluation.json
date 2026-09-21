@@ -1,0 +1,113 @@
+{
+  "acceptance": {
+    "no_clipped_gaps_or_overlaps": true,
+    "population_conservation_within_1_pct": true,
+    "ranking_unchanged": true,
+    "repeatable": true,
+    "resolution_sensitivity_documented": true
+  },
+  "after": {
+    "area_weighted_population_total": 6933931.297761452,
+    "candidate_count": 50,
+    "candidate_spatial_unit_id_coverage_pct": 100.0,
+    "parent_candidate_unit_count": 35,
+    "parent_national_unit_count": 38498,
+    "parent_populated_unit_count": 38445,
+    "population_allocation_digest": "555965826a6fc6f5cc23600a8f1f23792b5adc63bfe21e70bc482dbdbc91ea7b",
+    "population_boundary_method": "four quadrant samples per raster pixel",
+    "primary_candidate_unit_count": 50,
+    "primary_national_unit_count": 266955,
+    "primary_populated_unit_count": 266511
+  },
+  "before": {
+    "candidate_count": 50,
+    "candidate_spatial_unit_id_coverage_pct": 0.0,
+    "population_boundary_method": "pixel-center inclusion",
+    "population_total": 6938355.72262611
+  },
+  "checks": {
+    "assigned_cells_outside_overlap_grid": 0,
+    "boundary_gap_pct": 0.0,
+    "boundary_leakage_before_clip_pct": 1.4827917617668893,
+    "boundary_overlap_pct": 0.0,
+    "candidate_h3_id_coverage_pct": 100.0,
+    "coverage_topology_valid": true,
+    "direct_point_resolution_agreement_pct": 92.0,
+    "duplicate_grid_cells_removed": 1,
+    "hierarchical_parent_consistency_pct": 100.0,
+    "national_sample_coverage_pct": 100.0,
+    "overlapping_point_assignments": 0,
+    "parent_population_conservation_error_pct": 0.0,
+    "population_conservation_error_pct": 2.686275749274142e-14,
+    "rank_stability_spearman": 1.0,
+    "repeatable_population_allocation": true,
+    "scores_and_ranks_unchanged": true
+  },
+  "decision": "keep H3 for spatial indexing and reporting",
+  "limitations": [
+    "H3 is a reporting index and does not alter the placement score.",
+    "Population is area-weighted with four samples per source pixel; it is not a new measurement.",
+    "National topology is measured at resolution 6 in an equal-area CRS; overlap-selected edge cells are clipped to the supplied boundary for coverage interpretation."
+  ],
+  "population_quality": {
+    "allocated_population": 6933931.2977614505,
+    "area_weighted_population": 6933931.297761452,
+    "assigned_sample_count": 8471615,
+    "boundary_adjustment_vs_center_pct": 0.06376762797313908,
+    "center_based_population": 6938355.72262611,
+    "inside_boundary_sample_count": 8471615,
+    "populated_h3_cell_count": 266511,
+    "population_conservation_error_pct": 2.686275749274142e-14,
+    "source_unit": "people_per_km2",
+    "subpixel_sample_count": 8479172,
+    "valid_pixel_count": 2119793
+  },
+  "question": "Does H3 improve reproducible aggregation and reporting without changing dataset-only placement scores?",
+  "resolution_sensitivity": {
+    "candidate_unit_count_change": 15,
+    "direct_point_resolution_agreement_pct": 92.0,
+    "hierarchical_parent_consistency_pct": 100.0,
+    "parent_candidates_per_unit": 1.4285714285714286,
+    "parent_population_conservation_error_pct": 0.0,
+    "primary_candidates_per_unit": 1.0
+  },
+  "runtime_seconds": {
+    "exact_parent_grid_topology": 1.8822957579996,
+    "national_grid_generation": 4.877950091000002,
+    "primary_population_allocation": 4.1218356090003,
+    "repeat_population_allocation": 4.108711668000069
+  },
+  "software": {
+    "documentation": "https://uber.github.io/h3-py/",
+    "license": "Apache-2.0",
+    "package": "h3",
+    "package_index": "https://pypi.org/project/h3/",
+    "parent_average_cell_area_km2": 36.12906216441245,
+    "primary_average_cell_area_km2": 5.161293359717191,
+    "primary_resolution": 7,
+    "sensitivity_resolution": 6,
+    "versions": {
+      "c": "4.5.0",
+      "python": "4.5.0"
+    }
+  },
+  "sources": {
+    "boundary": {
+      "bytes": 293993,
+      "path": "data/external/admin_boundaries/lby_admin0.geojson",
+      "sha256": "3050191416f1256c946891aca69357bda522bea1fdb8d257e0532ebec1867c45"
+    },
+    "population": {
+      "bytes": 8234781,
+      "path": "data/external/lby_pd_2020_1km.tif",
+      "sha256": "0c814253b963898a4ca698f167bae1d1a6b8a45b7fc6d0203721f01b3b7c9eda"
+    },
+    "recommendations": {
+      "bytes": 24609,
+      "path": "eval_reports/recommended_cell_placements.csv",
+      "sha256": "d17cba2a7aae9e35d74b6719bfa10e069651df973ebc13990b9b2f9c7d4b50d1"
+    }
+  },
+  "status": "accepted",
+  "step": 7
+}

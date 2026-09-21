@@ -1,0 +1,51 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+dist/
+models/
+data/cleaned/
+
+# Retain proposed-placement artifacts and compact accepted-gate evidence.
+eval_reports/*
+!eval_reports/recommended_cell_placements.csv
+!eval_reports/recommended_cell_placements.geojson
+!eval_reports/libya_cell_coverage_map.html
+!eval_reports/step_07_h3_evaluation.json
+!eval_reports/step_08_worldcover_evaluation.json
+
+# Downloaded source rasters stay local; retain their provenance manifest.
+data/external/worldcover_2021/*.tif
+data/external/worldcover_2021/*.part
+data/external/worldcover_2021/.download.lock
+!data/external/worldcover_2021/manifest.json
+
+# Dated OSM source data stays local; retain the content-addressed manifest.
+data/external/osm_libya_2026_09_19/*.zip
+data/external/osm_libya_2026_09_19/*.gpkg
+data/external/osm_libya_2026_09_19/*.pbf
+data/external/osm_libya_2026_09_19/*.part
+data/external/osm_libya_2026_09_19/.download.lock
+data/external/osm_libya_2026_09_19/.height-download.lock
+!data/external/osm_libya_2026_09_19/manifest.json
+!data/external/osm_libya_2026_09_19/height_manifest.json
+
+!eval_reports/step_09_buildings_evaluation.json
+!eval_reports/step_10_building_height_evaluation.json
+!eval_reports/step_11_osm_context_evaluation.json
+!eval_reports/step_12_ookla_evaluation.json
+
+# Global Ookla archives and the derived Libya GeoPackage stay local.
+data/external/ookla_mobile_2025q2_2026q1/*.zip
+data/external/ookla_mobile_2025q2_2026q1/*.gpkg
+data/external/ookla_mobile_2025q2_2026q1/*.part
+data/external/ookla_mobile_2025q2_2026q1/.download.lock
+!data/external/ookla_mobile_2025q2_2026q1/manifest.json
+
+# Bounded VIIRS raster windows and flare locations stay local; retain provenance.
+data/external/viirs_nightlights_2024/*.tif
+data/external/viirs_nightlights_2024/*.kml
+data/external/viirs_nightlights_2024/*.csv
+data/external/viirs_nightlights_2024/*.part
+data/external/viirs_nightlights_2024/.download.lock
+!data/external/viirs_nightlights_2024/manifest.json
+!eval_reports/step_13_viirs_evaluation.json

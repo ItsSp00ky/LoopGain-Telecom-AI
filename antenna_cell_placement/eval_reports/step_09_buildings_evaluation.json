@@ -1,0 +1,183 @@
+{
+  "acceptance": {
+    "independent_built_up_classification_improvement_at_least_5pp": false,
+    "target_inhabited_area_coverage_at_least_95_pct": false,
+    "valid_geometry_after_repair_at_least_90_pct": true
+  },
+  "after": {
+    "building_context_fields": 7,
+    "shortlist_count": 50,
+    "shortlist_h3_with_observed_buildings": 43,
+    "shortlist_review_required_count": 0
+  },
+  "before": {
+    "building_context_fields": 0,
+    "shortlist_count": 50
+  },
+  "checks": {
+    "independent_reference_sample_available": false,
+    "municipalities_with_observed_buildings_pct": 100.0,
+    "populated_place_1km_observation_coverage_pct": 89.74358974358974,
+    "population_only_classification_improvement_pp": null,
+    "rank_stability_spearman": 1.0,
+    "scores_and_ranks_unchanged": true,
+    "shortlist_h3_context_available_pct": 100.0,
+    "shortlist_h3_with_observed_buildings_pct": 86.0,
+    "shortlist_review_required_count": 0,
+    "valid_geometry_pct_after_repair": 100.0
+  },
+  "decision": "keep dated OSM building footprints as review context only; mapping completeness and independent accuracy remain unverified",
+  "failed_case_sample": [
+    {
+      "candidate_id": "candidate-d6ad298b6eac",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Derna",
+      "recommendation_rank": 5,
+      "worldcover_class_name": "Shrubland"
+    },
+    {
+      "candidate_id": "candidate-6758c251d40c",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Ubari",
+      "recommendation_rank": 29,
+      "worldcover_class_name": "Bare / sparse vegetation"
+    },
+    {
+      "candidate_id": "candidate-38399d560724",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Murzuq",
+      "recommendation_rank": 34,
+      "worldcover_class_name": "Bare / sparse vegetation"
+    },
+    {
+      "candidate_id": "candidate-4caf7477545b",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Murzuq",
+      "recommendation_rank": 41,
+      "worldcover_class_name": "Bare / sparse vegetation"
+    },
+    {
+      "candidate_id": "candidate-7894c0df088d",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Derna",
+      "recommendation_rank": 46,
+      "worldcover_class_name": "Grassland"
+    },
+    {
+      "candidate_id": "candidate-47fb4ab18631",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Aljufra",
+      "recommendation_rank": 47,
+      "worldcover_class_name": "Bare / sparse vegetation"
+    },
+    {
+      "candidate_id": "candidate-0d43921d9b14",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Ejdabia",
+      "recommendation_rank": 50,
+      "worldcover_class_name": "Bare / sparse vegetation"
+    }
+  ],
+  "limitations": [
+    "OpenStreetMap building coverage is contributor-dependent and has no complete-coverage mask.",
+    "The Geofabrik schema does not prove whether individual outlines were surveyed, traced, or imported.",
+    "No independent pre-labeled Libya building sample is supplied, so precision, recall, and the five-point improvement gate are pending.",
+    "Building observations do not establish ownership, structural condition, legal access, or constructability.",
+    "Building fields remain outside the planning score."
+  ],
+  "municipality_coverage": {
+    "building_counts_by_municipality": {
+      "Al Jabal Al Akhdar": 87819,
+      "Al Jabal Al Gharbi": 42530,
+      "Aljfara": 28548,
+      "Aljufra": 2272,
+      "Alkufra": 2542,
+      "Almargeb": 80440,
+      "Almarj": 51880,
+      "Azzawya": 98254,
+      "Benghazi": 204780,
+      "Derna": 35416,
+      "Ejdabia": 4392,
+      "Ghat": 1147,
+      "Misrata": 153036,
+      "Murzuq": 2930,
+      "Nalut": 2877,
+      "Sebha": 18439,
+      "Sirt": 46318,
+      "Tobruk": 14817,
+      "Tripoli": 248361,
+      "Ubari": 3789,
+      "Wadi Ashshati": 1790,
+      "Zwara": 132393
+    },
+    "municipalities_with_observed_buildings": 22,
+    "municipalities_with_observed_buildings_pct": 100.0,
+    "municipality_count": 22
+  },
+  "quality": {
+    "duplicate_geometry_rows_removed": 84,
+    "input_rows": 1268052,
+    "invalid_geometry_rows_after_repair": 0,
+    "invalid_geometry_rows_before_repair": 0,
+    "layer": "gis_osm_buildings_a_free",
+    "missing_or_empty_geometry_rows": 0,
+    "nonpositive_area_rows_removed": 0,
+    "polygon_parts_after_repair": 1268066,
+    "processing_chunk_size": 100000,
+    "retained_polygon_rows": 1267982,
+    "source_crs": "GEOGCS[\"WGS 84 (CRS84)\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Longitude\",EAST],AXIS[\"Latitude\",NORTH],AUTHORITY[\"OGC\",\"CRS84\"]]",
+    "valid_geometry_pct_after_repair": 100.0
+  },
+  "question": "Do observed building footprints improve built-up demand and constructability context?",
+  "runtime_seconds": {
+    "national_streamed_quality_profile": 11.961770446999708,
+    "shortlist_h3_context": 0.08990043199992215,
+    "shortlist_spatial_index_load": 3.813653707999947,
+    "source_hash_verification": 0.3272991300000285
+  },
+  "settlement_coverage": {
+    "populated_place_1km_observation_coverage_pct": 89.74358974358974,
+    "populated_place_count": 78,
+    "populated_places_with_building_within_1km": 70
+  },
+  "source": {
+    "attribution": "OpenStreetMap contributors",
+    "building_feature_count": 1268052,
+    "building_layer": "gis_osm_buildings_a_free",
+    "crs": "GEOGCS[\"WGS 84 (CRS84)\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Longitude\",EAST],AXIS[\"Latitude\",NORTH],AUTHORITY[\"OGC\",\"CRS84\"]]",
+    "dataset": "OpenStreetMap Libya building outlines via Geofabrik",
+    "files": [
+      {
+        "bytes": 187184805,
+        "filename": "libya-260919-free.gpkg.zip",
+        "sha256": "b20e45df66e7c810fbc88879f3adba57e13b85fb5ff02150ff6c6126b8754568"
+      },
+      {
+        "bytes": 401502208,
+        "filename": "libya-260919-free.gpkg",
+        "sha256": "79a2bb39ed9189bb8757f9553e5807de111b9b443117b0fb5df81fe9729c4bf5"
+      }
+    ],
+    "format_documentation": "https://download.geofabrik.de/osm-data-in-gis-formats-free.pdf",
+    "http": {
+      "etag": "b2836a5-65be24e555967",
+      "last_modified": "Sun, 20 Sep 2026 04:09:55 GMT"
+    },
+    "license": "ODbL-1.0",
+    "license_url": "https://www.openstreetmap.org/copyright",
+    "retrieved_utc": "2026-09-20T17:04:02.681517+00:00",
+    "snapshot_date": "2026-09-19",
+    "source_url": "https://download.geofabrik.de/africa/libya-260919-free.gpkg.zip"
+  },
+  "source_policy": {
+    "absence_semantics": "A zero count means no mapped OSM footprint was observed; it does not mean that no building exists.",
+    "excluded": [
+      "Microsoft Global ML Building Footprints",
+      "Google Open Buildings"
+    ],
+    "reason": "Machine-detected footprint products conflict with the project rule against generated evidence.",
+    "selected": "OpenStreetMap contributor-mapped building outlines via Geofabrik"
+  },
+  "status": "review-only",
+  "step": 9
+}

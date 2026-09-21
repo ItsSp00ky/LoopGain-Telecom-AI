@@ -1,280 +1,240 @@
-# AI Antenna Cell Site Placement Optimization
-### Samsung Innovation Campus (SIC) Capstone Project – Team Loop Gain
+# Libya Telecom GIS Planning
 
-[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![uv](https://img.shields.io/badge/Package_Manager-uv-purple.svg)](https://github.com/astral-sh/uv)
-[![AI/ML](https://img.shields.io/badge/Models-LightGBM%20%7C%20XGBoost%20%7C%20RandomForest-orange.svg)](#)
-[![Geospatial](https://img.shields.io/badge/GIS-WorldPop%20%7C%20SRTM_DEM%20%7C%20UN_OCHA-green.svg)](#)
-[![ROC-AUC](https://img.shields.io/badge/Suitability_ROC--AUC-0.9862-brightgreen.svg)](#)
+Samsung Innovation Campus capstone project by Team Loop Gain.
 
-An intelligent geospatial Machine Learning and network planning system engineered to predict and optimize the most suitable geographic locations for deploying new cellular antenna towers across Libya. The platform balances high-resolution gridded population density, terrain elevation and prominence, road infrastructure accessibility, existing multi-carrier network topology, and coverage deficits.
+This project cleans supplied Libyan cellular observations, joins supplied geographic datasets, and ranks generated candidate locations for engineering review. It does not create synthetic training rows, infer missing measurements as facts, or present a score as a deployment probability.
 
----
+The central output is an explainable `planning_priority_score`. It is a relative planning indicator assembled from available population, access, terrain, and existing-site gap evidence. Regional Internet activity is exported as review context but does not affect the current rank. The score is not RF coverage, service quality, model confidence, or proof that a new site is required.
 
-## 👥 Team Loop Gain
+## Data Policy
 
-| Member | Email | Role |
-| :--- | :--- | :--- |
-| **Ahmed Gali** | [ahmed.gali.info@gmail.com](mailto:ahmed.gali.info@gmail.com) | Machine Learning & Data Engineering |
-| **Taha Elkhazmi** | [Elkhazmittt@gmail.com](mailto:Elkhazmittt@gmail.com) | AI Systems & Architecture |
-| **Mahmoud Almabrouk** | [mahmab90@gmail.com](mailto:mahmab90@gmail.com) | Data Modeling & Evaluation |
-| **Maher Alqadhi** | [maher9maher9@gmail.com](mailto:maher9maher9@gmail.com) | Systems Development |
-| **Mohamed Khalaf** | [moha.khalaf@uot.edu.ly](mailto:moha.khalaf@uot.edu.ly) | AI Research & Analysis |
-| **Ali Marghem** | [al.marghem@uot.edu.ly](mailto:al.marghem@uot.edu.ly) | AI Research & Verification |
+Only declared source datasets are used as evidence. Processing may clean, deduplicate, aggregate, project, or derive features from those datasets. The only generated geographic records are proposed candidate placements. Externally acquired roadmap sources remain experimental until their recorded gate justifies a narrow use.
 
----
+| Data class | Examples | Policy |
+| --- | --- | --- |
+| Supplied observations | `cells.sqlite3`, `cells.json`, `data/606.csv`, WorldPop, elevation, roads, boundaries, settlements, Cloudflare exports | Preserve source fields and provenance; validate before use. |
+| Deterministic derivatives | Deduplicated cells, clustered site references, distances, raster samples, catchment sums, percentiles | Reproducible from supplied data; keep missingness visible. |
+| Generated proposals | Candidate coordinates and their rank | Allowed only as clearly labeled planning suggestions. |
+| Gate-reviewed external source | ESA WorldCover; dated OpenStreetMap layers; Ookla mobile tiles; VIIRS night lights | Allowed only for their recorded gate decisions. Step 10 heights, the Step 11 port proxy, Step 12 Ookla, and Step 13 VIIRS remain excluded from runtime. |
+| Fabricated evidence | Synthetic positive/negative labels, invented bandwidth, guessed operator, assumed tower type, rule-created equipment labels | Prohibited. |
 
-## 📌 Executive Summary & Key Results
+Generated candidates must never be merged into observed site inventories. A high rank means "review first," not "build here."
 
-- **Data Cleaning & Deduplication**:
-  - Identified and repaired a critical regional scoping collision in legacy SQLite data (where site IDs repeating across RNC/TAC regions caused distant antennas up to 812 km apart to be collapsed).
-  - Consolidated **4,258** crowdsourced radio observations into **2,338** unique radio antennas with **<0.11m** spatial consistency.
-  - Collocated multi-technology antennas (threshold: 50m) into **2,115** physical cellular mast sites, uncovering **109** multi-technology collocated sites and **45** multi-operator infrastructure sharing sites between Libyana and Al-Madar.
-- **External Geospatial Intelligence for Libya**:
-  - Integrated **WorldPop 2020** 1km gridded population density (UN adjusted).
-  - Integrated **SRTM Digital Elevation Model (DEM)** at 250m resolution for elevation, slope, and 3km viewshed prominence.
-  - Integrated **UN OCHA Transportation Network** (4,141 road segments) and **Populated Places** across all 22 Libyan Municipalities (Baladiyat).
-- **Machine Learning Benchmark**:
-  - **Champion Model**: LightGBM Classifier with **0.9862 ROC-AUC**, **0.9794 PR-AUC**, and **95.19% Accuracy** across 5-fold stratified cross-validation.
-  - **Equipment Recommender**: Random Forest multi-tier classifier achieving **89.55% Accuracy** in recommending equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
-- **Placement Recommendations**:
-  - Evaluated **22,605** candidate locations across Libya, identifying **4,467** unserved coverage gaps and ranking the **Top 50 High-Priority New Cell Placements**.
-  - Added Cloudflare Radar's 52-week regional HTTP traffic share as a conservative digital-demand prior for final ranking (bounded to ±10%); the trained suitability model remains purely geospatial after leakage-aware testing rejected direct inclusion.
-- **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md) and the strategic system expansion in [`TELECOM_GIS_RF_AI_ROADMAP.md`](TELECOM_GIS_RF_AI_ROADMAP.md).
+## Declared Sources
 
----
+- `Libyan_cells_dataset/cells.sqlite3` and `cells.json`: project-provided cellular observations.
+- `data/606.csv`: OpenCellID cell observations for MCC 606.
+- `data/external/lby_pd_2020_1km.tif`: WorldPop population raster.
+- `data/external/dem/`: elevation raster used by the feature pipeline.
+- `data/Libya_SRTM/`: supplied SRTM HGT tiles; retained as source data even if the active pipeline uses the prepared elevation raster.
+- `data/external/roads/`: supplied road vectors.
+- `data/external/admin_boundaries/`: administrative boundaries and populated places.
+- `data/cloudflare_radar_libya/`: regional Internet-activity context. This is not mobile demand or radio coverage.
+- `data/external/worldcover_2021/`: 27 official ESA WorldCover 2021 v200 tiles plus a checked provenance manifest. Raw TIFFs stay local; the manifest records hashes, license, DOI, URLs, and retrieval metadata.
+- `data/external/osm_libya_2026_09_19/`: the dated Geofabrik Libya GeoPackage, archive, and raw PBF with checked provenance manifests. Building outlines plus hospital, higher-education, aviation, and industrial observations are integrated as review context. Explicit heights and the sparse ferry-terminal port proxy are excluded.
+- `data/external/ookla_mobile_2025q2_2026q1/`: four official quarterly mobile-performance archives, a deterministic Libya subset, and checked provenance. Step 12 rejected runtime integration because shortlist coverage failed. The source is CC BY-NC-SA 4.0 and is restricted to non-commercial use.
+- `data/external/viirs_nightlights_2024/`: bounded Libya windows from four official monthly VIIRS DNB composites, cloud-free observation counts, the official 2024 gas-flare catalog, and checked provenance. Step 13 rejected runtime integration because independent activity/KPI validation is unavailable.
 
-## 🌐 System Architecture
+WorldCover and the Step 9 and 11 OSM layers are integrated only as `review-only` evidence. None changes the score. Step 10 height evidence, Step 12 performance observations, and Step 13 night lights are excluded from outputs and scoring. Proposed additions and their evidence gates are documented in [TELECOM_GIS_RF_AI_ROADMAP.md](TELECOM_GIS_RF_AI_ROADMAP.md).
 
-```
-antenna_cell_placement/
-├── pyproject.toml                     # uv package configuration & CLI entry points
-├── uv.lock                            # Deterministic dependency lockfile
-├── README.md                          # Module documentation & benchmark report
-├── TECHNICAL_REPORT.md                # Comprehensive Engineering & Decisioning Report
-├── TELECOM_GIS_RF_AI_ROADMAP.md       # Telecom GIS, RF & AI Planning Roadmap
-│
-├── Libyan_cells_dataset/              # Raw crowdsourced telecom datasets
-│   ├── cells.sqlite3                  # Relational database (2,291 raw towers)
-│   ├── cells.json                     # Raw LTE observations (1,318 records)
-│   ├── cells.geojson                  # Legacy physical sites GeoJSON
-│   └── cells_map.html                 # Legacy site map
-│
-├── data/
-│   ├── external/                      # Downloaded Libya Geospatial Datasets
-│   │   ├── lby_pd_2020_1km.tif        # WorldPop 1km Population Density GeoTIFF
-│   │   ├── dem/DEM/lyb_strm_250m      # SRTM 250m Digital Elevation Model
-│   │   ├── roads/LYB_Roads.shp        # UN OCHA Libya Highway & Road Network
-│   │   └── admin_boundaries/         # Libya Admin 0, Admin 1, Admin 2 & Settlements
-│   ├── cloudflare_radar_libya/        # 52-week regional Internet demand context
-│   │
-│   └── cleaned/                       # Processed, Enriched & Parquet Datasets
-│       ├── cleaned_radio_towers.csv   # 2,338 deduplicated antennas with RF attributes
-│       ├── cleaned_physical_sites.csv # 2,115 physical mast sites
-│       ├── cleaned_physical_sites.geojson
-│       ├── cleaned_cells_combined.parquet  # 59-attribute enriched site dataset
-│       └── cleaned_cells_map.html     # Interactive Leaflet map
-│
-├── models/                            # Serialized Champion AI Models
-│   ├── cell_placement_suitability_model.joblib  # LightGBM Classifier (0.9862 ROC-AUC)
-│   └── equipment_recommendation_model.joblib    # Multi-tier Equipment Classifier
-│
-├── eval_reports/                      # Evaluation Reports, Benchmark Metrics & Maps
-│   ├── model_benchmark.json           # Model validation metrics
-│   ├── cloudflare_radar_assessment.json # Radar ablation and integration decision
-│   ├── opencellid_quality.json         # Observation quality report
-│   ├── suitability_roc_curve.png      # ROC curve visualization
-│   ├── suitability_feature_importance.png # Split gain feature importance chart
-│   ├── suitability_confusion_matrix.png   # Classification confusion matrix
-│   ├── recommended_cell_placements.csv    # Prioritized deployment recommendations
-│   ├── recommended_cell_placements.geojson
-│   └── libya_cell_coverage_map.html   # Master coverage & recommendation map
-│
-├── src/antenna_cell_placement/        # Python Package Source
-    ├── __init__.py                    # Package exports
-    ├── config.py                      # Paths, CRS constants, and parameters
-    ├── data_cleaning.py               # Parsing, deduplication & mast clustering
-    ├── feature_engineering.py         # Multi-layer raster & vector extraction
-    ├── cloudflare_radar.py            # Regional traffic mapping and demand prior
-    ├── opencellid.py                  # Optional observation import/review layer
-    ├── placement_model.py             # LightGBM & XGBoost training & cross-validation
-    ├── site_optimizer.py              # Coverage gap optimizer & ranking engine
-    ├── map_visualizer.py              # Folium / Leaflet map generator
-    ├── placement.py                   # Programmatic Python API
-    └── cli.py                         # Rich CLI command-line interface
+## Workflow
 
-└── tests/                             # Radar and OpenCellID regression tests
+```text
+supplied telecom observations --> validate and clean --> observed-site reference
+supplied GIS layers -----------> derive features ------> auditable planning evidence
+candidate generator -----------> score and filter ----> proposed placements
+                                                        |
+OpenCellID observations -------> proximity review ------+
+ESA WorldCover ---------------> water screen/context ---+
+OSM building outlines --------> mapped context ---------+
+selected OSM families --------> local review context ---+
 ```
 
----
+The planner favors locations with documented demand proxies, a gap from observed sites, and practical access. It emits the component values and missing-data flags alongside the final rank so a reviewer can see why a location was prioritized.
 
-## 📊 Model Evaluation & Benchmarks
+H3 resolution 7 provides stable planning-unit identifiers for candidates and area-weighted WorldPop aggregation. Resolution 6 is the documented parent sensitivity level. H3 improves aggregation and reporting but does not alter the placement score.
 
-Models were evaluated using 5-fold Stratified Cross-Validation on a balanced dataset of 2,115 confirmed cell sites and 2,500 systematically generated candidate locations across Libya's transportation corridors and settlement perimeters:
+WorldCover removes candidate points classified as permanent water and adds area-weighted H3 land-cover context. Mixed/coastal units are flagged for review. It does not alter the score and is not treated as validated RF clutter or proof of buildability.
 
-| Model | ROC-AUC | PR-AUC | Accuracy | F1-Score | Precision | Recall | Brier Score |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **LightGBM Classifier (Champion)** | **0.9862** | **0.9794** | **95.19%** | **0.9481** | **93.57%** | **96.08%** | **0.0379** |
-| **XGBoost Classifier** | 0.9867 | 0.9796 | 95.32% | 0.9494 | 93.81% | 96.10% | 0.0371 |
+The building layer adds H3 mapped-outline count, footprint area, density, and coverage ratio. Missing outlines mean “not observed,” not “no buildings.” This context does not alter ranking or prove land availability, access, ownership, or constructability.
 
-### Top Geospatial Drivers for Cell Site Placement
+The selected Step 11 layer adds H3 observation counts and nearest-feature distances for mapped hospitals, higher education, aviation, and industrial land use. These are contextual observations, not complete inventories or demand measurements. The sparse ferry-terminal class is excluded from runtime as an inadequate national port proxy.
 
-1. **`dist_to_nearest_site_m`**: Spatial inter-site distance and network density.
-2. **`population_sum_5km`**: Population catchment demand within standard macro cell coverage radius.
-3. **`dist_to_nearest_road_m`**: Infrastructure buildability and vehicular coverage.
-4. **`elevation_prominence_3km`**: Height above average terrain (HAAT), governing radio line-of-sight propagation.
-5. **`population_density_1km`**: Local density governing cell traffic load and micro-cell offloading requirements.
+The current output is a GIS screening product. It does not calculate RSRP, RSRQ, SINR, interference, sector azimuth, downtilt, antenna height, bandwidth, traffic capacity, or backhaul feasibility. Those require RF inputs and validation described in the roadmap.
 
----
+## Installation
 
-## 🚀 Quick Start Guide
-
-### 1. Installation with `uv`
+Python 3.12 or newer and `uv` are required.
 
 ```bash
-# Navigate to the antenna module
-cd antenna_cell_placement
-
-# Sync dependencies
 uv sync
+uv run antenna-placement --help
 ```
 
-### 2. Run Commands via CLI
+Rebuild the local WorldCover source snapshot and its provenance manifest from the official ESA bucket with:
 
 ```bash
-# 1. Clean raw SQLite/JSON data and consolidate physical mast sites
+PYTHONDONTWRITEBYTECODE=1 uv run python tools/download_worldcover.py
+```
+
+The source is [ESA WorldCover 2021 v200](https://esa-worldcover.org/en/data-access), licensed CC BY 4.0 and identified by [DOI 10.5281/zenodo.7254221](https://doi.org/10.5281/zenodo.7254221).
+
+Rebuild the exact Step 9 OpenStreetMap building snapshot and provenance manifest with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 uv run python tools/download_osm_buildings.py
+```
+
+The snapshot comes from [Geofabrik's Libya extract](https://download.geofabrik.de/africa/libya.html) and requires [OpenStreetMap attribution under ODbL](https://www.openstreetmap.org/copyright).
+
+Rebuild the exact Step 10 raw OSM snapshot and height-audit manifest with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 uv run python tools/download_osm_building_heights.py
+```
+
+The gate reads explicit [`height=*`](https://wiki.openstreetmap.org/wiki/Key:height) tags only. It does not convert `building:levels` into metres.
+
+Rebuild the Step 12 Ookla snapshot, Libya subset, and provenance manifest with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 uv run python tools/download_ookla_mobile.py
+```
+
+The source is [Speedtest by Ookla Global Mobile Network Performance Map Tiles](https://github.com/teamookla/ookla-open-data), licensed [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Speedtest® by Ookla® data was accessed on 21 September 2026 from AWS for project analysis of 2025 Q2 through 2026 Q1. Ookla trademarks are used under license.
+
+Rebuild the Step 13 bounded VIIRS snapshot and provenance manifest with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 uv run python tools/download_viirs_nightlights.py
+```
+
+The monthly composites come from the [World Bank Light Every Night public bucket](https://registry.opendata.aws/wb-light-every-night/) under ODbL. The upstream product is generated by the Earth Observation Group. The gate also uses EOG's official 2024 gas-flare catalog to exclude candidate points within 5 km of a known flare.
+
+## CLI
+
+Run the stages individually:
+
+```bash
+# Validate and clean the supplied telecom observations.
 uv run antenna-placement clean
 
-# Optional: refresh the OpenCellID quality/proximity reports explicitly
+# Validate and summarize data/606.csv for candidate review.
 uv run antenna-placement opencellid
 
-# 2. Extract multi-layer geospatial features (WorldPop, SRTM DEM, OCHA roads)
+# Derive GIS features from the supplied datasets.
 uv run antenna-placement features
 
-# 3. Train AI placement suitability and equipment recommendation models
-uv run antenna-placement train
-
-# 4. Scan Libya for coverage gaps and rank top placement recommendations
+# Generate and rank proposed locations with the explainable planning score.
 uv run antenna-placement recommend
 
-# 5. Generate interactive Leaflet map
+# Validate H3 coverage, population conservation, hierarchy, and repeatability.
+uv run antenna-placement h3-evaluate
+
+# Verify and compare the WorldCover screening layer against the frozen baseline.
+uv run antenna-placement worldcover-evaluate
+
+# Verify and compare mapped-building context against the Step 8 baseline.
+uv run antenna-placement buildings-evaluate
+
+# Audit explicit building-height evidence against the Step 9 baseline.
+uv run antenna-placement building-heights-evaluate
+
+# Evaluate selected OSM feature families against the frozen ranking baseline.
+uv run antenna-placement osm-evaluate
+
+# Audit supported Ookla mobile observations against the Step 11 baseline.
+uv run antenna-placement ookla-evaluate
+
+# Evaluate VIIRS radiance without adding it to production recommendations.
+uv run antenna-placement viirs-evaluate
+
+# Assess one proposed coordinate with the same explainable score.
+uv run antenna-placement assess --lat 32.88 --lon 13.18
+
+# Build the review map.
 uv run antenna-placement map
 
-# Or run the entire end-to-end pipeline in one step:
+# Run the complete dataset-only pipeline.
 uv run antenna-placement all
 ```
 
-### 3. Evaluate a Custom Candidate Location
+Use `uv run antenna-placement --help` as the authoritative command list. Coordinate assessment must report a planning score and evidence fields, never a probability or equipment recommendation.
 
-To assess placement suitability, population demand, and recommended equipment for any custom GPS coordinate in Libya:
+## OpenCellID `606.csv`
 
-```bash
-# Evaluate downtown Tripoli
-uv run antenna-placement predict --lat 32.88 --lon 13.18
+The importer accepts a named or headerless file with exactly these 14 columns in this order:
 
-# Evaluate remote desert location (e.g. Murzuq)
-uv run antenna-placement predict --lat 24.00 --lon 18.00
+```text
+radio,mcc,net,area,cell,unit,lon,lat,range,samples,changeable,created,updated,averageSignal
 ```
 
----
+The fields follow the [OpenCellID database format](https://docs.opencellid.org/docs/downloads/database-format). `net` is the MNC (SID for CDMA), `area` is LAC/TAC (NID for CDMA), and `cell` is the cell identifier. `unit` is PSC for UMTS or PCI for LTE and is normally empty for GSM/CDMA. `lon` and `lat` are estimated cell coordinates. `range` is an estimated cell range in metres; it is retained as metadata and is not treated as a coverage radius or coordinate-accuracy bound. `samples` is the number of measurements assigned to the cell. `created` and `updated` are Unix timestamps. `changeable` is deprecated and always `1`; `averageSignal` is deprecated and always `0`, so neither provides planning evidence.
 
-## 🏆 Top 5 High-Priority Recommended Deployments for Libya
+The importer keeps OpenCellID cells separate from physical-site references. A nearby cell can trigger review, but does not prove mast identity, coverage, capacity, operator ownership, or suitability. The absence of a nearby OpenCellID record does not prove a coverage gap.
 
-| Rank | Municipality | Nearest Settlement | Suitability | Priority Score | Recommended Equipment Tier | 5km Population | Nearest Cell Gap |
-| :---: | :--- | :--- | :---: | :---: | :--- | :---: | :---: |
-| **#1** | **Benghazi** | Suloug | **0.896** | **7.82** | Suburban Standard Macro (B3 + B20) | 9,987 | 13.28 km |
-| **#2** | **Benghazi** | Toukra | **0.791** | **7.65** | Urban High-Capacity Macro (B3+B1+B20) | 26,704 | 24.69 km |
-| **#3** | **Zwara** | Aljmail | **0.847** | **7.63** | Suburban Standard Macro (B3 + B20) | 24,521 | 10.74 km |
-| **#4** | **Zwara** | Al Ajaylat | **0.843** | **7.58** | Suburban Standard Macro (B3 + B20) | 24,013 | 14.83 km |
-| **#5** | **Derna** | Alqubba | **0.927** | **7.50** | Suburban Standard Macro (B3 + B20) | 9,463 | 10.01 km |
+## Missing Data
 
-## Cloudflare Radar regional demand integration
+Missing source values stay missing or receive an explicit availability flag. In particular:
 
-The 22-row regional feature table is useful for prioritization, but most files in
-`data/cloudflare_radar_libya` contain national or ISP-level values that are equal
-for every candidate coordinate and therefore cannot improve spatial prediction.
-All 22 Radar place labels are explicitly mapped to the project's OCHA admin-2
-municipalities.
+- absent bandwidth is not replaced with a technology-wide assumption;
+- unresolved operator identity stays unknown;
+- missing tower type stays unknown;
+- unavailable raster samples are not converted to measured zero;
+- absent Cloudflare regional data remains missing and flagged unavailable; Cloudflare does not affect ranking.
+- absent mapped building outlines remain explicitly unobserved; they are not converted into evidence of empty land and do not affect ranking.
 
-A controlled ablation tested three regional inputs against the same 4,615 training
-examples. Random stratified ROC-AUC moved only from **0.98625 to 0.98642**, while
-municipality-held-out ROC-AUC declined from **0.98331 to 0.98184**. The regional
-features were therefore rejected as classifier inputs, avoiding geographic leakage
-and leaving the saved suitability model and its benchmark unchanged.
+Rows that fail source validation are quarantined or excluded with a recorded reason. The pipeline must not silently relax planning constraints to force a requested number of recommendations.
 
-The 52-week HTTP request share is instead converted to a regional percentile and
-applied to the final deployment priority with a bounded factor of `0.9 + 0.2 ×
-percentile`. This adds at most ±10% influence and keeps the original geospatial
-priority, model probability, raw Radar share, growth, and factor in the exported
-CSV/GeoJSON for audit. Missing Radar data uses a neutral factor of 1.0. The full
-assessment is stored in
-[`eval_reports/cloudflare_radar_assessment.json`](eval_reports/cloudflare_radar_assessment.json).
+## Outputs
 
-## OpenCellID observations (`data/606.csv`)
+Cleaning and feature transformations run in memory. The retained project artifacts are proposed-placement CSV/GeoJSON, the review map, and compact Step 7-13 evaluation reports under `eval_reports/`; they can be rebuilt from declared source inputs.
 
-The optional OpenCellID export adds supplementary network evidence to placement
-review. Its third column, `net`, maps `0` to **Libyana** and `1` to **Al-Madar**;
-other codes remain **Unknown**. Both headerless and named 14-column exports are
-supported, following the [OpenCellID database format](https://docs.opencellid.org/docs/downloads/database-format).
-Timestamps are Unix seconds. `unit` is PSC/PCI, not a tower identifier, and the
-deprecated `averageSignal` is not signal-strength evidence.
+The recommendation output contains:
+
+- deterministic candidate ID, H3 resolution 7 unit, resolution 6 parent, generation source, latitude, and longitude;
+- `planning_priority_score` and component scores;
+- distance to observed-site references and roads;
+- population and terrain evidence when available;
+- municipality and settlement context;
+- OpenCellID proximity fields and review flag;
+- WorldCover point class, water/availability flags, H3 class proportions, and mixed/coastal review flag;
+- OSM mapped-building count, footprint area, density, coverage ratio, observation/availability flags, and review flag;
+- H3 counts, observation flags, and nearest-feature distances for the accepted Step 11 OSM review families;
+- a stable recommendation rank, score version, and reason codes.
+
+Candidates missing required population, terrain, site-distance, road-distance, or WorldCover point evidence are ineligible rather than filled with invented values. Confirmed WorldCover permanent-water points are also ineligible. Cloudflare context carries its own availability field.
+
+It must not contain invented radio bands, bandwidth, building height, equipment tier, coverage gain, or model probability.
+
+## Verification
 
 ```bash
-uv run antenna-placement opencellid
-# Optional alternative input for import/report generation:
-uv run antenna-placement opencellid --path /path/to/cells.csv
-uv run antenna-placement map
+uv run python -m unittest discover -s tests -v
 ```
 
-`clean` also imports `data/606.csv` when present. `recommend` adds observation
-proximity and a review flag to its CSV/GeoJSON output. The map reads the default
-raw export and displays optional operator layers plus proximity notes on proposed
-sites. An alternative `--path` only changes the import/report input; copy an export
-to `data/606.csv` to use it throughout the pipeline.
+For each pipeline run, also inspect the CLI source-validation summaries, missingness counts, candidate audit, score-component ranges, and map. Exact source snapshots and row counts can change, so record the command output with the source snapshot used for an accepted review.
 
-The initial September 13, 2026 assessment found:
+The 2026-09-20 Step 10 run passed all 37 automated tests and verified the raw PBF size and hash. Of 1,268,052 mapped footprints, only 3,042 had a plausible explicit height: 0.2399% coverage. Valid heights appeared in 19 of 22 municipalities and zero shortlisted H3 cells; none declared `source:height`. The recommendation output remained unchanged. Step 10 therefore has a `remove` decision, and no height field enters the runtime or score.
 
-| Measure | Count |
-| --- | ---: |
-| Unique cell identities | 1,406 |
-| Libyana / Al-Madar / unknown | 905 / 498 / 3 |
-| GSM / UMTS / LTE | 262 / 722 / 422 |
-| Cells over 3 km from an existing project site | 337 |
-| Existing top-50 recommendations near eligible observations | 11 |
+The 2026-09-21 Step 11 run passed all 40 automated tests and verified the existing GeoPackage snapshot. It retained 893 hospitals, 799 higher-education features, 87 aviation features, and 1,706 industrial features as review-only context. Those families covered 90.91-100% of municipalities. The 12-record ferry-terminal proxy covered only one municipality and was removed. Scores and ranks were identical before and after integration (Spearman 1.0).
 
-Outputs are [`data/cleaned/opencellid_cells.csv`](data/cleaned/opencellid_cells.csv),
-`opencellid_rejected.csv`, [`eval_reports/opencellid_quality.json`](eval_reports/opencellid_quality.json),
-and [`eval_reports/opencellid_recommendation_review.csv`](eval_reports/opencellid_recommendation_review.csv). Run `opencellid` again after
-changing recommendations to refresh the standalone review report.
+The 2026-09-21 Step 12 run passed all 44 automated tests and verified four official Ookla archives plus the deterministic Libya subset. Of 24,979 tile-quarter rows, 4,426 met the support threshold of at least five tests and three devices. Supported evidence covered 20 of 22 municipalities, but only 3 of 50 shortlisted H3 cells had at least two supported quarters. The 6% shortlist coverage failed the pre-set 25% threshold, so no Ookla field enters recommendations, assessment, maps, or scoring. Scores and ranks remained unchanged.
 
-Validation quarantines invalid identifiers, non-Libyan MCCs and coordinates outside
-the project bounding box (not a national boundary polygon). Deduplication uses
-`radio,mcc,net,area,cell`, preferring valid timestamps and the latest observation.
-All retained cells have source attribution, sample counts and UTC dates. Review
-flags use cells with valid dates, at least two samples and an update within 730
-days, within 3 km of a candidate. These thresholds are review heuristics, not
-calibrated confidence or coverage estimates. Distances use the project's UTM 33N
-projection. Missing operator evidence is represented by blank distance values.
+The 2026-09-21 Step 13 run verified 128,340,693 bytes of local VIIRS and flare artifacts. Forty-nine of 50 candidates remained supported after a 5 km official gas-flare exclusion (98% coverage), and selected-month radiance was stable (median Spearman 0.9660). A hypothetical 10% radiance weight promoted five candidates into the top 10, none near a catalogued flare. However, no independent activity, traffic, KPI, or reviewed planning labels exist to show incremental holdout improvement. VIIRS is therefore excluded from recommendations, assessment, maps, and scoring; redundancy is not treated as improvement.
 
-OpenCellID coordinates are estimated **cell locations**, not verified physical
-masts. The source `range` is retained as metadata and is not used as a coverage
-footprint or location-accuracy bound. Cell observations are therefore kept separate
-from mast counts, RF capacity, training labels and model inputs. Current model
-scores/ranks and the historical benchmarks above remain unchanged; this integration
-improves evidence available for review, without claiming measured predictive gains.
-No nearby observation does not establish an unserved area.
+## Limitations
 
-Data attribution: [OpenCellID](https://opencellid.org/).
+- Crowdsourced cell coordinates are estimates and may be stale, duplicated, or displaced from a physical mast.
+- A cluster of radio observations is an inferred site reference, not a verified asset register.
+- Population, roads, terrain, and Internet activity are planning proxies; none measures operator traffic or service quality.
+- Site-distance gaps do not establish RF coverage gaps.
+- Libya-wide work spans several UTM zones; distance and area calculations require projection checks.
+- Candidate coordinates require field survey, land and permitting review, power and backhaul checks, spectrum planning, RF simulation, and operator approval.
+- WorldCover describes 2021 surface class; it does not prove current buildability or calibrated RF attenuation.
+- OpenStreetMap building outlines are contributor-mapped and incomplete; absence does not prove empty land, while a footprint does not prove height, ownership, access, or constructability.
+- Explicit OSM height tags are too sparse and insufficiently sourced for national planning; floor counts are not converted into heights.
+- Ookla Speedtest observations are self-selected, sparse at shortlisted cells, and licensed for non-commercial use under share-alike terms. Tile-quarter device counts are not unique across space or time.
+- VIIRS radiance is an activity proxy, not mobile demand. A four-month median reduces transient influence but is not an active-fire mask, and the flare catalog cannot identify every industrial light source.
 
-Validation: `uv run python -m unittest discover -s tests -v`.
-
-### Map background without public tile servers
-
-The generated maps embed UN OCHA Libya boundaries, roads and settlement labels
-from `data/external`. They make no OpenStreetMap tile requests, avoiding the
-blocked-tile background when opening the HTML locally. Use the layer selector to
-show or hide roads, labels, sites and OpenCellID observations. Regenerate both
-HTML outputs with `uv run antenna-placement map`.
-
-This background provides geographic context, not street-level imagery. Folium's
-JavaScript and CSS still load from CDNs, so the HTML is not fully offline.
+See [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) for the implemented methodology and [TELECOM_GIS_RF_AI_ROADMAP.md](TELECOM_GIS_RF_AI_ROADMAP.md) for the gated path to RF- and KPI-validated planning. Step 14, FABDEM comparison, is next; Steps 15-20 remain pending in roadmap order.
