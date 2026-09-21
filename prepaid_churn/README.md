@@ -49,6 +49,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
 | `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes `reports/decisions.md`; releases nothing |
 | `uv run churn approve --proposals <file> --reviewer <name>` | T11 | Approves pending proposals and exports approved rows only; `--reject` records rejection |
+| `uv run churn advance` | T19 | Advises an emergency credit limit per customer and writes `reports/emergency_credit.md`; grants nothing |
 | `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |
 | `uv run streamlit run app/Home.py` | T14 | Opens the four demo screens over the released outputs; the only screen that writes is the named approval |
 
@@ -210,6 +211,34 @@ Without a gated bundle, every screen says so and leaves the risk figures blank r
 
 One thing the message screen is for: a single Arabic character forces an SMS into UCS-2, where one part is 70 characters instead of 160.
 The current approved message is 102 characters, so it sends, and bills, as two parts.
+
+## Emergency credit advice
+
+Almadar sells two emergency credit products: an airtime advance of 1, 3 or 5 LYD, and a
+flat 5 LYD data advance for 2 GB over 72 hours.
+Both are offered when the balance is nearly empty, so the eligible population is selected
+on being broke.
+
+```bash
+uv run churn advance
+```
+
+One rule decides the advice: never advise a debt above 0.6 of the customer's typical
+top-up, so that clearing it still leaves usable balance.
+It advises only amounts the operator actually sells, it estimates no probability of
+repayment, and it grants nothing.
+A limit reaches a customer only if a person approves it, exactly as a retention offer does.
+
+The finding that motivates the rule is in [reports/emergency_credit.md](reports/emergency_credit.md):
+the smallest recharge card, the data advance and the top airtime rung are all 5 LYD, so
+clearing either debt with one card returns the customer to a zero balance and buys them
+nothing.
+
+On the 30,000 unlabeled customers the result says more about the product than about the
+rule. This base tops up often in very small amounts, so 46.1% cannot carry even the 1 LYD
+advance and still have something left, and the flat 5 LYD data advance suits 4.65%.
+The report states every assumption, including how much the answer moves if a different
+statistic stands in for the customer's typical top-up.
 
 ## Development checks
 

@@ -274,6 +274,7 @@ A fresh clone of `Ali_Branch` on 2026-09-21 reproduced all of them byte for byte
 | `reports/almadar_view.md` | Money and packages in Almadar terms, with statuses | `churn almadar-view` |
 | `reports/tiers.md` | Value tiers, cutoffs and the clustering comparison | `churn fit-tiers` |
 | `reports/decisions.md` | Retention proposals with every cost and effect assumption | `churn decide` |
+| `reports/emergency_credit.md` | Advised emergency credit limits; uses no model | `churn advance` |
 | `docs/data_contract.md` | What an operator export must contain | `churn contract` |
 | `docs/output_contract.md` | The per-subscriber output contract | `churn output-contract` |
 | `docs/decisions.md` | Why each decision was made, with its date | written by hand |

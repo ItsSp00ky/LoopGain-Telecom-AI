@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-21 for Ali (T15 integration service, T14 demo app, T9 documentation).
+**Last updated:** 2026-09-21 for Ali (T15 service, T14 demo app, T9 documentation, T19 emergency credit).
 
 **Current review delivery**
 
@@ -51,7 +51,15 @@ Update this section at the end of every working session.
 - **The fresh-clone check was rerun on 2026-09-21 and passed:** the README pipeline rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, and `git status` showed no changed report.
 - That confirms T21, T15, T14 and the four new dependencies did not move the frozen champion or any committed number.
 - With a real bundle the 30,000 unlabeled customers score high 1,209, medium 3,594, low 22,779 and already silent 2,418.
-- T9, T10, T11, T14 and T15 are complete. T20 is next and needs Taha and the chatbot and copilot owners; T17, T19, T12 and T13 are the remaining experiments.
+- T19 is done, the first experiment after the MVP: `churn advance` advises an emergency credit limit from recharge behaviour alone.
+- T19 validation: 379 prepaid tests, lint and formatting pass; 38 of those tests are new, and no dependency was added.
+- **The T19 result is a finding about the product, not about the rule.** This base tops up often in very small amounts, median typical top-up 1.89 LYD.
+- So 46.1% of customers cannot carry even the 1 LYD advance and still have balance left, and the flat 5 LYD data advance suits only 4.65%, though the operator offers it to anyone with a low balance.
+- The zero-residual finding is computed, not asserted: the smallest card, the data advance and the top airtime rung are all 5 LYD.
+- The "typical top-up" basis is an assumption that moves the headline by twenty points, so `reports/emergency_credit.md` carries a sensitivity table instead of hiding it.
+- T9, T10, T11, T14, T15 and T19 are complete.
+- T20 is the last MVP item and needs Taha and the chatbot and copilot owners rather than code alone.
+- **T12 and T13 are graded:** decision 8 says SIC grades syllabus coverage, and Ch 8, Ch 9 RNN (T12) and Ch 9 GAN (T13) are the two chapters still uncovered. T17 covers no chapter.
 
 The following is the original 2026-09-19 handoff for rebuilding the source branch.
 Its branch instructions are superseded by the current review delivery above.
@@ -113,7 +121,7 @@ Its branch instructions are superseded by the current review delivery above.
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
    T20 still belongs with Taha and the other owners, because its acceptance needs them to confirm the responses give them what they need.
 6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
-7. After the MVP works end to end: T17, T19, T12 and T13.
+7. After the MVP works end to end: T19 (done, Ali), then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
@@ -748,7 +756,7 @@ Findings (`reports/almadar_view.md`, rules in `docs/almadar.md`):
 ## T19 - Emergency credit advice
 
 **Owner:** Ali
-**Status:** In progress
+**Status:** Done
 **Depends on:** T16, T18
 
 Why: Almadar's two emergency credit products (an airtime advance of 1, 3 or 5 LYD and a 5 LYD data advance) are the most Libyan part of Ali's work, and a safe limit can be set from real recharge behaviour.
@@ -762,6 +770,20 @@ Scope:
 Acceptance:
 - Tests for the ceiling and the denominations.
 - `reports/emergency_credit.md` with the share of customers per advised limit and every assumption.
+
+Findings (2026-09-21):
+- `src/prepaid_churn/advance.py` advises a limit and grants nothing; `churn advance` writes the advice and the report.
+- One rule: never advise a debt above 0.6 of the customer's typical top-up, ported with Ali's reason, and the code refuses any fraction at or above 1.
+- Only denominations the operator sells are advised, so a 2.9 LYD ceiling advises 1 LYD rather than inventing a 2 LYD advance.
+- The zero-residual finding is computed from `market.toml`, not hardcoded: the smallest card, the data advance and the top airtime rung are all 5 LYD, so clearing either leaves 0 LYD.
+- A test shows the finding would retire itself if the operator ever sold a larger smallest card.
+- The basis is an adaptation. Ali asks for the modal top-up; this data has only monthly totals and counts, so the quieter month's average per recharge is used, which is never larger and so cannot widen the advice.
+- That choice moves the result by more than twenty points, so the report carries a sensitivity table across the quieter month, the mean and the busier month, and both months travel beside each verdict.
+- **The result is a finding about the product.** This base tops up often in very small amounts, with a median typical top-up of 1.89 LYD against five to six recharges a month.
+- The smallest advance needs 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing; the flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, though the operator offers it to anyone with a low balance.
+- Advised airtime limits: 1 LYD for 37.51%, 3 LYD for 11.70%, 5 LYD for 4.65%, declined for 46.14%; 0.90% had no recharge at all.
+- Not ported, each for a stated reason: the repayment model, tier ceiling, CLV cap, cooling-off, chronic distress, lockout step-down, reject inference and fee structure.
+- 38 new tests; 379 prepaid tests, lint and formatting pass. No new dependency.
 
 ## T20 - Integration check with the team platform
 

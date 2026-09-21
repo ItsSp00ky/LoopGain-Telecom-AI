@@ -17,6 +17,7 @@ VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
 TIER_MODEL_PATH = PROJECT_ROOT / "artifacts" / "tiers" / "tiers.json"
 TIERS_PATH = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
 CAMPAIGN_DIR = PROJECT_ROOT / "artifacts" / "campaigns" / "retention"
+ADVICE_PATH = PROJECT_ROOT / "artifacts" / "scores" / "advance.csv"
 # Kaggle's unlabeled customers: never used for evaluation, so they stand in for "this month's base".
 RAW_SCORE_PATH = PROJECT_ROOT / "data" / "raw" / "test.csv"
 GATE_FILE = "gate.json"
@@ -239,6 +240,24 @@ def run_approve(args: argparse.Namespace) -> None:
     )
 
 
+def run_advance(args: argparse.Namespace) -> None:
+    from prepaid_churn.advance import advice_report, advise
+    from prepaid_churn.almadar import load_market
+    from prepaid_churn.clean import clean
+    from prepaid_churn.schema import validate
+    from prepaid_churn.scoring import SCORING_WINDOW
+
+    market = load_market()
+    cleaned = clean(validate(load_raw(args.input), labeled=False))
+    advice = advise(cleaned, SCORING_WINDOW, market)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    advice.to_csv(args.output, index=False, encoding="utf-8")
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(advice_report(advice, market, args.input.name), encoding="utf-8")
+    counts = advice["advice_code"].value_counts().to_dict()
+    print(f"Advice for {len(advice)} customers in {args.output}, report in {args.report}: {counts}")
+
+
 def run_serve(args: argparse.Namespace) -> None:
     import uvicorn
 
@@ -402,6 +421,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     output_contract.add_argument("--output", type=Path, default=OUTPUT_CONTRACT_PATH)
     output_contract.set_defaults(handler=run_output_contract)
+
+    advance = commands.add_parser(
+        "advance",
+        help="Advise an emergency credit limit per customer (ticket T19).",
+        description=(
+            "Rule-based advice only. It grants nothing, and a limit reaches a customer "
+            "only after a person approves it (decision 14)."
+        ),
+    )
+    advance.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
+    advance.add_argument("--output", type=Path, default=ADVICE_PATH)
+    advance.add_argument("--report", type=Path, default=REPORTS_DIR / "emergency_credit.md")
+    advance.set_defaults(handler=run_advance)
 
     serve = commands.add_parser(
         "serve",

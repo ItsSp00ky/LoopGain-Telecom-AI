@@ -553,3 +553,44 @@ The approved message on the checked campaign is 102 characters and therefore sen
 The customer message states the package and the reviewer's reason and nothing else.
 It carries no churn probability, no risk band and no value figure, and the reviewer's name is not in it either: the chatbot and an SMS both reach the customer, and which employee approved a campaign is not the customer's business.
 The subscriber screen refuses an ID shaped like a Libyan mobile number before looking anything up, because a Streamlit widget value reaches the session state and the server log first.
+
+## 23. Emergency credit advice from recharge behaviour, with no repayment model
+
+Date: 2026-09-21.
+
+Ali took T19 as the first experiment after the MVP.
+Almadar sells two emergency credit products, both confirmed from the operator's own documents and recorded by T16.
+The airtime advance is 1, 3 or 5 LYD, offered when the balance is at or below 0.5 LYD.
+The data advance is a flat 5 LYD for 2 GB over 72 hours, offered when the balance is at or below 1 LYD.
+
+`src/prepaid_churn/advance.py` advises a limit and grants nothing.
+A limit reaches a customer only if a person approves it, exactly as a retention offer does (decision 14).
+No new dependency was added.
+
+There is no repayment model and there will not be one until an operator supplies repayment history (decision 15).
+Nothing in the module estimates a probability of repayment, so no figure in the report is a default rate.
+`Ali_Branch` also caps by loyalty tier, by a share of customer value, by monthly cumulative exposure and by a chronic-distress screen.
+None of those were ported: they need a repayment model, an advance history, a tenure tier or balance-level fields that this data does not contain.
+Libyana's Credit Loan, with its tenure gate, grace period and line reset, describes a different operator and is not quoted for Almadar.
+
+One rule is applied: never advise a debt larger than 0.6 of the customer's typical top-up.
+The fraction is ported from `Ali_Branch` with his reason intact, and the code refuses any fraction at or above 1.
+At 1 a debt exactly equal to the typical top-up would be allowed, which is precisely the customer the rule exists to protect.
+
+The zero-residual finding is computed rather than asserted.
+The smallest recharge card is 5 LYD, and so are both the data advance and the top airtime rung, so clearing either leaves 0 LYD.
+A test pins this, and a second test shows the finding would retire itself if the operator ever sold a larger smallest card.
+The claim it supports is a disincentive to recharge, not a locked door: an exact equality is weaker evidence than an impossibility would be, and nothing here measures how often the disincentive bites.
+
+The basis for "typical top-up" is an adaptation, not a port.
+`Ali_Branch` asks for the modal top-up, because a mean is dragged up by one salary-week recharge that will not repeat.
+This dataset holds monthly totals and counts and never individual transactions, so no mode can be computed at all.
+The average top-up in the quieter of the two window months is used instead: closer to the habitual amount than an average across both, and never larger, so it cannot widen the advice.
+That choice moves the result by more than twenty points, so the report carries a sensitivity table across the quieter month, the mean and the busier month rather than burying the assumption.
+Both months travel in the output beside the verdict, so a reviewer sees the behaviour the advice was read from.
+
+The result on the 30,000 unlabeled customers is a finding about the product rather than about the rule.
+This base tops up often and in very small amounts: the median typical top-up is 1.89 LYD, against a median of five to six recharges a month.
+The smallest advance needs a top-up of at least 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing at all.
+The flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, although the operator offers it to anyone whose balance is low enough.
+Those shares are computed on real upGrad behaviour from another market and are not a claim about Libyan customers.

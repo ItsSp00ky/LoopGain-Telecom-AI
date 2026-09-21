@@ -34,7 +34,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | `docs/model_card.md` | T9 | Done (adapted structure, filled from the committed reports) |
 | 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | T17 | T17 | Planned |
-| 12 | Emergency credit rules and affordability ceiling | `conf/advance.yaml`, `src/cvm/decision/advance_limit.py` | T19 | T19 | Planned |
+| 12 | Emergency credit rules and affordability ceiling | `conf/advance.yaml`, `src/cvm/decision/advance_limit.py` | `src/prepaid_churn/advance.py` | T19 | Done (ceiling and denominations only; no repayment model) |
 | 13 | Synthesis engine and quality gate | `src/cvm/synthesis/ctgan_engine.py`, `quality_gate.py` | T13 | T13 | Planned |
 
 Not ported, with the reason in decision 15: the generated population and `hazard.py` labels, the repayment model, survival models, DuckDB, MLflow, Docker, conda, the eight-model benchmark, and the Cell2Cell, IBM, UCI, Hillstrom and Online Retail loaders.
@@ -159,4 +159,17 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Replaced his mandatory generated-data caveat with the equivalent that is true here: the data is real but from another market, undocumented in provenance, four months long and licensed for education only.
 - Every figure in the card is copied from a committed report and names it, because the employee copilot indexes the document (decision 17).
 - `tests/test_model_card.py` compares the card's figures against those reports, so a stale number fails the suite rather than reaching the copilot.
+
+### Step 12 - T19 emergency credit advice on Ali_Branch (2026-09-21)
+
+- Read `conf/advance.yaml` and `src/cvm/decision/advance_limit.py` at `06890f6`.
+- Ported the affordability ceiling, its 0.6 fraction and his reason for keeping it below 1, and the refusal to accept a fraction at or above 1.
+- Ported the rule that only denominations the operator actually sells may be advised, so a ceiling of 2.9 LYD advises 1 LYD rather than inventing a 2 LYD advance.
+- Ported the zero-residual finding, his honesty note that an equality is weaker evidence than an impossibility, and his correction that Libyana's Credit Loan does not describe Almadar.
+- Computed the finding from `market.toml` instead of hardcoding it, and added a test showing it would retire itself if the smallest card ever changed.
+- Adapted the basis: he asks for the modal top-up, and this data has only monthly totals and counts, so the quieter month's average per recharge is used and the report carries a sensitivity table for that choice.
+- Did not port the PD model, the tier ceiling, the CLV cap, the cooling-off period, the chronic-distress screen, the lockout-risk step-down, reject inference or the fee structure.
+  Each needs a repayment model, an advance history or balance-level fields that do not exist here, and decision 15 rules a repayment model out until an operator supplies one.
+- Did not carry over any number he measured on his generated population.
+- Decision 23 records the rule, the adaptation, the sensitivity and what was deliberately left out.
 
