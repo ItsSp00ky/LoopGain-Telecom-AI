@@ -568,8 +568,8 @@ Acceptance:
 
 ## T14 - Demo app
 
-**Owner:**
-**Status:** Todo
+**Owner:** Ali
+**Status:** In progress
 **Depends on:** T8, T11
 
 Scope:
