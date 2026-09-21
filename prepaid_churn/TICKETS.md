@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-21 for Ali (T15 integration service).
+**Last updated:** 2026-09-21 for Ali (T15 integration service, T14 demo app).
 
 **Current review delivery**
 
@@ -38,7 +38,15 @@ Update this section at the end of every working session.
 - The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the chatbot and copilot owners.
 - Run against this checkout on 2026-09-21: `/health` reports degraded with no bundle, `/catalogue` serves all 57 packages, `/portfolio/summary` summarises 30,000 subscribers with `risk_available` false, and no offer is released because none was approved.
 - Outputs are read once at startup, so restart the service after a new `churn approve` release; `/health` shows which campaign is being served.
-- T10, T11 and T15 are complete; the next product work is T20 integration checks with the chatbot and copilot owners, which needs Taha and the other owners rather than code alone.
+- T14 is implemented: four Streamlit screens over the released outputs, with the named approval step on the campaign screen.
+- T14 validation: 325 prepaid tests, lint and formatting pass; 26 of those tests are new.
+- Start it with `uv run streamlit run app/Home.py`; set `PREPAID_CHURN_CAMPAIGN_DIR` and `PREPAID_CHURN_PORTFOLIO` to show a campaign other than the first.
+- `streamlit` is the fourth dependency added on this delivery; decision 22 records why, and charts use the Altair that Streamlit already installs.
+- Every screen was opened in a browser against the 30,000-row export, a five-customer campaign and a one-customer campaign; that found five defects the unit tests had missed, all fixed.
+- Approving on screen writes through the same locked, audited path as `churn approve`, and only approved rows reach `released.csv`.
+- **For T11 to consider:** the approved Arabic message is 102 characters, so it sends and bills as two SMS parts; one part is 70 characters once any Arabic is present.
+- T10, T11, T14 and T15 are complete; the next product work is T20 integration checks, which needs Taha and the chatbot and copilot owners rather than code alone.
+- T9 documentation and the model card are the largest piece still doable without other people.
 
 The following is the original 2026-09-19 handoff for rebuilding the source branch.
 Its branch instructions are superseded by the current review delivery above.
@@ -99,7 +107,7 @@ Its branch instructions are superseded by the current review delivery above.
 5. T15 integration service (done, Ali), then T20 integration check with the chatbot and copilot.
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
    T20 still belongs with Taha and the other owners, because its acceptance needs them to confirm the responses give them what they need.
-6. T14 demo app and T9 documentation.
+6. T14 demo app (done, Ali), then T9 documentation and the model card.
 7. After the MVP works end to end: T17, T19, T12 and T13.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
@@ -569,7 +577,7 @@ Acceptance:
 ## T14 - Demo app
 
 **Owner:** Ali
-**Status:** In progress
+**Status:** Done
 **Depends on:** T8, T11
 
 Scope:
@@ -584,6 +592,21 @@ Acceptance:
 - `uv run streamlit run ...` starts the app from the README instructions.
 - Every screen is opened in a browser and checked, including with a single customer.
   (Lesson from `Ali_Branch`: two of its late bugs were only visible on screen.)
+
+Findings (2026-09-21):
+- Four screens in `app/`, over the pure `src/prepaid_churn/demo.py`; loading goes through `service.load_state`, so the app and the T15 endpoints answer from one state.
+- Start it with `uv run streamlit run app/Home.py`; `PREPAID_CHURN_CAMPAIGN_DIR` and `PREPAID_CHURN_PORTFOLIO` choose which campaign and export to show.
+- The app recomputes nothing. Its only write is a review, through `campaign.review_file`, with the same lock, atomic replacement and named audit event as `churn approve`.
+- The budget control is an explicit preview over the campaign's own stored inputs; it is never written and nothing in it can be approved (decision 22).
+- Every screen was opened in a browser on 2026-09-21: against the real 30,000-row export, a five-customer campaign and a one-customer campaign.
+- The browser check found five defects the unit tests had not, all now fixed: an alphabetically sorted axis that put the value tiers in a meaningless order, a typed ID silently overriding the random-pick button, fractional tick marks for whole customers, "1 customers", and "reviewed by nan" on an unreviewed proposal.
+- Approving on screen was verified end to end: the reviewer name is required, `review_log.jsonl` records subscriber, reviewer, decision, UTC time and campaign fingerprint, and only the approved row reaches `released.csv`.
+- The SMS preview reports parts rather than characters alone. The approved message on the checked campaign is 102 characters and sends as **two** UCS-2 parts, so T11's reason text does not fit one SMS in Arabic; that is a real finding for T11 to consider, not a display detail.
+- The customer message carries no churn probability, risk band, value figure or reviewer name.
+- The subscriber screen refuses an ID shaped like a Libyan mobile number before any lookup, which was checked in the browser.
+- 26 new tests; 325 prepaid tests, lint and formatting pass.
+- `streamlit` is added as a dependency; charts use Altair, which Streamlit already installs.
+- Limitations: outputs are cached per session and reread after a review or a restart, and the app is a local development server, not a deployed one.
 
 ## T15 - Integration service for the chatbot and copilot
 

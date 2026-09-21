@@ -71,6 +71,8 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/service.py` | T15 read-only integration state and the four payload builders (`load_state`, `health`, `catalogue`, `retention`, `portfolio_summary`) |
 | `src/prepaid_churn/api.py` | T15 FastAPI app, per-consumer API keys and the response models that generate `/docs` |
 | `src/prepaid_churn/privacy.py` | T15 pseudonymous IDs: the Libyan phone-number check and the salted `pseudonymize` helper |
+| `src/prepaid_churn/demo.py` | T14 pure layer behind the demo screens: loading, headline numbers, guardrail breakdown, SMS parts and the customer message |
+| `app/` | T14 Streamlit screens (`Home.py` plus `pages/`); thin, and the only write is a named review |
 | `data/processed/` | Built by `churn build-dataset` (git-ignored) |
 | `artifacts/models/` | Built by `churn train` (git-ignored) |
 | `artifacts/bundle/` | Built by `churn bundle` from a champion that passed its release gate (git-ignored) |

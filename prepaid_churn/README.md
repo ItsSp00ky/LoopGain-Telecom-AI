@@ -49,6 +49,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes `reports/decisions.md`; releases nothing |
 | `uv run churn approve --proposals <file> --reviewer <name>` | T11 | Approves pending proposals and exports approved rows only; `--reject` records rejection |
 | `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |
+| `uv run streamlit run app/Home.py` | T14 | Opens the four demo screens over the released outputs; the only screen that writes is the named approval |
 
 Full pipeline from a fresh clone, about a minute (the processed data, models and scores are git-ignored and rebuilt):
 
@@ -169,6 +170,39 @@ The OpenAPI page at `/docs` is generated from the response models, so it is the 
 Outputs are read once when the service starts, so restart it after a new `churn approve` release.
 `/health` reports the campaign it is holding, so you can see what is being served.
 Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null, which is the state of this checkout.
+
+## Demo app
+
+Four screens over what the pipeline wrote, for showing the module to someone.
+
+```bash
+uv run streamlit run app/Home.py
+```
+
+| Screen | What it shows |
+|---|---|
+| Home | The base, expected churners and revenue at risk, and what is not built yet |
+| Overview | Customers and LYD at risk by risk band and value tier, with the model's test results |
+| Subscriber | One customer: risk, plain-language reasons, value tier, the Almadar bundle held and the proposed offer |
+| Campaign builder | What the guardrails removed, the holdout, cost and value, the equal-spend comparison, and approve or reject under your name |
+| Message preview | The Arabic message an approved customer would receive, and how many SMS parts it actually costs |
+
+By default it reads the first campaign in `artifacts/campaigns/retention`.
+To show another one, name it before starting:
+
+```bash
+export PREPAID_CHURN_CAMPAIGN_DIR="artifacts/campaigns/campaign-001"
+export PREPAID_CHURN_PORTFOLIO="artifacts/scores/tiers.csv"
+```
+
+The app recomputes nothing.
+The only thing it writes is a review, through the same locked and audited path as `churn approve`, and only approved rows reach `released.csv`.
+The budget slider on the campaign screen is a preview over that campaign's own stored inputs: it is never written and nothing in it can be approved, so use `churn decide --budget` into a new directory to make a different budget real.
+
+Without a gated bundle, every screen says so and leaves the risk figures blank rather than showing zero.
+
+One thing the message screen is for: a single Arabic character forces an SMS into UCS-2, where one part is 70 characters instead of 160.
+The current approved message is 102 characters, so it sends, and bills, as two parts.
 
 ## Development checks
 

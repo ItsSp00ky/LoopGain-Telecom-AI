@@ -31,7 +31,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/almadar/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | `src/prepaid_churn/api.py`, `src/prepaid_churn/service.py`, `src/prepaid_churn/privacy.py` | T15 | Done (adapted design, four read-only endpoints and per-consumer keys) |
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Planned |
-| 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | T14 | T14 | Planned |
+| 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | T9 | T9 | Planned |
 | 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | T17 | T17 | Planned |
 | 12 | Emergency credit rules and affordability ceiling | `conf/advance.yaml`, `src/cvm/decision/advance_limit.py` | T19 | T19 | Planned |
@@ -133,4 +133,18 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Added what `Ali_Branch` did not have: per-consumer API keys enforced per endpoint, a refusal to start without them, the phone-number check on the request path, and an approved-only offer lookup.
 - Ali's API had no authentication and allowed every CORS origin outside production; that part was not carried over.
 - Decision 21 records the new dependencies, the access-control boundary and the reporting rules.
+
+### Step 10 - T14 demo app on Ali_Branch (2026-09-21)
+
+- Read `apps/_shared.py`, `apps/command_center/Home.py` and the Executive Overview, Subscriber 360 and Campaign Builder pages at `06890f6`.
+- Ported the SMS part calculation, with Ali's GSM-7 against UCS-2 finding and his reason for it: one Arabic character forces the whole message into UCS-2, where a part is 70 characters and not 160.
+- Ported the missing-output banner idea, which names what is absent and the command that produces it, and the right-to-left wrapper for Arabic.
+- Took his Executive Overview rule that expected churners is the sum of calibrated probabilities rather than a count above a threshold.
+- Took his Campaign Builder rule that a guardrail breakdown must state who was excluded and why, and his warning that the blanket comparison has to be made before the guardrails run.
+- Took his Subscriber 360 lesson about keeping a one-row frame rather than a Series, and his rule that the lookup field refuses a raw number in the UI and not only in the backend.
+- Did not port the RFM radar, the SHAP waterfall, the survival curve, the uplift quadrant, the leakage panel, the advance limit screen, the targeting CSV export, plotly or the `channel_sim` app.
+  Those belong to models this module does not have, or to T17 and T19.
+- Added what `Ali_Branch` did not have: the named approve and reject step from decision 14, writing through `campaign.review_file`, and a budget control that is an explicit preview which cannot be approved.
+- Ali's app carried a synthetic-data caveat on every screen; the equivalent here is the no-bundle banner, because this module's numbers are real but its risk figures are unavailable without a gated bundle.
+- Decision 22 records the Streamlit dependency, the preview boundary, the reporting rules and the five defects the browser check found.
 

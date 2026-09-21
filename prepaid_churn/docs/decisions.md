@@ -510,3 +510,46 @@ The cost is that a newly approved campaign is served only after a restart; `/hea
 
 The service was run against this checkout on 2026-09-21.
 It reports degraded with no bundle, serves all 57 catalogue packages, summarises the 30,000-row tiers-only export with `risk_available` false and every `lyd_at_risk` null, and returns zero approved offers, because no real campaign has been approved.
+
+## 22. A demo app that reads the outputs and can approve them
+
+Date: 2026-09-21.
+
+Ali took T14 after T15, so the module has something a person can be shown rather than an OpenAPI page.
+The app is four Streamlit screens in `app/`, over a new pure module `src/prepaid_churn/demo.py`, and it follows the same rule as the service: it reads what the pipeline wrote and recomputes nothing.
+Loading goes through `service.load_state`, so the screens and the T15 endpoints answer from one state and cannot drift apart.
+The one thing it may write is a review, and it writes it through `campaign.review_file` exactly as `churn approve` does, with the same lock, the same atomic replacement and the same named audit event (decision 14).
+
+Streamlit is added to the dependencies.
+Charts use Altair, which Streamlit already installs, so no separate plotting dependency was added.
+`streamlit run` is a development server for a demo, not infrastructure: there is no container, no process manager and no database.
+
+The budget is a preview, not a decision.
+The ticket asks for a budget control, and the screen provides one by re-running T11's allocation over the campaign's own stored inputs, catalogue and policy with only the budget changed.
+Nothing about that preview is written, and nothing in it can be approved.
+Approval always acts on the campaign `churn decide` wrote, so a reviewer cannot approve a row a slider produced.
+A different budget becomes real only by running `churn decide --budget` into a new directory.
+
+Two environment variables, `PREPAID_CHURN_CAMPAIGN_DIR` and `PREPAID_CHURN_PORTFOLIO`, choose which campaign and which export the app shows.
+Both genuinely vary: `churn decide --output-dir` writes every campaign to its own directory and `churn tiers --output` writes every export to its own file.
+Without them the app could only ever show the first campaign ever made.
+
+Reporting rules carried over from decision 21, because a screen misleads faster than an API:
+- Expected churners is the sum of calibrated probabilities, not a count above a threshold, and it keeps a decimal while it is small, because 0.7 expected churners is not 1.
+- Revenue at risk is the 12-month value weighted by each customer's own churn probability, never the value of everyone in a risky band.
+- Every figure that needs a churn probability is blank, not zero, when no bundle scored the export, and a banner says so on each screen.
+- Each screen names the outputs it is missing and the command that produces them.
+
+The ticket's acceptance is that every screen is opened in a browser, including with a single customer, because two of `Ali_Branch`'s late bugs were only visible on screen.
+That was done on 2026-09-21 against the real 30,000-row export, against a five-customer campaign and against a one-customer campaign.
+It found five defects that the unit tests had not: an alphabetically sorted category axis that put the value tiers in a meaningless order, a typed ID that silently overrode the random-pick button, a fractional tick axis for whole customers, a plural that read "1 customers", and an unreviewed proposal reporting "reviewed by nan" because pandas had cast the absent reviewer to text.
+All five are fixed and four of them now have tests.
+The exercise is the reason the ticket required it.
+
+The SMS preview reports parts, not characters alone, and that is the point of the screen.
+A single Arabic character forces the whole message into UCS-2, where one part is 70 characters instead of 160.
+The approved message on the checked campaign is 102 characters and therefore sends, and bills, as two parts, which is a real finding about T11's reason text rather than a display detail.
+
+The customer message states the package and the reviewer's reason and nothing else.
+It carries no churn probability, no risk band and no value figure, and the reviewer's name is not in it either: the chatbot and an SMS both reach the customer, and which employee approved a campaign is not the customer's business.
+The subscriber screen refuses an ID shaped like a Libyan mobile number before looking anything up, because a Streamlit widget value reaches the session state and the server log first.
