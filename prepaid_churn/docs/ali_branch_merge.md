@@ -32,7 +32,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | `src/prepaid_churn/api.py`, `src/prepaid_churn/service.py`, `src/prepaid_churn/privacy.py` | T15 | Done (adapted design, four read-only endpoints and per-consumer keys) |
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Planned |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
-| 10 | Model card template | `docs/model_cards/TEMPLATE.md` | T9 | T9 | Planned |
+| 10 | Model card template | `docs/model_cards/TEMPLATE.md` | `docs/model_card.md` | T9 | Done (adapted structure, filled from the committed reports) |
 | 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | T17 | T17 | Planned |
 | 12 | Emergency credit rules and affordability ceiling | `conf/advance.yaml`, `src/cvm/decision/advance_limit.py` | T19 | T19 | Planned |
 | 13 | Synthesis engine and quality gate | `src/cvm/synthesis/ctgan_engine.py`, `quality_gate.py` | T13 | T13 | Planned |
@@ -147,4 +147,16 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Added what `Ali_Branch` did not have: the named approve and reject step from decision 14, writing through `campaign.review_file`, and a budget control that is an explicit preview which cannot be approved.
 - Ali's app carried a synthetic-data caveat on every screen; the equivalent here is the no-bundle banner, because this module's numbers are real but its risk figures are unavailable without a gated bundle.
 - Decision 22 records the Streamlit dependency, the preview boundary, the reporting rules and the five defects the browser check found.
+
+### Step 11 - T9 documentation and model card on Ali_Branch (2026-09-21)
+
+- Read `docs/model_cards/TEMPLATE.md` at `06890f6` and kept its structure: intended use, out-of-scope use, training data, metrics with the primary one first, calibration, explainability, limitations, ethical considerations, selection bias and maintenance.
+- Kept his rule that accuracy is not a headline metric at a low base rate, and reported PR-AUC first with accuracy omitted entirely.
+- Kept his insistence on an out-of-scope section, and on stating plainly that a model feeding a priced decision produces an input to a constrained decision rather than the decision.
+- Adapted his "naive versus honest" section.
+  No naive variant was run here, so instead of inventing one the card shows the validation PR-AUC of 0.4582 against the test 0.3477 and names the four traps the design avoids.
+- Dropped the fields that describe infrastructure this module does not have: MLflow run, `conf/models/*.yaml`, the Evidently drift report and the temporal cut dates, which do not apply to a customer split.
+- Replaced his mandatory generated-data caveat with the equivalent that is true here: the data is real but from another market, undocumented in provenance, four months long and licensed for education only.
+- Every figure in the card is copied from a committed report and names it, because the employee copilot indexes the document (decision 17).
+- `tests/test_model_card.py` compares the card's figures against those reports, so a stale number fails the suite rather than reaching the copilot.
 

@@ -8,6 +8,7 @@ The team's chatbot and copilot use its outputs (decision 17).
 **New here (for example Ali):** read the Handoff section of [TICKETS.md](TICKETS.md) first; it says how to rebuild everything and what comes next.
 
 - Plan, status and handoff notes: [TICKETS.md](TICKETS.md).
+- What the model is, what it may not be used for, and its limits: [docs/model_card.md](docs/model_card.md).
 - Why things are the way they are: [docs/decisions.md](docs/decisions.md).
 - Working with Claude on this module: [CLAUDE.md](CLAUDE.md).
 
@@ -61,10 +62,16 @@ uv run churn evaluate --chosen-at 2026-09-19
 uv run churn bundle
 uv run churn score
 uv run churn almadar-view
+uv run churn fit-tiers
+uv run churn tiers
 ```
 
 `--chosen-at 2026-09-19` keeps the date the champion was frozen.
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
+Checked again on 2026-09-21 from a fresh clone of `Ali_Branch`: same bundle version, same tier artifact `tiers-v1-cd15525cb3ef`, and no committed report changed.
+
+The last two commands build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
+To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
 The Almadar packages and market facts are in `data/almadar/` ([docs/almadar.md](docs/almadar.md)).
 
 ## Value tiers without new operator data

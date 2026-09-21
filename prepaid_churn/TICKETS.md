@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-21 for Ali (T15 integration service, T14 demo app).
+**Last updated:** 2026-09-21 for Ali (T15 integration service, T14 demo app, T9 documentation).
 
 **Current review delivery**
 
@@ -46,7 +46,12 @@ Update this section at the end of every working session.
 - Approving on screen writes through the same locked, audited path as `churn approve`, and only approved rows reach `released.csv`.
 - **For T11 to consider:** the approved Arabic message is 102 characters, so it sends and bills as two SMS parts; one part is 70 characters once any Arabic is present.
 - T10, T11, T14 and T15 are complete; the next product work is T20 integration checks, which needs Taha and the chatbot and copilot owners rather than code alone.
-- T9 documentation and the model card are the largest piece still doable without other people.
+- T9 is done: [docs/model_card.md](docs/model_card.md) covers intended and out-of-scope use, the data, the frozen metrics and thresholds, calibration, explanations, the approval step, the Almadar assumptions, limitations, ethics, selection bias and maintenance.
+- T9 validation: 341 prepaid tests, lint and formatting pass; 16 of those tests compare the card's figures against the reports they cite.
+- **The fresh-clone check was rerun on 2026-09-21 and passed:** the README pipeline rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, and `git status` showed no changed report.
+- That confirms T21, T15, T14 and the four new dependencies did not move the frozen champion or any committed number.
+- With a real bundle the 30,000 unlabeled customers score high 1,209, medium 3,594, low 22,779 and already silent 2,418.
+- T9, T10, T11, T14 and T15 are complete. T20 is next and needs Taha and the chatbot and copilot owners; T17, T19, T12 and T13 are the remaining experiments.
 
 The following is the original 2026-09-19 handoff for rebuilding the source branch.
 Its branch instructions are superseded by the current review delivery above.
@@ -107,7 +112,7 @@ Its branch instructions are superseded by the current review delivery above.
 5. T15 integration service (done, Ali), then T20 integration check with the chatbot and copilot.
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
    T20 still belongs with Taha and the other owners, because its acceptance needs them to confirm the responses give them what they need.
-6. T14 demo app (done, Ali), then T9 documentation and the model card.
+6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
 7. After the MVP works end to end: T17, T19, T12 and T13.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
@@ -437,7 +442,7 @@ Findings:
 ## T9 - Documentation
 
 **Owner:** Ali
-**Status:** In progress
+**Status:** Done
 **Depends on:** T8
 
 Scope:
@@ -447,6 +452,20 @@ Scope:
 
 Acceptance:
 - A teammate reproduces the evaluation report from a fresh clone by following the README only.
+
+Findings (2026-09-21):
+- [docs/model_card.md](docs/model_card.md) is written, adapted from `Ali_Branch`'s template (port log step 11).
+- Every figure in it is copied from a committed report and names that report, because the copilot indexes the document (decision 17).
+- It states what the model may not be used for first: no pricing, no credit or limits, no decision without a named reviewer, nothing sellable, and no language model in any path that sets an offer or a price.
+- Limitations are explicit: another market, undocumented provenance, four months of history, an educational licence, a spent test window, no causal claim and no network-quality features.
+- Ethics, selection bias and maintenance are covered; `circle_id` is the only region field and it is dropped before training, checked on 2026-09-21.
+- No naive-versus-honest table is invented. Instead the card shows validation PR-AUC 0.4582 against test 0.3477 and names the four traps the design avoids.
+- **Acceptance met.** A fresh clone of `Ali_Branch` on 2026-09-21 ran the README pipeline and reproduced every committed report byte for byte, with `git status` clean.
+- The same run rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, which confirms the T21, T15, T14 and dependency changes did not move the frozen champion.
+- The README already listed every command; the full-pipeline block now also runs `fit-tiers` and `tiers`, which the service and the app need, and links the model card.
+- `tests/test_model_card.py` compares the card's figures against the reports, so a stale number fails the suite instead of reaching the copilot.
+- 16 new tests; 341 prepaid tests, lint and formatting pass.
+- Scoring the 30,000 unlabeled customers with the real bundle gives high 1,209, medium 3,594, low 22,779 and already silent 2,418 (fresh clone, 2026-09-21).
 
 ## T10 - Value tiers (syllabus Ch 6)
 
