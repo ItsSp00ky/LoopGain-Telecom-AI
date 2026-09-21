@@ -580,8 +580,8 @@ Findings (2026-09-20):
 
 ## T12 - Sequence benchmark (syllabus Ch 8, Ch 9 RNN)
 
-**Owner:**
-**Status:** Todo
+**Owner:** Taha + Claude
+**Status:** In progress
 **Depends on:** T7
 
 Scope:
@@ -595,8 +595,8 @@ Acceptance:
 
 ## T13 - Synthetic data experiment (syllabus Ch 9 GAN)
 
-**Owner:**
-**Status:** Todo
+**Owner:** Taha + Claude
+**Status:** In progress
 **Depends on:** T4, T18
 
 Question: can an operator share a synthetic copy of its customer data (real data cannot leave the operator) and still get a useful model?
