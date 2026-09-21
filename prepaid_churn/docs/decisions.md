@@ -716,3 +716,43 @@ Tuning an experiment against the test set until it beats the champion is exactly
 Two independent efforts on this data dropped the recurrent model for the same reason.
 
 The honest caveat travels with the result in [../reports/sequence_benchmark.md](../reports/sequence_benchmark.md): with six or twelve months per customer, or with call-detail records instead of monthly totals, the comparison is worth running again.
+
+## 29. A synthetic copy is a demo, not a way to share customer data
+
+Date: 2026-09-22.
+
+T13 asked the operator's question rather than the model's: real prepaid data cannot leave a telecom operator, so can the operator fit a generator on its customers, hand out the copy, and still let someone build a model worth having?
+The experiment fits CTGAN and a Gaussian copula on 6,000 real training customers and 28 features, then trains the same LightGBM on each copy and scores all of them on the same real validation customers.
+
+The answer on this data, at this budget, is no.
+A model trained on the copula copy keeps 45% of the PR-AUC that the same model reaches on real customers, and the CTGAN copy keeps 15%.
+Both copies are told apart from real rows with a detection ROC-AUC of 1.000, so neither is realistic enough to be mistaken for the real thing either.
+CTGAN also lost the churn rate itself: 16.8% of its rows are churners against 4.7% in the real sample, and a model trained on the wrong base rate is wrong before it has learnt anything.
+
+Two results are worth keeping beyond the grade.
+
+The Gaussian copula, which is the simple baseline the GAN has to beat, beat it on every measure that matters here.
+That is a normal outcome for 60 epochs on a laptop CPU and it is reported as it came out.
+A longer fit would probably close the gap, and the report says so rather than presenting a budget as a ceiling.
+
+The business view is where the copies visibly came apart.
+Shown in Almadar terms through T18, 72% of the real customers are on pay-as-you-go, 14% hold a monthly bundle and 14% buy daily packs.
+The copula copy puts 86% on daily packs and nobody on pay-as-you-go; CTGAN puts 44% on monthly bundles.
+Every column in those copies is individually inside its real range, and the customers are still on the wrong packages, which is the failure a column-by-column quality score does not show.
+
+This is also the measured version of an argument this module already made twice.
+Decision 7 cut the generated population from the CVM proposal and decision 15 declined to carry `Ali_Branch`'s hazard-formula labels, both on the grounds that a model fitted to generated data is evidence about the generator and not about customers.
+T13 puts a number on it on our own data.
+So the rule stands and now has a citation: no synthetic row trains, calibrates or evaluates anything in this module, and no report or presentation may describe this module as producing a shareable synthetic customer base.
+
+What the copies are good for, and how this module uses them: a demo with no real customers in it, a schema to build a pipeline against, and a load test.
+That is real value and it is what the report claims.
+
+What was not measured, and would have to be before any copy left an operator: privacy.
+A copy can pass every fidelity test and still memorise a rare customer, and membership inference is the test for that, not column shapes.
+
+One honest note on method.
+The first version of the fidelity check counted rows with a negative amount and reported about 54% for both copies.
+That check was wrong: `diff_*` columns are differences and are negative for half the real customers too, so the same check called the real data 58% impossible.
+It was replaced with a comparison against the columns that are never negative in the real sample, where both copies score 0%, because SDV keeps each column inside the range it learnt.
+The wrong version is recorded here because it is the kind of check that looks like a finding and is really a bug.

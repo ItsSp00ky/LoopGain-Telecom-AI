@@ -77,6 +77,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `app/` | T14 Streamlit screens (`Home.py` plus `pages/`); thin, and the only write is a named review |
 | `src/prepaid_churn/advance.py` | T19 emergency credit advice: affordability ceiling, operator denominations, zero-residual finding and report |
 | `src/prepaid_churn/sequence.py` | T12 Keras LSTM over the two monthly steps, calibrated and scored against the champion on the frozen test (experiments group) |
+| `experiments/synthetic.py` | T13 CTGAN and Gaussian copula copies of the training customers, run with `uv run --script` in their own environment (decision 27) |
 | `data/processed/` | Built by `churn build-dataset` (git-ignored) |
 | `artifacts/models/` | Built by `churn train` (git-ignored) |
 | `artifacts/bundle/` | Built by `churn bundle` from a champion that passed its release gate (git-ignored) |

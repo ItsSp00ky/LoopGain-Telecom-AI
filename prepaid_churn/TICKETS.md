@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`, T20 done, T12 and T13 claimed).
+**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`; T20, T12 and T13 done).
 
 **Where the module is now**
 
@@ -24,7 +24,10 @@ Update this section at the end of every working session.
   Four questions are deliberately not served, each written in the guide with its reason.
 - **Validation of T20 here**: 390 prepaid tests, lint and formatting pass; 11 of them are T20's, and no dependency was added.
   The check ran clean against a real service holding the 30,000-subscriber base and a campaign with two approved offers and one rejected.
-- **What is left:** T12 and T13, the two graded syllabus chapters still missing (decision 8), claimed by us on 2026-09-22; T17 last.
+- **T12 and T13 are done**, so every graded syllabus chapter is now covered on real data (decision 8).
+  T12: the LSTM loses to LightGBM by a third of its PR-AUC and fails two of the four release checks, which is the expected answer for a two-step window and is kept as it came out (decision 28).
+  T13: a synthetic copy of the customers is a demo and a pipeline test, not a way to share data; the best copy keeps 45% of the real model's PR-AUC and both copies are told from real rows at a detection ROC-AUC of 1.000 (decision 29).
+- **What is left:** T17, the uplift experiment, which covers no syllabus chapter and is last by design; and the open questions below.
 
 **For Ali: what changed on our side**
 
@@ -41,10 +44,12 @@ Update this section at the end of every working session.
      Worth a `--report` flag or a campaign-local path.
    - `test_api.py` and `test_demo.py` each build their own copy of the same four subscribers, and `tests/test_client.py` now makes three.
      If you touch those fixtures, moving them into `conftest.py` would be a good small cleanup; we left them alone rather than editing your tests.
-4. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
-5. Your Claude can start from this, in the repo:
+4. T12 and T13 are done too, so the only ticket left is T17 (uplift), which is where your Criteo and Qini work from `Ali_Branch` would land if you want it.
+   Both experiment results are negative and stay that way: the LSTM loses to LightGBM, and a synthetic copy of the customers is a demo rather than a way to share data (decisions 28 and 29).
+5. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
+6. Your Claude can start from this, in the repo:
 
-   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and added T20. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 and 25 in `prepaid_churn/docs/decisions.md`, and steps 13 and 14 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
+   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and then finished T20, T12 and T13. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 to 29 in `prepaid_churn/docs/decisions.md`, and steps 13 to 16 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
 
 **Ali's delivery log (2026-09-20 and 2026-09-21)**
 
@@ -116,6 +121,8 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
 - T20 is done: the guide, the example client, `churn check-integration` and the copilot's subscriber lookup that the walkthrough found missing.
+- T12 and T13 are done: `reports/sequence_benchmark.md` and `reports/synthetic.md`, with decisions 27, 28 and 29.
+  Neither experiment changed a model, a feature or a threshold, and the frozen champion is untouched.
 - `tahaDev` now also carries Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`; they are Ali's work, and the team has to see them before anything reaches `main`.
 
 **Blocked on**
@@ -130,8 +137,8 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 5. T15 integration service (done, Ali), then T20 integration check (done, Taha + Claude).
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
 6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
-7. The MVP now works end to end: T19 (done, Ali), then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
-   T12 and T13 are the next work worth doing, and they are graded; whoever picks one writes their name in its Owner field first.
+7. The MVP now works end to end: T19 (done, Ali), T12 and T13 (done, Taha + Claude), and T17 last.
+   T17 is the only ticket left open, and it covers no syllabus chapter.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
@@ -144,8 +151,6 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
 - **`churn decide` overwrites a committed report:** it rewrites `reports/decisions.md`, so running the documented command leaves a tracked file dirty.
   Ali's call: a `--report` path, or write it beside the campaign.
-- **The two graded experiments:** T12 (sequence benchmark) and T13 (synthetic data) are the last syllabus chapters uncovered, and nobody owns either.
-  Taha and Ali should split them.
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
   We use the upGrad prepaid data instead (decisions 1 and 5), because the IBM data is fictional and postpaid.
   Taha should tell the team leader so the action plan matches the work.
@@ -609,7 +614,7 @@ Findings (2026-09-22, `reports/sequence_benchmark.md`):
 ## T13 - Synthetic data experiment (syllabus Ch 9 GAN)
 
 **Owner:** Taha + Claude
-**Status:** In progress
+**Status:** Done
 **Depends on:** T4, T18
 
 Question: can an operator share a synthetic copy of its customer data (real data cannot leave the operator) and still get a useful model?
@@ -627,6 +632,21 @@ Scope:
 Acceptance:
 - `reports/synthetic.md` with the train-on-synthetic vs train-on-real table and the detection ROC-AUC.
 - The synthetic data is never used to train the production model.
+
+Findings (2026-09-22, `reports/synthetic.md`):
+- `uv run --script experiments/synthetic.py` runs the whole experiment in about 90 seconds and writes the report.
+  It is a standalone script with its own environment because SDV caps pandas below 3, which would downgrade the module and break the frozen bundle (decision 27); it imports this package for the Almadar rules and the LightGBM settings, so nothing is duplicated.
+- Setup: 6,000 real training customers, 28 features (the 18 strongest by gain plus the columns T18 needs), CTGAN at 60 epochs on a CPU, and a Gaussian copula as the baseline.
+- Utility, scored on the same 9,812 real validation customers: real training 0.3238 PR-AUC, copula copy 0.1456 (45%), CTGAN copy 0.0491 (15%).
+- Detection ROC-AUC is 1.000 for both copies, so neither is realistic enough to pass for real data.
+- CTGAN lost the churn rate: 16.8% churners against 4.7% real. The copula kept it (5.1%).
+- In Almadar terms (T18) the copies are visibly wrong: real customers are 72% pay-as-you-go, 14% monthly, 14% daily; the copula copy is 86% daily and 0% pay-as-you-go, CTGAN is 44% monthly.
+  Every column is inside its real range, and the customers are still on the wrong packages.
+- Verdict: a synthetic copy here is a demo, a schema and a pipeline test, not a way to share customer data (decision 29).
+  That is the measured version of decisions 7 and 15, which cut generated populations and formula labels on the same argument.
+- Honest note: the first fidelity check counted negative amounts and reported 54% for both copies; it was wrong, because `diff_*` columns are negative for half the real customers too, so the same check called the real data 58% impossible. The corrected check is 0% for both.
+- Not measured: privacy. A copy can pass every fidelity test and still memorise a rare customer; membership inference is the test for that, and it is not in this experiment.
+- The script is linted by `ruff check` with the rest of the module, and it has no unit tests: it lives in its own environment, so the module's suite cannot import it, and its evidence is the committed report.
 
 ## T14 - Demo app
 

@@ -211,6 +211,16 @@ It loses, as two monthly steps predict: PR-AUC 0.2326 against LightGBM's 0.3477,
 The comparison, the thresholds and the caveats are in [reports/sequence_benchmark.md](reports/sequence_benchmark.md), and decisions 27 and 28 record why the answer is kept as it came out.
 Keras runs on the torch backend; SDV (T13) is deliberately not in this group, because it caps pandas below 3 and would downgrade the environment the champion was frozen in.
 
+T13 fits CTGAN and a Gaussian copula on real training customers and asks whether an operator could share a generated copy instead of its data.
+It runs in its own environment, so it needs no group at all:
+
+```bash
+uv run --script experiments/synthetic.py
+```
+
+The answer is no at this budget: a model trained on the best copy keeps 45% of the PR-AUC it reaches on real customers, both copies are told from real rows with a detection ROC-AUC of 1.000, and in Almadar terms the copies put customers on the wrong packages.
+The numbers, the limits and what a copy is actually good for are in [reports/synthetic.md](reports/synthetic.md) and decision 29.
+
 ## Demo app
 
 Four screens over what the pipeline wrote, for showing the module to someone.

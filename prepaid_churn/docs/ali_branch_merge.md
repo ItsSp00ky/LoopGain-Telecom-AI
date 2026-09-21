@@ -37,7 +37,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | `docs/model_card.md` | T9 | Done (adapted structure, filled from the committed reports) |
 | 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | T17 | T17 | Planned |
 | 12 | Emergency credit rules and affordability ceiling | `conf/advance.yaml`, `src/cvm/decision/advance_limit.py` | `src/prepaid_churn/advance.py` | T19 | Done (ceiling and denominations only; no repayment model) |
-| 13 | Synthesis engine and quality gate | `src/cvm/synthesis/ctgan_engine.py`, `quality_gate.py` | T13 | T13 | Planned |
+| 13 | Synthesis engine and quality gate | `src/cvm/synthesis/ctgan_engine.py`, `quality_gate.py` | `experiments/synthetic.py` | T13 | Done (the design; SDV's own CTGAN and quality report, fitted on our real customers) |
 
 Not ported, with the reason in decision 15: the generated population and `hazard.py` labels, the repayment model, survival models, DuckDB, MLflow, Docker, conda, the eight-model benchmark, and the Cell2Cell, IBM, UCI, Hillstrom and Online Retail loaders.
 
@@ -204,3 +204,13 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - One gap mattered: an employee copilot could quote portfolio totals but could not answer "what do we know about the customer I have on the phone", because no endpoint served one subscriber to the copilot.
   `GET /subscribers/{id}/risk` closes it (decision 26); `Ali_Branch`'s API had the equivalent in its `/v1/subscriber/{id}` view, so this is closer to his design than the four endpoints were.
 - The other gaps are recorded in the guide with the reason each one is not served, rather than left for a consumer to discover: the package a customer holds, the emergency credit advice, a bulk list of risky customers, and the review queue.
+
+### Step 16 - T12 and T13, the two graded experiments (2026-09-22, Taha + Claude)
+
+- Taha asked for the remaining tickets to be finished by us rather than left for someone else, so both graded syllabus experiments were done here.
+- T12 is not from `Ali_Branch`, but it lands on the same conclusion his branch reached: his API once returned an `lstm_churn_probability` beside the main score, and his integration document records that it was removed because M1 is a single gradient-boosting family now.
+  Our LSTM loses to LightGBM by a third of its PR-AUC on the frozen test window.
+- T13 ports the design of his `ctgan_engine.py` and `quality_gate.py`, not their code: SDV ships both the synthesiser and the quality report, and his wrapper existed to generate a population this module does not use.
+  The important change is what it is fitted on. His engine generated customers from Cell2Cell and a hazard formula; this one fits real upGrad training customers and asks what a model trained on the copy is worth.
+- The result is the measured version of decision 15's argument for cutting his generated population, and it is recorded in decision 29.
+- Not ported: his quality gate's pass or fail thresholds. They gated a pipeline that shipped generated data into a model, and nothing here does that.
