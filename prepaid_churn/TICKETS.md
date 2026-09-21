@@ -436,8 +436,8 @@ Findings:
 
 ## T9 - Documentation
 
-**Owner:**
-**Status:** Todo
+**Owner:** Ali
+**Status:** In progress
 **Depends on:** T8
 
 Scope:
