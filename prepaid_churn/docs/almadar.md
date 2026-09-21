@@ -46,7 +46,8 @@ They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_
 
 `Ali_Branch` kept 37 packages in 12 families.
 This catalogue has all 57 packages of the operator file, because the chatbot must show what is on sale.
-The difference is the five Mix families (Diamond, Platinum, Bronze, Silver and Gold, 20 packages with data and voice), which Ali removed on 2026-09-18 without recording why.
+The difference is the five Mix families (Diamond, Platinum, Bronze, Silver and Gold, 20 packages with data and voice), which Ali removed on 2026-09-18 in commit `62040af`.
+That commit records what the removal cost him and how he handled it, and it shows the choice was deliberate, but it never says why the families should go, so the question below stands.
 If Mix is no longer sold, remove those rows; if it is, it is the richest data-and-voice family for offers.
 
 ## `market.toml`

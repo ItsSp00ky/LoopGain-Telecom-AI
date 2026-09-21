@@ -137,7 +137,8 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
   He should still say whether he disagrees with anything decisions 15 to 17 took or left out, and now also with decisions 24 and 25.
 - **Folder name:** the module now covers more than churn; rename `prepaid_churn/` (for example to `cvm/`, like Ali's package) once Ali agrees.
 - **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
-- **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) from his catalogue without a recorded reason; ask whether they are still sold (`docs/almadar.md`).
+- **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) in commit `62040af` of 2026-09-18.
+  That commit shows the removal was deliberate and handled, but not why; ask whether the operator still sells them (`docs/almadar.md`).
 - **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
 - **`churn decide` overwrites a committed report:** it rewrites `reports/decisions.md`, so running the documented command leaves a tracked file dirty.
   Ali's call: a `--report` path, or write it beside the campaign.
@@ -713,7 +714,7 @@ Acceptance:
 
 Findings (details in `docs/almadar.md`):
 - 57 packages in 17 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
-- The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed without recording why; they stay until he says they are no longer sold (a test pins the difference).
+- The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed in commit `62040af` without saying why; they stay until he says the operator no longer sells them (a test pins the difference).
 - Data volumes: 31 packages state them, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
 - Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.
 - The recharge cards are `reported` (no operator document yet); ARPU (40 LYD) is an assumption and delivery costs are estimates.

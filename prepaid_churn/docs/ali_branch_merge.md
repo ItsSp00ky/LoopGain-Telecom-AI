@@ -65,7 +65,7 @@ Useful for the team but outside this module: `docs/integration/copilot_starter/`
 
 - Copied the four files of `Almadar/` into `data/almadar/source/`; their SHA-256 hashes match the `06890f6` blobs.
 - Built `data/almadar/offers.csv` from the operator file: prices, stated volumes, minutes, speeds and member counts are parsed from it, and the IDs follow `conf/catalogue.yaml`.
-  All 57 packages are in, including the five Mix families that Ali's catalogue dropped without a recorded reason (open question in TICKETS.md).
+  All 57 packages are in, including the five Mix families that Ali's catalogue dropped (his commit `62040af` of 2026-09-18 records the removal and its consequences, but not why they should go; open question in TICKETS.md).
 - Each volume records where it comes from (`stated`, `name`, `reported` or `none`); Ali's catalogue flagged inferred volumes once for the whole file, not per package.
 - Moved the facts from `conf/market.yaml`, `conf/catalogue.yaml` and `conf/advance.yaml` that later tickets need into `data/almadar/market.toml`, each with a status and a source.
   The recharge cards became `reported` instead of `confirmed`, because no operator document for them is in the repo.
