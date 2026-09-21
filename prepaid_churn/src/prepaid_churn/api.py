@@ -36,6 +36,7 @@ from prepaid_churn.service import (
     load_state,
     portfolio_summary,
     retention,
+    subscriber,
 )
 
 CHATBOT = "chatbot"
@@ -224,6 +225,41 @@ class PortfolioResponse(BaseModel):
     release_gate_passed: bool | None = None
 
 
+class SubscriberResponse(BaseModel):
+    """What the copilot is told about one subscriber (T20).
+
+    The opposite rule to `RetentionResponse`: the employee asking is allowed to see the
+    risk and the value, because they are deciding what to do for this customer.
+    The reasons are the model's own plain-language factors from the scoring export, so
+    the copilot quotes them rather than inventing an explanation.
+    """
+
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
+
+    subscriber_id: str
+    churn_probability: float | None = Field(
+        default=None, description="Calibrated probability; null when no bundle scored the export."
+    )
+    risk_band: str | None = None
+    reasons: list[str] = Field(
+        default_factory=list,
+        description="Why the model raised this customer's risk, in the order it ranked them.",
+    )
+    value_tier: str | None = None
+    value_status: str | None = Field(
+        default=None, description="`scenario`, or `already_silent` when there is nothing to model."
+    )
+    value_12m_low_lyd: float | None = None
+    value_12m_base_lyd: float | None = None
+    value_12m_high_lyd: float | None = None
+    monthly_spend_lyd: float | None = Field(
+        default=None, description="Assumed monthly recharge at the frozen T18 rate."
+    )
+    model_version: str | None = None
+    tier_version: str | None = None
+    scored_at: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Access control and identifier checks
 # ---------------------------------------------------------------------------
@@ -359,6 +395,30 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
             return portfolio_summary(app.state.service)
         except ServiceUnavailable as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
+
+    @app.get(
+        "/subscribers/{subscriber_id}/risk",
+        response_model=SubscriberResponse,
+        tags=["copilot"],
+        dependencies=[Depends(_consumer(COPILOT))],
+        responses={404: {"description": "This subscriber is not in the scored export."}},
+    )
+    def read_subscriber(subscriber_id: str = Depends(checked_subscriber_id)) -> dict:
+        """One subscriber's risk, reasons and value, for the employee helping them.
+
+        404 means the export does not hold this ID, which is a different thing from the
+        chatbot's 404: here nothing is being hidden, the subscriber was simply not scored.
+        """
+        try:
+            found = subscriber(app.state.service, subscriber_id)
+        except ServiceUnavailable as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        if found is None:
+            raise HTTPException(
+                status_code=404,
+                detail="This subscriber is not in the scored export.",
+            )
+        return found
 
     return app
 

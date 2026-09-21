@@ -81,6 +81,16 @@ def catalogue(base_url: str, chatbot_key: str) -> list[dict]:
     return get(base_url, "/catalogue", chatbot_key)["offers"]
 
 
+def _found(base_url: str, path: str, api_key: str) -> dict | None:
+    """GET something that may legitimately not exist; 404 becomes None."""
+    try:
+        return get(base_url, path, api_key)
+    except ServiceError as error:
+        if error.status == 404:
+            return None
+        raise
+
+
 def offer_for(base_url: str, chatbot_key: str, subscriber_id: str) -> dict | None:
     """The approved offer for one subscriber, or None when there is none.
 
@@ -90,13 +100,20 @@ def offer_for(base_url: str, chatbot_key: str, subscriber_id: str) -> dict | Non
     refused, so this returns None for all of them and the chatbot says nothing either
     way.
     """
-    path = f"/subscribers/{urllib.parse.quote(str(subscriber_id), safe='')}/retention"
-    try:
-        return get(base_url, path, chatbot_key)
-    except ServiceError as error:
-        if error.status == 404:
-            return None
-        raise
+    return _found(base_url, f"/subscribers/{_quote(subscriber_id)}/retention", chatbot_key)
+
+
+def risk_for(base_url: str, copilot_key: str, subscriber_id: str) -> dict | None:
+    """One subscriber's risk, reasons and value, or None when the export does not hold them.
+
+    This 404 means what it says: the subscriber was not scored. Nothing is being hidden,
+    unlike the chatbot's 404 above.
+    """
+    return _found(base_url, f"/subscribers/{_quote(subscriber_id)}/risk", copilot_key)
+
+
+def _quote(subscriber_id: str) -> str:
+    return urllib.parse.quote(str(subscriber_id), safe="")
 
 
 def portfolio_summary(base_url: str, copilot_key: str) -> dict:
@@ -194,6 +211,7 @@ def check(base_url: str, chatbot_key: str, copilot_key: str, subscriber_id: str)
     )
     at_risk = sum(group["lyd_at_risk"] or 0 for group in portfolio["by_risk_band"])
     passed = sum(threshold["passed"] for threshold in portfolio["success_thresholds"].values())
+    found = risk_for(base_url, copilot_key, subscriber_id)
     result.lines += [
         f"- /portfolio/summary: {portfolio['subscribers']} subscribers, risk available "
         f"{portfolio['risk_available']}, scored {portfolio['scored_at']}",
@@ -201,6 +219,13 @@ def check(base_url: str, chatbot_key: str, copilot_key: str, subscriber_id: str)
         f"- LYD at risk: {at_risk:,.0f} (12-month scenario weighted by churn probability)",
         f"- release gate: {portfolio['release_gate_passed']}, "
         f"{passed} of {len(portfolio['success_thresholds'])} success thresholds passed",
+        f"- /subscribers/{subscriber_id}/risk: "
+        + (
+            f"{found['risk_band']} risk, probability {found['churn_probability']}, tier "
+            f'{found["value_tier"]}, first reason "{(found["reasons"] or ["none"])[0]}"'
+            if found
+            else "not in the scored export (404)"
+        ),
         "",
         "## Refusals, which every consumer has to handle",
     ]
@@ -211,6 +236,11 @@ def check(base_url: str, chatbot_key: str, copilot_key: str, subscriber_id: str)
     )
     result.expect(
         "a chatbot endpoint with the copilot key", 403, lambda: catalogue(base_url, copilot_key)
+    )
+    result.expect(
+        "the copilot's subscriber lookup with the chatbot key",
+        403,
+        lambda: get(base_url, f"/subscribers/{_quote(subscriber_id)}/risk", chatbot_key),
     )
     result.expect("a chatbot endpoint with no key", 401, lambda: get(base_url, "/catalogue"))
     result.expect(

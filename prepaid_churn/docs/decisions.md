@@ -642,3 +642,37 @@ The contract test starts the real app on a real port and runs the same client ag
 
 What the example deliberately does not do: no retry, no backoff, no connection pooling, no caching and no authentication flow.
 Each consumer's own framework has those, and an offer must not be cached anyway (decision 14 and the grounding rules in [integration.md](integration.md)).
+
+## 26. The copilot can look up one subscriber
+
+Date: 2026-09-21.
+
+T20's acceptance is that the consumers get what they need, so the walkthrough asked the questions each consumer really gets rather than only checking that the documented calls answer.
+The chatbot came through it: a customer asks what is available and whether anything is waiting for them, and `/catalogue` and `/subscribers/{id}/retention` answer both.
+The copilot did not.
+An employee with a customer on the phone asks "what do we know about this one", and the service could answer only with portfolio totals.
+A copilot that cannot answer the question it was opened for is not integrated, whatever the endpoint list says.
+
+`GET /subscribers/{id}/risk` serves one row of the same export the summary already aggregates: the calibrated probability, the risk band, the model's own plain-language reasons in its own order, the value tier, the three 12-month scenarios, the assumed monthly spend, and the versions and timestamp behind all of it.
+Nothing is computed on the request, so it cannot disagree with the summary.
+
+The fields this endpoint returns are exactly the ones the chatbot may never see (decision 21).
+That is the point of two keys: the employee deciding what to do for a customer needs the risk, and the customer does not need to be told how likely the operator thinks they are to leave.
+Both lookups sit under `/subscribers/{id}`, so each key is refused on the other's path and a test proves it on a real socket.
+
+Its 404 means something different from the offer lookup's, and the guide says so.
+There, 404 hides whether an offer was considered and refused.
+Here it only means the subscriber is not in the scored export, because nothing about a subscriber is withheld from the copilot once they are in it.
+
+What was not added, although the walkthrough asked for it:
+
+- A list or search endpoint ("the 200 riskiest customers").
+  Serving customer-level rows in bulk over HTTP is what decision 17's de-identification rule exists to prevent, and the analyst case is already covered by the committed exports and the demo app.
+- The package a customer holds and their spend, for the chatbot.
+  The Almadar view is this module's assumption (decision 16), not an operator fact, and the operator's own systems answer it correctly and in real time.
+- The emergency credit advice (T19).
+  It is a proposal for a person, and no review step exists for it yet; a credit limit needs an approval as much as an offer does (decision 14).
+- The review queue.
+  A read-only service should not become the place where campaigns are watched; `churn approve` and the demo app own that.
+
+Each one is written in [integration.md](integration.md) with its reason, so a consumer asks instead of building a workaround.

@@ -27,13 +27,6 @@ dev = [
     "pytest",
     "ruff",
 ]
-# The two graded syllabus experiments (T12, T13). Installed only with
-# `uv sync --group experiments`, so the module a teammate clones stays small.
-experiments = [
-    "keras",
-    "sdv",
-    "torch",
-]
 
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13"]

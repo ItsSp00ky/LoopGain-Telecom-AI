@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-21 by Taha + Claude (Ali's branch taken into `tahaDev`, T20 delivered).
+**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`, T20 done, T12 and T13 claimed).
 
 **Where the module is now**
 
@@ -18,12 +18,13 @@ Update this section at the end of every working session.
 - **Ali's delivery was checked here before it was taken**: 379 tests, lint and formatting green, and a full rebuild that reproduced bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef` with no committed report changed.
   His review of our files (identifiers read as text, stricter export and bundle checks, one calibration prediction instead of three) moves no model, feature or threshold, which that rebuild proves.
 - **The MVP is complete end to end**: T16, T8, T18, T10, T11, T15, T14, T9, T19 and now T20.
-- **T20 is delivered except for the part that needs people.**
-  [docs/integration.md](docs/integration.md) is the guide for the chatbot, copilot, network ML and antenna owners; `src/prepaid_churn/client.py` is the example client they copy; `churn check-integration` runs it against a live service and checks the four refusals.
-  Its acceptance needs those owners to say the responses give them what they need, so the ticket stays open until they do.
-- **Validation of T20 here**: 388 prepaid tests, lint and formatting pass; 9 of those tests are new, and no dependency was added.
-  The check was run against a real service on 2026-09-21 holding the 30,000-subscriber base, a campaign with two approved offers and one rejected: status ok, 57 packages, the approved offer returned, 176,494 LYD at risk, and all four refusals correct.
-- **What is left:** the owners' confirmation for T20, then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
+- **T20 is done.**
+  [docs/integration.md](docs/integration.md) is the guide for the chatbot, copilot, network ML and antenna owners; `src/prepaid_churn/client.py` is the example client they copy; `churn check-integration` runs it against a live service and checks five refusals.
+  Its walkthrough found one real gap and closed it: the copilot can now look up one subscriber (`GET /subscribers/{id}/risk`, decision 26), which it needs to help an employee with a customer on the phone.
+  Four questions are deliberately not served, each written in the guide with its reason.
+- **Validation of T20 here**: 390 prepaid tests, lint and formatting pass; 11 of them are T20's, and no dependency was added.
+  The check ran clean against a real service holding the 30,000-subscriber base and a campaign with two approved offers and one rejected.
+- **What is left:** T12 and T13, the two graded syllabus chapters still missing (decision 8), claimed by us on 2026-09-22; T17 last.
 
 **For Ali: what changed on our side**
 
@@ -66,6 +67,7 @@ Update this section at the end of every working session.
 - Positive recommendations, partial/all reviews, rejected-row exclusion, review locking and interrupted-write recovery are covered by hand-made tests.
 - Run `churn decide` with the existing gated bundle for risk-based proposals, or `churn decide --tiers-only` for readiness; choose a new campaign output directory on each run.
 - T15 is implemented: a read-only FastAPI service with four endpoints, one API key per consumer and a phone-number check on subscriber IDs.
+  T20's walkthrough added a fifth, `GET /subscribers/{id}/risk` for the copilot (decision 26).
 - T15 validation: 299 prepaid tests, lint and formatting pass; 52 of those tests are new.
 - `fastapi`, `uvicorn` and `httpx` are the first dependencies added since the module was built; decision 21 records why.
 - Start it with `uv run churn serve` after setting `PREPAID_CHURN_CHATBOT_KEY` and `PREPAID_CHURN_COPILOT_KEY`; neither has a default and the service refuses to start without both.
@@ -113,19 +115,19 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
-- T20 is done apart from its acceptance: the guide, the example client and `churn check-integration` exist and were run against a live service; the chatbot and copilot owners have not confirmed yet.
+- T20 is done: the guide, the example client, `churn check-integration` and the copilot's subscriber lookup that the walkthrough found missing.
 - `tahaDev` now also carries Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`; they are Ali's work, and the team has to see them before anything reaches `main`.
 
 **Blocked on**
-- T20's acceptance: the chatbot and copilot owners have to read [docs/integration.md](docs/integration.md), call the service with `churn check-integration`, and say in the T20 Findings whether the responses give them what they need.
-  Nothing else waits on it; the code is written and tested.
+- Nothing.
+  T20 is accepted from the consumer side by its owner (decision 26 and the T20 Findings); reopen it if a response shape turns out to be wrong when the chatbot and the copilot are built.
 
 **Next steps, in order (the MVP path from decision 17)**
 1. T16 Almadar catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract (done).
 3. T18 Almadar view of the real customers (done).
 4. T10 value tiers and T11 offers with human approval (done).
-5. T15 integration service (done, Ali), then T20 integration check (done here, Taha + Claude, apart from the owners' confirmation).
+5. T15 integration service (done, Ali), then T20 integration check (done, Taha + Claude).
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
 6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
 7. The MVP now works end to end: T19 (done, Ali), then T12 and T13, which cover the two graded syllabus chapters still missing (decision 8), and T17 last.
@@ -674,7 +676,8 @@ Acceptance:
 - A test shows the chatbot endpoint never returns a churn probability or an unapproved offer.
 
 Findings (2026-09-21):
-- `service.py` holds the pure read-only state and the four payload builders; `api.py` is the thin FastAPI layer; `privacy.py` is the ported identifier check.
+- `service.py` holds the pure read-only state and the payload builders; `api.py` is the thin FastAPI layer; `privacy.py` is the ported identifier check.
+- T20 later added a fifth endpoint to this service, `GET /subscribers/{id}/risk` for the copilot, for the reason in decision 26.
 - Every route is a GET, and a test asserts the generated OpenAPI document contains no other method, so the service has no write path.
 - Approved offers are read from the authoritative `proposals.json` through `released_campaign`, never from the derived `released.csv`, so a hand-edited CSV still cannot publish an offer.
 - One key per consumer in the `X-API-Key` header, compared in constant time; the copilot key is refused on chatbot endpoints and the chatbot key on `/portfolio/summary`.
@@ -802,7 +805,7 @@ Findings (2026-09-21):
 ## T20 - Integration check with the team platform
 
 **Owner:** Taha + Claude
-**Status:** In review (the guide, the client and the check are done; the owners have not confirmed)
+**Status:** Done
 **Depends on:** T15
 
 Why: the final goal is one platform (decision 17), and `Ali_Branch` noted that nobody had ever called its API from the other side.
@@ -832,7 +835,15 @@ Findings (2026-09-21):
 - 9 new tests; 388 prepaid tests, lint and formatting pass.
 - The network ML contract is keyed by the pseudonymous subscriber ID rather than by `cell_id` as `Ali_Branch` had it, because this module never sees a cell; it also states that adding any such field means a new frozen champion, so it is a version 2 change.
 - For the antenna and cell placement owners the honest answer is that we have nothing per cell to give; the guide says so rather than implying a join that nobody can make.
-- **Still open:** the walkthrough itself. Taha owns the chatbot and the copilot in the action plan, and the acceptance needs him and the other owners to call the service and answer in this section.
+Walkthrough (2026-09-22), which is the acceptance:
+- Taha asked for the remaining work to be finished by us rather than waiting on other owners, and he owns the chatbot and the copilot in the action plan, so the walkthrough was run from the consumer side here.
+- The method: ask the questions each consumer really gets, rather than checking that the documented calls answer. The chatbot passed. The copilot did not.
+- **The gap:** an employee with a customer on the phone asks what we know about them, and the service could answer only with portfolio totals. `GET /subscribers/{id}/risk` was added for the copilot, with the probability, risk band, the model's own reasons, the value tier and the 12-month scenarios (decision 26).
+  Both subscriber lookups share a path prefix, so each key is refused on the other's, and a test proves it over a real socket.
+- Four questions are deliberately not served, each written in the guide with its reason: the package a customer holds, the emergency credit advice, a bulk list of risky customers, and the review queue.
+- The check now covers five refusals and ran clean against a live service (its timestamps are UTC, so they read 2026-09-21): status ok, 57 packages, the approved offer, 176,494 LYD at risk, subscriber 70008 high risk at 0.52 with three reasons, and every refusal correct.
+- 390 prepaid tests, lint and formatting pass; 11 of them are T20's.
+- Reopen this ticket if a response shape turns out to be wrong when the chatbot and the copilot are actually built; the network ML and antenna owners have not read the guide yet, and neither consumes this module today.
 
 ## T21 - Code and logic review
 

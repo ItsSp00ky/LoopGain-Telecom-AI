@@ -74,6 +74,7 @@ Generate your client from `/openapi.json` rather than hand-writing request model
 | `GET /catalogue` | chatbot | Every Almadar package on sale, with its collection date |
 | `GET /subscribers/{id}/retention` | chatbot | The approved offer for one subscriber, or 404 |
 | `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test results |
+| `GET /subscribers/{id}/risk` | copilot | One subscriber's risk, the model's reasons, and their value tier |
 
 Send your key in the `X-API-Key` header.
 Each key is accepted only on its own endpoints: the chatbot key on `/portfolio/summary` is 403, and the copilot key on `/catalogue` is 403.
@@ -182,6 +183,54 @@ What each number means, so the copilot does not describe it as something it is n
 Cite these field names when the copilot quotes a number, and say the assumption alongside the figure.
 [model_card.md](model_card.md) is the long version of the same limits.
 
+### The customer on the phone
+
+"Employee has customer 70008 on the line: what do we know?"
+
+`GET /subscribers/70008/risk`, with the copilot key:
+
+```json
+{
+  "subscriber_id": "70008",
+  "churn_probability": 0.52419242304383,
+  "risk_band": "high",
+  "reasons": [
+    "This month's share of the last two months' total minutes (50% = stable): 0%",
+    "Amount recharged on the last recharge day this month: 0",
+    "Local incoming minutes this month: 0"
+  ],
+  "value_tier": "low",
+  "value_status": "scenario",
+  "value_12m_low_lyd": 5.86,
+  "value_12m_base_lyd": 19.56,
+  "value_12m_high_lyd": 59.11,
+  "monthly_spend_lyd": 21.56,
+  "model_version": "lightgbm-2026-09-19-ef9430fb",
+  "tier_version": "tiers-v1-cd15525cb3ef",
+  "scored_at": "2026-09-21T22:00:45+00:00"
+}
+```
+
+`reasons` are the model's own factors, already written as sentences, in the order the model ranked them.
+Quote them; do not paraphrase them into a story, and do not add a reason the list does not contain.
+They explain the score, not the customer: "no recharge on the last recharge day" is what the model reacted to, not a diagnosis.
+
+This is the copilot's endpoint and only the copilot's.
+The same subscriber under the chatbot key is 403, and the chatbot's own offer lookup is 403 for the copilot, although both paths start with `/subscribers/{id}`.
+404 here means the subscriber is not in the scored export, which is not the loaded 404 of the offer lookup; nothing is being hidden.
+
+### What it does not answer yet
+
+Found by walking the questions each consumer actually gets (T20), and left out on purpose.
+Ask if you need one, rather than working around it:
+
+| Question | Why there is no endpoint |
+|---|---|
+| "What package am I on, and what do I spend?" (chatbot) | The Almadar view (T18) exists as a file but is an assumption of this module, not an operator fact. The operator's own systems answer it correctly and in real time. |
+| "How much credit can I borrow?" (chatbot) | The T19 advice is a proposal for a person, and no reviewer step exists for it yet. An offer needs an approval (decision 14) and so does a credit limit. |
+| "Give me the 200 riskiest customers" (copilot) | A bulk customer-level export over HTTP is what the de-identification rule exists to prevent (decision 17). Analysts read the committed exports or the demo app. |
+| "What is waiting for review, and what did we approve this week?" (copilot) | Campaign state is written by `churn decide` and `churn approve` and shown in the demo app. Serving it would put a review queue in a read-only service. |
+
 ## 6. Rules for the components that use a language model
 
 These are project commitments (decision 17), and they are the answer to "why is the LLM not making the decision?".
@@ -260,22 +309,24 @@ Run on 2026-09-21 against a service holding the 30,000-subscriber base and a rev
 ## Health, without a key
 - status: ok
 - model: lightgbm-2026-09-19-ef9430fb, bundle loaded True, smoke prediction True
-- serving 30000 subscribers and 2 approved offers from campaign 6cdc11bcae76...
+- serving 30000 subscribers and 2 approved offers from campaign 0bdfa31a0531...
 
 ## Chatbot, with the chatbot key
 - /catalogue: 57 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
-- /subscribers/70008/retention: SABAH_1, approved 2026-09-21T21:04:45+00:00
+- /subscribers/70008/retention: SABAH_1, approved 2026-09-21T22:46:21+00:00
 - the chatbot may say: مكافأة من الكتالوج: الصبح (06:00-11:00)؛ قيمة موجبة وفق افتراضات الاحتفاظ. [offer_reason_ar] - الصبح [offer.name_ar]
 
 ## Copilot, with the copilot key
-- /portfolio/summary: 30000 subscribers, risk available True, scored 2026-09-21T20:59:52+00:00
+- /portfolio/summary: 30000 subscribers, risk available True, scored 2026-09-21T22:00:45+00:00
 - by risk band: high 1209, medium 3594, low 22779, already_silent 2418
 - LYD at risk: 176,494 (12-month scenario weighted by churn probability)
 - release gate: True, 4 of 4 success thresholds passed
+- /subscribers/70008/risk: high risk, probability 0.52419242304383, tier low, first reason "This month's share of the last two months' total minutes (50% = stable): 0%"
 
 ## Refusals, which every consumer has to handle
 - the copilot's endpoint with the chatbot key: expected 403, got 403
 - a chatbot endpoint with the copilot key: expected 403, got 403
+- the copilot's subscriber lookup with the chatbot key: expected 403, got 403
 - a chatbot endpoint with no key: expected 401, got 401
 - a subscriber ID shaped like a phone number: expected 422, got 422
 

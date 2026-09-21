@@ -32,7 +32,7 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | `src/prepaid_churn/value.py`, `src/prepaid_churn/segmentation.py` | T10 | Done (adapted design, training-frozen cutoffs) |
 | 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/almadar/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | `src/prepaid_churn/api.py`, `src/prepaid_churn/service.py`, `src/prepaid_churn/privacy.py` | T15 | Done (adapted design, four read-only endpoints and per-consumer keys) |
-| 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Done (adapted to the four endpoints; his six grounding rules kept) |
+| 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Done (adapted to this service's endpoints; his six grounding rules kept) |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | `docs/model_card.md` | T9 | Done (adapted structure, filled from the committed reports) |
 | 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | T17 | T17 | Planned |
@@ -191,9 +191,16 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 
 - Read `docs/INTEGRATION.md` at `06890f6` and kept its shape: why a service and not an import, health before the first call, the endpoint table, two rules for every call, a worked example per consumer, the grounding rules, what the copilot may index, and what this module needs from network ML.
 - Kept all six of Ali's grounding rules almost unchanged, because they were the strongest thing in his document and they answer the instructor's question about why no language model decides anything.
-- Rewrote every example against the four endpoints this module actually serves, with real responses captured from a running service rather than invented ones.
+- Rewrote every example against the endpoints this module actually serves, with real responses captured from a running service rather than invented ones.
 - Adapted his network ML field contract: his was keyed by `cell_id` for a model that had cell features, and ours is keyed by the pseudonymous subscriber ID, because this module never sees a cell and the subscriber-to-cell mapping is the operator's.
   Stated plainly that adding any such field means a new frozen champion, so it is a version 2 change.
 - Added what his document did not have: which files a retriever may index and which it may never touch, and a command that checks the seam instead of a document that describes it.
 - Did not port `docs/integration/copilot_starter/`: it is scaffolding for the copilot itself, which is a different component and Taha's in the action plan.
 - Decision 25 records why the example client is copied rather than imported and uses no dependency.
+
+### Step 15 - The T20 walkthrough and what it changed (2026-09-21, Taha + Claude)
+
+- Walked the questions each consumer really gets, instead of only checking that the documented calls answer.
+- One gap mattered: an employee copilot could quote portfolio totals but could not answer "what do we know about the customer I have on the phone", because no endpoint served one subscriber to the copilot.
+  `GET /subscribers/{id}/risk` closes it (decision 26); `Ali_Branch`'s API had the equivalent in its `/v1/subscriber/{id}` view, so this is closer to his design than the four endpoints were.
+- The other gaps are recorded in the guide with the reason each one is not served, rather than left for a consumer to discover: the package a customer holds, the emergency credit advice, a bulk list of risky customers, and the review queue.

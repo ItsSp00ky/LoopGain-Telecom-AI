@@ -86,6 +86,9 @@ def portfolio():
             "subscriber_id": ["0001", "0002", "NA", "0004"],
             "churn_probability": [0.5, 0.4, 0.3, None],
             "risk_band": ["high", "high", "medium", "already_silent"],
+            "reason_1": ["No recharge for 21 days"] * 3 + [None],
+            "reason_2": ["Outgoing minutes down 80%"] * 3 + [None],
+            "reason_3": [None] * 4,
             "value_tier": ["high", "high", "medium", "very_low"],
             "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
             "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
@@ -142,6 +145,25 @@ def test_the_example_client_reads_what_each_consumer_needs(service):
     assert {group["name"] for group in summary["by_risk_band"]} >= {"high", "medium"}
 
 
+def test_the_copilot_can_look_up_the_customer_on_the_phone(service):
+    """The question T20's walkthrough found no endpoint for."""
+    found = client.risk_for(service, COPILOT_KEY, "0001")
+    assert found["risk_band"] == "high" and found["churn_probability"] == 0.5
+    assert found["reasons"] == ["No recharge for 21 days", "Outgoing minutes down 80%"]
+    assert found["value_tier"] == "high" and found["value_12m_base_lyd"] == 100.0
+    assert client.risk_for(service, COPILOT_KEY, "not-in-the-export") is None
+
+
+def test_the_two_subscriber_endpoints_do_not_open_each_other(service):
+    """They share a path prefix, so each key has to be refused on the other's lookup."""
+    with pytest.raises(client.ServiceError) as refused:
+        client.get(service, "/subscribers/0001/risk", CHATBOT_KEY)
+    assert refused.value.status == 403
+    with pytest.raises(client.ServiceError) as also_refused:
+        client.get(service, "/subscribers/0001/retention", COPILOT_KEY)
+    assert also_refused.value.status == 403
+
+
 def test_the_chatbot_cannot_tell_a_refused_offer_from_one_that_never_existed(service):
     """Rejected, unreviewed and unknown all come back as None, with no way to tell them apart."""
     for subscriber_id in ("0002", "NA", "0004", "does-not-exist"):
@@ -155,6 +177,8 @@ def test_the_check_reports_a_working_seam(service):
     assert "Every check passed." in result.text
     for refusal in ("with the chatbot key", "with the copilot key", "with no key", "phone number"):
         assert refusal in result.text
+    assert "subscriber lookup with the chatbot key" in result.text
+    assert "high risk, probability 0.5" in result.text
 
 
 def test_a_refusal_that_does_not_happen_is_a_failure():

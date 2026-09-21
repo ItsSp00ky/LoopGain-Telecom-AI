@@ -367,6 +367,7 @@ def test_the_openapi_page_documents_every_endpoint(client):
         "/catalogue",
         "/subscribers/{subscriber_id}/retention",
         "/portfolio/summary",
+        "/subscribers/{subscriber_id}/risk",  # added by T20, for the copilot
     }
     assert client.get("/docs").status_code == 200
 

@@ -72,6 +72,26 @@ CATALOGUE_COLUMNS = (
     "collected",
 )
 
+# What the copilot may be told about one subscriber (T20).
+# The employee is helping this customer, so the risk figures the chatbot may never see
+# belong here; the reviewer's name and the offer do not, because the campaign endpoints
+# already own those and a lookup is not a review.
+SUBSCRIBER_COLUMNS = (
+    "subscriber_id",
+    "churn_probability",
+    "risk_band",
+    "value_tier",
+    "value_status",
+    "value_12m_low_lyd",
+    "value_12m_base_lyd",
+    "value_12m_high_lyd",
+    "monthly_spend_lyd",
+    "model_version",
+    "tier_version",
+    "scored_at",
+)
+REASON_COLUMNS = ("reason_1", "reason_2", "reason_3")
+
 RISK_BANDS = ("high", "medium", "low", "already_silent")
 VALUE_TIERS = ("very_high", "high", "medium", "low", "very_low")
 
@@ -304,6 +324,28 @@ def _offer_details(state: ServiceState, offer_id: object) -> dict | None:
         return None
     columns = [name for name in CATALOGUE_COLUMNS if name in offers.columns]
     return _json_safe(offers[columns].iloc[[0]])[0]
+
+
+def subscriber(state: ServiceState, subscriber_id: str) -> dict | None:
+    """One subscriber's risk, reasons and value for the copilot, or None when unknown.
+
+    This is the question T20's walkthrough found no endpoint for: an employee is on the
+    phone with a customer and asks the copilot what it knows about them.
+    The portfolio summary cannot answer it, and without it the copilot can quote totals
+    but cannot help with the call it was opened for.
+
+    It reads the same export the summary reads, so a subscriber is here only if
+    `churn tiers` scored them; nothing is computed on the request.
+    """
+    portfolio = state.portfolio
+    if portfolio is None:
+        raise ServiceUnavailable(state.portfolio_error or "No portfolio export is available.")
+    rows = portfolio.loc[portfolio["subscriber_id"].astype(str) == str(subscriber_id)]
+    if rows.empty:
+        return None
+    row = _json_safe(rows.iloc[[0]])[0]
+    reasons = [row[name] for name in REASON_COLUMNS if row.get(name) is not None]
+    return {name: row.get(name) for name in SUBSCRIBER_COLUMNS} | {"reasons": reasons}
 
 
 def _group_summary(portfolio: pd.DataFrame, column: str, order: tuple[str, ...]) -> list[dict]:
