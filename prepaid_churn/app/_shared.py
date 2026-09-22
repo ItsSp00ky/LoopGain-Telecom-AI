@@ -112,8 +112,13 @@ def ordered_bar(
     # Customers are whole people, so the axis never shows 0.05 of one. Altair defaults to
     # fine fractional ticks when every bar is 1, which is what a small campaign looks like.
     ticks = alt.Axis(format="d", tickMinStep=1)
+    # labelLimit=0 keeps the whole category name. The guardrail reasons are sentences, and
+    # Altair's default truncated them to "No offer: low chu..." on the real campaign.
+    names = alt.Axis(labelLimit=0)
     axes = {
-        "y" if horizontal else "x": category(f"{label}:N", sort=list(order), title=None),
+        "y" if horizontal else "x": category(
+            f"{label}:N", sort=list(order), title=None, axis=names
+        ),
         "x" if horizontal else "y": measure(
             f"{value}:Q", title=value.replace("_", " "), axis=ticks
         ),

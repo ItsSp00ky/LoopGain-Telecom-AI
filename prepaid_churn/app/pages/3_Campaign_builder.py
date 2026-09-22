@@ -170,9 +170,17 @@ else:
     chosen = st.multiselect(
         "Subscribers to review",
         pending_offers["subscriber_id"].astype(str).tolist(),
-        help="Leave empty to review every pending proposal at once.",
+        help="Type an ID to find it; the table above shows the first 200.",
     )
     note = st.text_input("Note (optional)")
+
+    # Reviewing everything at once has to be deliberate, and the box says how many.
+    # An empty selection used to mean "all", which on a real campaign of a few thousand
+    # proposals let one click approve every offer the reviewer had not looked at.
+    review_all = st.checkbox(
+        f"Review all {len(pending_offers):,} pending proposals, not only the ones selected"
+    )
+    count = len(pending_offers) if review_all else len(chosen)
 
     approve, reject = st.columns(2)
     for column, decision, label in (
@@ -183,13 +191,19 @@ else:
             if st.button(f"{label} selected", width="stretch", type="primary"):
                 if not reviewer.strip():
                     st.error("A reviewer name is required.", icon=":material/error:")
+                elif not count:
+                    st.error(
+                        "Choose the subscribers to review, or tick the box to review "
+                        "every pending proposal.",
+                        icon=":material/error:",
+                    )
                 else:
                     try:
                         review_file(
                             demo.campaign_path,
                             reviewer,
                             decision,
-                            chosen or None,
+                            None if review_all else chosen,
                             note,
                         )
                     except RetentionError as error:
@@ -197,8 +211,7 @@ else:
                     else:
                         refresh()
                         st.success(
-                            f"{len(chosen) or len(pending_offers)} proposal(s) {decision} "
-                            f"by {reviewer.strip()}.",
+                            f"{count:,} proposal(s) {decision} by {reviewer.strip()}.",
                             icon=":material/check_circle:",
                         )
                         st.rerun()
