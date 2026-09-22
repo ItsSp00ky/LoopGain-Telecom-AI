@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`; T20, T12 and T13 done).
+**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`; T20, T12, T13 and T17 done: every ticket is now closed).
 
 **Where the module is now**
 
@@ -27,7 +27,11 @@ Update this section at the end of every working session.
 - **T12 and T13 are done**, so every graded syllabus chapter is now covered on real data (decision 8).
   T12: the LSTM loses to LightGBM by a third of its PR-AUC and fails two of the four release checks, which is the expected answer for a two-step window and is kept as it came out (decision 28).
   T13: a synthetic copy of the customers is a demo and a pipeline test, not a way to share data; the best copy keeps 45% of the real model's PR-AUC and both copies are told from real rows at a detection ROC-AUC of 1.000 (decision 29).
-- **What is left:** T17, the uplift experiment, which covers no syllabus chapter and is last by design; and the open questions below.
+- **T17 is done, so every ticket in this file is closed.**
+  It measured the assumption behind T11 on two public randomised trials: targeting by uplift and targeting by risk are not the same ranking, and on Criteo the risk ranking is worse than random (decision 30).
+  The telecom dataset the action plan names, Orange Belgium, is too small to answer, and the report says so rather than picking a winner.
+- **What is left:** nothing in this file.
+  The open questions below still stand, and the next real work is whatever the team needs for the presentation and the demo.
 
 **For Ali: what changed on our side**
 
@@ -44,12 +48,14 @@ Update this section at the end of every working session.
      Worth a `--report` flag or a campaign-local path.
    - `test_api.py` and `test_demo.py` each build their own copy of the same four subscribers, and `tests/test_client.py` now makes three.
      If you touch those fixtures, moving them into `conftest.py` would be a good small cleanup; we left them alone rather than editing your tests.
-4. T12 and T13 are done too, so the only ticket left is T17 (uplift), which is where your Criteo and Qini work from `Ali_Branch` would land if you want it.
-   Both experiment results are negative and stay that way: the LSTM loses to LightGBM, and a synthetic copy of the customers is a demo rather than a way to share data (decisions 28 and 29).
+4. T12, T13 and T17 are done too, so every ticket in TICKETS.md is closed.
+   The results are negative and stay that way: the LSTM loses to LightGBM, a synthetic copy is a demo rather than a way to share data, and targeting by risk is not targeting by uplift (decisions 28, 29 and 30).
+   T17 ports your Qini and your two-model difference by hand, and our Criteo Qini of 0.0698 on a 10% sample is close to the 0.0771 your branch reports, which is the first of your numbers this module has reproduced independently.
+   Your Criteo sourcing notes saved real time: scikit-uplift's fetcher and Criteo's own link are both dead, and the HuggingFace copy you found is what the script uses.
 5. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
 6. Your Claude can start from this, in the repo:
 
-   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and then finished T20, T12 and T13. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 to 29 in `prepaid_churn/docs/decisions.md`, and steps 13 to 16 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
+   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and then finished T20, T12, T13 and T17, so every ticket is closed. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 to 30 in `prepaid_churn/docs/decisions.md`, and steps 13 to 17 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
 
 **Ali's delivery log (2026-09-20 and 2026-09-21)**
 
@@ -121,8 +127,9 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
 - T20 is done: the guide, the example client, `churn check-integration` and the copilot's subscriber lookup that the walkthrough found missing.
-- T12 and T13 are done: `reports/sequence_benchmark.md` and `reports/synthetic.md`, with decisions 27, 28 and 29.
-  Neither experiment changed a model, a feature or a threshold, and the frozen champion is untouched.
+- T12, T13 and T17 are done: `reports/sequence_benchmark.md`, `reports/synthetic.md` and `reports/uplift.md`, with decisions 27 to 30.
+  No experiment changed a model, a feature or a threshold, and the frozen champion is untouched.
+- T17's external datasets are downloaded on demand into the git-ignored `data/external/`; they are under non-commercial licences and are never committed.
 - `tahaDev` now also carries Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`; they are Ali's work, and the team has to see them before anything reaches `main`.
 
 **Blocked on**
@@ -137,8 +144,8 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 5. T15 integration service (done, Ali), then T20 integration check (done, Taha + Claude).
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
 6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
-7. The MVP now works end to end: T19 (done, Ali), T12 and T13 (done, Taha + Claude), and T17 last.
-   T17 is the only ticket left open, and it covers no syllabus chapter.
+7. The MVP now works end to end: T19 (done, Ali), T12, T13 and T17 (done, Taha + Claude).
+   Every ticket in this file is closed.
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
@@ -755,8 +762,8 @@ Findings (details in `docs/almadar.md`):
 
 ## T17 - Uplift experiment on real data
 
-**Owner:**
-**Status:** Todo
+**Owner:** Taha + Claude
+**Status:** Done
 **Depends on:** nothing
 
 Why: the SIC action plan lists the Orange Belgium Churn-Uplift dataset, and a retention offer only pays when it changes behaviour (decision 4).
@@ -771,6 +778,19 @@ Scope:
 
 Acceptance:
 - `reports/uplift.md` with the Qini comparison for both datasets and a written verdict.
+
+Findings (2026-09-22, `reports/uplift.md`):
+- `uv run --script experiments/uplift.py` fetches both datasets into the git-ignored `data/external/` and writes the report; the Criteo archive is 311 MB and is downloaded once.
+- Criteo (1,397,959 rows, a real randomised advertising test): ranking by uplift reaches a Qini of 0.0698, ranking by predicted response reaches -0.1138, and twenty random rankings span plus or minus 0.0110.
+  Realised uplift in the top 30%: +2.89% against +0.02%.
+  The response ranking, which is the one T11 uses, is worse than random here.
+- Orange Belgium (11,896 customers, a real telecom retention call): every ranking sits inside the noise band, because the held-out 30% holds 3,569 customers and 120 churners.
+  The dataset is the right industry and too small to settle anything, and the report says so instead of picking a winner.
+- Ali's Qini is ported by hand, including the control-arm rescaling and the perfect-ranking normalisation, and checked at runtime against `sklift.metrics.qini_auc_score`: agreement 8.14e-06 on Criteo, 1.46e-03 on the small Orange holdout.
+- Orange's outcome is flipped to retention on purpose; fitting on churn would rank the customers a call *loses* (decision 30).
+- The lesson for T11: the riskiest decile is not the persuadable decile, so "share saved" stays an assumption and every LYD figure downstream of it stays a scenario.
+  T11's random holdout is the only instrument in this module that can turn it into a measurement, and this is the reason to keep it.
+- Neither dataset is committed: both are non-commercial licences, and `data/external/` is git-ignored.
 
 ## T18 - Almadar view of the real customers
 

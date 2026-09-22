@@ -756,3 +756,39 @@ The first version of the fidelity check counted rows with a negative amount and 
 That check was wrong: `diff_*` columns are differences and are negative for half the real customers too, so the same check called the real data 58% impossible.
 It was replaced with a comparison against the columns that are never negative in the real sample, where both copies score 0%, because SDV keeps each column inside the range it learnt.
 The wrong version is recorded here because it is the kind of check that looks like a finding and is really a bug.
+
+## 30. Risk targeting and uplift targeting are not the same ranking
+
+Date: 2026-09-22.
+
+T11 gives a bonus to the customers this module ranks riskiest and assumes a share of them are saved by it.
+That assumption is the weakest number in the module, and the upGrad data cannot test it: it has no treatment arm, so no uplift model can be fitted on it at all.
+T17 therefore measures the method on two public randomised trials and carries back the lesson, not the numbers.
+
+On Criteo's 1.4 million randomised rows, ranking by uplift reaches a Qini of 0.0698 while ranking by predicted response, which is the ranking T11 uses, reaches -0.1138.
+Twenty uninformative rankings on the same rows span plus or minus 0.0110, so the uplift ranking clears the noise and the response ranking is not merely worse, it is worse than random.
+The realised uplift in the top 30% is +2.89% against +0.02%.
+The people most likely to respond were not the people the advertisement moved, and there is no reason to expect churn to behave differently.
+
+Orange Belgium, the telecom dataset, answers nothing, and that is reported rather than dressed up.
+Its held-out 30% holds 3,569 customers and 120 churners, and every ranking, including the random one, sits inside the same noise band.
+A dataset of that size cannot estimate an uplift ranking, and the honest output of the run is that sentence.
+This is worth keeping because the SIC action plan lists Orange Belgium as a churn-uplift source: it is the right industry and the right action, and it is still too small to settle anything.
+
+What this changes in the module: nothing in the code, and one sentence in how T11 must be read.
+The riskiest decile is not the persuadable decile, so "share saved" stays an assumption with a stated value rather than a measured rate, and every LYD figure downstream of it stays a scenario.
+T11's random holdout of proposed customers is the only instrument this module has for turning that assumption into a measurement, and it only pays once a real campaign runs against it.
+That holdout was already in T11 before this experiment; T17 is the reason to keep it when someone asks why part of the budget is not spent.
+
+Two smaller decisions recorded here.
+
+The Qini implementation is ported by hand from `Ali_Branch` rather than imported from scikit-uplift, keeping both things his comments say are easy to get wrong: the control arm is rescaled to the treated arm's size at every depth, and the coefficient is normalised by the perfect ranking.
+It is then checked against `sklift.metrics.qini_auc_score` at runtime, and the agreement is printed in the report: 8.14e-06 on Criteo and 1.46e-03 on the small Orange holdout.
+An implementation that is only a call to the thing it is checked against cannot disagree with it, which is his argument and it is right.
+
+Orange's outcome is flipped on purpose.
+Its label is churn, so a call that works makes the label smaller, and an uplift model fitted on churn ranks the customers a call would lose.
+Retention is the response the campaign is trying to produce, and getting that sign wrong is the classic way an uplift study reports its best customers as its worst.
+
+The two datasets are downloaded on demand into `data/external/`, which is git-ignored.
+Both are under non-commercial licences and neither is ours to redistribute, so unlike the Kaggle data in `data/raw/` (decision 9) they are never committed.

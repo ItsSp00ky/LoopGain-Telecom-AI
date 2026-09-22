@@ -78,6 +78,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/advance.py` | T19 emergency credit advice: affordability ceiling, operator denominations, zero-residual finding and report |
 | `src/prepaid_churn/sequence.py` | T12 Keras LSTM over the two monthly steps, calibrated and scored against the champion on the frozen test (experiments group) |
 | `experiments/synthetic.py` | T13 CTGAN and Gaussian copula copies of the training customers, run with `uv run --script` in their own environment (decision 27) |
+| `experiments/uplift.py` | T17 two-model uplift and Qini on two public randomised trials, with the datasets fetched into the git-ignored `data/external/` |
 | `data/processed/` | Built by `churn build-dataset` (git-ignored) |
 | `artifacts/models/` | Built by `churn train` (git-ignored) |
 | `artifacts/bundle/` | Built by `churn bundle` from a champion that passed its release gate (git-ignored) |

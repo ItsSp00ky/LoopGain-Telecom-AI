@@ -221,6 +221,17 @@ uv run --script experiments/synthetic.py
 The answer is no at this budget: a model trained on the best copy keeps 45% of the PR-AUC it reaches on real customers, both copies are told from real rows with a detection ROC-AUC of 1.000, and in Almadar terms the copies put customers on the wrong packages.
 The numbers, the limits and what a copy is actually good for are in [reports/synthetic.md](reports/synthetic.md) and decision 29.
 
+T17 asks whether the customers a model ranks riskiest are the ones an offer actually saves, which is the assumption behind T11:
+
+```bash
+uv run --script experiments/uplift.py
+```
+
+They are not the same customers. On Criteo's 1.4 million randomised rows, targeting by uplift reaches a Qini of 0.0698 while targeting by predicted response, the ranking T11 uses, reaches -0.1138, which is worse than random.
+The telecom dataset the action plan names, Orange Belgium, is too small to answer at all and the report says so.
+See [reports/uplift.md](reports/uplift.md) and decision 30.
+Both datasets are downloaded on demand into the git-ignored `data/external/`, because they are other people's data under non-commercial licences.
+
 ## Demo app
 
 Four screens over what the pipeline wrote, for showing the module to someone.
