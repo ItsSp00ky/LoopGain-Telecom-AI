@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`; T20, T12, T13 and T17 done: every ticket is now closed).
+**Last updated:** 2026-09-22 by Taha + Claude (every ticket closed; the demo app reworked after Taha used it).
 
 **Where the module is now**
 
@@ -30,6 +30,8 @@ Update this section at the end of every working session.
 - **T17 is done, so every ticket in this file is closed.**
   It measured the assumption behind T11 on two public randomised trials: targeting by uplift and targeting by risk are not the same ranking, and on Criteo the risk ranking is worse than random (decision 30).
   The telecom dataset the action plan names, Orange Belgium, is too small to answer, and the report says so rather than picking a winner.
+- **The demo app was reworked after Taha used it (decision 31):** a campaign picker in the sidebar, proposing a campaign or a single offer from the screens, a Released screen that shows what was approved and where it lives, and a fix for the approval box, where an empty selection used to approve every pending proposal.
+  Keep demo campaigns small: 500 customers is a 1.7 MB snapshot that loads instantly, the whole base is 80 MB and is what made the app feel heavy.
 - **What is left:** nothing in this file.
   The open questions below still stand, and the next real work is whatever the team needs for the presentation and the demo.
 
@@ -85,7 +87,8 @@ Update this section at the end of every working session.
 - The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the chatbot and copilot owners.
 - Run against this checkout on 2026-09-21: `/health` reports degraded with no bundle, `/catalogue` serves all 57 packages, `/portfolio/summary` summarises 30,000 subscribers with `risk_available` false, and no offer is released because none was approved.
 - Outputs are read once at startup, so restart the service after a new `churn approve` release; `/health` shows which campaign is being served.
-- T14 is implemented: four Streamlit screens over the released outputs, with the named approval step on the campaign screen.
+- T14 is implemented: five Streamlit screens over the released outputs, with the named approval step on the campaign screen.
+  Taha used it on 2026-09-22 and it grew a campaign picker, a way to propose a campaign or a single offer from the screen, and a Released screen (decision 31).
 - T14 validation: 325 prepaid tests, lint and formatting pass; 26 of those tests are new.
 - Start it with `uv run streamlit run app/Home.py`; set `PREPAID_CHURN_CAMPAIGN_DIR` and `PREPAID_CHURN_PORTFOLIO` to show a campaign other than the first.
 - `streamlit` is the fourth dependency added on this delivery; decision 22 records why, and charts use the Altair that Streamlit already installs.
@@ -673,6 +676,18 @@ Acceptance:
 - `uv run streamlit run ...` starts the app from the README instructions.
 - Every screen is opened in a browser and checked, including with a single customer.
   (Lesson from `Ali_Branch`: two of its late bugs were only visible on screen.)
+
+Findings (2026-09-22, after Taha used it):
+- It was slow at everything, because a campaign over the whole base is an 80 MB snapshot that was parsed twice per load and again after every review.
+  It is parsed once now, and the app can propose a campaign over as few customers as it likes: 500 customers is a 1.7 MB snapshot that loads instantly.
+- A campaign picker in the sidebar names the campaign every screen is reading, its size and how many offers are approved in it.
+- The Campaign builder proposes a new campaign (customers considered, budget, name) through the same path as `churn decide`, and the Subscriber screen proposes for one customer.
+  Neither picks a package and neither approves anything (decision 31).
+- A new Released screen answers "I approved it, where did it go": the approved rows, the package beside each one, the reviewer, the three files and the chatbot endpoint that serves them.
+- Fixed a real hazard: an empty selection in the approval box used to mean "approve every pending proposal". It is an error now, and reviewing them all is a separate checkbox that says how many.
+- Taha's own 15 approvals from that session are intact in `artifacts/campaigns/full-base-30000`, which is still in the picker.
+- The Subscriber screen also gained a "Pick a high-risk one" button, because a random customer on this base is almost always a "no offer" and finding one to look at took several tries.
+- 5 new tests; 401 prepaid tests, lint and formatting pass.
 
 Findings (2026-09-21):
 - Four screens in `app/`, over the pure `src/prepaid_churn/demo.py`; loading goes through `service.load_state`, so the app and the T15 endpoints answer from one state.

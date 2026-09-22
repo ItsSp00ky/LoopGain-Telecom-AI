@@ -193,13 +193,20 @@ def _load_bundle(directory: Path) -> tuple[Bundle | None, str | None, bool]:
     return bundle, None, True
 
 
-def _load_campaign(path: Path) -> tuple[pd.DataFrame, str | None, str | None, str | None]:
-    """The approved offers only, from the authoritative snapshot."""
+def _load_campaign(
+    path: Path, campaign: dict | None = None
+) -> tuple[pd.DataFrame, str | None, str | None, str | None]:
+    """The approved offers only, from the authoritative snapshot.
+
+    `campaign` is an already-parsed snapshot, for a caller that needs the whole thing as
+    well as the released rows. The demo app is that caller, and parsing its JSON twice was
+    the slowest thing it did.
+    """
     empty = pd.DataFrame(columns=list(RELEASE_COLUMNS))
-    if not path.exists():
+    if campaign is None and not path.exists():
         return empty, None, None, None
     try:
-        campaign = load_campaign(path)
+        campaign = load_campaign(path) if campaign is None else campaign
         released = released_campaign(campaign)
     except Exception as error:
         # A campaign that cannot be validated serves no offers at all.
@@ -226,14 +233,19 @@ def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
     return portfolio, None
 
 
-def load_state(paths: ServicePaths) -> ServiceState:
+def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceState:
     """Read every output the service serves, once.
 
     A missing bundle, campaign or export is recorded rather than raised: the endpoints
     that need one answer 503 with the reason, and the ones that do not keep working.
+
+    `campaign` lets a caller pass a snapshot it has already parsed; the service itself
+    never does.
     """
     bundle, bundle_error, smoke_passed = _load_bundle(paths.bundle_dir)
-    approved, campaign_id, created_at, campaign_error = _load_campaign(paths.campaign_path)
+    approved, campaign_id, created_at, campaign_error = _load_campaign(
+        paths.campaign_path, campaign
+    )
     portfolio, portfolio_error = _load_portfolio(paths.portfolio_path)
     return ServiceState(
         offers=load_offers(paths.offers_path),

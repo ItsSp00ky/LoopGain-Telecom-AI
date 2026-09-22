@@ -74,7 +74,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/privacy.py` | T15 pseudonymous IDs: the Libyan phone-number check and the salted `pseudonymize` helper |
 | `src/prepaid_churn/client.py` | T20 example client for the other components, standard library only, and the `check` behind `churn check-integration` |
 | `src/prepaid_churn/demo.py` | T14 pure layer behind the demo screens: loading, headline numbers, guardrail breakdown, SMS parts and the customer message |
-| `app/` | T14 Streamlit screens (`Home.py` plus `pages/`); thin, and the only write is a named review |
+| `app/` | T14 Streamlit screens (`Home.py` plus `pages/`); thin, and the only writes are a named review and a proposed campaign (decision 31) |
 | `src/prepaid_churn/advance.py` | T19 emergency credit advice: affordability ceiling, operator denominations, zero-residual finding and report |
 | `src/prepaid_churn/sequence.py` | T12 Keras LSTM over the two monthly steps, calibrated and scored against the champion on the frozen test (experiments group) |
 | `experiments/synthetic.py` | T13 CTGAN and Gaussian copula copies of the training customers, run with `uv run --script` in their own environment (decision 27) |

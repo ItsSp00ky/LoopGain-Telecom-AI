@@ -13,6 +13,7 @@ from prepaid_churn.demo import (
     VALUE_TIERS,
     DemoPaths,
     budget_preview,
+    campaign_directories,
     campaign_totals,
     customer_message,
     expected_churners,
@@ -21,6 +22,8 @@ from prepaid_churn.demo import (
     load_demo,
     offer_row,
     pending_proposals,
+    propose_offers,
+    released_offers,
     revenue_at_risk,
     sms_parts,
     subscriber_view,
@@ -362,3 +365,84 @@ def test_no_risk_or_value_figure_can_reach_the_customer(demo):
 def test_an_unknown_language_is_refused(demo):
     with pytest.raises(ValueError, match="Arabic or English"):
         customer_message({}, None, "fr")
+
+
+# --- What the screens need to find a campaign and its released rows (T14 follow-up) ---
+
+
+def test_the_picker_lists_campaigns_without_opening_them(tmp_path):
+    """It runs on every page load, so it reads the directory and not the 80 MB snapshot."""
+    for name, approved in (("first", 2), ("second", 0)):
+        directory = tmp_path / name
+        directory.mkdir()
+        (directory / "proposals.json").write_text("{}", encoding="utf-8")
+        rows = ["subscriber_id,recommended_offer_id"] + [f"000{i},SABAH_1" for i in range(approved)]
+        (directory / "released.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    listed = campaign_directories(tmp_path)
+    assert set(listed["campaign"]) == {"first", "second"}
+    assert listed.set_index("campaign").loc["first", "approved"] == 2
+    assert listed.set_index("campaign").loc["second", "approved"] == 0
+
+
+def test_an_empty_campaigns_folder_lists_nothing(tmp_path):
+    listed = campaign_directories(tmp_path / "nothing-here")
+    assert listed.empty and list(listed.columns) == [
+        "campaign",
+        "approved",
+        "updated",
+        "size_mb",
+        "path",
+    ]
+
+
+def test_released_offers_shows_the_package_beside_the_approval(demo):
+    """The answer to "I approved it, where is it": the row, the package and the reviewer."""
+    released = released_offers(demo)
+    assert list(released["subscriber_id"]) == ["0001"]  # 0002 was rejected, two unreviewed
+    row = released.iloc[0]
+    assert row["offer_id"] and row["package"] and float(row["price_lyd"]) >= 0
+    assert row["reviewer"] == "Ali Marghem"
+    assert row["reason_ar"]
+
+
+def test_released_offers_is_empty_before_a_review(built, offers, customers, policy, tmp_path):
+    decisions, comparison = propose(customers, offers, policy)
+    campaign = build_campaign(customers, decisions, comparison, offers, policy, STAMP)
+    # Its own directory: a campaign never overwrites another one's decisions.
+    save_campaign(campaign, tmp_path / "unreviewed")
+    unreviewed = replace(built, campaign_dir=tmp_path / "unreviewed")
+    assert released_offers(load_demo(unreviewed)).empty
+
+
+def test_the_app_proposes_through_the_same_engine(tmp_path, population, bundle):
+    """Proposing from a screen has to be the `churn decide` path, not a shortcut of its own."""
+    from conftest import build_population_raw
+
+    from prepaid_churn.almadar import load_market
+    from prepaid_churn.value import fit_tiers, save_tiers
+    from prepaid_churn.windows import build_datasets
+
+    base_frame = build_population_raw().drop(columns=["churn_probability"])
+    base = tmp_path / "base.csv"
+    base_frame.to_csv(base, index=False)
+    save_bundle(bundle, tmp_path / "bundle")
+    tiers = fit_tiers(build_datasets(population)["train"], load_market())
+    save_tiers(tiers, tmp_path / "tiers.json")
+    paths = DemoPaths(
+        bundle_dir=tmp_path / "bundle",
+        base_path=base,
+        tiers_path=tmp_path / "tiers.json",
+    )
+
+    campaign = propose_offers(paths, tmp_path / "campaign", budget_lyd=50.0, customers=20)
+    rows = pd.DataFrame(campaign["snapshot"]["rows"])
+    assert len(rows) == 20  # only the customers the screen asked for
+    assert campaign["reviews"] == []  # proposing approves nothing (decision 14)
+    assert campaign["snapshot"]["policy"]["budget_lyd"] == 50.0
+    assert (tmp_path / "campaign" / "proposals.json").exists()
+
+    one = propose_offers(paths, tmp_path / "one", subscribers=[str(base_frame["id"].iloc[0])])
+    assert len(one["snapshot"]["rows"]) == 1
+
+    with pytest.raises(ValueError, match="none-of-these"):
+        propose_offers(paths, tmp_path / "nobody", subscribers=["none-of-these"])

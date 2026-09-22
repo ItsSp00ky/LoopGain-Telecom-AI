@@ -2,11 +2,20 @@
 
 import pandas as pd
 import streamlit as st
-from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state
+from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state, use_campaign
 
-from prepaid_churn.demo import offer_row, subscriber_view
+from prepaid_churn.almadar import InvalidCatalogueError
+from prepaid_churn.bundle import BundleError
+from prepaid_churn.demo import (
+    CAMPAIGNS_DIR,
+    DemoPaths,
+    offer_row,
+    propose_offers,
+    subscriber_view,
+    utc_today,
+)
 from prepaid_churn.privacy import looks_like_phone_number
-from prepaid_churn.retention import NO_OFFER
+from prepaid_churn.retention import NO_OFFER, RetentionError
 
 configure("Subscriber", icon="person")
 demo = state()
@@ -18,15 +27,25 @@ if missing_banner(demo, ("portfolio",)):
 
 portfolio = demo.portfolio
 
-left, right = st.columns([3, 1])
+left, random_column, risky_column = st.columns([3, 1, 1])
 
-# The button is handled before the box is drawn, and writes into the box's own state.
+# The buttons are handled before the box is drawn, and write into the box's own state.
 # Keeping a separate "picked" value meant a typed ID silently won over the button, so
 # "Pick one at random" looked broken once anything had been typed. Only visible on screen.
-with right:
+with random_column:
     st.write("")
     if st.button("Pick one at random", width="stretch"):
         st.session_state["subscriber_id"] = str(portfolio["subscriber_id"].sample(1).iloc[0])
+        st.rerun()
+
+with risky_column:
+    st.write("")
+    # Most of this base is not at risk, so a random customer is almost always a "no
+    # offer". Someone opening this screen to see what an offer looks like was picking
+    # one customer after another to find one, which is a bad first minute.
+    risky = portfolio.loc[portfolio.get("risk_band", pd.Series(dtype="str")).eq("high")]
+    if st.button("Pick a high-risk one", width="stretch", disabled=risky.empty):
+        st.session_state["subscriber_id"] = str(risky["subscriber_id"].sample(1).iloc[0])
         st.rerun()
 
 with left:
@@ -123,9 +142,38 @@ status = str(subscriber.get("status") or "")
 
 if offer_id is None:
     st.info(
-        "This customer is not in a campaign yet. Run `uv run churn decide`.",
+        "This customer is not in the campaign the screens are reading.",
         icon=":material/info:",
     )
+    # One customer, the same decision path as a whole campaign: the policy chooses the
+    # package and the guardrails still apply. The screen only chooses who is considered,
+    # and a named person still has to approve whatever comes out (decision 14).
+    st.caption(
+        "Propose an offer for this one customer. It runs the same engine as a campaign, "
+        "writes its own campaign directory, and approves nothing."
+    )
+    budget = st.number_input("Budget for this customer (LYD)", min_value=0.0, value=5.0, step=1.0)
+    if st.button("Propose an offer for this customer", type="primary"):
+        directory = CAMPAIGNS_DIR / f"ui-{subscriber_id}-{utc_today()}"
+        try:
+            with st.spinner("Scoring this customer and asking the engine..."):
+                propose_offers(
+                    DemoPaths.from_environment(),
+                    directory,
+                    subscribers=[subscriber_id],
+                    budget_lyd=budget,
+                )
+        except (
+            BundleError,
+            InvalidCatalogueError,
+            RetentionError,
+            FileNotFoundError,
+            ValueError,
+        ) as error:
+            st.error(str(error), icon=":material/error:")
+        else:
+            use_campaign(directory)
+            st.rerun()
 elif str(offer_id) == NO_OFFER:
     st.info(
         f"**No offer.** {subscriber.get('offer_reason_en') or 'No reason recorded.'}\n\n"
@@ -157,3 +205,15 @@ else:
         "profit or causal uplift. An offer is sent only after a named reviewer approves "
         "it on the campaign screen."
     )
+    if status == "approved":
+        st.info(
+            "This one is approved, so it is on the **Released** screen and the chatbot "
+            "can be told about it.",
+            icon=":material/verified:",
+        )
+    elif status != "rejected":
+        st.info(
+            "Waiting for a review. Approve or reject it on the **Campaign builder** "
+            "screen, under your own name.",
+            icon=":material/how_to_reg:",
+        )
