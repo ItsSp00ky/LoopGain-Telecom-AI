@@ -158,6 +158,30 @@ uv run antenna-placement predict --lat 32.88 --lon 13.18
 
 ---
 
+## 📶 Quick Start: Network KPI & Traffic Prediction Engine
+
+To run the 3GPP cellular and 4G traffic forecasting pipelines:
+
+```bash
+# Navigate to the network KPI prediction module
+cd network_kpi_prediction
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run all automated unit tests (48 tests, 100% pass rate)
+python main.py test
+python -m unittest discover -s kpi_prediction_pipeline_traffic/tests -p "test_*.py" -v
+
+# Query real-time dynamic ML prediction with 90% confidence ribbons and SLA checks:
+python main.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7 --live
+
+# Execute the 4G network traffic volume pipeline:
+python main.py --pipeline traffic
+```
+
+---
+
 ## 📜 License
 
 Developed for the Samsung Innovation Campus (SIC) Capstone Project by Team Loop Gain.
