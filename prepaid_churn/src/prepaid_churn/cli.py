@@ -311,6 +311,7 @@ def run_sequence_benchmark(args: argparse.Namespace) -> None:
 
 def run_check_integration(args: argparse.Namespace) -> None:
     import os
+    import sys
 
     from prepaid_churn.api import CHATBOT_KEY_VARIABLE, COPILOT_KEY_VARIABLE
     from prepaid_churn.client import check
@@ -329,6 +330,10 @@ def run_check_integration(args: argparse.Namespace) -> None:
         keys[COPILOT_KEY_VARIABLE],
         args.subscriber_id,
     )
+    # Redirected Windows output otherwise uses the local code page, which cannot
+    # encode the Arabic offer names this check promises to show.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     print(result.text)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

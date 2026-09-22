@@ -172,6 +172,8 @@ def check(base_url: str, chatbot_key: str, copilot_key: str, subscriber_id: str)
     """Run the whole contract against a running service and report what came back."""
     result = CheckResult()
     state = health(base_url)
+    if state["status"] != "ok":
+        result.failures.append("service health is degraded")
     outputs = state["latest_outputs"]
     result.lines += [
         f"# Integration check of {base_url}",
@@ -206,17 +208,22 @@ def check(base_url: str, chatbot_key: str, copilot_key: str, subscriber_id: str)
         "## Copilot, with the copilot key",
     ]
     portfolio = portfolio_summary(base_url, copilot_key)
+    if not portfolio["risk_available"]:
+        result.failures.append("portfolio risk is unavailable")
+    if portfolio["release_gate_passed"] is not True:
+        result.failures.append("model release gate has not passed")
     bands = ", ".join(
         f"{group['name']} {group['customers']}" for group in portfolio["by_risk_band"]
     )
     at_risk = sum(group["lyd_at_risk"] or 0 for group in portfolio["by_risk_band"])
+    risk_text = f"{at_risk:,.0f}" if portfolio["risk_available"] else "unavailable"
     passed = sum(threshold["passed"] for threshold in portfolio["success_thresholds"].values())
     found = risk_for(base_url, copilot_key, subscriber_id)
     result.lines += [
         f"- /portfolio/summary: {portfolio['subscribers']} subscribers, risk available "
         f"{portfolio['risk_available']}, scored {portfolio['scored_at']}",
         f"- by risk band: {bands}",
-        f"- LYD at risk: {at_risk:,.0f} (12-month scenario weighted by churn probability)",
+        f"- LYD at risk: {risk_text} (12-month scenario weighted by churn probability)",
         f"- release gate: {portfolio['release_gate_passed']}, "
         f"{passed} of {len(portfolio['success_thresholds'])} success thresholds passed",
         f"- /subscribers/{subscriber_id}/risk: "

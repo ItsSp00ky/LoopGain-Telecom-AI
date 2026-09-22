@@ -9,7 +9,24 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Ali (Taha's work taken onto `Ali_Branch`; the answered questions closed and the follow-ups he left cleared).
+**Last updated:** 2026-09-22 by Ali (end-to-end readiness review on `Ali_Branch`, following the earlier handoff below).
+
+**Ali's end-to-end readiness check, 2026-09-22**
+
+- All 22 tickets remain Done; this was the explicitly requested T21 acceptance review, not a new model experiment.
+- The full README rebuild reproduced the frozen bundle and tiers, scored 30,000 subscribers and proposed 2,911 offers from the current 37-package catalogue.
+  Existing tracked model and research reports reproduced unchanged.
+- The live API, CLI consumer and all five Streamlit pages passed, including individual approval and Arabic/English message preview on an isolated QA campaign.
+  The original new campaign is unreviewed at `artifacts/campaigns/e2e-20260922`; all temporary servers were stopped.
+- Fixed identifier parsing and ambiguous IDs, malformed API credentials, serving retired approvals, false-positive integration checks and redirected Arabic CLI output (decision 33).
+  Dashboard regressions now execute the page scripts and approval-to-preview flow on the shared hand-made fixtures.
+- Validation: 420 tests pass with none skipped, including the optional LSTM test; lint and formatting pass.
+  Third-party test adapter and Keras/Torch deprecation warnings remain.
+- Ready for a local demo and HTTP consumer testing with the available data; operator performance and campaign effectiveness remain unvalidated.
+  The Almadar source links remain open, and no new operator data is required for the completed fixes.
+- [The acceptance report](reports/end_to_end.md) records evidence, limitations and exact startup commands for this checkout.
+- Delivery stays on `Ali_Branch` under Ali's explicit instruction in this task; no commit or push targets `tahaDev`.
+  Earlier branch directions below are historical and do not supersede that instruction.
 
 **Ali's session, 2026-09-22**
 
@@ -707,6 +724,11 @@ Findings (2026-09-21):
 - `streamlit` is added as a dependency; charts use Altair, which Streamlit already installs.
 - Limitations: outputs are cached per session and reread after a review or a restart, and the app is a local development server, not a deployed one.
 
+Readiness follow-up (Ali, 2026-09-22):
+- All five page scripts passed `AppTest` on the rebuilt 30,000-subscriber export, and the Streamlit server passed HTTP startup.
+- Literal `NA` IDs now retain their Almadar view, and chart widths use the current Streamlit argument.
+- Permanent hand-made regressions cover rendering, empty-selection refusal, individual approval, refreshed message selection and Arabic/English previews.
+
 ## T15 - Integration service for the chatbot and copilot
 
 **Owner:** Ali
@@ -747,6 +769,11 @@ Findings (2026-09-21):
 - Run against this checkout on 2026-09-21: degraded with no bundle, all 57 packages served, 30,000 subscribers summarised with `risk_available` false, zero approved offers.
 - Limitations: outputs are loaded once, so a new release is served after a restart; the keys are service-to-service access control, not per-user authorization, and assume the service is not exposed publicly.
 - T20 still owns `docs/integration.md`, the example client and the walkthrough with the chatbot and copilot owners.
+
+Readiness follow-up (Ali, 2026-09-22):
+- The real API served the frozen bundle, 30,000 subscribers and 37 current packages with health `ok`.
+- Portfolio IDs preserve literal text and reject empty or duplicate identifiers; malformed non-ASCII credentials return 401.
+- Approvals for packages absent from the current catalogue are withheld and explained in health (decision 33).
 
 ## T16 - Almadar catalogue and market facts
 
@@ -874,7 +901,7 @@ Findings (2026-09-21):
 
 ## T20 - Integration check with the team platform
 
-**Owner:** Taha + Claude
+**Owner:** Taha + Claude; Ali for the 2026-09-22 readiness follow-up
 **Status:** Done
 **Depends on:** T15
 
@@ -915,6 +942,11 @@ Walkthrough (2026-09-22), which is the acceptance:
 - 390 prepaid tests, lint and formatting pass; 11 of them are T20's.
 - Reopen this ticket if a response shape turns out to be wrong when the chatbot and the copilot are actually built; the network ML and antenna owners have not read the guide yet, and neither consumes this module today.
 
+Readiness follow-up (Ali, 2026-09-22):
+- The real consumer and CLI passed all five refusals over the rebuilt artifacts and an isolated reviewed campaign.
+- Degraded health, unavailable portfolio risk and a failed release gate now fail the check; unavailable LYD at risk stays unavailable.
+- Redirected Arabic output now uses UTF-8, with a subprocess regression for a Western Windows code page.
+
 ## T21 - Code and logic review
 
 **Owner:** Ali (review requested and implemented with Codex)
@@ -940,6 +972,8 @@ Findings:
 - Calibration uses two model prediction calls instead of five; the focused density benchmark is 4.00 times faster.
 - The frozen champion choices and real-data test results are unchanged.
 - No new infrastructure, dependencies or business logic were introduced.
+- The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](reports/end_to_end.md).
+  Validation now passes 420 tests with none skipped; the frozen model and prior research results are unchanged.
 
 ## Future work (needs real operator data)
 

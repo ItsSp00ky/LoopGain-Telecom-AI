@@ -68,7 +68,7 @@ else:
             horizontal=True,
             height=40 * len(rejections) + 60,
         ),
-        use_container_width=True,
+        width="stretch",
     )
     st.dataframe(rejections, width="stretch", hide_index=True)
     st.caption(

@@ -58,6 +58,10 @@ class ApiKeys:
                 raise ServiceConfigurationError(
                     f"The {name} API key must be at least {MIN_KEY_LENGTH} characters."
                 )
+            if not key.isascii() or any(not 33 <= ord(character) <= 126 for character in key):
+                raise ServiceConfigurationError(
+                    f"The {name} API key must use printable ASCII without spaces."
+                )
         if hmac.compare_digest(chatbot, copilot):
             raise ServiceConfigurationError(
                 "The chatbot and copilot keys must differ, or the two consumers are not "
@@ -72,6 +76,10 @@ class ApiKeys:
         key was tried first.
         """
         found = None
+        # HTTP headers can contain non-ASCII bytes; compare_digest(str, str) raises on
+        # those instead of returning False. Malformed credentials must be a 401, not a 500.
+        if not presented.isascii():
+            return None
         for name, key in self._keys.items():
             if hmac.compare_digest(presented, key):
                 found = name

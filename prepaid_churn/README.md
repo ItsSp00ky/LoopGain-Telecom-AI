@@ -72,6 +72,7 @@ uv run churn tiers
 `--chosen-at 2026-09-19` keeps the date the champion was frozen.
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
 Checked again on 2026-09-21 from a fresh clone of `Ali_Branch`: same bundle version, same tier artifact `tiers-v1-cd15525cb3ef`, and no committed report changed.
+The [2026-09-22 end-to-end check](reports/end_to_end.md) reproduced them again, exercised the live API and all five dashboard pages, and records how to open the checked campaign.
 
 The last two commands build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
 To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
@@ -180,7 +181,8 @@ The OpenAPI page at `/docs` is generated from the response models, so it is the 
 
 Outputs are read once when the service starts, so restart it after a new `churn approve` release.
 `/health` reports the campaign it is holding, so you can see what is being served.
-Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null, which is the state of this checkout.
+Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null.
+An approved package that has left the current catalogue is withheld, and health explains that a new campaign needs to be created and reviewed.
 
 ## Integration guide for the other components
 
@@ -194,8 +196,9 @@ With a service running, the check calls every endpoint and every refusal a consu
 uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a subscriber>
 ```
 
-It prints what each consumer sees and exits 1 if a refusal did not happen, so the seam is checked rather than described.
-Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign: status ok, 57 packages, the approved offer for one subscriber, 176,494 LYD at risk, and all four refusals correct.
+It prints what each consumer sees and exits 1 if a refusal did not happen, health is degraded, risk is unavailable or the model release gate has not passed.
+Redirected output is UTF-8 so Arabic package names work on Windows too.
+Checked on 2026-09-22 against the rebuilt 30,000-subscriber base and an isolated QA campaign: status ok, 37 packages, the approved offer for one subscriber and all five refusals correct.
 
 ## Syllabus experiments
 

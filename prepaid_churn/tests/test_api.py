@@ -82,6 +82,57 @@ def copilot(client, url):
     return client.get(url, headers={API_KEY_HEADER: COPILOT_KEY})
 
 
+def test_literal_na_id_survives_the_csv_and_copilot_lookup(client):
+    response = copilot(client, "/subscribers/NA/risk")
+    assert response.status_code == 200
+    assert response.json()["subscriber_id"] == "NA"
+    assert response.json()["churn_probability"] == 0.3
+
+
+def test_non_ascii_presented_key_is_unauthorized_instead_of_crashing(client):
+    response = client.get("/catalogue", headers={API_KEY_HEADER: b"\xe9"})
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize("key", ["é" * 32, " " * 32, "a" * 31 + "\n"])
+def test_configured_keys_must_be_usable_http_credentials(key):
+    with pytest.raises(ServiceConfigurationError, match="ASCII"):
+        ApiKeys(key, COPILOT_KEY)
+
+
+def test_retired_approved_offer_is_withheld_and_health_explains(served, offers, tmp_path, keys):
+    current_path = tmp_path / "current.csv"
+    offers.loc[offers.offer_id.ne("SABAH_1")].to_csv(current_path, index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "bundle",
+            tmp_path / "tiers.csv",
+            tmp_path / "campaign" / "proposals.json",
+            current_path,
+        )
+    )
+    client = TestClient(create_app(state, keys))
+    assert chatbot(client, "/subscribers/0001/retention").status_code == 404
+    health = client.get("/health").json()
+    assert health["status"] == "degraded"
+    assert health["latest_outputs"]["approved_offers"] == 0
+    assert "no longer in the current catalogue" in health["problems"][0]
+
+
+@pytest.mark.parametrize("ids", [["same", "same", "NA", "0004"], ["", "0002", "NA", "0004"]])
+def test_malformed_portfolio_ids_fail_at_load(served, portfolio, tmp_path, keys, ids):
+    portfolio["subscriber_id"] = ids
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "bundle", tmp_path / "tiers.csv", tmp_path / "campaign" / "proposals.json"
+        )
+    )
+    client = TestClient(create_app(state, keys))
+    assert client.get("/health").json()["status"] == "degraded"
+    assert copilot(client, "/subscribers/0001/risk").status_code == 503
+
+
 # ---------------------------------------------------------------------------
 # /health
 # ---------------------------------------------------------------------------

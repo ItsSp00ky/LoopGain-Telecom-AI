@@ -831,3 +831,37 @@ Passing `--report` explicitly still writes wherever it is told, which is how the
 A test runs the documented command and asserts that the committed report is untouched.
 
 The other report-writing commands keep their fixed defaults, because each one regenerates the same committed file from the same committed input; the fresh-clone check of T9 depends on exactly that.
+
+## 33. Readiness must cover the served answers and the real review screens
+
+Date: 2026-09-22.
+
+Ali asked whether every ticket was finished and requested an end-to-end run with the available data.
+All tickets are Done, but the initial checkout had no local churn bundle, and a passing unit suite alone could not show what an evaluator or consumer would receive.
+The frozen README rebuild reproduced the expected artifacts without changing existing reports, and the live run is recorded in [reports/end_to_end.md](../reports/end_to_end.md).
+No model choice was changed because of this check.
+
+The serving boundary must preserve a literal `NA` subscriber ID just as the input and campaign boundaries do.
+Pandas' string dtype still recognises missing-value tokens, so the service portfolio and demo view use an ID converter while numeric columns keep their missing-value behavior.
+Empty or duplicate portfolio IDs are rejected at startup rather than letting a lookup return an arbitrary row.
+
+An approved offer can disappear from the current catalogue after the immutable campaign was reviewed, as the Mix removal made concrete.
+The service withholds such rows and reports degraded health; it does not invalidate or rewrite the campaign's audit history.
+A new campaign and review are needed to propose a current package.
+The dashboard's approved-message selector reads this same filtered service state.
+
+The API requires printable ASCII credentials without spaces and rejects non-ASCII presented credentials with 401.
+This prevents a malformed header from reaching `compare_digest`, whose string comparison raises on non-ASCII input.
+There is no change to the two-role access model.
+
+The integration checker previously counted only refusal failures, so degraded health or unavailable risk could still end with "Every check passed."
+Health, available portfolio risk and the model release gate are now readiness requirements too, and a failure returns exit code 1.
+Unavailable LYD at risk is not printed as zero.
+Its Arabic output is UTF-8 even when redirected on Windows, where the default code page caused the actual CLI acceptance run to crash.
+
+The dashboard's actual scripts are now exercised on the shared hand-made fixtures with Streamlit `AppTest`.
+The review-to-message test covers empty-selection refusal, individual approval, cache refresh and both message languages.
+Live acceptance reviews used a separate QA copy; the original 2,911-proposal campaign received no approvals.
+
+Delivery remains on `Ali_Branch` because Ali explicitly forbade commits or pushes to `tahaDev` in this task.
+That current instruction takes precedence over the earlier shared-branch convention in decision 24.

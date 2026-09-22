@@ -5,7 +5,14 @@ import pytest
 
 from prepaid_churn.almadar import load_offers
 from prepaid_churn.bundle import save_bundle
-from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
+from prepaid_churn.campaign import (
+    build_campaign,
+    load_campaign,
+    released_campaign,
+    review_campaign,
+    save_campaign,
+)
+from prepaid_churn.data import PROJECT_ROOT
 from prepaid_churn.demo import (
     CAMPAIGN_DIR_VARIABLE,
     PORTFOLIO_VARIABLE,
@@ -88,6 +95,65 @@ def demo(built):
     return load_demo(built)
 
 
+@pytest.fixture
+def screen(built, monkeypatch):
+    """Run the real page scripts over the same hand-made files as the pure-layer tests."""
+    from streamlit.testing.v1 import AppTest
+
+    monkeypatch.syspath_prepend(str(PROJECT_ROOT / "app"))
+    import _shared
+
+    monkeypatch.setattr(DemoPaths, "from_environment", classmethod(lambda cls: built))
+    _shared.refresh()
+
+    def open_page(name):
+        app = AppTest.from_file(str(PROJECT_ROOT / "app" / name), default_timeout=30).run()
+        assert not app.exception, [error.message for error in app.exception]
+        return app
+
+    yield open_page
+    _shared.refresh()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Home.py",
+        "pages/1_Overview.py",
+        "pages/2_Subscriber.py",
+        "pages/3_Campaign_builder.py",
+        "pages/4_Message_preview.py",
+    ],
+)
+def test_every_dashboard_page_renders(screen, name):
+    screen(name)
+
+
+def test_dashboard_review_requires_a_selection_and_refreshes_the_message(screen, built):
+    app = screen("pages/3_Campaign_builder.py")
+    original = built.campaign_path.read_bytes()
+    app.text_input[0].set_value("Test reviewer")
+    approve = next(button for button in app.button if button.label == "Approve selected")
+    approve.click().run()
+    assert not app.exception
+    assert any("Choose the subscribers" in error.value for error in app.error)
+    assert built.campaign_path.read_bytes() == original
+
+    app.multiselect[0].set_value(["NA"])
+    next(button for button in app.button if button.label == "Approve selected").click().run()
+    assert not app.exception
+    released = released_campaign(load_campaign(built.campaign_path))
+    assert set(released.subscriber_id) == {"0001", "NA"}
+
+    preview = screen("pages/4_Message_preview.py")
+    assert set(preview.selectbox[0].options) == {"0001", "NA"}
+    preview.selectbox[0].set_value("NA").run()
+    arabic = preview.text_area[0].value
+    assert any("\u0600" <= character <= "\u06ff" for character in arabic)
+    preview.radio[0].set_value("en").run()
+    assert not preview.exception and preview.text_area[0].value != arabic
+
+
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
@@ -101,6 +167,14 @@ def test_a_complete_checkout_loads_everything(demo, bundle, offers):
     assert len(demo.decisions) == 4
     assert len(demo.offers) == len(offers)
     assert demo.campaign_path is not None
+
+
+def test_literal_na_id_keeps_its_subscriber_view_and_recharge_card(demo):
+    found = subscriber_view(demo, "NA")
+    assert found is not None
+    assert found["subscriber_id"] == "NA"
+    assert found["usual_card_lyd"] == 5.0
+    assert found["churn_probability"] == 0.3
 
 
 def test_an_empty_checkout_names_the_command_for_each_missing_output(tmp_path):
