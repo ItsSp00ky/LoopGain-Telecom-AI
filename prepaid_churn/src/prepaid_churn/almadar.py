@@ -28,6 +28,7 @@ from prepaid_churn.windows import Window, window_features
 
 ALMADAR_DIR = PROJECT_ROOT / "data" / "almadar"
 OFFERS_PATH = ALMADAR_DIR / "offers.csv"
+EXCLUDED_PATH = ALMADAR_DIR / "excluded.csv"
 MARKET_PATH = ALMADAR_DIR / "market.toml"
 
 OPERATORS = ("Almadar Aljadid",)
@@ -157,23 +158,74 @@ def _catalogue_value(offer: pd.Series, column: str) -> float | str | None:
     return None if pd.isna(offer[column]) else float(offer[column])
 
 
-def check_against_source(offers: pd.DataFrame, directory: str | Path = ALMADAR_DIR) -> list[str]:
+EXCLUDED_COLUMNS = (
+    "offer_id",
+    "family_en",
+    "source_file",
+    "source_row",
+    "reason",
+    "decided_by",
+    "decided_on",
+)
+
+
+def load_excluded(path: str | Path = EXCLUDED_PATH) -> pd.DataFrame:
+    """Operator rows deliberately left out of the catalogue, each with a reason.
+
+    A package the operator no longer sells has to leave the catalogue, but it must not
+    simply vanish: the source files are byte-for-byte copies of the operator's own export,
+    and `check_against_source` requires every row in them to be accounted for.
+    Recording the removal here keeps that guarantee, so a package cannot be dropped
+    silently, which is exactly how the Mix families went missing in the first place.
+    """
+    path = Path(path)
+    if not path.exists():
+        return pd.DataFrame(columns=list(EXCLUDED_COLUMNS))
+    excluded = pd.read_csv(path)
+    missing = set(EXCLUDED_COLUMNS) - set(excluded.columns)
+    if missing:
+        raise InvalidCatalogueError(f"{path.name} is missing columns: {sorted(missing)}")
+    blank = [
+        column for column in ("reason", "decided_by", "decided_on") if excluded[column].isna().any()
+    ]
+    if blank:
+        raise InvalidCatalogueError(
+            f"Every excluded package needs a reason, a name and a date; {blank} has blanks."
+        )
+    return excluded
+
+
+def check_against_source(
+    offers: pd.DataFrame,
+    directory: str | Path = ALMADAR_DIR,
+    excluded: pd.DataFrame | None = None,
+) -> list[str]:
     """Problems where the catalogue no longer matches the operator's own file.
 
-    Checks that every source row is covered exactly once, and that the family, name,
-    price and every value the operator states (volume, minutes, speeds, members) match.
+    Checks that every source row is either in the catalogue exactly once or recorded in
+    `excluded.csv` with a reason, and that the family, name, price and every value the
+    operator states (volume, minutes, speeds, members) match.
     A volume the file states must be marked "stated"; volumes it leaves out (read from
     the name or reported by a teammate) cannot be compared.
     """
     problems = []
+    excluded = load_excluded() if excluded is None else excluded
     for source_file, rows in offers.groupby("source_file"):
         with (Path(directory) / source_file).open(encoding="utf-8-sig", newline="") as f:
             source = list(csv.reader(f))[1:]
         counts = rows["source_row"].value_counts()
-        expected_rows = set(range(1, len(source) + 1))
-        missing = sorted(expected_rows - set(counts.index))
+        dropped = set(excluded.loc[excluded["source_file"].eq(source_file), "source_row"])
+        source_rows = set(range(1, len(source) + 1))
+        if overlap := sorted(dropped & set(counts.index)):
+            problems.append(
+                f"{source_file}: source rows {overlap} are both in the catalogue and "
+                "recorded as excluded"
+            )
+        missing = sorted(source_rows - dropped - set(counts.index))
         repeated = sorted(counts[counts > 1].index)
-        unknown = sorted(set(counts.index) - expected_rows)
+        # "Unknown" means the row is not in the operator's file at all, which an excluded
+        # row still is; a row in both places is reported once, by the message above.
+        unknown = sorted(set(counts.index) - source_rows)
         if missing or repeated or unknown:
             problems.append(
                 f"{source_file}: source rows missing {missing}, repeated {repeated}, "

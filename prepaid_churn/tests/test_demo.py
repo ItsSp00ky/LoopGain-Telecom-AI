@@ -42,38 +42,17 @@ def policy():
 
 
 @pytest.fixture
-def customers():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, 0.2],
-            "risk_band": ["high", "high", "medium", "low"],
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "value_status": ["scenario"] * 4,
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, 40.0],
-            "bundle_held": ["PAYG"] * 4,
-            "uses_voice": [True] * 4,
-            "uses_data": [True] * 4,
-        }
-    )
+def customers(customers):
+    """The shared four, with the last one made low risk.
 
-
-@pytest.fixture
-def portfolio():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, None],
-            "risk_band": ["high", "high", "medium", "already_silent"],
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
-            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
-            "reason_1": ["Recharges fell sharply", "Fewer minutes", None, None],
-            "reason_2": ["Data use stopped", None, None, None],
-            "reason_3": [None, None, None, None],
-            "scored_at": [STAMP] * 4,
-        }
+    The campaign screens are about what the guardrails removed, so this file needs a
+    customer the `low_risk` guard actually excludes. Everything else comes from the
+    shared fixture in `conftest.py`.
+    """
+    return customers.assign(
+        risk_band=["high", "high", "medium", "low"],
+        value_tier=["high", "high", "medium", "very_low"],
+        value_12m_base_lyd=[100.0, 80.0, 60.0, 40.0],
     )
 
 
@@ -193,7 +172,7 @@ def test_one_subscriber_joins_the_portfolio_the_decision_and_the_almadar_view(de
     assert subscriber["bundle_held"] == "PAYG"
     assert subscriber["recommended_offer_id"] == "SABAH_1"
     assert subscriber["status"] == "approved"
-    assert subscriber["reasons"] == ["Recharges fell sharply", "Data use stopped"]
+    assert subscriber["reasons"] == ["No recharge for 21 days", "Outgoing minutes down 80%"]
 
 
 def test_a_subscriber_with_no_reasons_gets_an_empty_list_not_a_blank_string(demo):
@@ -226,7 +205,7 @@ def test_a_single_customer_export_behaves_like_a_batch(tmp_path, bundle, portfol
     subscriber = subscriber_view(demo, "0001")
     assert subscriber["risk_band"] == "high"
     assert isinstance(subscriber["churn_probability"], float)
-    assert subscriber["reasons"] == ["Recharges fell sharply", "Data use stopped"]
+    assert subscriber["reasons"] == ["No recharge for 21 days", "Outgoing minutes down 80%"]
     assert group_counts(demo.portfolio, "value_tier", VALUE_TIERS)["customers"].sum() == 1
     assert expected_churners(demo.portfolio) == pytest.approx(0.5)
 

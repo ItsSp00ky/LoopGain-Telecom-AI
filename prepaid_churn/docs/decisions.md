@@ -792,3 +792,42 @@ Retention is the response the campaign is trying to produce, and getting that si
 
 The two datasets are downloaded on demand into `data/external/`, which is git-ignored.
 Both are under non-commercial licences and neither is ours to redistribute, so unlike the Kaggle data in `data/raw/` (decision 9) they are never committed.
+
+## 31. The Mix families leave the catalogue, and a removal is recorded rather than silent
+
+Date: 2026-09-22.
+
+Ali confirmed that Almadar no longer sells the five Mix families, answering the question T16 left open on 2026-09-19.
+He had removed the same 20 packages from his own catalogue on 2026-09-18 in commit `62040af`, which showed the removal was deliberate but never recorded a reason.
+The catalogue now holds 37 packages in 12 families, which is exactly what `Ali_Branch` held, so the difference T16 pinned with a test is closed.
+
+Deleting the rows alone was not acceptable.
+The files in `data/almadar/source/` are byte-for-byte copies of the operator's own export (port step 1), and `check_against_source` required every row in them to appear in the catalogue exactly once.
+Editing the source file to match would have destroyed the evidence, and relaxing the check would have allowed any package to disappear unnoticed, which is precisely how the Mix question arose.
+
+So a removal is now recorded.
+`data/almadar/excluded.csv` holds one row per package that the operator file lists but the operator no longer sells, each with its source row, a reason, the person who decided and the date.
+`check_against_source` requires every source row to be either in the catalogue exactly once or recorded there, so the integrity guarantee is unchanged while the catalogue is free to shrink.
+"Unknown" in that check now means a row that is not in the operator file at all, which an excluded row still is.
+
+Removing Mix narrows the action space, and that is a real consequence rather than a detail.
+They were the only metered packages carrying both data and voice.
+What is left with voice is the Family share tier, which the membership guard already excludes because we cannot establish eligibility, and the 1 LYD morning pass, which the cannibalisation guard blocks above the base monthly rung.
+A voice-only customer above that rung therefore has no eligible offer at all.
+`tests/test_retention.py` now pins that as the expected answer, with the reasoning written beside it, instead of asserting that a Mix package is chosen.
+
+The committed `reports/decisions.md` was regenerated, and only the 20 Mix rows left its per-offer table.
+Every headline number is unchanged, because the readiness run proposes no offers at all.
+
+## 32. The decision report is written beside its campaign
+
+Date: 2026-09-22.
+
+Taha found that `churn decide` rewrote the committed `reports/decisions.md`, so running the documented command left a tracked file dirty and could replace the recorded readiness run with another run's numbers.
+Every campaign needs its own output directory, and a run may use a different budget, so the report is campaign-specific and does not belong at a fixed path in the repository.
+
+`--report` now defaults to `decisions.md` inside `--output-dir`.
+Passing `--report` explicitly still writes wherever it is told, which is how the committed readiness report is refreshed on purpose.
+A test runs the documented command and asserts that the committed report is untouched.
+
+The other report-writing commands keep their fixed defaults, because each one regenerates the same committed file from the same committed input; the fresh-clone check of T9 depends on exactly that.

@@ -213,11 +213,15 @@ def run_decide(args: argparse.Namespace) -> None:
     decisions, comparison = propose(inputs, offers, policy)
     campaign = build_campaign(inputs, decisions, comparison, offers, policy)
     path = save_campaign(campaign, args.output_dir)
+    # The report belongs to the campaign, not to the repository. Every run uses a new
+    # output directory and may use a different budget, so a fixed default would let the
+    # documented command overwrite the committed readiness report with another run's.
+    report_path = args.report or args.output_dir / "decisions.md"
     report = decisions_report(decisions, comparison, offers, policy)
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(report, encoding="utf-8")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report, encoding="utf-8")
     print(f"{decisions['status'].eq('proposed').sum()} proposals in {path}; none are approved.")
-    print(f"Decision report: {args.report}")
+    print(f"Decision report: {report_path}")
 
 
 def run_approve(args: argparse.Namespace) -> None:
@@ -448,7 +452,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget", type=float, default=None, help="Override campaign budget in LYD."
     )
     decide.add_argument("--output-dir", type=Path, default=CAMPAIGN_DIR)
-    decide.add_argument("--report", type=Path, default=REPORTS_DIR / "decisions.md")
+    decide.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="Where to write the report; defaults to decisions.md inside --output-dir.",
+    )
     decide.add_argument(
         "--tiers-only",
         action="store_true",

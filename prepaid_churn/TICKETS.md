@@ -9,7 +9,23 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Taha + Claude (Ali's branch taken into `tahaDev`; T20, T12, T13 and T17 done: every ticket is now closed).
+**Last updated:** 2026-09-22 by Ali (Taha's work taken onto `Ali_Branch`; the answered questions closed and the follow-ups he left cleared).
+
+**Ali's session, 2026-09-22**
+
+- Ali is working on `Ali_Branch`, which was fast-forwarded onto Taha's `73762df`; `tahaDev` is not written to from this checkout.
+  Every commit of both branches is in this history, so nothing diverges yet, but the two branch tips will drift if both are pushed. Agree one branch before the next session.
+- **Ali's answers:** he agrees with decisions 15 to 17, 24 and 25; the folder keeps the name `prepaid_churn/`; the Mix families are no longer sold.
+- **The Mix packages are out.** The catalogue is 37 packages in 12 families, matching Ali's own, and the 20 retired ones are recorded in `data/almadar/excluded.csv` with a reason, a name and a date (decision 31).
+  `check_against_source` now requires every operator row to be in the catalogue exactly once or recorded as excluded, so a package can never leave silently again.
+- **Consequence worth knowing:** Mix held the only metered data-and-voice packages, so a voice-only customer above the base monthly rung now has no eligible offer.
+  That is pinned as the expected answer in `tests/test_retention.py`, not treated as a bug.
+- **`churn decide` no longer dirties a tracked file** (decision 32): `--report` defaults beside the campaign, and a test runs the documented command and asserts the committed report is untouched.
+- **The duplicated fixtures are gone.** The four subscribers lived in four test files; Taha's version is now the single one in `tests/conftest.py`.
+  `test_demo.py` keeps one documented override, because its campaign screens need a customer the `low_risk` guard actually excludes.
+- `reports/decisions.md` was regenerated and lost only its 20 Mix rows; every headline number is unchanged, because the readiness run proposes nothing.
+- Validation: 400 prepaid tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group), lint and formatting green.
+- **Still open for Ali:** the source links for the Almadar files, the only question of his that remains.
 
 **Where the module is now**
 
@@ -122,7 +138,7 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - Ali's parallel work on `Ali_Branch` was reviewed and is being combined into this module (decisions 15, 16 and 17).
   Every step is logged in [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
 - Almadar Aljadid is now the operator (decision 16), and the customer MVP comes first, built to plug into the team platform (decision 17).
-- T16 is done: `data/almadar/` holds all 57 Almadar packages and the market facts, each with a status (`docs/almadar.md`).
+- T16 is done: `data/almadar/` holds the 37 Almadar packages still sold and the market facts, each with a status; the 20 Mix packages the operator retired are recorded in `excluded.csv` (`docs/almadar.md`).
 - T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
@@ -149,15 +165,17 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
-- **Ali's agreement:** answered in practice on 2026-09-20, when Ali adopted this tree as his baseline and built on it (decision 18).
-  He should still say whether he disagrees with anything decisions 15 to 17 took or left out, and now also with decisions 24 and 25.
-- **Folder name:** the module now covers more than churn; rename `prepaid_churn/` (for example to `cvm/`, like Ali's package) once Ali agrees.
+- **Ali's agreement: answered on 2026-09-22.**
+  Ali agrees with decisions 15 to 17 and with 24 and 25, and disagrees with nothing taken or left out.
+- **Folder name: answered on 2026-09-22.**
+  Ali chose to keep `prepaid_churn/`; the rename is not happening, so every path in the docs and the action plan stays as it is.
 - **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
-- **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) in commit `62040af` of 2026-09-18.
-  That commit shows the removal was deliberate and handled, but not why; ask whether the operator still sells them (`docs/almadar.md`).
+- **Mix packages: answered on 2026-09-22.**
+  Ali confirmed the operator no longer sells the five Mix families, so the 20 packages are out of the catalogue and recorded in `data/almadar/excluded.csv` with the reason (decision 31).
+  The catalogue is now 37 packages in 12 families, matching his.
 - **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
-- **`churn decide` overwrites a committed report:** it rewrites `reports/decisions.md`, so running the documented command leaves a tracked file dirty.
-  Ali's call: a `--report` path, or write it beside the campaign.
+- **`churn decide` overwrites a committed report: fixed on 2026-09-22.**
+  `--report` now defaults to `decisions.md` inside `--output-dir`, so the documented command leaves the committed report alone (decision 32).
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
   We use the upGrad prepaid data instead (decisions 1 and 5), because the IBM data is fictional and postpaid.
   Taha should tell the team leader so the action plan matches the work.
@@ -754,7 +772,8 @@ Acceptance:
 - The package count matches `Ali_Branch`'s catalogue (37 packages in 12 families), or the difference is explained.
 
 Findings (details in `docs/almadar.md`):
-- 57 packages in 17 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
+- 37 packages in 12 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
+- The operator file lists 57; the 20 Mix packages Ali confirmed retired on 2026-09-22 are in `excluded.csv` with a reason, a name and a date, and the check requires every source row to be in one place or the other (decision 31).
 - The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed in commit `62040af` without saying why; they stay until he says the operator no longer sells them (a test pins the difference).
 - Data volumes: 31 packages state them, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
 - Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.

@@ -134,3 +134,48 @@ def bundle(trained, passing_gate):
     return build_bundle(
         trained["champion"], passing_gate, trained["datasets"]["validation"], "2026-09-19T12:00"
     )
+
+
+# The four subscribers every integration test uses: one approved, one rejected, two left
+# unreviewed, and one whose identifier is the literal text "NA".
+# Taha's version from `test_client.py` is the shared one; `test_api.py`, `test_client.py`
+# and `test_retention.py` had grown their own identical copies.
+STAMP = "2026-09-20T12:00:00+00:00"
+
+
+@pytest.fixture
+def customers() -> pd.DataFrame:
+    """Decision inputs: what `propose` needs to build a campaign."""
+    return pd.DataFrame(
+        {
+            "subscriber_id": ["0001", "0002", "NA", "0004"],
+            "churn_probability": [0.5, 0.4, 0.3, 0.2],
+            "risk_band": ["high"] * 4,
+            "value_tier": ["high"] * 4,
+            "value_status": ["scenario"] * 4,
+            "value_12m_base_lyd": [100.0] * 4,
+            "bundle_held": ["PAYG"] * 4,
+            "uses_voice": [True] * 4,
+            "uses_data": [True] * 4,
+        }
+    )
+
+
+@pytest.fixture
+def portfolio() -> pd.DataFrame:
+    """A bundle-backed `churn tiers` export for the same four subscribers."""
+    return pd.DataFrame(
+        {
+            "subscriber_id": ["0001", "0002", "NA", "0004"],
+            "churn_probability": [0.5, 0.4, 0.3, None],
+            "risk_band": ["high", "high", "medium", "already_silent"],
+            "reason_1": ["No recharge for 21 days"] * 3 + [None],
+            "reason_2": ["Outgoing minutes down 80%"] * 3 + [None],
+            "reason_3": [None] * 4,
+            "value_tier": ["high", "high", "medium", "very_low"],
+            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
+            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
+            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
+            "scored_at": [STAMP] * 4,
+        }
+    )

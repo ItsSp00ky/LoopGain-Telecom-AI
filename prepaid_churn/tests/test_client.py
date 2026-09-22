@@ -13,7 +13,6 @@ import time
 from contextlib import closing, contextmanager
 from dataclasses import replace
 
-import pandas as pd
 import pytest
 import uvicorn
 
@@ -59,43 +58,6 @@ def running(app):
     finally:
         server.should_exit = True
         thread.join(timeout=STARTUP_SECONDS)
-
-
-@pytest.fixture
-def customers():
-    """Four subscribers, as in `test_api.py`: one approved, one rejected, two unreviewed."""
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, 0.2],
-            "risk_band": ["high"] * 4,
-            "value_tier": ["high"] * 4,
-            "value_status": ["scenario"] * 4,
-            "value_12m_base_lyd": [100.0] * 4,
-            "bundle_held": ["PAYG"] * 4,
-            "uses_voice": [True] * 4,
-            "uses_data": [True] * 4,
-        }
-    )
-
-
-@pytest.fixture
-def portfolio():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, None],
-            "risk_band": ["high", "high", "medium", "already_silent"],
-            "reason_1": ["No recharge for 21 days"] * 3 + [None],
-            "reason_2": ["Outgoing minutes down 80%"] * 3 + [None],
-            "reason_3": [None] * 4,
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
-            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
-            "scored_at": [STAMP] * 4,
-        }
-    )
 
 
 @pytest.fixture

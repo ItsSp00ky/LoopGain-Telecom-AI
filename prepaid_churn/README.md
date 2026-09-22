@@ -49,7 +49,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
-| `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes `reports/decisions.md`; releases nothing |
+| `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes the report beside the campaign; releases nothing |
 | `uv run churn approve --proposals <file> --reviewer <name>` | T11 | Approves pending proposals and exports approved rows only; `--reject` records rejection |
 | `uv run churn advance` | T19 | Advises an emergency credit limit per customer and writes `reports/emergency_credit.md`; grants nothing |
 | `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |

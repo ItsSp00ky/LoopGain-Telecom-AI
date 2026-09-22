@@ -95,7 +95,7 @@ Nothing can be created, changed or approved through this service, and no offer a
 The customer asks what they can get today.
 Two calls, and nothing invented between them.
 
-`GET /catalogue` returns all 57 packages; one row:
+`GET /catalogue` returns all 37 packages; one row:
 
 ```json
 {
@@ -312,7 +312,7 @@ Run on 2026-09-21 against a service holding the 30,000-subscriber base and a rev
 - serving 30000 subscribers and 2 approved offers from campaign 0bdfa31a0531...
 
 ## Chatbot, with the chatbot key
-- /catalogue: 57 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
+- /catalogue: 37 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
 - /subscribers/70008/retention: SABAH_1, approved 2026-09-21T22:46:21+00:00
 - the chatbot may say: مكافأة من الكتالوج: الصبح (06:00-11:00)؛ قيمة موجبة وفق افتراضات الاحتفاظ. [offer_reason_ar] - الصبح [offer.name_ar]
 

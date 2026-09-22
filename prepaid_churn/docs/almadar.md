@@ -7,7 +7,8 @@ They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_
 | File | What it is | Who uses it |
 |---|---|---|
 | `source/` | The operator material as Ali collected it on 2026-09-18, unchanged: the package list (`internet_offers_data_v4.csv`), pay-as-you-go tariffs and the two emergency credit services, translated from Arabic. | Only as evidence for the two files below. |
-| `offers.csv` | One row per package the operator sells: 57 packages in 17 families. | Retention offers (T11), the Almadar view of customers (T18), and the team's customer chatbot. |
+| `offers.csv` | One row per package the operator still sells: 37 packages in 12 families. | Retention offers (T11), the Almadar view of customers (T18), and the team's customer chatbot. |
+| `excluded.csv` | Packages that are in the operator file but are no longer sold, each with a reason, a name and a date. | `check_against_source`, so a package cannot leave the catalogue silently. |
 | `market.toml` | Every other fact a calculation needs, each with a status and a source. | T11, T18 and T19. |
 
 `src/prepaid_churn/almadar.py` loads both files and checks their rules; `tests/test_almadar.py` runs those checks.
@@ -42,13 +43,22 @@ They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_
 
 `check_against_source` proves that every family, name, price and every value the operator states still matches the source file, and that every source row appears exactly once.
 
-### Differences from `Ali_Branch`'s catalogue
+### The Mix families, and how a package leaves the catalogue
 
-`Ali_Branch` kept 37 packages in 12 families.
-This catalogue has all 57 packages of the operator file, because the chatbot must show what is on sale.
-The difference is the five Mix families (Diamond, Platinum, Bronze, Silver and Gold, 20 packages with data and voice), which Ali removed on 2026-09-18 in commit `62040af`.
-That commit records what the removal cost him and how he handled it, and it shows the choice was deliberate, but it never says why the families should go, so the question below stands.
-If Mix is no longer sold, remove those rows; if it is, it is the richest data-and-voice family for offers.
+The operator file lists 57 packages.
+The catalogue holds 37 of them, in 12 families, and the other 20 are recorded in `excluded.csv`.
+
+Those 20 are the five Mix families: Diamond, Platinum, Bronze, Silver and Gold.
+Ali removed them from his own catalogue on 2026-09-18 in commit `62040af`, which showed the removal was deliberate but never said why.
+He confirmed on 2026-09-22 that the operator no longer sells them, so they are out here too and the catalogue now matches his.
+
+The source files are byte-for-byte copies of the operator's own export and are never edited, so a package that stops being sold is moved into `excluded.csv` rather than deleted.
+`check_against_source` requires every row of the operator file to be either in the catalogue exactly once or recorded as excluded with a reason, a name and a date.
+That is what stops a package going missing quietly, which is how this question arose in the first place.
+
+Removing Mix narrows what T11 can offer.
+They were the only metered packages that carried both data and voice, so what is left with voice is the Family share tier, which the membership guard excludes, and the 1 LYD morning pass.
+A voice-only customer above the base monthly rung now has no eligible offer at all, and `tests/test_retention.py` pins that as the expected answer rather than a bug.
 
 ## `market.toml`
 

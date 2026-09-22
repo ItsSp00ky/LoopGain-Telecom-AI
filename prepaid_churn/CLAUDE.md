@@ -93,7 +93,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/cli.py` | `churn` command |
 | `reports/` | Generated reports with aggregate numbers (committed) |
 | `data/raw/` | `train.csv`, `test.csv`, `data_dictionary.csv` from Kaggle (committed) |
-| `data/almadar/` | Almadar packages (`offers.csv`), market facts (`market.toml`) and the operator source files; see `docs/almadar.md` |
+| `data/almadar/` | Almadar packages still sold (`offers.csv`), packages the operator retired (`excluded.csv`), market facts (`market.toml`) and the operator source files; see `docs/almadar.md` |
 
 ## End of every session
 

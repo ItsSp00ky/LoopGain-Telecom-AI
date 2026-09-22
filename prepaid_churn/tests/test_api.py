@@ -1,7 +1,6 @@
 import json
 from dataclasses import replace
 
-import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
@@ -44,41 +43,6 @@ def offers():
 @pytest.fixture
 def policy():
     return replace(load_policy(), holdout_fraction=0.0)
-
-
-@pytest.fixture
-def customers():
-    """Four hand-made subscribers, one of whom has the literal ID "NA"."""
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, 0.2],
-            "risk_band": ["high"] * 4,
-            "value_tier": ["high"] * 4,
-            "value_status": ["scenario"] * 4,
-            "value_12m_base_lyd": [100.0] * 4,
-            "bundle_held": ["PAYG"] * 4,
-            "uses_voice": [True] * 4,
-            "uses_data": [True] * 4,
-        }
-    )
-
-
-@pytest.fixture
-def portfolio():
-    """A bundle-backed export: risk and value are both present."""
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, None],
-            "risk_band": ["high", "high", "medium", "already_silent"],
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
-            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
-            "scored_at": [STAMP] * 4,
-        }
-    )
 
 
 @pytest.fixture
