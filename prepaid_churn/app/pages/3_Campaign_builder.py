@@ -8,14 +8,20 @@ It is the only thing in this app that writes anything.
 
 import pandas as pd
 import streamlit as st
-from _shared import configure, lyd, missing_banner, ordered_bar, refresh, state
+from _shared import configure, lyd, missing_banner, ordered_bar, refresh, state, use_campaign
 
+from prepaid_churn.almadar import InvalidCatalogueError
+from prepaid_churn.bundle import BundleError
 from prepaid_churn.campaign import review_file
 from prepaid_churn.demo import (
+    CAMPAIGNS_DIR,
+    DemoPaths,
     budget_preview,
     campaign_totals,
     guardrail_rejections,
     pending_proposals,
+    propose_offers,
+    utc_today,
 )
 from prepaid_churn.retention import NO_OFFER, RetentionError
 
@@ -23,6 +29,59 @@ configure("Campaign builder", icon="campaign")
 demo = state()
 
 st.title("Campaign builder")
+
+# --- Propose a campaign -------------------------------------------------------
+# The same path as `churn decide`: the frozen tiers, the gated bundle, the catalogue and
+# the policy, with the same guardrails and holdout. The screen chooses who is considered
+# and what may be spent; it never picks a package, and what it proposes still has to be
+# approved by a named person below (decision 14).
+with st.expander("Propose a new campaign", expanded=demo.campaign is None):
+    st.caption(
+        "Runs the same decision path as `uv run churn decide` and writes a new campaign "
+        "directory. Nothing is approved by proposing."
+    )
+    size, money, naming = st.columns([1, 1, 2])
+    customers = size.select_slider(
+        "Customers considered",
+        options=[50, 200, 1000, 5000, 30000],
+        value=200,
+        help="From the top of the scored base. The whole base takes about half a minute "
+        "and writes an 80 MB snapshot.",
+    )
+    budget = money.number_input("Budget (LYD)", min_value=0.0, value=100.0, step=50.0)
+    name = naming.text_input("Campaign name", value=f"ui-{utc_today()}-{customers}")
+    if st.button("Propose offers", type="primary"):
+        directory = CAMPAIGNS_DIR / name.strip()
+        if not name.strip():
+            st.error("The campaign needs a name.", icon=":material/error:")
+        elif (directory / "proposals.json").exists():
+            st.error(
+                f"`{name}` already exists. Each campaign keeps its own decisions and "
+                "reviews, so pick another name.",
+                icon=":material/error:",
+            )
+        else:
+            try:
+                with st.spinner(f"Scoring {customers:,} customers and proposing offers..."):
+                    campaign = propose_offers(
+                        DemoPaths.from_environment(),
+                        directory,
+                        budget_lyd=budget,
+                        customers=customers,
+                    )
+            except (BundleError, InvalidCatalogueError, RetentionError, FileNotFoundError) as e:
+                st.error(str(e), icon=":material/error:")
+            else:
+                use_campaign(directory)
+                proposed = sum(
+                    1 for row in campaign["snapshot"]["rows"] if row.get("status") == "proposed"
+                )
+                st.success(
+                    f"Campaign `{name}` proposed, with {proposed:,} offers waiting for a "
+                    "review below. Nothing has been approved.",
+                    icon=":material/check_circle:",
+                )
+                st.rerun()
 
 if missing_banner(demo, ("campaign",)):
     st.stop()
@@ -167,20 +226,19 @@ else:
         st.caption(f"Showing the first 200 of {len(pending_offers):,}.")
 
     reviewer = st.text_input("Your name", help="Recorded against every decision you make.")
+    # Only the rows on screen can be picked, and reviewing everything is a separate,
+    # explicit choice: an empty selection used to mean "all of them", which is a bad
+    # default when the list is thousands of customers long.
     chosen = st.multiselect(
         "Subscribers to review",
-        pending_offers["subscriber_id"].astype(str).tolist(),
-        help="Type an ID to find it; the table above shows the first 200.",
+        pending_offers["subscriber_id"].astype(str).head(200).tolist(),
+        help="Pick the customers to decide on.",
+    )
+    everyone = st.checkbox(
+        f"Review all {len(pending_offers):,} pending proposals at once",
+        help="Only tick this if you mean every pending row, not just the ones listed.",
     )
     note = st.text_input("Note (optional)")
-
-    # Reviewing everything at once has to be deliberate, and the box says how many.
-    # An empty selection used to mean "all", which on a real campaign of a few thousand
-    # proposals let one click approve every offer the reviewer had not looked at.
-    review_all = st.checkbox(
-        f"Review all {len(pending_offers):,} pending proposals, not only the ones selected"
-    )
-    count = len(pending_offers) if review_all else len(chosen)
 
     approve, reject = st.columns(2)
     for column, decision, label in (
@@ -191,10 +249,9 @@ else:
             if st.button(f"{label} selected", width="stretch", type="primary"):
                 if not reviewer.strip():
                     st.error("A reviewer name is required.", icon=":material/error:")
-                elif not count:
+                elif not chosen and not everyone:
                     st.error(
-                        "Choose the subscribers to review, or tick the box to review "
-                        "every pending proposal.",
+                        "Pick at least one subscriber, or tick the box to review them all.",
                         icon=":material/error:",
                     )
                 else:
@@ -203,15 +260,21 @@ else:
                             demo.campaign_path,
                             reviewer,
                             decision,
-                            None if review_all else chosen,
+                            None if everyone else chosen,
                             note,
                         )
                     except RetentionError as error:
                         st.error(str(error), icon=":material/error:")
                     else:
                         refresh()
+                        count = len(pending_offers) if everyone else len(chosen)
                         st.success(
-                            f"{count:,} proposal(s) {decision} by {reviewer.strip()}.",
+                            f"{count} proposal(s) {decision} by {reviewer.strip()}. "
+                            + (
+                                "Approved offers are on the **Released** screen."
+                                if decision == "approved"
+                                else "Rejected rows never reach a customer."
+                            ),
                             icon=":material/check_circle:",
                         )
                         st.rerun()

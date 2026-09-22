@@ -250,6 +250,11 @@ uv run streamlit run app/Home.py
 | Subscriber | One customer: risk, plain-language reasons, value tier, the Almadar bundle held and the proposed offer |
 | Campaign builder | What the guardrails removed, the holdout, cost and value, the equal-spend comparison, and approve or reject under your name |
 | Message preview | The Arabic message an approved customer would receive, and how many SMS parts it actually costs |
+| Released | What was approved, where the files are, and the endpoint the chatbot reads it from |
+
+The sidebar picks which campaign every screen reads.
+The Campaign builder can propose a new one (how many customers, what budget), and the Subscriber screen can propose an offer for one customer; both run the same engine as `churn decide`, and neither approves anything (decision 34).
+Keep a proposed campaign small while demonstrating: 500 customers is a 1.7 MB snapshot that loads instantly, where the whole 30,000-customer base is 80 MB.
 
 By default it reads the first campaign in `artifacts/campaigns/retention`.
 To show another one, name it before starting:

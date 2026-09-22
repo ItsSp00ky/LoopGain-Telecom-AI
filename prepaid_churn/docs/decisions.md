@@ -865,3 +865,30 @@ Live acceptance reviews used a separate QA copy; the original 2,911-proposal cam
 
 Delivery remains on `Ali_Branch` because Ali explicitly forbade commits or pushes to `tahaDev` in this task.
 That current instruction takes precedence over the earlier shared-branch convention in decision 24.
+
+## 34. The app may propose a campaign, and every campaign keeps its own directory
+
+Date: 2026-09-22.
+
+Taha used the demo app and found three things wrong with it, all of them fair.
+It was slow at everything, there was no way to create an offer without going back to the command line, and after approving fifteen offers there was nowhere to see what he had approved.
+
+**Slow.** A campaign over the whole base is a snapshot of 30,000 customers, which is an 80 MB JSON file, and the app was reading it twice on every cold load and once more after every review.
+Two fixes: the snapshot is now parsed once and handed to the service loader (`load_state(paths, campaign)`), and the app can propose a campaign over as few customers as it likes, which is what makes the file small.
+A 500-customer campaign is 1.7 MB and loads instantly; the 30,000-customer one still exists and is still selectable, so nothing was taken away.
+
+**No way to create an offer.** The app now runs the same decision path as `churn decide`: the frozen tiers, the gated bundle, the catalogue, the policy, the same guardrails and the same holdout.
+The screen chooses two things only, who is considered and what may be spent.
+It never picks a package, because the whole point of T11 is that a policy picks it against stated value assumptions, and it never approves what it proposed, because a named person has to (decision 14).
+The Subscriber screen proposes for one customer the same way, which is how a real operator meets this: an employee has someone on the phone and asks what can be done for them.
+Proposing for a customer the model scores at low risk correctly produces "no offer", and the screen says so rather than inventing something to give away.
+
+Every proposal writes its own campaign directory and never appends to an existing one.
+That is Ali's design in T11 and it stays: a campaign is an immutable snapshot of what was decided, with its own fingerprint and its own review log, and appending to it would make the fingerprint a lie.
+The cost is a directory per proposal, which is why the sidebar now has a picker that lists them.
+
+**Nowhere to see what was approved.** There is a Released screen now: the approved rows, the package beside each one, who approved it and when, the three files that hold it, and the one endpoint the chatbot reads it from.
+It also says the service loads the campaign at startup, so a new release is served after a restart, which was true before and written nowhere a reviewer would look.
+
+One more thing was wrong and is fixed: an empty selection in the approval box meant "approve everything", so a reviewer who clicked Approve with nothing selected approved every pending proposal in the campaign.
+Reviewing everything is now a separate checkbox that says how many rows it covers, and an empty selection is an error rather than a mass approval.

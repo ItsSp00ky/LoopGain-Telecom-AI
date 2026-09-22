@@ -6,30 +6,88 @@ recomputes is a screen that will eventually disagree with the T15 service, and t
 an evaluator sees has to be the number the engine produced.
 """
 
+from dataclasses import replace
+from pathlib import Path
+
 import streamlit as st
 
-from prepaid_churn.demo import DemoPaths, load_demo
+from prepaid_churn.demo import DemoPaths, campaign_directories, load_demo
 
 CAPTION = "Team Loop Gain - Samsung Innovation Campus - Almadar Aljadid prepaid customers"
+CAMPAIGN_KEY = "campaign_dir"
 
 
 def configure(title: str, icon: str = "signal_cellular_alt") -> None:
+    """Page setup, and the campaign picker every screen shares.
+
+    The picker lives here rather than on one screen because every screen reads a campaign,
+    and a reviewer who approves on one screen and looks for the result on another has to
+    be sure both are showing the same one.
+    """
     st.set_page_config(page_title=f"{title} - Loop Gain", page_icon=icon, layout="wide")
+    _campaign_picker()
 
 
-@st.cache_resource
-def state():
-    """Load every output once per session.
+def campaign_dir() -> Path:
+    """The campaign the screens are reading: the picked one, or the configured default."""
+    chosen = st.session_state.get(CAMPAIGN_KEY)
+    return Path(chosen) if chosen else DemoPaths.from_environment().campaign_dir
+
+
+@st.cache_resource(show_spinner="Reading what the pipeline wrote...")
+def _load(directory: str):
+    """Load every output once per campaign.
 
     `cache_resource` rather than `cache_data` because the state holds a loaded model
     bundle, which is shared rather than copied per caller.
+    The directory is the cache key, so switching campaigns does not reload the bundle for
+    the ones already read.
     """
-    return load_demo(DemoPaths.from_environment())
+    return load_demo(replace(DemoPaths.from_environment(), campaign_dir=Path(directory)))
+
+
+def state():
+    return _load(str(campaign_dir()))
 
 
 def refresh() -> None:
-    """Drop the cache after a review, so the screens show the new status."""
-    state.clear()
+    """Drop the cache after a review or a new campaign, so the screens show it."""
+    _load.clear()
+
+
+def use_campaign(directory) -> None:
+    """Point every screen at this campaign, from now on."""
+    st.session_state[CAMPAIGN_KEY] = str(directory)
+    refresh()
+
+
+def _campaign_picker() -> None:
+    campaigns = campaign_directories()
+    with st.sidebar:
+        st.divider()
+        if campaigns.empty:
+            st.caption(
+                "No campaign yet. The **Campaign builder** screen proposes one, or run "
+                "`uv run churn decide`."
+            )
+            return
+        options = campaigns["path"].tolist()
+        labels = {
+            row.path: f"{row.campaign} - {row.approved} approved" for row in campaigns.itertuples()
+        }
+        current = str(campaign_dir())
+        index = options.index(current) if current in options else 0
+        chosen = st.selectbox(
+            "Campaign",
+            options,
+            index=index,
+            format_func=lambda path: labels[path],
+            help="Every screen reads this campaign. Each `churn decide` run makes one.",
+        )
+        if chosen != current:
+            use_campaign(chosen)
+            st.rerun()
+        st.caption(f"`{Path(chosen).name}`, {campaigns.loc[options.index(chosen), 'size_mb']} MB")
 
 
 def missing_banner(demo, needed: tuple[str, ...]) -> bool:

@@ -13,12 +13,12 @@ event (decision 14).
 
 import datetime
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pandas as pd
 
-from prepaid_churn.almadar import OFFERS_PATH
+from prepaid_churn.almadar import OFFERS_PATH, load_offers
 from prepaid_churn.campaign import campaign_rows, load_campaign
 from prepaid_churn.data import PROJECT_ROOT
 from prepaid_churn.retention import REASONS
@@ -43,13 +43,20 @@ CAMPAIGN_DIR_VARIABLE = "PREPAID_CHURN_CAMPAIGN_DIR"
 PORTFOLIO_VARIABLE = "PREPAID_CHURN_PORTFOLIO"
 
 
+CAMPAIGNS_DIR = PROJECT_ROOT / "artifacts" / "campaigns"
+
+
 @dataclass(frozen=True)
 class DemoPaths:
     portfolio_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
     view_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
-    campaign_dir: Path = PROJECT_ROOT / "artifacts" / "campaigns" / "retention"
+    campaign_dir: Path = CAMPAIGNS_DIR / "retention"
     bundle_dir: Path = PROJECT_ROOT / "artifacts" / "bundle"
     offers_path: Path = OFFERS_PATH
+    # The base the app proposes on, and the frozen tiers it values it with. Both are what
+    # `churn decide` uses; the app runs the same path rather than a shortcut of its own.
+    base_path: Path = PROJECT_ROOT / "data" / "raw" / "test.csv"
+    tiers_path: Path = PROJECT_ROOT / "artifacts" / "tiers" / "tiers.json"
 
     @property
     def campaign_path(self) -> Path:
@@ -111,20 +118,23 @@ class DemoState:
 
 def load_demo(paths: DemoPaths) -> DemoState:
     """Read what exists and record what does not, rather than failing on a missing file."""
-    service = load_state(paths.service())
     missing: list[tuple[str, str]] = []
-    if service.portfolio is None:
-        missing.append(("portfolio", PRODUCED_BY["portfolio"]))
-    if service.bundle is None:
-        missing.append(("bundle", PRODUCED_BY["bundle"]))
-
     campaign, decisions = None, None
     if paths.campaign_path.exists():
+        # Parsed here and handed to the service, which needs the same snapshot for the
+        # released rows. A campaign of 30,000 customers is an 80 MB file, and reading it
+        # twice was most of the app's loading time.
         campaign = load_campaign(paths.campaign_path)
         decisions = campaign_rows(campaign)
         decisions["subscriber_id"] = decisions["subscriber_id"].astype(str)
     else:
         missing.append(("campaign", PRODUCED_BY["campaign"]))
+
+    service = load_state(paths.service(), campaign)
+    if service.portfolio is None:
+        missing.append(("portfolio", PRODUCED_BY["portfolio"]))
+    if service.bundle is None:
+        missing.append(("bundle", PRODUCED_BY["bundle"]))
 
     view = None
     if paths.view_path.exists():
@@ -394,3 +404,106 @@ def customer_message(subscriber: dict, offer: dict | None, language: str = "ar")
 
 def utc_today() -> str:
     return datetime.datetime.now(datetime.UTC).date().isoformat()
+
+
+def campaign_directories(root: Path = CAMPAIGNS_DIR) -> pd.DataFrame:
+    """Every campaign on disk, newest first, without opening the snapshots.
+
+    A campaign of the whole base is an 80 MB file, so the picker reads the directory and
+    the small released file instead: it has to be instant, and it is only choosing which
+    campaign to load.
+    """
+    rows = []
+    for snapshot in sorted(root.glob("*/proposals.json")):
+        released = snapshot.parent / "released.csv"
+        approved = 0
+        if released.exists():
+            with released.open(encoding="utf-8") as handle:
+                approved = max(sum(1 for _ in handle) - 1, 0)
+        rows.append(
+            {
+                "campaign": snapshot.parent.name,
+                "approved": approved,
+                "updated": datetime.datetime.fromtimestamp(
+                    snapshot.stat().st_mtime, datetime.UTC
+                ).strftime("%Y-%m-%d %H:%M"),
+                "size_mb": round(snapshot.stat().st_size / 1e6, 1),
+                "path": str(snapshot.parent),
+            }
+        )
+    frame = pd.DataFrame(rows, columns=["campaign", "approved", "updated", "size_mb", "path"])
+    return frame.sort_values("updated", ascending=False, ignore_index=True)
+
+
+def propose_offers(
+    paths: DemoPaths,
+    output_dir: Path,
+    subscribers: list[str] | None = None,
+    budget_lyd: float | None = None,
+    customers: int | None = None,
+) -> dict:
+    """Propose offers and save them as a new campaign, the way `churn decide` does.
+
+    This is the app creating a campaign rather than reading one, so it runs exactly the
+    T11 path: the frozen tiers, the gated bundle, the catalogue and the policy, with the
+    same guardrails and the same holdout. The app chooses who is considered and how much
+    may be spent, and nothing else; it never picks a package, and it never approves what
+    it proposed (decision 14).
+
+    `subscribers` limits it to named IDs, `customers` to the first N of the base. A
+    campaign over the whole base takes about half a minute and writes an 80 MB snapshot,
+    which is why the screens offer a size at all.
+    """
+    from prepaid_churn.bundle import load_bundle
+    from prepaid_churn.campaign import build_campaign, save_campaign
+    from prepaid_churn.data import load_raw
+    from prepaid_churn.retention import decision_inputs, load_policy, propose
+    from prepaid_churn.schema import ID
+    from prepaid_churn.value import load_tiers
+
+    raw = load_raw(paths.base_path)
+    if subscribers:
+        wanted = {str(one) for one in subscribers}
+        raw = raw[raw[ID].astype(str).isin(wanted)]
+        if raw.empty:
+            raise ValueError(f"None of {sorted(wanted)} is in {paths.base_path.name}.")
+    elif customers:
+        raw = raw.head(customers)
+
+    policy = load_policy()
+    if budget_lyd is not None:
+        policy = replace(policy, budget_lyd=float(budget_lyd))
+    offers = load_offers(paths.offers_path)
+    inputs = decision_inputs(
+        raw, load_tiers(paths.tiers_path), load_bundle(paths.bundle_dir), offers
+    )
+    decisions, comparison = propose(inputs, offers, policy)
+    campaign = build_campaign(inputs, decisions, comparison, offers, policy)
+    save_campaign(campaign, output_dir)
+    return campaign
+
+
+def released_offers(state: DemoState) -> pd.DataFrame:
+    """The approved offers of this campaign, with the package beside each one.
+
+    This is the answer to "I approved something, where did it go": these rows are what
+    `released.csv` holds and what the chatbot is served, and nothing else leaves the
+    module.
+    """
+    approved = state.service.approved
+    if approved is None or approved.empty:
+        return pd.DataFrame()
+    offers = state.service.offers.set_index("offer_id")
+    package = offers.reindex(approved["recommended_offer_id"].astype(str))
+    return pd.DataFrame(
+        {
+            "subscriber_id": approved["subscriber_id"].astype(str).to_numpy(),
+            "offer_id": approved["recommended_offer_id"].astype(str).to_numpy(),
+            "package": package["name_en"].to_numpy(),
+            "package_ar": package["name_ar"].to_numpy(),
+            "price_lyd": package["price_lyd"].to_numpy(),
+            "reviewed_at": approved.get("reviewed_at", pd.Series(dtype="str")).to_numpy(),
+            "reviewer": approved.get("reviewer", pd.Series(dtype="str")).to_numpy(),
+            "reason_ar": approved.get("offer_reason_ar", pd.Series(dtype="str")).to_numpy(),
+        }
+    )
