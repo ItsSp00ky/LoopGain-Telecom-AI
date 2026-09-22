@@ -1,0 +1,184 @@
+{
+  "feature_version": "gis_v2_density_circles_geodesic_20260922",
+  "created_utc": "2026-09-22T15:38:34.526750+00:00",
+  "population": {
+    "path": "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\lby_pd_2020_1km.tif",
+    "crs": "EPSG:4326",
+    "shape": [
+      1638,
+      1891
+    ],
+    "transform": [
+      0.0083333333,
+      0.0,
+      9.390416630143562,
+      0.0,
+      -0.0083333333,
+      33.166250061468986,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "nodata": -99999.0,
+    "tags": {
+      "AREA_OR_POINT": "Area"
+    },
+    "band_tags": {
+      "STATISTICS_MAXIMUM": "5184.9794921875",
+      "STATISTICS_MEAN": "4.6036133011361",
+      "STATISTICS_MINIMUM": "0.0083146365359426",
+      "STATISTICS_STDDEV": "65.915978913194"
+    },
+    "declared_units": "density"
+  },
+  "dem": {
+    "path": "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\dem\\DEM\\lyb_strm_250m",
+    "crs": "EPSG:4326",
+    "shape": [
+      6555,
+      7565
+    ],
+    "transform": [
+      0.00208333333,
+      0.0,
+      9.389968186000033,
+      0.0,
+      -0.00208333333,
+      33.164295171150044,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "nodata": -32768.0,
+    "tags": {},
+    "band_tags": {},
+    "declared_units": "elevation"
+  },
+  "unit_evidence": "https://hub.worldpop.org/geodata/summary?id=47207",
+  "unit_evidence_note": "Published Libya population-density family is people/km\u00b2. Local TIFF has no unit tag; density interpretation is explicit. Exact UN-adjustment provenance not established by local filename.",
+  "sources_sha256": {
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\Libyan_cells_dataset\\cells.sqlite3": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\lby_pd_2020_1km.tif": "0c814253b963898a4ca698f167bae1d1a6b8a45b7fc6d0203721f01b3b7c9eda",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\dem\\DEM\\lyb_strm_250m": "10be38f6f1b85dd33cc509f10a2706024f9a9b759ba33e2615a284e3400ed125",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.shp": "77886c1f70f71e97045231b2c5567cbff6b87d66b4bc7ea9c71d3374844667ca",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\cleaned\\cleaned_physical_sites.csv": "55f0d8287e786b18cb06b4545436fd27d65fc01b82484b83bfe70fa423fc2145",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\eval_reports\\experiment_20260922_v1\\dataset.parquet": "c2f69c15b9e8674c158ea9182e444aa4ecd00e7dd2c7e3c752147039b17172dc",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.cpg": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.dbf": "332aec9479bd510f7927dadbecada11d6e65016f9acdfa91e7a8cce528a8fbe8",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.prj": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.sbn": "14bd36ea30b8322266909fbd6537429ca2fd0112d40d8a8239fef6afdfa2b6c1",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.sbx": "a1caab50de9f51aaa2939cf2f5cc2d29c44bf17d12a7bdbe28b28c47b7180809",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.shp.xml": "72d7519d6b2bfc1be1e16daca9a923ef0356da8b4eb565b08eb4dd10340a3cc1",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\roads\\LYB_Roads.shx": "9aec34f64cf47311a10ee5af3cda01b4feb4d8d9ff34a02eab8a625bc8fea838",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\buildings\\libya_122012230.csv.gz": "090de8e4475f049c43e0377ba6a3e8f1c273b7ecf44c346d01dd27217899d9c9",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\buildings\\libya_122012231.csv.gz": "f1528b6cf8ea1698ed12f55660ad5b01fa187c5694947efd7efbefb800f4a414",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\admin_boundaries\\lby_populatedplaces.geojson": "9d623f1dacdf6fc416386eaec79602a922c048766dc6137cbf9d0c4388c6ab79",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\external\\admin_boundaries\\lby_admin2.geojson": "1cab274527073e4f623a599762634ba193bba29dbf0ed5e52c48e4b774ddc92b",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\cleaned\\h3\\h3_grid_Tripoli.geojson": "661804bfc6af96db425493647e97a2a52b15338dc8e738a1f62e180887f354aa",
+    "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\cleaned\\h3\\h3_features_Tripoli.parquet": "0ec7c176a8f7730716c236ab32de65d1f3163c0fe6b8d2df627d1ca37a7ab91a"
+  },
+  "source_code_sha256": {
+    "building_features.py": "f5679ff2ebe3101cda24049dffab9abe8da31962170298a491b4f5f5de3e7c8a",
+    "cli.py": "b61c0e724c073a3f55254fb9f2c6fe508ccbbafd159a5aa5ca12e00ff2de92f1",
+    "cloudflare_radar.py": "e00c7a4410e558f7fd1e5572db96d9b8444f8f92406918d9066b02a992322233",
+    "config.py": "43efa2ccb0f68e0842efe921e32c8109d2aefbe61620afa5021edf2957839d66",
+    "data_cleaning.py": "b2184608073b3e78660c9dc2a199bee97e6ece19442de87faeaa8b6a43690236",
+    "evaluation.py": "b657407bfd4a0da512aafaf9cb92d25244f88f31f3e33170d7093e7061a0c1d2",
+    "expansion_score.py": "db973e672d017eb52a577be66fc9e6186b7d14b803bae1e6472a0971b38ad274",
+    "feature_engineering.py": "6dcebe68b2285851f75dfbaa4cc13b5fcbc0a11e264fff2302650b6b1e972981",
+    "gis_v2.py": "8ebc30ad2f64c229a0733ca2115a2dc21de0e8cfd98df86562e62bf1f2ad1cd4",
+    "h3_grid.py": "d7201fdffe5fd2bf4ef761e28523b72a40cbaa8611df67746484cc259a82c4fc",
+    "inventory_audit_v2.py": "5c58df48d03294a7ceb5d8cbc0df30bcd2f3c66250ed8904ba9ce6a1c2550499",
+    "landcover_features.py": "446d447773e54dcf118ef2daee19cd32be62cee4cf69dab4d33d17e9fcbfe373",
+    "map_visualizer.py": "75bc8167ac2bc8326569ee58c9084971fb44d038af59f985a8bda7f3ce956c41",
+    "opencellid.py": "30d12025995c6487ba7a277a80938cbd4c84e425bb78e9c55dbeac2b25b9e5be",
+    "osm_features.py": "ccf00f9d4e21d874e2e4f509d65a8adcfe2da13616c446ac9483da95348c6662",
+    "phase2_pipeline.py": "34541e5f82c6d8eebcce42e34ea849486f298ee33a1ee46aee93f7ec6a927b27",
+    "placement.py": "38a631d7e8e7c8a649ca7c219a0fb7d5aa055eacef8dc2d0a06fea1c6be1713a",
+    "placement_model.py": "76f5ab9c4027692eab25d1a4a2a506827d70751719daf6fa7e71b3fcdcbd9330",
+    "rooftop_candidates.py": "9a36a3707d01329f90b3b8bca9b7db4332ad7e16d0b2deda4fd8539bf8193def",
+    "site_optimizer.py": "c4d4c435f63f46292247c79a2e0ab98242708e9bcc4f39a4396d54a8dce896db",
+    "training_experiment.py": "9b4400e18501fb040bd8e6a175cd25d766d27eef10259abf882ffd14b04cc00b",
+    "validation.py": "4d7886af163d6f345057a926062c88007706a3d2c356780677f91605b818d6ab",
+    "__init__.py": "960073877ecd27141d7f01ded2e3e328da59d73915b8e2837f73966f33b1b054"
+  },
+  "inventory_audit": {
+    "raw_observations": 4258,
+    "legacy_radio_groups": 2338,
+    "network_scoped_radio_groups": 2338,
+    "cross_network_legacy_key_collisions": 0,
+    "physical_sites": 2115,
+    "clusters_with_diameter_over_50m": 5,
+    "max_cluster_diameter_m": 87.06420149401015,
+    "groups_with_reported_bandwidth": 623,
+    "groups_with_repeat_observation_bandwidth_inflation": 0,
+    "policy": "Scoped audit table is authoritative for observed bandwidth provenance; legacy estimated site capacity fields are not v2 ML inputs. Stable mast IDs are retained pending review of flagged clusters."
+  },
+  "packages": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "geopandas": "1.1.4",
+    "rasterio": "1.5.1",
+    "shapely": "2.1.2",
+    "pyproj": "3.8.0",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0"
+  },
+  "serving_model_sha256_before": "50db67199746fe3ed9092c15f2a6b93433536fd51c0c28102869a20ffe955667",
+  "v2_dataset_sha256": "4c695d4795bd99b7dbb80fcfcf77fd7b96dba98b089427a624b116cfa83576f4",
+  "missing_feature_counts": {
+    "population_density_1km": 272,
+    "population_sum_3km": 1101,
+    "population_sum_5km": 1707,
+    "elevation_m": 384,
+    "elevation_prominence_3km": 1334,
+    "terrain_slope_deg": 454,
+    "dist_to_nearest_road_m": 0,
+    "dist_to_nearest_settlement_m": 0,
+    "dist_to_nearest_site_m": 0,
+    "site_density_3km": 0,
+    "site_density_5km": 0,
+    "site_density_10km": 0
+  },
+  "historical_grouping_policy": "Frozen municipality labels kept for controlled comparison; actual polygon membership is municipality_polygon_v2. Offshore/outside polygons remain unknown in v2.",
+  "h3": {
+    "hexes": 2987,
+    "scored": 2216,
+    "masked": {
+      "water_hexes": 771,
+      "uninhabited_hexes": 0
+    },
+    "partial_population_hexes": 761
+  },
+  "rooftop_audit": {
+    "scanned_buildings": 970860,
+    "usable_height_records": 0,
+    "missing_height_records": 970860,
+    "min_footprint_area_m2": 150,
+    "per_hex": 5,
+    "invalid_geometries": 25,
+    "shortlisted_buildings": 100,
+    "ranking_policy": "Existing H3 area rank, then footprint area. No tallest-building or RF-suitability claim."
+  },
+  "raw_database_unchanged": true,
+  "serving_model_unchanged": true,
+  "completed_utc": "2026-09-22T15:44:40.735418+00:00",
+  "outputs": [
+    "comparison_predictions.csv",
+    "dataset_v2.parquet",
+    "h3_features_Tripoli_v2.parquet",
+    "h3_scores_Tripoli_v2.csv",
+    "h3_scores_Tripoli_v2.geojson",
+    "inventory_audit.json",
+    "manifest.json",
+    "model_comparison.json",
+    "physical_sites_features_v2.csv",
+    "physical_sites_features_v2.parquet",
+    "physical_site_cluster_audit.csv",
+    "radio_inventory_scoped_v2.csv",
+    "rooftop_candidates.csv",
+    "rooftop_candidates.geojson",
+    "rooftop_candidates_map.html",
+    "suitability_gis_v2.joblib"
+  ]
+}

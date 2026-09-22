@@ -28,6 +28,17 @@ from antenna_cell_placement.config import (
 )
 
 
+def nearest_operator_distance(tree, coordinates, exclude_self=False):
+    """Exclude one colocated query point only if it exists in this operator index."""
+    if tree is None:
+        return np.full(len(coordinates), np.nan, dtype=np.float32)
+    if not exclude_self:
+        return tree.query(coordinates, k=1)[0].astype(np.float32)
+    distances, _ = tree.query(coordinates, k=2)
+    selected = np.where(distances[:, 0] < 1e-6, distances[:, 1], distances[:, 0])
+    return np.where(np.isfinite(selected), selected, np.nan).astype(np.float32)
+
+
 class GeospatialFeatureExtractor:
     """
     Centralized extractor for geospatial, environmental, and infrastructure features
@@ -114,6 +125,8 @@ class GeospatialFeatureExtractor:
         self.site_tree_all = cKDTree(coords_all)
         self.existing_site_coords = coords_all
 
+        self.site_tree_libyana = None
+        self.site_tree_almadar = None
         lib_idx = df_sites[df_sites["has_libyana"] == 1].index
         mad_idx = df_sites[df_sites["has_almadar"] == 1].index
 
@@ -264,13 +277,8 @@ class GeospatialFeatureExtractor:
                     site_dens_5km[i] = len(self.site_tree_all.query_ball_point(utm_coords[i], 5000.0))
                     site_dens_10km[i] = len(self.site_tree_all.query_ball_point(utm_coords[i], 10000.0))
 
-            if self.site_tree_libyana is not None:
-                d_lib, _ = self.site_tree_libyana.query(utm_coords, k=(2 if is_existing_site else 1))
-                dist_to_libyana_m = (d_lib[:, 1] if is_existing_site else d_lib).astype(np.float32)
-
-            if self.site_tree_almadar is not None:
-                d_mad, _ = self.site_tree_almadar.query(utm_coords, k=(2 if is_existing_site else 1))
-                dist_to_almadar_m = (d_mad[:, 1] if is_existing_site else d_mad).astype(np.float32)
+            dist_to_libyana_m = nearest_operator_distance(self.site_tree_libyana, utm_coords, is_existing_site)
+            dist_to_almadar_m = nearest_operator_distance(self.site_tree_almadar, utm_coords, is_existing_site)
 
         # Build feature DataFrame
         df_features = pd.DataFrame({

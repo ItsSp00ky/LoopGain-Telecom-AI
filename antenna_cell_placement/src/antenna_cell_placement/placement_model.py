@@ -58,6 +58,41 @@ SUITABILITY_FEATURE_COLS = [
 ]
 
 
+EQUIPMENT_FEATURE_COLS = [
+    "population_density_1km",
+    "population_sum_3km",
+    "population_sum_5km",
+    "elevation_m",
+    "elevation_prominence_3km",
+    "terrain_slope_deg",
+    "dist_to_nearest_road_m",
+    "dist_to_nearest_settlement_m",
+    "dist_to_nearest_site_m",
+    "site_density_3km",
+    "site_density_5km",
+]
+
+
+def label_equipment_tiers(df: pd.DataFrame) -> pd.Series:
+    """
+    Rule-based equipment tier for each site (first matching rule wins). These rules
+    are the training target of the equipment recommender, so the model is learning
+    to reproduce them; several rule inputs are also model features.
+    """
+    pop_1km = df["population_density_1km"]
+    micro = (df["primary_tower_type"] == "MICRO") | (
+        (pop_1km > 2500) & (df["dist_to_nearest_site_m"] < 250)
+    )
+    urban = (pop_1km >= 1200) | (df["total_bandwidth_mhz"] >= 40.0) | (df["total_carrier_count"] >= 3)
+    suburban = (pop_1km >= 150) | (df["total_bandwidth_mhz"] >= 20.0) | (df["dist_to_nearest_road_m"] < 500)
+    tiers = np.select(
+        [micro, urban, suburban],
+        ["Micro_Cell_Hotspot", "Urban_HighCapacity_Macro", "Suburban_Standard_Macro"],
+        default="Rural_Coverage_Macro",
+    )
+    return pd.Series(tiers, index=df.index)
+
+
 def generate_synthetic_negative_samples(
     df_positives: pd.DataFrame,
     extractor: GeospatialFeatureExtractor,
@@ -90,18 +125,30 @@ def generate_synthetic_negative_samples(
     sample_utm_pts = [Point(road_pts[idx, 0], road_pts[idx, 1]) for idx in road_sample_idxs]
     gdf_road_samples = gpd.GeoDataFrame(geometry=sample_utm_pts, crs="EPSG:32633").to_crs("EPSG:4326")
 
+    from pyproj import Transformer
+    from antenna_cell_placement.config import CRS_WGS84, CRS_PROJECTED_LIBYA
+    transformer = Transformer.from_crs(CRS_WGS84, CRS_PROJECTED_LIBYA, always_xy=True)
+    if extractor.site_tree_all is None:
+        raise ValueError("Set the existing-site inventory before negative sampling")
     for pt in gdf_road_samples.geometry:
         if len(neg_lons) >= int(n_negatives * 0.40):
             break
         # Filter within Libya bounds
         if LIBYA_BBOX["min_lon"] <= pt.x <= LIBYA_BBOX["max_lon"] and LIBYA_BBOX["min_lat"] <= pt.y <= LIBYA_BBOX["max_lat"]:
             # Check distance to existing sites
-            dist_to_site, _ = extractor.site_tree_all.query([pt.x, pt.y]) if extractor.site_tree_all else (99999, 0)
             # Add small random jitter (50m to 500m)
             jitter_x = np.random.uniform(-0.005, 0.005)
             jitter_y = np.random.uniform(-0.005, 0.005)
-            neg_lons.append(pt.x + jitter_x)
-            neg_lats.append(pt.y + jitter_y)
+            cand_lon, cand_lat = pt.x + jitter_x, pt.y + jitter_y
+            if not (LIBYA_BBOX["min_lon"] <= cand_lon <= LIBYA_BBOX["max_lon"] and
+                    LIBYA_BBOX["min_lat"] <= cand_lat <= LIBYA_BBOX["max_lat"]):
+                continue
+            candidate_xy = transformer.transform(cand_lon, cand_lat)
+            distance, _ = extractor.site_tree_all.query(candidate_xy)
+            if distance <= 5000.0:
+                continue
+            neg_lons.append(cand_lon)
+            neg_lats.append(cand_lat)
 
     # Subset 2: Populated places perimeter (~30%)
     for geom in extractor.places_df.geometry:
@@ -335,39 +382,9 @@ def train_equipment_recommender(
     - Tier 4: Micro_Cell_Offload (small cell / hotspot in high density)
     """
     df = df_sites_enriched.copy()
+    df["equipment_tier"] = label_equipment_tiers(df)
 
-    # Define target equipment tier from empirical data
-    equipment_tier = []
-    for _, row in df.iterrows():
-        pop_1km = row["population_density_1km"]
-        bw = row["total_bandwidth_mhz"]
-        car_cnt = row["total_carrier_count"]
-        site_type = row["primary_tower_type"]
-
-        if site_type == "MICRO" or (pop_1km > 2500 and row["dist_to_nearest_site_m"] < 250):
-            equipment_tier.append("Micro_Cell_Hotspot")
-        elif pop_1km >= 1200 or bw >= 40.0 or car_cnt >= 3:
-            equipment_tier.append("Urban_HighCapacity_Macro")
-        elif pop_1km >= 150 or bw >= 20.0 or row["dist_to_nearest_road_m"] < 500:
-            equipment_tier.append("Suburban_Standard_Macro")
-        else:
-            equipment_tier.append("Rural_Coverage_Macro")
-
-    df["equipment_tier"] = equipment_tier
-
-    features = [
-        "population_density_1km",
-        "population_sum_3km",
-        "population_sum_5km",
-        "elevation_m",
-        "elevation_prominence_3km",
-        "terrain_slope_deg",
-        "dist_to_nearest_road_m",
-        "dist_to_nearest_settlement_m",
-        "dist_to_nearest_site_m",
-        "site_density_3km",
-        "site_density_5km",
-    ]
+    features = EQUIPMENT_FEATURE_COLS
 
     X = df[features]
     y = df["equipment_tier"]
@@ -381,7 +398,10 @@ def train_equipment_recommender(
 
     # Accuracy
     acc = accuracy_score(y, clf_eq.predict(X))
-    print(f"Equipment Recommendation In-Sample Accuracy: {acc:.4f}")
+    print(
+        f"Equipment Recommendation In-Sample Accuracy: {acc:.4f} "
+        "(scored on its own training data; run `evaluate` for held-out numbers)"
+    )
 
     return {
         "equipment_model_path": str(EQUIPMENT_MODEL_PATH),

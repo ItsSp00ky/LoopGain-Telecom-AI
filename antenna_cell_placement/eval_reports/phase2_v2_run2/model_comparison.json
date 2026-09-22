@@ -1,0 +1,70 @@
+{
+  "legacy_features_same_recipe": {
+    "development_grouped_cv": {
+      "n": 4008,
+      "positives": 1582,
+      "roc_auc": 0.9027986947137155,
+      "average_precision": 0.8854372373136642,
+      "accuracy_at_0_5": 0.8340818363273453,
+      "brier_score": 0.1165390471236654
+    },
+    "test": {
+      "n": 2607,
+      "positives": 533,
+      "roc_auc": 0.9033463537661859,
+      "average_precision": 0.8285783288646246,
+      "accuracy_at_0_5": 0.8918296892980437,
+      "brier_score": 0.08633786167191858
+    },
+    "test_hard": {
+      "n": 2033,
+      "positives": 533,
+      "roc_auc": 0.8761413383364604,
+      "average_precision": 0.8369573707952049,
+      "accuracy_at_0_5": 0.8686669945892769,
+      "brier_score": 0.10455107084772568
+    },
+    "population_only_test_auc": 0.6950473204383405,
+    "population_only_hard_auc": 0.5945378361475923
+  },
+  "v2_features": {
+    "development_grouped_cv": {
+      "n": 4008,
+      "positives": 1582,
+      "roc_auc": 0.9039253431274968,
+      "average_precision": 0.8868434678994068,
+      "accuracy_at_0_5": 0.8378243512974052,
+      "brier_score": 0.11397545240534106
+    },
+    "test": {
+      "n": 2607,
+      "positives": 533,
+      "roc_auc": 0.910668311860776,
+      "average_precision": 0.8374070185688532,
+      "accuracy_at_0_5": 0.8925968546221711,
+      "brier_score": 0.0862328371642532
+    },
+    "test_hard": {
+      "n": 2033,
+      "positives": 533,
+      "roc_auc": 0.8852082551594747,
+      "average_precision": 0.8452832228814732,
+      "accuracy_at_0_5": 0.867683226758485,
+      "brier_score": 0.10466491382813707
+    },
+    "population_only_test_auc": 0.672663966087773,
+    "population_only_hard_auc": 0.5719612257661038
+  },
+  "interpretation": "Same frozen diagnostic examples and recipe; geographic test was previously inspected. Synthetic labels are not deployment outcomes. No automatic serving-model promotion.",
+  "parameters": {
+    "n_estimators": 350,
+    "learning_rate": 0.035,
+    "max_depth": 6,
+    "num_leaves": 31,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "verbose": -1,
+    "n_jobs": 2
+  }
+}

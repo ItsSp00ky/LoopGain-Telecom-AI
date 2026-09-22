@@ -6,3 +6,5 @@ eval_reports/*.csv linguist-generated=true
 eval_reports/*.geojson linguist-generated=true
 models/*.joblib binary
 data/cleaned/*.parquet binary
+data/cleaned/h3/*.parquet binary
+data/cleaned/h3/*.geojson linguist-generated=true

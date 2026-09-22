@@ -1,0 +1,139 @@
+{
+  "development_grouped_cv": {
+    "roc_auc": 0.9027986947137155,
+    "average_precision": 0.8854372373136642,
+    "accuracy": 0.8340818363273453,
+    "f1": 0.7573878146661802,
+    "n": 4008,
+    "n_positive": 1582,
+    "brier_score": 0.1165390471236654,
+    "population_only_roc_auc": 0.7378009824040656,
+    "precision_at_20": 1.0,
+    "precision_at_50": 1.0
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "municipalities": [
+        "Tripoli"
+      ],
+      "metrics": {
+        "roc_auc": 0.8629742547425474,
+        "average_precision": 0.902951478088206,
+        "accuracy": 0.7861842105263158,
+        "f1": 0.7724620770128354,
+        "n": 912,
+        "n_positive": 492,
+        "brier_score": 0.14418985140917454,
+        "population_only_roc_auc": 0.6188467866821525,
+        "precision_at_20": 1.0,
+        "precision_at_50": 1.0
+      }
+    },
+    {
+      "fold": 1,
+      "municipalities": [
+        "Aljufra",
+        "Almargeb"
+      ],
+      "metrics": {
+        "roc_auc": 0.867167038597045,
+        "average_precision": 0.8510888293981937,
+        "accuracy": 0.8049738219895288,
+        "f1": 0.6915113871635611,
+        "n": 764,
+        "n_positive": 301,
+        "brier_score": 0.1419487354686626,
+        "population_only_roc_auc": 0.6166593715692114,
+        "precision_at_20": 1.0,
+        "precision_at_50": 1.0
+      }
+    },
+    {
+      "fold": 2,
+      "municipalities": [
+        "Benghazi",
+        "Sirt"
+      ],
+      "metrics": {
+        "roc_auc": 0.9291274029400678,
+        "average_precision": 0.9363771221808097,
+        "accuracy": 0.851063829787234,
+        "f1": 0.8252569750367107,
+        "n": 799,
+        "n_positive": 379,
+        "brier_score": 0.10582824135522394,
+        "population_only_roc_auc": 0.7803587134062068,
+        "precision_at_20": 1.0,
+        "precision_at_50": 1.0
+      }
+    },
+    {
+      "fold": 3,
+      "municipalities": [
+        "Ghat",
+        "Misrata",
+        "Murzuq",
+        "Zwara"
+      ],
+      "metrics": {
+        "roc_auc": 0.9021012050653595,
+        "average_precision": 0.8358456861633884,
+        "accuracy": 0.8513157894736842,
+        "f1": 0.7018469656992085,
+        "n": 760,
+        "n_positive": 216,
+        "brier_score": 0.10336836487918659,
+        "population_only_roc_auc": 0.7719907407407407,
+        "precision_at_20": 1.0,
+        "precision_at_50": 1.0
+      }
+    },
+    {
+      "fold": 4,
+      "municipalities": [
+        "Al Jabal Al Gharbi",
+        "Alkufra",
+        "Azzawya",
+        "Ubari"
+      ],
+      "metrics": {
+        "roc_auc": 0.9335149475633424,
+        "average_precision": 0.8572450381192342,
+        "accuracy": 0.8848641655886158,
+        "f1": 0.7390029325513197,
+        "n": 773,
+        "n_positive": 194,
+        "brier_score": 0.08282251013896492,
+        "population_only_roc_auc": 0.832505386108292,
+        "precision_at_20": 1.0,
+        "precision_at_50": 0.98
+      }
+    }
+  ],
+  "test": {
+    "roc_auc": 0.9033463537661859,
+    "average_precision": 0.8285783288646246,
+    "accuracy": 0.8918296892980437,
+    "f1": 0.7267441860465116,
+    "n": 2607,
+    "n_positive": 533,
+    "brier_score": 0.08633786167191858,
+    "population_only_roc_auc": 0.6950473204383405,
+    "precision_at_20": 1.0,
+    "precision_at_50": 1.0
+  },
+  "test_hard_negative": {
+    "roc_auc": 0.8761413383364604,
+    "average_precision": 0.8369573707952049,
+    "accuracy": 0.8686669945892769,
+    "f1": 0.7374631268436578,
+    "n": 2033,
+    "n_positive": 533,
+    "brier_score": 0.10455107084772568,
+    "population_only_roc_auc": 0.5945378361475923,
+    "precision_at_20": 1.0,
+    "precision_at_50": 1.0
+  },
+  "promotion_status": "experimental artifact; not promoted to serving model"
+}

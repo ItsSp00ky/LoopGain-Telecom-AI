@@ -1,13 +1,30 @@
 # AI Antenna Cell Site Placement Optimization
+
+**Phase 2 GIS v2 and building review:** See [the implementation and dataset limits](document/PHASE2_GIS_AND_ROOFTOPS.md). Run `antenna-placement phase2 --output-dir eval_reports/a_new_phase2_run` for versioned GIS features, a controlled model comparison and a preliminary Tripoli footprint shortlist. Local building heights are unavailable; outputs are survey candidates. Existing serving commands retain their legacy feature contract.
+
+**Phase 2 verified:** 62 tests passed. The completed run is `eval_reports/phase2_v2_run2/`: hard-negative AUC 0.8852 versus 0.8761 with legacy features on identical samples, 100 footprint candidates in 20 areas, and zero usable heights among 970,860 scanned records. This is diagnostic model evidence, not verified RF improvement. [Open the building review map](eval_reports/phase2_v2_run2/rooftop_candidates_map.html).
 ### Samsung Innovation Campus (SIC) Capstone Project – Team Loop Gain
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/Package_Manager-uv-purple.svg)](https://github.com/astral-sh/uv)
 [![AI/ML](https://img.shields.io/badge/Models-LightGBM%20%7C%20XGBoost%20%7C%20RandomForest-orange.svg)](#)
 [![Geospatial](https://img.shields.io/badge/GIS-WorldPop%20%7C%20SRTM_DEM%20%7C%20UN_OCHA-green.svg)](#)
-[![ROC-AUC](https://img.shields.io/badge/Suitability_ROC--AUC-0.9862-brightgreen.svg)](#)
 
-An intelligent geospatial Machine Learning and network planning system engineered to predict and optimize the most suitable geographic locations for deploying new cellular antenna towers across Libya. The platform balances high-resolution gridded population density, terrain elevation and prominence, road infrastructure accessibility, existing multi-carrier network topology, and coverage deficits.
+> **Current evidence (2026-09-22):** This is a GIS screening prototype. The historical suitability AUC is 0.9844 on held-out municipalities but 0.7238 on populated nearby synthetic non-sites. Equipment accuracy is 78.39% in municipality-grouped CV; 89.55% is training-set accuracy. These metrics do not establish deployment need or RF coverage. Read the [ML models and data guide](document/ML_MODELS_AND_DATA.md) and [implementation plan](document/IMPROVEMENT_PLAN.md) first.
+
+**Verified milestone:** 40 tests passed; cleaned data now has 645 Al-Madar LTE and 673 Libyana LTE records. The separate experiment has hard-negative AUC 0.8761 versus population-only 0.5945 on the same rows; its samples differ from the historical stress test. See [verification](eval_reports/implementation_verification.json).
+
+The latest implementation adds source-scoped Al-Madar attribution, repeatable H3 feature joins, corrected negative-sampling boundaries, missing-data handling, and a separate reproducible training experiment:
+
+```powershell
+uv run antenna-placement clean
+uv run antenna-placement features
+uv run antenna-placement train-experiment --output-dir eval_reports/my_new_experiment
+```
+
+The experiment writes exact examples/splits, a manifest, model, predictions and metrics to a new directory. It does not promote the model automatically. Existing reports below are historical results from the earlier serving pipeline.
+
+An exploratory geospatial Machine Learning and network planning system engineered to predict and optimize the most suitable geographic locations for deploying new cellular antenna towers across Libya. The platform balances high-resolution gridded population density, terrain elevation and prominence, road infrastructure accessibility, existing multi-carrier network topology, and coverage deficits.
 
 ---
 
@@ -24,23 +41,23 @@ An intelligent geospatial Machine Learning and network planning system engineere
 
 ---
 
-## 📌 Executive Summary & Key Results
+## 📌 Historical pipeline results
 
 - **Data Cleaning & Deduplication**:
   - Identified and repaired a critical regional scoping collision in legacy SQLite data (where site IDs repeating across RNC/TAC regions caused distant antennas up to 812 km apart to be collapsed).
   - Consolidated **4,258** crowdsourced radio observations into **2,338** unique radio antennas with **<0.11m** spatial consistency.
-  - Collocated multi-technology antennas (threshold: 50m) into **2,115** physical cellular mast sites, uncovering **109** multi-technology collocated sites and **45** multi-operator infrastructure sharing sites between Libyana and Al-Madar.
+  - Collocated multi-technology antennas (threshold: 50m) into **2,115** physical cellular mast sites, uncovering **109** multi-technology collocated sites and **65** inferred multi-operator shared sites (after the owner-confirmed LTE correction) between Libyana and Al-Madar.
 - **External Geospatial Intelligence for Libya**:
-  - Integrated **WorldPop 2020** 1km gridded population density (UN adjusted).
-  - Integrated **SRTM Digital Elevation Model (DEM)** at 250m resolution for elevation, slope, and 3km viewshed prominence.
+  - Integrated **WorldPop 2020** 1km gridded population density; exact local UN-adjustment provenance remains unverified.
+  - Integrated **SRTM Digital Elevation Model (DEM)** at about 250m resolution for ground elevation, slope, and 3km terrain prominence; this is not a viewshed calculation.
   - Integrated **UN OCHA Transportation Network** (4,141 road segments) and **Populated Places** across all 22 Libyan Municipalities (Baladiyat).
 - **Machine Learning Benchmark**:
   - **Champion Model**: LightGBM Classifier with **0.9862 ROC-AUC**, **0.9794 PR-AUC**, and **95.19% Accuracy** across 5-fold stratified cross-validation.
-  - **Equipment Recommender**: Random Forest multi-tier classifier achieving **89.55% Accuracy** in recommending equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
+  - **Equipment Recommender**: Random Forest multi-tier classifier achieving **89.55% in-sample accuracy** (not independent validation) in recommending equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
 - **Placement Recommendations**:
-  - Evaluated **22,605** candidate locations across Libya, identifying **4,467** unserved coverage gaps and ranking the **Top 50 High-Priority New Cell Placements**.
+  - Evaluated **22,605** candidate locations across Libya, flagging **4,467** candidate inventory gaps requiring RF review and ranking the **Top 50 High-Priority New Cell Placements**.
   - Added Cloudflare Radar's 52-week regional HTTP traffic share as a conservative digital-demand prior for final ranking (bounded to ±10%); the trained suitability model remains purely geospatial after leakage-aware testing rejected direct inclusion.
-- **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](TECHNICAL_REPORT.md) and the strategic system expansion in [`TELECOM_GIS_RF_AI_ROADMAP.md`](TELECOM_GIS_RF_AI_ROADMAP.md).
+- **Comprehensive Documentation**: See the detailed engineering specification in [`TECHNICAL_REPORT.md`](document/TECHNICAL_REPORT.md) and the strategic system expansion in [`TELECOM_GIS_RF_AI_ROADMAP.md`](document/TELECOM_GIS_RF_AI_ROADMAP.md).
 
 ---
 
@@ -51,8 +68,14 @@ antenna_cell_placement/
 ├── pyproject.toml                     # uv package configuration & CLI entry points
 ├── uv.lock                            # Deterministic dependency lockfile
 ├── README.md                          # Module documentation & benchmark report
-├── TECHNICAL_REPORT.md                # Comprehensive Engineering & Decisioning Report
-├── TELECOM_GIS_RF_AI_ROADMAP.md       # Telecom GIS, RF & AI Planning Roadmap
+│
+├── document/                          # Project documentation (reports, plans, roadmaps)
+│   ├── TECHNICAL_REPORT.md            # Comprehensive Engineering & Decisioning Report
+│   ├── TELECOM_GIS_RF_AI_ROADMAP.md   # Telecom GIS, RF & AI Planning Roadmap
+│   ├── PILOT_PLAN_AND_VALIDATION.md   # Tripoli pilot plan, testing & validation, weaknesses
+│   ├── ML_MODELS_AND_DATA.md          # ML models explained + honest train/test data breakdown
+│   ├── DATASETS_OVERVIEW.md           # Dataset inventory and column reference
+│   └── IMPLEMENTATION_ROADMAP.md      # Implementation roadmap notes
 │
 ├── Libyan_cells_dataset/              # Raw crowdsourced telecom datasets
 │   ├── cells.sqlite3                  # Relational database (2,291 raw towers)
@@ -175,6 +198,28 @@ uv run antenna-placement predict --lat 32.88 --lon 13.18
 # Evaluate remote desert location (e.g. Murzuq)
 uv run antenna-placement predict --lat 24.00 --lon 18.00
 ```
+
+### 4. Pilot-City H3 Expansion Analysis (Tripoli)
+
+An area-level screening stage that runs in front of the point-level suitability model. It tiles a pilot city into H3 hexagons, combines population, terrain, roads, existing-site density (Phase 1) with Microsoft building footprints, ESA WorldCover land cover and OpenStreetMap roads/POIs (Phase 2), and ranks hexes by an auditable **Expansion Need Score**. See [`PILOT_PLAN_AND_VALIDATION.md`](document/PILOT_PLAN_AND_VALIDATION.md) for the plan, validation method, and known weaknesses.
+
+```bash
+# Phase 1: H3 grid + existing features per hex
+uv run antenna-placement h3-grid --city Tripoli
+
+# Phase 2: add building / land-cover / OSM features
+uv run antenna-placement enrich-h3 --city Tripoli
+
+# Score hexes (expansion need x AI suitability), then validate and map
+uv run antenna-placement expansion-score --city Tripoli
+uv run antenna-placement validate-h3 --city Tripoli
+uv run antenna-placement h3-map --city Tripoli
+
+# Or everything in one step:
+uv run antenna-placement h3-all --city Tripoli
+```
+
+Outputs: `data/cleaned/h3/h3_features_Tripoli.parquet`, `eval_reports/h3_expansion_scores_Tripoli.{csv,geojson}`, `eval_reports/h3_validation_Tripoli.json`, and the interactive map `eval_reports/h3_expansion_map_Tripoli.html`. Raw Phase-2 inputs live in `data/external/{buildings,landcover,osm}/` (see [`DATASETS_OVERVIEW.md`](document/DATASETS_OVERVIEW.md)).
 
 ---
 

@@ -1,0 +1,55 @@
+{
+  "created_utc": "2026-09-22T10:04:58.894031+00:00",
+  "tests": {
+    "run": 40,
+    "errors": 0,
+    "failures": 0,
+    "passed": true
+  },
+  "radio_counts": {
+    "Al-Madar/GSM": 236,
+    "Al-Madar/LTE": 645,
+    "Al-Madar/UMTS": 295,
+    "Libyana/GSM": 274,
+    "Libyana/LTE": 673,
+    "Libyana/UMTS": 215
+  },
+  "physical_sites": 2115,
+  "multi_operator_sites": 65,
+  "raw_database_unchanged": true,
+  "experiment_dir": "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\eval_reports\\experiment_20260922_v1",
+  "experiment_test": {
+    "roc_auc": 0.9033463537661859,
+    "average_precision": 0.8285783288646246,
+    "accuracy": 0.8918296892980437,
+    "f1": 0.7267441860465116,
+    "n": 2607,
+    "n_positive": 533,
+    "brier_score": 0.08633786167191858,
+    "population_only_roc_auc": 0.6950473204383405,
+    "precision_at_20": 1.0,
+    "precision_at_50": 1.0
+  },
+  "experiment_hard_test": {
+    "roc_auc": 0.8761413383364604,
+    "average_precision": 0.8369573707952049,
+    "accuracy": 0.8686669945892769,
+    "f1": 0.7374631268436578,
+    "n": 2033,
+    "n_positive": 533,
+    "brier_score": 0.10455107084772568,
+    "population_only_roc_auc": 0.5945378361475923,
+    "precision_at_20": 1.0,
+    "precision_at_50": 1.0
+  },
+  "refreshed_outputs": [
+    "cleaned radio/site CSV and GeoJSON",
+    "enriched site parquet and CSV",
+    "Tripoli H3 features/scores/map",
+    "national recommendations and maps"
+  ],
+  "h3_grid_rows": 2987,
+  "h3_scored_rows": 2216,
+  "phase2_source_features": "Carried over existing building/landcover/OSM values; raw Phase2 enrichment not rerun",
+  "completed_utc": "2026-09-22T10:08:26.116272+00:00"
+}

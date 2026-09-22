@@ -19,7 +19,14 @@ from antenna_cell_placement.config import (
     MODEL_METRICS_PATH,
     RECOMMENDATIONS_CSV,
     CLEANED_MAP_HTML,
+    DEFAULT_PILOT_CITY,
+    H3_RESOLUTION,
 )
+
+# Windows consoles with a non-UTF-8 code page (e.g. cp1256) cannot encode the
+# check marks in the status lines below and crash rich; force UTF-8 output.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 console = Console()
 
@@ -174,6 +181,153 @@ def cmd_predict(args):
     console.print(table)
 
 
+def cmd_h3_grid(args):
+    """Build the H3 planning grid and Phase-1 feature table for a pilot city."""
+    from antenna_cell_placement.h3_grid import build_h3_feature_table
+    console.print(Panel(f"[bold green]Building H3 Grid for {args.city}[/bold green]"))
+    df = build_h3_feature_table(city=args.city, resolution=args.resolution)
+    console.print(f"[bold cyan]Built {len(df)} H3 hexes at resolution {args.resolution}.[/bold cyan]")
+
+
+def cmd_enrich_h3(args):
+    """Enrich the H3 grid with building, land-cover, and OSM features (Phase 2)."""
+    from antenna_cell_placement.h3_grid import enrich_h3_feature_table
+    console.print(Panel(f"[bold green]Enriching H3 Grid with Phase-2 Data for {args.city}[/bold green]"))
+    df = enrich_h3_feature_table(city=args.city)
+    console.print(f"[bold cyan]Enriched {len(df)} H3 hexes with building/land-cover/OSM features.[/bold cyan]")
+
+
+def cmd_expansion_score(args):
+    """Compute the expansion need score per H3 hex and export ranked CSV/GeoJSON."""
+    from antenna_cell_placement.expansion_score import run_expansion_score_pipeline
+    console.print(Panel(f"[bold green]Computing Expansion Need Score for {args.city}[/bold green]"))
+    scored = run_expansion_score_pipeline(city=args.city)
+
+    table = Table(title=f"Top 10 Priority Hexes: {args.city}")
+    table.add_column("Rank", style="bold yellow")
+    table.add_column("H3 Index", style="cyan")
+    table.add_column("Priority", style="bold green")
+    table.add_column("Expansion Need", style="green")
+    table.add_column("Suitability", style="magenta")
+    table.add_column("Pop (5km)", style="blue")
+    table.add_column("Sites in hex", style="red")
+
+    for _, row in scored.head(10).iterrows():
+        suit = row.get("placement_suitability_score")
+        table.add_row(
+            str(int(row["expansion_rank"])),
+            str(row["h3_index"]),
+            f"{row['combined_priority_score']:.2f}",
+            f"{row['expansion_need_score']:.2f}",
+            "n/a" if suit is None or suit != suit else f"{suit:.3f}",
+            f"{int(row['population_sum_5km']):,}",
+            str(int(row["existing_sites_site_count"])),
+        )
+    console.print(table)
+
+
+def cmd_validate_h3(args):
+    """Validate the expansion score via known-site recovery and weight sensitivity."""
+    from antenna_cell_placement.validation import run_validation_pipeline
+    console.print(Panel(f"[bold green]Validating Expansion Need Score for {args.city}[/bold green]"))
+    report = run_validation_pipeline(city=args.city)
+    rec = report["known_site_recovery"]
+
+    table = Table(title=f"Known-Site Recovery ({rec['n_folds']} folds, {rec['hide_fraction']:.0%} of sites hidden)")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Expansion Score", style="bold green", justify="right")
+    table.add_column("Population-only baseline", style="blue", justify="right")
+    table.add_row("ROC-AUC", f"{rec['mean_auc_expansion_score']:.3f}", f"{rec['mean_auc_population_only']:.3f}")
+    table.add_row(
+        "Recall @ top 10% hexes",
+        f"{rec['mean_recall_top10pct_expansion_score']:.3f}",
+        f"{rec['mean_recall_top10pct_population_only']:.3f}",
+    )
+    table.add_row("Recall @ top 25% hexes", f"{rec['mean_recall_top25pct_expansion_score']:.3f}", "-")
+    table.add_row(
+        "ROC-AUC (unserved hexes only)",
+        f"{rec['mean_auc_expansion_score_unserved']:.3f}",
+        f"{rec['mean_auc_population_only_unserved']:.3f}",
+    )
+    table.add_row(
+        "Recall @ top 10% (unserved hexes only)",
+        f"{rec['mean_recall_top10pct_expansion_score_unserved']:.3f}",
+        f"{rec['mean_recall_top10pct_population_only_unserved']:.3f}",
+    )
+    console.print(table)
+
+    sens = Table(title="Weight Sensitivity (vs. default weights)")
+    sens.add_column("Weight", style="cyan")
+    sens.add_column("Factor", justify="right")
+    sens.add_column("Spearman rank corr.", justify="right", style="green")
+    sens.add_column("Top-50 overlap", justify="right", style="blue")
+    for row in report["weight_sensitivity"]:
+        sens.add_row(row["weight"], f"x{row['factor']}", f"{row['spearman_rank_correlation']:.3f}", f"{row['top50_overlap']:.0%}")
+    console.print(sens)
+
+
+def cmd_evaluate(args):
+    """Municipality-held-out evaluation of the suitability and equipment models."""
+    from antenna_cell_placement.evaluation import run_evaluation_pipeline
+    console.print(Panel("[bold green]Geographic Hold-out Evaluation of Placement Models[/bold green]"))
+    report = run_evaluation_pipeline()
+    suit, equip = report["suitability_model"], report["equipment_model"]
+
+    table = Table(title="Suitability model (LightGBM): how the score changes with an honest split")
+    table.add_column("Evaluation", style="cyan")
+    table.add_column("ROC-AUC", justify="right", style="bold green")
+    table.add_column("Avg precision", justify="right")
+    table.add_row("Random 5-fold CV (shipped scheme)", f"{suit['random_cv']['roc_auc']:.4f}", f"{suit['random_cv']['average_precision']:.4f}")
+    table.add_row("Municipality-grouped 5-fold CV", f"{suit['municipality_grouped_cv']['roc_auc']:.4f}", f"{suit['municipality_grouped_cv']['average_precision']:.4f}")
+    held = suit["held_out_test"]
+    table.add_row(f"Held-out test ({len(held['municipalities'])} municipalities)", f"{held['roc_auc']:.4f}", f"{held['average_precision']:.4f}")
+    table.add_row("  population-only baseline (same test)", f"{held['population_only_baseline_roc_auc']:.4f}", "-")
+    stress = suit["hard_negative_stress_test"]
+    if stress:
+        table.add_row("Hard-negative stress test (real sites vs populated non-sites)", f"{stress['roc_auc']:.4f}", "-")
+        table.add_row("  population-only baseline (same test)", f"{stress['population_only_roc_auc']:.4f}", "-")
+    console.print(table)
+
+    eq = Table(title="Equipment recommender (Random Forest)")
+    eq.add_column("Evaluation", style="cyan")
+    eq.add_column("Accuracy", justify="right", style="bold green")
+    eq.add_column("Macro-F1", justify="right")
+    eq.add_row("In-sample (as shipped)", f"{equip['in_sample_accuracy_as_shipped']:.4f}", "-")
+    eq.add_row("Random 5-fold CV", f"{equip['random_cv']['accuracy']:.4f}", f"{equip['random_cv']['macro_f1']:.4f}")
+    eq.add_row("Municipality-grouped 5-fold CV", f"{equip['municipality_grouped_cv']['accuracy']:.4f}", f"{equip['municipality_grouped_cv']['macro_f1']:.4f}")
+    eq.add_row("Majority-class baseline", f"{equip['majority_class_baseline_accuracy']:.4f}", "-")
+    eq.add_row("Feature-side rules only (no model)", f"{equip['feature_side_rules_only_accuracy']:.4f}", "-")
+    console.print(eq)
+
+
+def cmd_h3_map(args):
+    """Generate the interactive expansion-priority map for a pilot city."""
+    from antenna_cell_placement.map_visualizer import generate_h3_expansion_map
+    console.print(Panel(f"[bold green]Generating H3 Expansion Priority Map for {args.city}[/bold green]"))
+    path = generate_h3_expansion_map(city=args.city, top_n=args.top_n)
+    console.print(f"[bold cyan]Map saved to: {path}[/bold cyan]")
+
+
+def cmd_h3_all(args):
+    """Run the full pilot-city pipeline: grid, Phase-2 enrichment, scoring, validation, map."""
+    cmd_h3_grid(args)
+    cmd_enrich_h3(args)
+    cmd_expansion_score(args)
+    cmd_validate_h3(args)
+    cmd_h3_map(args)
+    console.print(Panel(f"[bold green]Pilot-city H3 pipeline for {args.city} completed.[/bold green]"))
+
+
+def cmd_train_experiment(args):
+    from antenna_cell_placement.training_experiment import run_training_experiment
+    run_training_experiment(args.output_dir)
+
+
+def cmd_phase2(args):
+    from antenna_cell_placement.phase2_pipeline import run_phase2
+    run_phase2(args.output_dir, args.frozen_dataset)
+
+
 def cmd_all(args):
     """Run full end-to-end pipeline."""
     cmd_clean(args)
@@ -205,6 +359,37 @@ def main():
     pred_parser.add_argument("--lat", type=float, required=True, help="Latitude (WGS84)")
     pred_parser.add_argument("--lon", type=float, required=True, help="Longitude (WGS84)")
 
+    h3_parser = subparsers.add_parser("h3-grid", help="Build H3 planning grid for a pilot city (Phase 1)")
+    h3_parser.add_argument("--city", default=DEFAULT_PILOT_CITY, help="Pilot city name")
+    h3_parser.add_argument("--resolution", type=int, default=H3_RESOLUTION, help="H3 resolution")
+
+    enrich_h3_parser = subparsers.add_parser("enrich-h3", help="Add building/land-cover/OSM features to H3 grid (Phase 2)")
+    enrich_h3_parser.add_argument("--city", default=DEFAULT_PILOT_CITY, help="Pilot city name")
+
+    score_parser = subparsers.add_parser("expansion-score", help="Compute per-hex expansion need score")
+    score_parser.add_argument("--city", default=DEFAULT_PILOT_CITY, help="Pilot city name")
+
+    validate_parser = subparsers.add_parser("validate-h3", help="Known-site recovery and weight sensitivity validation")
+    validate_parser.add_argument("--city", default=DEFAULT_PILOT_CITY, help="Pilot city name")
+
+    experiment_parser = subparsers.add_parser("train-experiment", help="Reproducible grouped training experiment; saves a separate artifact")
+    experiment_parser.add_argument("--output-dir", type=Path, default=None, help="New directory for data, split manifest, model and metrics")
+
+    phase2_parser = subparsers.add_parser("phase2", help="Versioned GIS migration, controlled training and preliminary rooftop shortlist")
+    phase2_parser.add_argument("--output-dir", type=Path, default=None, help="New output directory; existing outputs are never overwritten")
+    phase2_parser.add_argument("--frozen-dataset", type=Path, default=None)
+
+    subparsers.add_parser("evaluate", help="Municipality-held-out evaluation of the suitability and equipment models")
+
+    h3_map_parser = subparsers.add_parser("h3-map", help="Generate the interactive expansion-priority map")
+    h3_map_parser.add_argument("--city", default=DEFAULT_PILOT_CITY, help="Pilot city name")
+    h3_map_parser.add_argument("--top-n", type=int, default=20, help="Number of top hexes to call out")
+
+    h3_all_parser = subparsers.add_parser("h3-all", help="Run grid, enrichment, scoring, validation and map for a pilot city")
+    h3_all_parser.add_argument("--city", default=DEFAULT_PILOT_CITY, help="Pilot city name")
+    h3_all_parser.add_argument("--resolution", type=int, default=H3_RESOLUTION, help="H3 resolution")
+    h3_all_parser.add_argument("--top-n", type=int, default=20, help="Number of top hexes to call out on the map")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -220,6 +405,15 @@ def main():
         "map": cmd_map,
         "all": cmd_all,
         "predict": cmd_predict,
+        "h3-grid": cmd_h3_grid,
+        "enrich-h3": cmd_enrich_h3,
+        "expansion-score": cmd_expansion_score,
+        "validate-h3": cmd_validate_h3,
+        "evaluate": cmd_evaluate,
+        "train-experiment": cmd_train_experiment,
+        "phase2": cmd_phase2,
+        "h3-map": cmd_h3_map,
+        "h3-all": cmd_h3_all,
     }
 
     cmd_fn = commands.get(args.command)

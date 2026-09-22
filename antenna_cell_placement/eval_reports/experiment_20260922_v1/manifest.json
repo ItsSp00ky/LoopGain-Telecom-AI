@@ -1,0 +1,64 @@
+{
+  "created_utc": "2026-09-22T10:05:32.578982+00:00",
+  "input_parquet_sha256": "7c151199646fe72a993c024c8d58955fe3cf835130fb2dbdbc7189701c982dd2",
+  "dataset_sha256": "c2f69c15b9e8674c158ea9182e444aa4ecd00e7dd2c7e3c752147039b17172dc",
+  "test_municipalities": [
+    "Wadi Ashshati",
+    "Almarj",
+    "Derna",
+    "Ejdabia",
+    "Sebha",
+    "Nalut",
+    "Al Jabal Al Akhdar",
+    "Tobruk",
+    "Aljfara"
+  ],
+  "parameters": {
+    "n_estimators": 350,
+    "learning_rate": 0.035,
+    "max_depth": 6,
+    "num_leaves": 31,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "verbose": -1,
+    "n_jobs": 2
+  },
+  "features": [
+    "population_density_1km",
+    "population_sum_3km",
+    "population_sum_5km",
+    "elevation_m",
+    "elevation_prominence_3km",
+    "terrain_slope_deg",
+    "dist_to_nearest_road_m",
+    "dist_to_nearest_settlement_m",
+    "dist_to_nearest_site_m",
+    "site_density_3km",
+    "site_density_5km",
+    "site_density_10km"
+  ],
+  "counts": {
+    "development/observed_site": 1582,
+    "development/synthetic_background_corridor": 926,
+    "development/synthetic_hard": 1500,
+    "test/observed_site": 533,
+    "test/synthetic_background_corridor": 574,
+    "test/synthetic_hard": 1500
+  },
+  "python": "3.12.13",
+  "packages": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0",
+    "geopandas": "1.1.4"
+  },
+  "limitations": [
+    "Test municipalities already inspected in historical evaluation; not a blind prospective test.",
+    "Synthetic non-sites are unlabeled locations, not confirmed unsuitable sites.",
+    "Network features use the full observed inventory; conditional inventory task, not hidden-network recovery.",
+    "Legacy population windows and nationwide UTM33 distances remain uncorrected.",
+    "Scores are class probabilities for this sampled task, not probabilities that new deployment is needed."
+  ]
+}
