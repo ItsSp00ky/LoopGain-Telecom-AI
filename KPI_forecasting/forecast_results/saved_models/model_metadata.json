@@ -1,0 +1,47 @@
+{
+  "description": "Trained XGBoost models and schemas for 4G/LTE forecasting",
+  "train_date_range": "2025-09-18 to 2026-06-05",
+  "test_date_range": "2026-06-05 to 2026-09-17",
+  "kpis": [
+    "E-RAB Drop Rate",
+    "4G Cell Av. (%)",
+    "Avg RRC Connected users"
+  ],
+  "metrics": [
+    {
+      "KPI": "E-RAB Drop Rate",
+      "MAE": 0.0217,
+      "RMSE": 0.0351,
+      "MAPE (%)": 6.51,
+      "R2": 0.9795
+    },
+    {
+      "KPI": "4G Cell Av. (%)",
+      "MAE": 3.9759,
+      "RMSE": 5.7742,
+      "MAPE (%)": 4.69,
+      "R2": 0.3441
+    },
+    {
+      "KPI": "Avg RRC Connected users",
+      "MAE": 0.4392,
+      "RMSE": 0.9379,
+      "MAPE (%)": 2.51,
+      "R2": 0.9891
+    }
+  ],
+  "models": {
+    "E-RAB Drop Rate": {
+      "model": "forecast_results\\saved_models\\model_E-RAB_Drop_Rate.json",
+      "schema": "forecast_results\\saved_models\\features_E-RAB_Drop_Rate.json"
+    },
+    "4G Cell Av. (%)": {
+      "model": "forecast_results\\saved_models\\model_4G_Cell_Av_pct.json",
+      "schema": "forecast_results\\saved_models\\features_4G_Cell_Av_pct.json"
+    },
+    "Avg RRC Connected users": {
+      "model": "forecast_results\\saved_models\\model_Avg_RRC_Connected_users.json",
+      "schema": "forecast_results\\saved_models\\features_Avg_RRC_Connected_users.json"
+    }
+  }
+}
