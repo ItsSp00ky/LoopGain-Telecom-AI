@@ -80,17 +80,16 @@ def cmd_train(args):
 def cmd_recommend(args):
     """Run coverage gap optimizer and rank top new cell site placements."""
     from antenna_cell_placement.site_optimizer import run_optimizer_pipeline
-    console.print(Panel("[bold green]Running Coverage Gap Optimization & Site Placement Ranking[/bold green]"))
+    console.print(Panel("[bold green]Planning priorities for engineering review[/bold green]"))
     recs = run_optimizer_pipeline()
 
-    table = Table(title="Top 10 AI Recommended Cell Placements for Libya")
+    table = Table(title="Top 10 planning priorities for engineering review")
     table.add_column("Rank", style="bold yellow")
     table.add_column("Municipality", style="cyan")
     table.add_column("Settlement", style="magenta")
-    table.add_column("Suitability", style="green")
+    table.add_column("Experimental ML", style="green")
     table.add_column("Priority", style="bold green")
-    table.add_column("Equipment Tier", style="white")
-    table.add_column("5km Pop", style="blue")
+    table.add_column("Population within 5 km", style="blue")
     table.add_column("Gap (km)", style="red")
 
     for _, row in recs.head(10).iterrows():
@@ -100,7 +99,6 @@ def cmd_recommend(args):
             str(row["nearest_settlement_name"]),
             f"{row['placement_suitability_score']:.3f}",
             f"{row['deployment_priority_score']:.2f}",
-            str(row["recommended_equipment_tier"]).replace("_Macro", ""),
             f"{int(row['population_sum_5km']):,}",
             f"{row['dist_to_nearest_site_m'] / 1000.0:.1f} km",
         )
@@ -110,74 +108,30 @@ def cmd_recommend(args):
 def cmd_map(args):
     """Generate interactive geospatial maps."""
     from antenna_cell_placement.map_visualizer import generate_interactive_map
-    console.print(Panel("[bold green]Generating Interactive Geospatial Coverage & Recommendation Maps[/bold green]"))
+    console.print(Panel("[bold green]Generating planning-review maps[/bold green]"))
     map_path = generate_interactive_map()
     console.print(f"[bold cyan]✓ Interactive map saved to: {map_path}[/bold cyan]")
 
 
 def cmd_predict(args):
-    """Predict placement suitability and recommended equipment for a custom coordinate."""
-    import joblib
-    from antenna_cell_placement.feature_engineering import GeospatialFeatureExtractor
-    from antenna_cell_placement.placement_model import SUITABILITY_FEATURE_COLS
-    import pandas as pd
-
-    lat = float(args.lat)
-    lon = float(args.lon)
-
-    console.print(Panel(f"[bold green]Evaluating Custom Candidate Site at ({lat:.4f}, {lon:.4f})[/bold green]"))
-
-    extractor = GeospatialFeatureExtractor()
-    extractor.load_layers()
-    df_sites = pd.read_parquet(CLEANED_SITES_PARQUET)
-    extractor.set_existing_sites(df_sites)
-
-    features = extractor.extract_features([lon], [lat], is_existing_site=False)
-
-    suit_model = joblib.load(SUITABILITY_MODEL_PATH)
-    eq_model = joblib.load(SUITABILITY_MODEL_PATH.parent / "equipment_recommendation_model.joblib")
-
-    score = suit_model.predict_proba(features[SUITABILITY_FEATURE_COLS])[0, 1]
-
-    eq_features = [
-        "population_density_1km",
-        "population_sum_3km",
-        "population_sum_5km",
-        "elevation_m",
-        "elevation_prominence_3km",
-        "terrain_slope_deg",
-        "dist_to_nearest_road_m",
-        "dist_to_nearest_settlement_m",
-        "dist_to_nearest_site_m",
-        "site_density_3km",
-        "site_density_5km",
-    ]
-    tier = eq_model.predict(features[eq_features])[0]
-
-    table = Table(title=f"AI Placement Assessment: ({lat:.4f}, {lon:.4f})")
-    table.add_column("Parameter", style="cyan")
-    table.add_column("Value", style="green")
-
-    table.add_row("Placement Suitability Score", f"{score:.4f} ({'HIGHLY SUITABLE' if score >= 0.75 else ('MODERATE' if score >= 0.50 else 'LOW')})")
-    table.add_row("Recommended Equipment Tier", str(tier))
-    table.add_row("Municipality", str(features['municipality_name'].iloc[0]))
-    table.add_row("Nearest City / Town", f"{features['nearest_settlement_name'].iloc[0]} ({features['dist_to_nearest_settlement_m'].iloc[0] / 1000.0:.1f} km)")
-    table.add_row("Population Density (1km²)", f"{features['population_density_1km'].iloc[0]:.1f} people/km²")
-    table.add_row("5km Population Catchment", f"{int(features['population_sum_5km'].iloc[0]):,} people")
-    table.add_row("Distance to Nearest Cell Tower", f"{features['dist_to_nearest_site_m'].iloc[0] / 1000.0:.2f} km")
-    table.add_row("Distance to Nearest Road", f"{features['dist_to_nearest_road_m'].iloc[0]:.1f} meters")
-    table.add_row("Ground Elevation", f"{features['elevation_m'].iloc[0]:.1f} m ASL")
-    table.add_row("Elevation Prominence (3km)", f"{features['elevation_prominence_3km'].iloc[0]:.1f} m")
-    if features["cloudflare_data_available"].iloc[0]:
-        table.add_row(
-            "Regional HTTP Traffic Share (52w)",
-            f"{features['cloudflare_http_requests_share_52w_pct'].iloc[0]:.3f}%",
-        )
-        table.add_row(
-            "Regional Digital Demand Score",
-            f"{features['cloudflare_regional_demand_score'].iloc[0]:.3f}",
-        )
-
+    """Display experimental site-pattern recognition and GIS context."""
+    from antenna_cell_placement.placement import predict_site_suitability
+    result = predict_site_suitability(float(args.lat), float(args.lon))
+    table = Table(title="Candidate context for engineering review")
+    table.add_column("Measure", style="cyan")
+    table.add_column("Value")
+    for label, key in [
+        ("Experimental site-pattern score", "experimental_site_pattern_score"),
+        ("Municipality", "municipality"),
+        ("Nearest settlement", "nearest_settlement"),
+        ("Population within 5 km (legacy estimate)", "population_sum_5km"),
+        ("Nearest known site (km)", "distance_to_nearest_cell_km"),
+        ("Road distance (m)", "distance_to_nearest_road_m"),
+        ("Ground elevation (m)", "elevation_m"),
+        ("Building height", "building_height_status"),
+        ("Interpretation", "interpretation"),
+    ]:
+        table.add_row(label, str(result[key]))
     console.print(table)
 
 
@@ -208,7 +162,7 @@ def cmd_expansion_score(args):
     table.add_column("H3 Index", style="cyan")
     table.add_column("Priority", style="bold green")
     table.add_column("Expansion Need", style="green")
-    table.add_column("Suitability", style="magenta")
+    table.add_column("Experimental ML", style="magenta")
     table.add_column("Pop (5km)", style="blue")
     table.add_column("Sites in hex", style="red")
 
@@ -355,7 +309,7 @@ def main():
     subparsers.add_parser("map", help="Generate interactive Leaflet coverage and recommendation maps")
     subparsers.add_parser("all", help="Run full end-to-end pipeline")
 
-    pred_parser = subparsers.add_parser("predict", help="Predict suitability for custom (lat, lon) coordinates")
+    pred_parser = subparsers.add_parser("predict", help="Inspect experimental site-pattern score and GIS context for a coordinate")
     pred_parser.add_argument("--lat", type=float, required=True, help="Latitude (WGS84)")
     pred_parser.add_argument("--lon", type=float, required=True, help="Longitude (WGS84)")
 

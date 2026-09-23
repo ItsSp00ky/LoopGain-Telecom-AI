@@ -82,6 +82,10 @@ def export_rooftops(gdf, output_dir):
     from pathlib import Path
     import folium
     output_dir=Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    gdf = gdf.copy()
+    known = gdf.get('building_height_known', pd.Series(False, index=gdf.index))
+    gdf['building_height_status'] = known.map({True: 'Source height present; unverified', False: 'Unavailable'})
     # JSON conversion also supports an empty shortlist.
     (output_dir/'rooftop_candidates.geojson').write_text(gdf.to_json(),encoding='utf-8')
     gdf.drop(columns='geometry').to_csv(output_dir/'rooftop_candidates.csv',index=False)
@@ -91,10 +95,11 @@ def export_rooftops(gdf, output_dir):
     if len(gdf):
         folium.GeoJson(gdf.to_json(),name='Footprints for review',
             style_function=lambda _: {'color':'#ef6c00','fillOpacity':0.4},
-            tooltip=folium.GeoJsonTooltip(fields=['building_id','footprint_area_m2','building_height_known','candidate_status'])).add_to(m)
+            tooltip=folium.GeoJsonTooltip(fields=['building_id','footprint_area_m2','building_height_status','candidate_status'])).add_to(m)
         for _,row in gdf.iterrows():
             folium.CircleMarker([row.canonical_latitude,row.canonical_longitude],radius=3,
-                tooltip=f'Area rank {row.area_priority_rank}; footprint {row.footprint_area_m2:.0f} m²; height unknown; survey required').add_to(m)
+                tooltip=f'Area rank {row.area_priority_rank}; footprint {row.footprint_area_m2:.0f} m²; height {row.building_height_status.lower()}; survey required').add_to(m)
     folium.LayerControl().add_to(m)
-    m.get_root().html.add_child(folium.Element('<div style="position:fixed;bottom:20px;left:20px;z-index:9999;background:white;padding:12px;max-width:330px">Preliminary building footprints for survey. Height, usable roof area, structural capacity, permission, power and backhaul are unverified.</div>'))
+    height_note = 'Building heights unavailable.' if not known.any() else 'Source heights require verification.'
+    m.get_root().html.add_child(folium.Element(f'<div style="position:fixed;bottom:25px;left:20px;z-index:9999;background:white;padding:12px;max-width:330px"><b>Building footprints for engineering review</b><br>{height_note} Usable roof area, structural capacity, permission, power and backhaul are unverified.</div>'))
     m.save(str(output_dir/'rooftop_candidates_map.html'))

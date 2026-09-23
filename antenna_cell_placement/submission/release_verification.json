@@ -1,0 +1,152 @@
+{
+  "tests_passed": 64,
+  "commands": [
+    {
+      "job": "tests",
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "seconds": 42.37,
+      "ended_utc": "2026-09-23T08:05:52.228898+00:00"
+    },
+    {
+      "job": "recommend",
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "recommend"
+      ],
+      "exit_code": 0,
+      "seconds": 33.44,
+      "ended_utc": "2026-09-23T08:06:25.674516+00:00"
+    },
+    {
+      "job": "predict",
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "predict",
+        "--lat",
+        "32.88",
+        "--lon",
+        "13.18"
+      ],
+      "exit_code": 0,
+      "seconds": 13.36,
+      "ended_utc": "2026-09-23T08:06:39.033067+00:00"
+    },
+    {
+      "job": "map",
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "map"
+      ],
+      "exit_code": 0,
+      "seconds": 28.08,
+      "ended_utc": "2026-09-23T08:07:07.116732+00:00"
+    },
+    {
+      "job": "h3-map",
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "h3-map",
+        "--city",
+        "Tripoli"
+      ],
+      "exit_code": 0,
+      "seconds": 11.32,
+      "ended_utc": "2026-09-23T08:07:18.441917+00:00"
+    },
+    {
+      "job": "submission",
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "tools/build_submission.py",
+        "--phase2-dir",
+        "eval_reports/phase2_v2_run2",
+        "--output-dir",
+        "submission"
+      ],
+      "exit_code": 0,
+      "seconds": 27.54,
+      "ended_utc": "2026-09-23T08:07:45.987969+00:00"
+    }
+  ],
+  "browser": {
+    "checkedUtc": "2026-09-23T08:21:04.201Z",
+    "browser": "Microsoft Edge (Chromium), headless",
+    "browserVersion": "153.0.4234.48",
+    "networkPolicy": "All external HTTP/HTTPS requests blocked",
+    "externalRequests": [],
+    "results": [
+      {
+        "file": "index.html",
+        "map": null,
+        "javascriptErrors": [],
+        "failedLocalRequests": [],
+        "screenshot": "screenshots/01_submission_overview.png"
+      },
+      {
+        "file": "tripoli_planning_map.html",
+        "map": {
+          "center": {
+            "lat": 32.775000000000006,
+            "lng": 13.3
+          },
+          "zoom": 11,
+          "layers": 7240,
+          "paths": 7112,
+          "tooltipVerified": true
+        },
+        "javascriptErrors": [],
+        "failedLocalRequests": [],
+        "screenshot": "screenshots/02_tripoli_priorities.png"
+      },
+      {
+        "file": "rooftop_candidates_map.html",
+        "map": {
+          "center": {
+            "lat": 32.85,
+            "lng": 13.25
+          },
+          "zoom": 11,
+          "layers": 4429,
+          "paths": 4344,
+          "tooltipVerified": true
+        },
+        "javascriptErrors": [],
+        "failedLocalRequests": [],
+        "screenshot": "screenshots/03_footprint_review.png"
+      }
+    ],
+    "status": "passed"
+  },
+  "unchanged_baseline_artifacts": {
+    "antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3": {
+      "unchanged": true,
+      "git_blob": "6bda86748c343ce12206bcf344fb6c50a9b752b9"
+    },
+    "antenna_cell_placement/models/cell_placement_suitability_model.joblib": {
+      "unchanged": true,
+      "git_blob": "3e9daf2f3497589bb91871a77c12624e49d5d981"
+    },
+    "antenna_cell_placement/models/equipment_recommendation_model.joblib": {
+      "unchanged": true,
+      "git_blob": "5eb8db9ef5854fe8a1949124e0c6ae488b044e6c"
+    }
+  },
+  "scope": "Submission output/documentation fixes; no Ahmed merge or model promotion"
+}

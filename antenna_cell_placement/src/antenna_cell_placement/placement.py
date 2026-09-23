@@ -9,13 +9,13 @@ from antenna_cell_placement.site_optimizer import CellSiteOptimizer
 from antenna_cell_placement.feature_engineering import GeospatialFeatureExtractor
 from antenna_cell_placement.placement_model import SUITABILITY_FEATURE_COLS
 import joblib
-from antenna_cell_placement.config import SUITABILITY_MODEL_PATH, EQUIPMENT_MODEL_PATH, CLEANED_SITES_PARQUET
+from antenna_cell_placement.config import SUITABILITY_MODEL_PATH, CLEANED_SITES_PARQUET
 
 
 def predict_site_suitability(latitude: float, longitude: float) -> Dict[str, Any]:
     """
-    Predicts the suitability and recommended equipment configuration
-    for an antenna cell site at a given (latitude, longitude) coordinate in Libya.
+    Return experimental existing-site pattern similarity and observed GIS context.
+    This is not a coverage prediction or installation approval.
     """
     extractor = GeospatialFeatureExtractor()
     extractor.load_layers()
@@ -26,31 +26,16 @@ def predict_site_suitability(latitude: float, longitude: float) -> Dict[str, Any
     features = extractor.extract_features([longitude], [latitude], is_existing_site=False)
 
     suit_model = joblib.load(SUITABILITY_MODEL_PATH)
-    eq_model = joblib.load(EQUIPMENT_MODEL_PATH)
 
     score = float(suit_model.predict_proba(features[SUITABILITY_FEATURE_COLS])[0, 1])
-
-    eq_features = [
-        "population_density_1km",
-        "population_sum_3km",
-        "population_sum_5km",
-        "elevation_m",
-        "elevation_prominence_3km",
-        "terrain_slope_deg",
-        "dist_to_nearest_road_m",
-        "dist_to_nearest_settlement_m",
-        "dist_to_nearest_site_m",
-        "site_density_3km",
-        "site_density_5km",
-    ]
-    tier = str(eq_model.predict(features[eq_features])[0])
 
     return {
         "latitude": latitude,
         "longitude": longitude,
-        "suitability_score": round(score, 4),
-        "is_suitable": score >= 0.65,
-        "recommended_equipment_tier": tier,
+        "experimental_site_pattern_score": round(score, 4),
+        "interpretation": "Existing-site pattern recognition; not RF coverage or deployment success.",
+        "building_height_m": None,
+        "building_height_status": "Unavailable",
         "municipality": features["municipality_name"].iloc[0],
         "nearest_settlement": features["nearest_settlement_name"].iloc[0],
         "distance_to_nearest_settlement_km": round(features["dist_to_nearest_settlement_m"].iloc[0] / 1000.0, 2),

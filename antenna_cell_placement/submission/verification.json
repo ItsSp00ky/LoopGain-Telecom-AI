@@ -1,0 +1,14 @@
+{
+  "owner_confirmed_almadar_raw_records": 645,
+  "owner_confirmed_almadar_radio_groups": 645,
+  "attribution_methods": [
+    "owner_confirmed_import_1_a099aa826f11"
+  ],
+  "radio_groups_total": 2338,
+  "scored_tripoli_hexes": 2216,
+  "shortlisted_areas": 20,
+  "footprint_candidates": 100,
+  "usable_footprint_heights": 0,
+  "footprint_coordinates_inside_geometry": true,
+  "raw_database_sha256": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06"
+}

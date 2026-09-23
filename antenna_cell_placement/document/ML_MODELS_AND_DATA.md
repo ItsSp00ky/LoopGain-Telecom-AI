@@ -1,5 +1,9 @@
 # ML models and data: what the system learns and how to evaluate it
 
+**Submission update (2026-09-23):** The public demo now describes planning priorities for engineering review and omits equipment, frequency-band and bandwidth advice. The coordinate response exposes an experimental site-pattern score, not an installation-suitability verdict. The controlled hard-negative comparison remains 0.876141 versus 0.885208; population-only baselines are 0.594538 and 0.571961 respectively. These are the same frozen examples and recipe, not demonstrated RF improvement. [Submission guide](SUBMISSION_READINESS.md) and [portable demo](../submission/index.html).
+
+Historical equipment-model results below describe research experiments, not the current public outputs. Legacy point-planning commands retain their existing model/features; the submission Tripoli map explicitly uses the separate phase-2 GIS v2 artifacts. No model has been promoted and no full branch merge is included.
+
 Updated: 2026-09-22. This is the primary model/data reference. Historical numbers below come from saved reports, not from a new blind field trial. The implementation plan is in [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md).
 
 ## 1. Purpose and decision boundary

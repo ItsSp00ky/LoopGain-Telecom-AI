@@ -1,7 +1,7 @@
 """
-Cell Site Placement Optimizer & Coverage Gap Analyzer for Libya.
-Identifies unserved and underserved populated corridors, evaluates candidate coordinates
-using the trained AI suitability model, and generates prioritized deployment recommendations.
+Experimental planning priorities for engineering review.
+Known-site distance and population are proxies; the score does not predict RF
+coverage or deployment success. Equipment and spectrum advice are not produced.
 """
 
 from pathlib import Path
@@ -15,7 +15,6 @@ from shapely.geometry import Point
 
 from antenna_cell_placement.config import (
     SUITABILITY_MODEL_PATH,
-    EQUIPMENT_MODEL_PATH,
     CLEANED_SITES_PARQUET,
     RECOMMENDATIONS_CSV,
     REPORTS_DIR,
@@ -31,16 +30,14 @@ class CellSiteOptimizer:
     """
     Evaluates geospatial candidate locations across Libya to recommend
     optimal placements for new cell sites based on population demand,
-    coverage gaps, terrain elevation, and road accessibility.
+    known-site gaps, terrain elevation, and road accessibility.
     """
 
     def __init__(
         self,
-        suitability_model_path: Path = SUITABILITY_MODEL_PATH,
-        equipment_model_path: Path = EQUIPMENT_MODEL_PATH
+        suitability_model_path: Path = SUITABILITY_MODEL_PATH
     ):
         self.suitability_model = joblib.load(suitability_model_path)
-        self.equipment_model = joblib.load(equipment_model_path)
         self.extractor = GeospatialFeatureExtractor()
         self.extractor.load_layers()
 
@@ -94,9 +91,11 @@ class CellSiteOptimizer:
         top_k: int = 50
     ) -> pd.DataFrame:
         """
-        Scans candidate grid across Libya, filters for coverage gaps,
-        runs AI suitability inference, and returns ranked recommendations.
+        Scans candidate grid across Libya, filters for known-site gaps,
+        runs experimental site-pattern inference, and returns ranked recommendations.
         """
+        if top_k < 1:
+            raise ValueError("top_k must be positive")
         print("Generating candidate search grid across Libyan populated regions and highway corridors...")
         cand_lons, cand_lats = self.generate_candidate_grid(step_km=4.0)
         print(f"Generated {len(cand_lons)} candidate evaluation points.")
@@ -104,77 +103,22 @@ class CellSiteOptimizer:
         print("Extracting multi-layer geospatial features for candidate locations...")
         df_candidates = self.extractor.extract_features(cand_lons, cand_lats, is_existing_site=False)
 
-        print(f"Filtering for coverage gaps (min distance to existing tower >= {min_gap_distance_m}m, min 5km pop >= {min_population_5km})...")
+        print(f"Filtering for known-site gaps (min distance to existing tower >= {min_gap_distance_m}m, min 5km pop >= {min_population_5km})...")
         mask_gap = (
             (df_candidates["dist_to_nearest_site_m"] >= min_gap_distance_m) &
             (df_candidates["population_sum_5km"] >= min_population_5km) &
             (df_candidates["dist_to_nearest_road_m"] <= 4000.0)
         )
         df_gaps = df_candidates[mask_gap].copy()
-        print(f"Identified {len(df_gaps)} coverage gap candidates meeting demographic criteria.")
+        print(f"Identified {len(df_gaps)} planning candidates meeting demographic criteria.")
 
+        # Keep the requested constraints, including when no candidate survives.
         if df_gaps.empty:
-            print("No gaps found matching strict criteria. Relaxing distance threshold to 2000m...")
-            mask_gap = (
-                (df_candidates["dist_to_nearest_site_m"] >= 2000.0) &
-                (df_candidates["population_sum_5km"] >= 200.0)
-            )
-            df_gaps = df_candidates[mask_gap].copy()
-
-        # Run AI Suitability Predictor
-        X_cand = df_gaps[SUITABILITY_FEATURE_COLS]
-        suitability_probs = self.suitability_model.predict_proba(X_cand)[:, 1]
-        df_gaps["placement_suitability_score"] = np.round(suitability_probs, 4)
-
-        # Run Equipment Recommender
-        eq_features = [
-            "population_density_1km",
-            "population_sum_3km",
-            "population_sum_5km",
-            "elevation_m",
-            "elevation_prominence_3km",
-            "terrain_slope_deg",
-            "dist_to_nearest_road_m",
-            "dist_to_nearest_settlement_m",
-            "dist_to_nearest_site_m",
-            "site_density_3km",
-            "site_density_5km",
-        ]
-        eq_preds = self.equipment_model.predict(df_gaps[eq_features])
-        df_gaps["recommended_equipment_tier"] = eq_preds
-
-        # Recommend Frequency Bands & Deployment Strategy
-        rec_bands = []
-        rec_bandwidth = []
-        rec_operators = []
-
-        for _, row in df_gaps.iterrows():
-            tier = row["recommended_equipment_tier"]
-            pop_5k = row["population_sum_5km"]
-            dist_lib = row["dist_to_libyana_site_m"]
-            dist_mad = row["dist_to_almadar_site_m"]
-
-            if tier == "Urban_HighCapacity_Macro":
-                rec_bands.append("B3 (1800MHz) + B1 (2100MHz) + B20 (800MHz)")
-                rec_bandwidth.append("40 - 60 MHz (Multi-Carrier LTE-A)")
-            elif tier == "Suburban_Standard_Macro":
-                rec_bands.append("B3 (1800MHz) + B20 (800MHz)")
-                rec_bandwidth.append("20 - 30 MHz (Dual-Carrier LTE)")
-            else:
-                rec_bands.append("B20 (800MHz) + B8 (900MHz)")
-                rec_bandwidth.append("10 - 15 MHz (Long-Range Coverage)")
-
-            # Recommend Operator
-            if dist_lib > 6000 and dist_mad > 6000:
-                rec_operators.append("Shared Infrastructure (Libyana + Al-Madar)")
-            elif dist_lib > dist_mad:
-                rec_operators.append("Libyana Priority")
-            else:
-                rec_operators.append("Al-Madar Priority")
-
-        df_gaps["recommended_rf_bands"] = rec_bands
-        df_gaps["recommended_bandwidth"] = rec_bandwidth
-        df_gaps["recommended_operator_strategy"] = rec_operators
+            print("No eligible planning candidates; constraints were not relaxed.")
+            df_gaps["placement_suitability_score"] = pd.Series(dtype=float)
+        else:
+            probabilities = self.suitability_model.predict_proba(df_gaps[SUITABILITY_FEATURE_COLS])[:, 1]
+            df_gaps["placement_suitability_score"] = np.round(probabilities, 4)
 
         # Compute the geospatial score first, keeping the model output auditable.
         # Cloudflare Radar is a regional HTTP-demand prior rather than coverage
@@ -211,7 +155,7 @@ class CellSiteOptimizer:
             if len(final_picks) >= top_k:
                 break
 
-        df_recommendations = pd.DataFrame(final_picks).reset_index(drop=True)
+        df_recommendations = (pd.DataFrame(final_picks) if final_picks else df_gaps.iloc[0:0].copy()).reset_index(drop=True)
         df_recommendations["recommendation_rank"] = range(1, len(df_recommendations) + 1)
 
         # Reorder columns for presentation
@@ -229,10 +173,6 @@ class CellSiteOptimizer:
             "cloudflare_http_requests_share_52w_pct",
             "cloudflare_annual_traffic_growth_52w_pct",
             "cloudflare_data_available",
-            "recommended_equipment_tier",
-            "recommended_rf_bands",
-            "recommended_bandwidth",
-            "recommended_operator_strategy",
             "population_density_1km",
             "population_sum_5km",
             "dist_to_nearest_site_m",
@@ -257,7 +197,7 @@ class CellSiteOptimizer:
             geometry=[Point(lon, lat) for lon, lat in zip(df_recommendations["canonical_longitude"], df_recommendations["canonical_latitude"])],
             crs=CRS_WGS84
         )
-        gdf_rec.to_file(rec_geojson_path, driver="GeoJSON")
+        rec_geojson_path.write_text(gdf_rec.to_json(), encoding="utf-8")
         print(f"Exported Recommendations GeoJSON to: {rec_geojson_path}")
 
         return df_recommendations
@@ -268,12 +208,12 @@ def run_optimizer_pipeline() -> pd.DataFrame:
     optimizer = CellSiteOptimizer()
     recs = optimizer.find_optimal_placements(min_gap_distance_m=3000.0, min_population_5km=300.0, top_k=50)
     print("\n" + "="*70)
-    print("TOP 10 RECOMMENDED CELL SITE PLACEMENTS FOR LIBYA")
+    print("TOP 10 PLANNING PRIORITIES FOR ENGINEERING REVIEW")
     print("="*70)
     print(recs[[
         "recommendation_rank", "municipality_name", "nearest_settlement_name",
         "deployment_priority_score", "placement_suitability_score",
-        "recommended_equipment_tier", "population_sum_5km", "dist_to_nearest_site_m"
+        "population_sum_5km", "dist_to_nearest_site_m"
     ]].head(10).to_string(index=False))
     return recs
 
