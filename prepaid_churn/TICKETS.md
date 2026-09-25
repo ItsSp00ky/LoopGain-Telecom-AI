@@ -9,7 +9,18 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Ali (merged Taha's dashboard follow-up `d38377d` into `Ali_Branch`; prior reviews retained).
+**Last updated:** 2026-09-25 by Ali (step-by-step recap of the module, now at T4; prior notes retained).
+
+**Ali's step-by-step recap, 2026-09-25**
+
+- Ali is walking through the module from T1, confirming or changing each step; every change goes to `Ali_Branch` only.
+- Steps 1 to 3 changed wording, not results: T1 now leads with the finding that shapes the product, decision 1 leads with the dataset mismatch, and decision 5 states the four-month trade-off.
+- Step 4 (T4) added error bars on the frozen test numbers with `churn uncertainty` (decision 35), which changes no model and reproduces `evaluation_all.md` exactly.
+  The champion's lead over the baseline held in all 2,000 resamples, and all four release checks pass at the unfavourable end of their intervals.
+- Step 4 also settled `--high-value`: it stays as a comparison with the upGrad case study, the product never uses it, and it must not be evaluated on the spent test window (decision 36).
+  T4 now says 107 window features, with the 126 of `dataset_all.md` explained by T5's 19.
+- Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
+- Next: step 5, the T5 features.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -234,6 +245,7 @@ Reasons are in [docs/decisions.md](docs/decisions.md).
 - **Eligibility:** only customers active in the current month are trained on, validated and scored (decision 12).
 - **High-value filter:** optional flag, off by default.
   When on, it keeps customers whose average recharge amount over the two feature months is at or above the 70th percentile (the top 30%).
+  It is for comparison with the upGrad case study only; the product never uses it (decision 36).
 - **Models:** logistic regression baseline and LightGBM, with probability calibration.
   PCA is never a model input, because it destroys per-customer explanations.
   PCA is allowed only for the T10 segment plot.
@@ -374,6 +386,7 @@ Scope, in `src/prepaid_churn/windows.py`:
 - `window_label`: window A uses our usage rule on month 8; window B uses Kaggle's month 9 label.
 - Eligibility: only customers active in the current month (decision 12).
 - Optional high-value filter: average airtime plus data recharge amount over the two window months in the top 30%, computed among eligible customers of that window.
+  It exists to compare with the upGrad case study's population; nothing downstream reads its output (decision 36).
 - Customer split 70/15/15, stratified by the window A label, seed 42.
 - `churn build-dataset [--high-value]` writes `train`, `validation` and `test` Parquet files to `data/processed/all/` (or `high_value/`) and a summary to `reports/dataset_all.md` (or `dataset_high_value.md`).
 
@@ -382,10 +395,12 @@ Acceptance:
 - Tests prove no customer appears in more than one split.
 - Window A and window B have identical feature columns.
 
-Result on the real data (`reports/dataset_all.md`): 107 features.
+Result on the real data: 107 window features.
+`reports/dataset_all.md` shows 126, because `build-dataset` now also adds the 19 features of T5.
 Train 45,858 rows (4.65% churn), validation 9,812 (4.61%), test 9,677 (4.35%).
 Our computed month 8 label and Kaggle's month 9 label give almost the same churn rate, which supports that our rule matches Kaggle's definition.
-High-value only: 13,708, 3,024 and 2,942 rows.
+High-value only (`reports/dataset_high_value.md`): 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.
+It must not be carried through `churn evaluate`, because the test window is spent; the T7 high-value slice answers how the model does on these customers (decision 36).
 
 ## T5 - Features
 
@@ -450,6 +465,7 @@ Scope, in `src/prepaid_churn/evaluation.py`:
 - Risk bands from validation only: `high` from the best-F1 threshold, `medium` above the validation churn rate, `low` below.
 - `freeze` saves everything to `artifacts/models/all/champion.joblib` before the test window is scored.
 - `churn evaluate` then scores test customers in window B once and writes `reports/evaluation_all.md`: metrics for both models, precision and recall at the top 5%, 10% and 20%, risk bands, a reliability table (instead of an image, so it reads in Markdown), and the high-value slice.
+- Added on 2026-09-25 (decision 35): `churn uncertainty` resamples the frozen test predictions to put 95% intervals on the published numbers and writes `reports/uncertainty.md`; it trains and chooses nothing.
 
 Acceptance:
 - `reports/evaluation_all.md` compares logistic regression and LightGBM on window B.
@@ -482,6 +498,11 @@ Success thresholds (decision 13), checked against these test results:
 
 The thresholds were written down after this test run, at the instructor's request, so this pass is reported honestly as a check, not as a pre-registered result.
 From now on they are a gate for every new model (retraining, a new month or an operator's own data), checked before the model is used (T8).
+
+How sure these numbers are (decision 35, `reports/uncertainty.md`, 2,000 paired resamples of the frozen predictions, nothing changed):
+- LightGBM PR-AUC 0.348, 95% interval 0.301 to 0.400; logistic regression 0.277, 0.238 to 0.324.
+- LightGBM scored higher than the baseline in all 2,000 resamples; the difference is 0.071, interval 0.040 to 0.102.
+- All four thresholds still pass at the unfavourable end of their intervals; the closest to its bar is capture, at 57.3% against 50%.
 
 ## T8 - Model bundle and batch scoring
 

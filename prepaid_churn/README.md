@@ -37,9 +37,10 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn profile` | T1 | Profiles `data/raw/train.csv` and writes `reports/profile.md` |
 | `uv run churn validate [--input <file>]` | T2 | Checks an export against the [data contract](docs/data_contract.md) |
 | `uv run churn contract` | T2 | Regenerates `docs/data_contract.md` from the code |
-| `uv run churn build-dataset [--high-value]` | T4 | Validates, cleans and builds train, validation and test windows in `data/processed/` |
+| `uv run churn build-dataset [--high-value]` | T4 | Validates, cleans and builds train, validation and test windows in `data/processed/`; `--high-value` is only for comparison with the upGrad case study (decision 36) |
 | `uv run churn train` | T6 | Trains logistic regression and LightGBM into `artifacts/models/` |
 | `uv run churn evaluate` | T7 | Calibrates and freezes the champion on validation, scores the test month and stores the release gate (decision 13) |
+| `uv run churn uncertainty` | T7 | Puts 95% intervals on the frozen test metrics in `reports/uncertainty.md`; changes no model (decision 35) |
 | `uv run churn bundle` | T8 | Packages a champion that passed its release gate into `artifacts/bundle/` |
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |

@@ -113,6 +113,36 @@ def run_evaluate(args: argparse.Namespace) -> None:
     print(f"Release gate {'passed' if gate['passed'] else 'FAILED'} ({model_dir / GATE_FILE})")
 
 
+def run_uncertainty(args: argparse.Namespace) -> None:
+    import joblib
+    import pandas as pd
+
+    from prepaid_churn.evaluation import frozen_test_probabilities, uncertainty_report
+    from prepaid_churn.windows import LABEL
+
+    variant = args.data_dir.name
+    model_dir = MODELS_DIR / variant
+    saved_path = model_dir / "champion.joblib"
+    if not saved_path.exists():
+        raise FileNotFoundError(f"{saved_path} not found. Run `uv run churn evaluate` first.")
+    models = {}
+    for name in ("logistic_regression", "lightgbm"):
+        path = model_dir / f"{name}.joblib"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} not found. Run `uv run churn train` first.")
+        models[name] = joblib.load(path)
+    saved = joblib.load(saved_path)
+    validation = pd.read_parquet(args.data_dir / "validation.parquet")
+    test = pd.read_parquet(args.data_dir / "test.parquet")
+    probabilities = frozen_test_probabilities(models, saved, validation, test)
+    report = uncertainty_report(
+        test[LABEL], probabilities, saved.name, saved.chosen_at, repeats=args.repeats
+    )
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(report, encoding="utf-8")
+    print(f"Intervals on the frozen test metrics ({args.repeats:,} resamples) in {args.report}")
+
+
 def run_bundle(args: argparse.Namespace) -> None:
     import joblib
     import pandas as pd
@@ -400,6 +430,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Date recorded as the freeze date (default: today).",
     )
     evaluate.set_defaults(handler=run_evaluate)
+
+    uncertainty = commands.add_parser(
+        "uncertainty",
+        help="Put 95%% intervals on the frozen test metrics; changes no model (T7).",
+    )
+    uncertainty.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
+    uncertainty.add_argument("--repeats", type=int, default=2000)
+    uncertainty.add_argument("--report", type=Path, default=REPORTS_DIR / "uncertainty.md")
+    uncertainty.set_defaults(handler=run_uncertainty)
 
     bundle = commands.add_parser(
         "bundle", help="Package the champion that passed its release gate (ticket T8)."

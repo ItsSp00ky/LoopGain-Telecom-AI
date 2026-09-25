@@ -913,3 +913,51 @@ It also says the service loads the campaign at startup, so a new release is serv
 
 One more thing was wrong and is fixed: an empty selection in the approval box meant "approve everything", so a reviewer who clicked Approve with nothing selected approved every pending proposal in the campaign.
 Reviewing everything is now a separate checkbox that says how many rows it covers, and an empty selection is an error rather than a mass approval.
+
+## 35. Error bars on the frozen test numbers, and they change nothing
+
+Date: 2026-09-25.
+
+While recapping T4, Ali asked how sure we are of the published test numbers.
+Every figure in `reports/evaluation_all.md` comes from one draw of 9,677 test customers, 421 of whom churned, and none of them had an interval.
+"0.348 beats 0.277" was stated as a fact without saying how much of it could be the luck of which customers landed in the test group.
+
+`churn uncertainty` answers that with a bootstrap.
+It resamples the frozen test predictions 2,000 times, 9,677 customers drawn with replacement each time, seed 42, and reports the 2.5th and 97.5th percentiles of each measure.
+Both models are scored on the same resampled customers every time, so the difference between them is paired.
+
+It is built so that it cannot change anything.
+It trains, calibrates and chooses nothing.
+Only the champion's calibrator is saved, so the baseline's is re-derived by repeating the validation-only freeze with the recorded date, and the command refuses to continue unless that repeat reproduces the saved champion's test predictions exactly.
+Its estimates match `reports/evaluation_all.md` to the last digit, and that report was not regenerated.
+Reading the frozen predictions again is not a second evaluation: the models, the calibrators and every choice are the ones scored once on 2026-09-19.
+No result of it may be used to justify a change to a model, feature or threshold.
+
+What it found, from [reports/uncertainty.md](../reports/uncertainty.md):
+
+- LightGBM PR-AUC 0.348, 95% interval 0.301 to 0.400; logistic regression 0.277, 0.238 to 0.324.
+- The difference is 0.071, interval 0.040 to 0.102, and LightGBM scored higher in all 2,000 resamples, so the champion's lead is not luck of the draw.
+- All four checks of decision 13 still pass at the unfavourable end of their intervals: capture at least 57.3%, PR-AUC at least 7.1 times the churn rate, a calibration gap of at most 0.5 points, and a lead over the baseline of at least 0.040.
+- The baseline's own capture interval reaches down to 48.7%, below the 50% bar, so the baseline alone would not have been a safe release.
+- The drop from validation to test, 0.458 to 0.348, is more than twice the half-width of the test interval, so the later month, Kaggle's label and the optimism of having chosen on validation move the numbers more than sampling luck does.
+
+What it does not cover: training randomness, which would need models retrained on other splits and each scored on the spent test window, and a different month or operator, which only new data can measure.
+
+## 36. The high-value flag stays, as a comparison tool only
+
+Date: 2026-09-25.
+
+The T4 recap found that `churn build-dataset --high-value` builds a dataset that no later command reads.
+The product path (`bundle`, `score`, `tiers`, `decide`, the service and the app) always uses `data/processed/all/`.
+The high-value slice in `reports/evaluation_all.md` does not come from the flag either: `churn evaluate` applies the same rule to the main test set, with its own 70th-percentile cutoff (`HIGH_VALUE_QUANTILE`).
+
+It stays, for two reasons.
+The upGrad case study this data comes from predicts churn only for high-value customers, the top 30% by average recharge over the first two months, and the flag is how our numbers can be set beside work that follows the case study.
+Ours is computed among active customers only (decision 12), so the population is close to the case study's, not identical.
+It is also small, tested and off by default, and removing it would reopen a settled choice for no gain to the product.
+
+What changed is only the text, so nobody reads more into the flag than it does.
+T4, the settled choices in TICKETS.md, the README and the model card now say that it exists for comparison and that the product never uses it.
+It must not be carried through `churn evaluate` on this data: the test customers were scored once on 2026-09-19, so a model trained on the high-value dataset could only be tested by scoring them a second time.
+The T7 slice, PR-AUC 0.383 at 2.9% churn, is the answer to how the model does on these customers.
+`reports/dataset_high_value.md` stays as the record of the population's size: 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.

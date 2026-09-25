@@ -60,7 +60,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/windows.py` | T4 windows, labels, eligibility, customer split (`build_datasets`) |
 | `src/prepaid_churn/features.py` | T5 engineered features (`FEATURES`, `add_features`) |
 | `src/prepaid_churn/training.py` | T6 models, training and metrics |
-| `src/prepaid_churn/evaluation.py` | T7 calibration, frozen `Champion`, test report |
+| `src/prepaid_churn/evaluation.py` | T7 calibration, frozen `Champion`, test report, and the bootstrap intervals behind `churn uncertainty` (decision 35) |
 | `src/prepaid_churn/bundle.py` | T8 model bundle: build, save, load with version and smoke checks |
 | `src/prepaid_churn/scoring.py` | T8 `score`, plain-language reasons, output contract (`OUTPUT_COLUMNS`) |
 | `src/prepaid_churn/value.py` | T10 training-frozen tiers, versioned artifact, 12-month revenue scenarios and output extension |
