@@ -20,8 +20,10 @@ Update this section at the end of every working session.
 - Step 4 also settled `--high-value`: it stays as a comparison with the upGrad case study, the product never uses it, and it must not be evaluated on the spent test window (decision 36).
   T4 now says 107 window features, with the 126 of `dataset_all.md` explained by T5's 19.
 - Step 5 (T5) changed text only: the two share descriptions in `features.py` now say what the data shows, and T5 answers its own open question (the four share features carry 3.0% of the gain).
+- Step 6 (T6) found that the model's top signal is partly temporary absence: roamers are 52% of the churners, and 26% of customers silent in month 8 were active again in month 9.
+  That is now a model card limitation, and the early-stopping change T6 made without a decision entry is recorded as decision 37.
 - Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 6, T6 training.
+- Next: step 7, T7 calibration and evaluation.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -239,7 +241,7 @@ Reasons are in [docs/decisions.md](docs/decisions.md).
   - Window B: features from months 7 and 8, label = Kaggle's month 9 label.
 - **Customer split:** customers are split 70/15/15 into train, validation and test, stratified by the window A label.
   - Train customers: fit models on window A.
-  - Validation customers: early stopping, calibration and threshold choice on window A.
+  - Validation customers: calibration and threshold choice on window A; LightGBM's early stopping uses 10% of the train customers instead (decision 37).
   - Test customers: final evaluation on window B, run once after everything is frozen.
 - **No leakage:** a feature may only use months up to and including "current month".
   Month 9 information never enters features.
@@ -443,9 +445,11 @@ Answered on 2026-09-25 from the trained LightGBM's gain and the train customers,
 
 Scope, in `src/prepaid_churn/training.py`:
 - Logistic regression baseline: signed log transform (heavy-tailed amounts), scaling, no class weights.
+  It uses scikit-learn's default L2 penalty and converged in 87 of the 5,000 iterations it is allowed.
 - LightGBM, no class weights, deterministic mode, seed 42.
   The tree count comes from early stopping on 10% of the train customers, then LightGBM is refit on all train customers.
-  This keeps the validation customers untouched for T7 (a change from the first plan, which early-stopped on validation).
+  This keeps the validation customers untouched for T7 (a change from the first plan, which early-stopped on validation; decision 37).
+  The other settings were set by hand and never searched: learning rate 0.03, 31 leaves, at least 50 customers per leaf, 80% row and column sampling and an L2 penalty of 1.0.
 - `churn train [--data-dir data/processed/all]` writes `artifacts/models/all/*.joblib` and `reports/training_all.md`.
 
 Acceptance:
@@ -462,6 +466,14 @@ Result on the validation customers (uncalibrated), 12 seconds on a laptop CPU:
 The churn rate is 4.6%, so a PR-AUC of 0.458 is about 10 times better than random.
 The top feature is roaming outgoing minutes in the current month (13% of gain), then `trend_total_mou` and days since the last recharge.
 Roaming is plausible (travel, moving away, or a local SIM abroad), and it is not leakage: it is measured in the month before the label month.
+
+Checked on 2026-09-25 with the train and validation customers only; no model was saved or changed:
+- Customers roaming in the current month are 14.0% of the train customers and 52.2% of the churners, and they churn at 17.3% against 2.6%.
+- The four roaming columns carry 18.9% of the gain.
+  The same recipe without them scores a validation PR-AUC of 0.401 instead of 0.458 (logistic regression: 0.318 instead of 0.336).
+- Of 2,131 train customers silent in month 8, 561 (26.3%) were active again in month 9 by Kaggle's label: 35.2% of those who had been roaming and 16.7% of the others.
+  So part of this signal is temporary absence, which the one-month label counts as churn.
+- Every customer in the data has the same home circle (`circle_id` 109), so roaming here mostly means being away from that region, which is unlikely to mean the same in Libya (model card, Limitations).
 
 ## T7 - Calibration and evaluation
 

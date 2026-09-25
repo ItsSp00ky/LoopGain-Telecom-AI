@@ -228,6 +228,14 @@ Stated plainly, because this is the section an evaluator should read hardest.
 - **Educational licence.** The Kaggle competition terms allow education only, so a model fitted on this data cannot be sold or deployed commercially (decision 11).
 - **The test window is spent.** It was scored once, on 2026-09-19. No model, feature or threshold may change because of those numbers, and any future comparison must be against them rather than a re-scored test.
 - **Churn is inactivity, so a dual-SIM subscriber who still receives calls but places none elsewhere looks retained.** The receiving-SIM hypothesis from `Ali_Branch` is testable only on real Libyan data.
+- **One month of silence is not always churn.**
+  Of 2,131 train customers who went silent in month 8, 561 (26%) were active again in month 9 by Kaggle's label (T6).
+  The label counts temporary absence as churn, and an offer to a customer who would have come back anyway is spent for nothing.
+- **The strongest signal is roaming, and it belongs to this market.**
+  Customers roaming in the current month are 14% of the train customers but 52% of the churners, and the four roaming columns carry 19% of LightGBM's gain (T6).
+  Without them, the same training recipe scores a validation PR-AUC of 0.401 instead of 0.458.
+  Every customer here has the same home circle (`circle_id` 109), so roaming mostly means being away from that region, and roamers who went silent came back more often (35% against 17%).
+  In Libya roaming would mostly mean being abroad, so this signal is likely to behave differently there, which is one more reason the model must be retrained on the operator's own data (decisions 11 and 16).
 - **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5%, or 10% for the morning product, and it is not measured. T17 is the ticket that would start to measure it.
 - **No network-quality features.** Dropped calls and outages are not in this data. T20 defines the field contract for the network ML team to supply them later.
 - **Age on network is a snapshot**, not a per-month value, so tenure carries the timing limitation recorded in T4.

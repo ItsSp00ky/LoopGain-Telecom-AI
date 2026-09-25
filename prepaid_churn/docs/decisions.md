@@ -961,3 +961,24 @@ T4, the settled choices in TICKETS.md, the README and the model card now say tha
 It must not be carried through `churn evaluate` on this data: the test customers were scored once on 2026-09-19, so a model trained on the high-value dataset could only be tested by scoring them a second time.
 The T7 slice, PR-AUC 0.383 at 2.9% churn, is the answer to how the model does on these customers.
 `reports/dataset_high_value.md` stays as the record of the population's size: 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.
+
+## 37. Early stopping uses the train customers, not validation
+
+Date: 2026-09-25.
+
+The settled plan in TICKETS.md gave the validation customers three jobs: early stopping, calibration and threshold choice.
+T6 moved the first job to a slice of the train customers and said so in its ticket, but no decision entry recorded the change, and the settled list kept the old wording until Ali's recap found it.
+This entry records what was built; it changes no model.
+
+What T6 does: LightGBM is fitted on 90% of the train customers while the other 10%, stratified by label with seed 42, decide when to stop (100 rounds without a better log loss).
+The model is then refitted on all train customers with that tree count, 288 trees.
+
+Why: the validation customers are then used only for the T7 choices (calibration, the champion and the risk bands), and T6's validation numbers come from customers its stopping rule never saw.
+Stopping on validation and then calibrating and choosing on the same customers would have used them twice.
+The cost is small: the tree count is chosen with 90% of the train customers instead of all of them.
+
+The other LightGBM settings were set by hand and never searched: a learning rate of 0.03, 31 leaves, at least 50 customers per leaf, 80% row and column sampling and an L2 penalty of 1.0.
+They are more cautious than LightGBM's defaults, and only the tree count is fitted.
+
+T12's LSTM is an experiment, and its ticket early-stops it on validation customers.
+It lost to LightGBM, so that choice could only have flattered the loser.
