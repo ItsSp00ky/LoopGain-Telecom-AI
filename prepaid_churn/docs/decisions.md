@@ -7,9 +7,18 @@ Every entry says what was decided, why, and what it rules out.
 ## 1. We do not build on Ahmed's `customer_churn_prediction/` module
 
 Date: 2026-09-13.
+The reasoning below was reordered on 2026-09-25; the decision and every finding are unchanged.
 
 Taha asked for an independent audit of the existing churn module before reusing it.
-The audit found problems serious enough to start fresh in `prepaid_churn/`:
+
+**The deciding reason is the data, not the code.**
+The Maven and IBM Telco datasets describe a fictional company, which IBM states itself, and both are postpaid and a single snapshot in time.
+This module serves prepaid subscribers of a Libyan operator, where there is no contract to cancel and churn is a monthly behaviour that has to be observed rather than an event that gets recorded.
+No amount of repair turns invented postpaid contract records into prepaid behaviour, so a different foundation was needed whatever state the code had been in.
+
+**The audit also found faults in the code.**
+They are listed here because they are the mistakes this module was then built to avoid, not because they decided the outcome.
+Every one of them could have been fixed; the dataset mismatch could not.
 
 - **Label leak from dropping "Joined" customers.**
   The Maven dataset has 4,720 Stayed, 1,869 Churned and 454 Joined customers.
@@ -30,10 +39,14 @@ The audit found problems serious enough to start fresh in `prepaid_churn/`:
   The champion was picked by test ROC-AUC (0.9280 vs 0.9278, within noise) and the 0.63 threshold was tuned on the test set.
   The discount engine then ignores that threshold and hardcodes 0.60 and 0.35.
 - Smaller issues: dead and contradictory `DISCOUNT_TIERS` config, 120 negative monthly charges left unhandled, gender and age feeding discount decisions, report numbers that no code produces (the 75% acceptance rate and the strategy comparison), no tests, and about 100 MB of datasets committed to git.
-- The Maven and IBM Telco data describe a fictional company (IBM calls it fictional), and it is a postpaid, single-snapshot dataset.
+
+Each fault above has a matching rule in this module.
+The leak became the no-leakage rule of T4 and T5, the in-sample headline became the single frozen test of T7, the uncalibrated probabilities became the mandatory calibration check of decision 13, and the tuned threshold became the rule that every choice is made on validation customers only.
 
 Ahmed's folder stays untouched on this branch.
 If `prepaid_churn/` works, the team deletes the old folder later.
+
+This entry is not a judgement of Ahmed's work as a whole, and the audit was of the code in the repository rather than of the person who wrote it.
 
 ## 2. No two-tower architecture
 

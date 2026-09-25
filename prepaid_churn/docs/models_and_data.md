@@ -29,13 +29,11 @@ The retention decisions (T11) and the emergency credit advice (T19) use no model
 |---|---|
 | upGrad Telecom Churn (`data/raw/train.csv`) | Trains and tests the churn model. |
 | upGrad unlabelled set (`data/raw/test.csv`) | The live base that gets scored. |
-| Almadar `offers.csv` | The packages offered to customers. |
-| Almadar `market.toml` | Prices, recharge cards, emergency credit and the ARPU assumption. |
 | Orange Belgium (OpenML 45580) | Uplift experiment. |
 | Criteo Uplift v2.1 | Uplift experiment. |
 | Synthetic copies | Output of CTGAN and Copula, for the T13 test. |
 
-Only the first four belong to the product.
+Only the first two belong to the product.
 The last three exist for experiments and are never committed.
 
 The full numbers are in [model_card.md](model_card.md) and in the reports under `reports/`.
