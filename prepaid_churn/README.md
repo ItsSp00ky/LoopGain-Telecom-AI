@@ -37,9 +37,10 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn profile` | T1 | Profiles `data/raw/train.csv` and writes `reports/profile.md` |
 | `uv run churn validate [--input <file>]` | T2 | Checks an export against the [data contract](docs/data_contract.md) |
 | `uv run churn contract` | T2 | Regenerates `docs/data_contract.md` from the code |
-| `uv run churn build-dataset [--high-value]` | T4 | Validates, cleans and builds train, validation and test windows in `data/processed/` |
+| `uv run churn build-dataset [--high-value]` | T4 | Validates, cleans and builds train, validation and test windows in `data/processed/`; `--high-value` is only for comparison with the upGrad case study (decision 36) |
 | `uv run churn train` | T6 | Trains logistic regression and LightGBM into `artifacts/models/` |
 | `uv run churn evaluate` | T7 | Calibrates and freezes the champion on validation, scores the test month and stores the release gate (decision 13) |
+| `uv run churn uncertainty` | T7 | Puts 95% intervals on the frozen test metrics in `reports/uncertainty.md`; changes no model (decision 35) |
 | `uv run churn bundle` | T8 | Packages a champion that passed its release gate into `artifacts/bundle/` |
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
@@ -49,7 +50,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
-| `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes `reports/decisions.md`; releases nothing |
+| `uv run churn decide` | T11 | Proposes catalogue bonuses under a campaign budget and writes the report beside the campaign; releases nothing |
 | `uv run churn approve --proposals <file> --reviewer <name>` | T11 | Approves pending proposals and exports approved rows only; `--reject` records rejection |
 | `uv run churn advance` | T19 | Advises an emergency credit limit per customer and writes `reports/emergency_credit.md`; grants nothing |
 | `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |
@@ -72,6 +73,7 @@ uv run churn tiers
 `--chosen-at 2026-09-19` keeps the date the champion was frozen.
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
 Checked again on 2026-09-21 from a fresh clone of `Ali_Branch`: same bundle version, same tier artifact `tiers-v1-cd15525cb3ef`, and no committed report changed.
+The [2026-09-22 end-to-end check](reports/end_to_end.md) reproduced them again, exercised the live API and all five dashboard pages, and records how to open the checked campaign.
 
 The last two commands build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
 To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
@@ -180,7 +182,8 @@ The OpenAPI page at `/docs` is generated from the response models, so it is the 
 
 Outputs are read once when the service starts, so restart it after a new `churn approve` release.
 `/health` reports the campaign it is holding, so you can see what is being served.
-Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null, which is the state of this checkout.
+Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null.
+An approved package that has left the current catalogue is withheld, and health explains that a new campaign needs to be created and reviewed.
 
 ## Integration guide for the other components
 
@@ -194,8 +197,9 @@ With a service running, the check calls every endpoint and every refusal a consu
 uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a subscriber>
 ```
 
-It prints what each consumer sees and exits 1 if a refusal did not happen, so the seam is checked rather than described.
-Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign: status ok, 57 packages, the approved offer for one subscriber, 176,494 LYD at risk, and all four refusals correct.
+It prints what each consumer sees and exits 1 if a refusal did not happen, health is degraded, risk is unavailable or the model release gate has not passed.
+Redirected output is UTF-8 so Arabic package names work on Windows too.
+Checked on 2026-09-22 against the rebuilt 30,000-subscriber base and an isolated QA campaign: status ok, 37 packages, the approved offer for one subscriber and all five refusals correct.
 
 ## Syllabus experiments
 
@@ -250,7 +254,7 @@ uv run streamlit run app/Home.py
 | Released | What was approved, where the files are, and the endpoint the chatbot reads it from |
 
 The sidebar picks which campaign every screen reads.
-The Campaign builder can propose a new one (how many customers, what budget), and the Subscriber screen can propose an offer for one customer; both run the same engine as `churn decide`, and neither approves anything (decision 31).
+The Campaign builder can propose a new one (how many customers, what budget), and the Subscriber screen can propose an offer for one customer; both run the same engine as `churn decide`, and neither approves anything (decision 34).
 Keep a proposed campaign small while demonstrating: 500 customers is a 1.7 MB snapshot that loads instantly, where the whole 30,000-customer base is 80 MB.
 
 By default it reads the first campaign in `artifacts/campaigns/retention`.

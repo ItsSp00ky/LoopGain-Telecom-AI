@@ -7,13 +7,14 @@ This file is the narrative that connects them: what happened, in what order, wha
 ## Where things stand on 2026-09-25
 
 - Branch `tahaDev`, pushed; the only branch anyone works on (decision 24).
-  `Ali_Branch` is kept as a record and is not worked on.
+  `Ali_Branch` was meant to stay a record, but Ali kept working on it through 2026-09-25; it was merged into `tahaDev` through `f0156e2` (see the Handoff).
 - Every ticket in TICKETS.md is closed, T0 to T21.
-- 401 prepaid tests, `ruff check` and `ruff format --check` pass (with `uv sync --group experiments`; without it the one Keras test is skipped).
+- 435 prepaid tests after merging `Ali_Branch` (401 before it), `ruff check` and `ruff format --check` pass (with `uv sync --group experiments`; without it the one Keras test is skipped).
 - A fresh rebuild reproduces the frozen champion byte for byte: bundle `lightgbm-2026-09-19-ef9430fb`, tiers `tiers-v1-cd15525cb3ef`, and no committed report changes.
-- Decisions run from 1 to 31; this session wrote 15 to 17 and 24 to 31, and Ali wrote 18 to 23.
+- Decisions run from 1 to 36; this session wrote 15 to 17, 24 to 30 and 34, and Ali wrote 18 to 23, 31 to 33, 35 and 36.
+  Both sessions first numbered a decision 31; Ali's merge `5483f50` kept his Mix catalogue decision as 31 and renumbered the demo app decision to 34.
 - **Open, and the first thing to pick up:** Taha tried the reworked demo app and said it is "still somehow heavy and somehow random, I didn't understand it" (see "Feedback not yet acted on" below).
-- **Also open:** the three questions for Ali in the TICKETS open questions, and three checks on the final report draft (section "The final report draft").
+- **Also open:** the one question for Ali left in the TICKETS open questions (the Almadar source links), and three checks on the final report draft (section "The final report draft").
 
 ## Timeline
 
@@ -56,7 +57,7 @@ This file is the narrative that connects them: what happened, in what order, wha
 ### 6. The demo app, after Taha used it (2026-09-22)
 
 - Taha's first test: the app was slow at everything, there was no way to create an offer, and after approving 15 offers he could not find them.
-- `d38377d` (decision 31): the campaign snapshot is parsed once instead of twice; a campaign picker in the sidebar; the Campaign builder can propose a campaign (customers, budget, name) and the Subscriber screen can propose for one customer, both through the same path as `churn decide`; a new Released screen; a "Pick a high-risk one" button; and a fix for a real hazard, where an empty selection in the approval box approved every pending proposal.
+- `d38377d` (decision 34): the campaign snapshot is parsed once instead of twice; a campaign picker in the sidebar; the Campaign builder can propose a campaign (customers, budget, name) and the Subscriber screen can propose for one customer, both through the same path as `churn decide`; a new Released screen; a "Pick a high-risk one" button; and a fix for a real hazard, where an empty selection in the approval box approved every pending proposal.
 - Checked end to end in the browser: propose, approve one, see it on Released.
 
 ### 7. Mentoring session preparation (2026-09-23)
@@ -79,7 +80,7 @@ This file is the narrative that connects them: what happened, in what order, wha
 Taha, 2026-09-23, after trying the reworked app: "do not open it again, it is still somehow heavy and somehow random, I didn't understand it".
 
 What the disk shows about that session:
-- He proposed a campaign over all 30,000 customers from the Campaign builder (`artifacts/campaigns/ui-2026-09-22-30000`, 78 MB), which brings back exactly the slowness decision 31 fixed, because the slider offers 30,000.
+- He proposed a campaign over all 30,000 customers from the Campaign builder (`artifacts/campaigns/ui-2026-09-22-30000`, 78 MB), which brings back exactly the slowness decision 34 fixed, because the slider offers 30,000.
 - He also proposed a 200-customer campaign and approved one offer in it (`ui-2026-09-22-200`: subscriber 70016, reviewer "taha", note "offer"), so the propose, approve and release path did work for him; the problem is understanding, not a broken flow.
 
 What "random" means is not known; candidates are the "Pick one at random" button, the random holdout group, or campaigns built from "the first N customers", which looks arbitrary.

@@ -225,11 +225,16 @@ def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
     if not path.exists():
         return None, f"{path.name} not found. Run `uv run churn tiers` first."
     try:
-        portfolio = pd.read_csv(path, dtype={"subscriber_id": str})
+        portfolio = pd.read_csv(path, converters={"subscriber_id": str})
     except Exception as error:
         return None, f"{type(error).__name__}: {error}"
     if "value_tier" not in portfolio.columns:
         return None, f"{path.name} has no value_tier column; it is not a `churn tiers` export."
+    if "subscriber_id" not in portfolio.columns:
+        return None, f"{path.name} has no subscriber_id column."
+    ids = portfolio["subscriber_id"]
+    if ids.isna().any() or ids.str.strip().eq("").any() or not ids.is_unique:
+        return None, f"{path.name} needs nonempty, unique subscriber IDs."
     return portfolio, None
 
 
@@ -247,8 +252,16 @@ def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceStat
         paths.campaign_path, campaign
     )
     portfolio, portfolio_error = _load_portfolio(paths.portfolio_path)
+    offers = load_offers(paths.offers_path)
+    unavailable = ~approved["recommended_offer_id"].isin(offers["offer_id"])
+    if unavailable.any():
+        campaign_error = (
+            f"{int(unavailable.sum())} approved offers are no longer in the current catalogue; "
+            "they are withheld. Create and review a new campaign."
+        )
+        approved = approved.loc[~unavailable].copy()
     return ServiceState(
-        offers=load_offers(paths.offers_path),
+        offers=offers,
         approved=approved,
         loaded_at=utc_now(),
         bundle=bundle,
@@ -327,7 +340,8 @@ def retention(state: ServiceState, subscriber_id: str) -> dict | None:
         for name, value in _json_safe(rows.iloc[[0]])[0].items()
         if name in CHATBOT_RELEASE_COLUMNS
     }
-    return row | {"offer": _offer_details(state, row["recommended_offer_id"])}
+    offer = _offer_details(state, row["recommended_offer_id"])
+    return None if offer is None else row | {"offer": offer}
 
 
 def _offer_details(state: ServiceState, offer_id: object) -> dict | None:

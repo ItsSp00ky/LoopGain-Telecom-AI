@@ -18,6 +18,7 @@ from prepaid_churn.campaign import (
     save_campaign,
 )
 from prepaid_churn.cli import main
+from prepaid_churn.data import REPORTS_DIR
 from prepaid_churn.retention import (
     NO_OFFER,
     RetentionError,
@@ -42,23 +43,6 @@ def offers():
 @pytest.fixture
 def policy():
     return replace(load_policy(), holdout_fraction=0.0)
-
-
-@pytest.fixture
-def customers():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, 0.2],
-            "risk_band": ["high"] * 4,
-            "value_tier": ["high"] * 4,
-            "value_status": ["scenario"] * 4,
-            "value_12m_base_lyd": [100.0] * 4,
-            "bundle_held": ["PAYG"] * 4,
-            "uses_voice": [True] * 4,
-            "uses_data": [True] * 4,
-        }
-    )
 
 
 @pytest.fixture
@@ -123,11 +107,16 @@ def test_cannibalisation_guard_uses_held_monthly_bundle_even_at_high_risk(
 
 
 def test_service_relevance_and_unknown_technical_eligibility(customers, offers, policy):
+    # A voice-only customer above the base rung now has nothing to be offered.
+    # The Mix families were the only metered data-and-voice packages, and Ali confirmed on
+    # 2026-09-22 that they are no longer sold. What is left with voice is the Family share
+    # tier, which the membership guard excludes, and the morning pass, which the
+    # cannibalisation guard blocks above MO_20. No offer is the correct answer, not a bug.
     customers["uses_data"] = False
-    customers["bundle_held"] = "MO_80"  # blocks morning bonus; Mix voice minutes remain relevant
+    customers["bundle_held"] = "MO_80"
     result, _ = propose(customers, offers, policy)
-    selected = offers.set_index("offer_id").loc[result["recommended_offer_id"]]
-    assert selected["voice_minutes"].gt(0).all()
+    assert result["recommended_offer_id"].eq(NO_OFFER).all()
+    assert result["decision_code"].eq("no_eligible_offer").all()
     customers["uses_data"] = True
     excluded = offers[offers["network"].notna() | offers["members"].gt(1)]["offer_id"]
     # Make unknown-eligibility products economically dominant if the guard is removed.
@@ -393,6 +382,38 @@ def test_decide_and_approve_cli(raw, trained, bundle, tmp_path):
     assert len(released_campaign(campaign)) == sum(
         row["status"] == "proposed" for row in campaign["snapshot"]["rows"]
     )
+
+
+def test_the_decision_report_defaults_beside_the_campaign(raw, trained, bundle, tmp_path):
+    """Running the documented command must not overwrite the committed readiness report.
+
+    Every run needs a new output directory and may use a different budget, so a fixed
+    default under reports/ meant `churn decide` left a tracked file dirty.
+    """
+    committed = REPORTS_DIR / "decisions.md"
+    before = committed.read_text(encoding="utf-8")
+
+    model = fit_tiers(trained["datasets"]["train"], load_market())
+    model_path, input_path = tmp_path / "tiers.json", tmp_path / "export.csv"
+    save_tiers(model, model_path)
+    save_bundle(bundle, tmp_path / "bundle")
+    raw.to_csv(input_path, index=False)
+    directory = tmp_path / "campaign"
+    main(
+        [
+            "decide",
+            "--input",
+            str(input_path),
+            "--model",
+            str(model_path),
+            "--bundle",
+            str(tmp_path / "bundle"),
+            "--output-dir",
+            str(directory),
+        ]
+    )
+    assert (directory / "decisions.md").exists()
+    assert committed.read_text(encoding="utf-8") == before
 
 
 def test_approval_cli_selects_and_rejects_individual_proposals(campaign, tmp_path):

@@ -5,7 +5,14 @@ import pytest
 
 from prepaid_churn.almadar import load_offers
 from prepaid_churn.bundle import save_bundle
-from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
+from prepaid_churn.campaign import (
+    build_campaign,
+    load_campaign,
+    released_campaign,
+    review_campaign,
+    save_campaign,
+)
+from prepaid_churn.data import PROJECT_ROOT
 from prepaid_churn.demo import (
     CAMPAIGN_DIR_VARIABLE,
     PORTFOLIO_VARIABLE,
@@ -45,38 +52,17 @@ def policy():
 
 
 @pytest.fixture
-def customers():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, 0.2],
-            "risk_band": ["high", "high", "medium", "low"],
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "value_status": ["scenario"] * 4,
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, 40.0],
-            "bundle_held": ["PAYG"] * 4,
-            "uses_voice": [True] * 4,
-            "uses_data": [True] * 4,
-        }
-    )
+def customers(customers):
+    """The shared four, with the last one made low risk.
 
-
-@pytest.fixture
-def portfolio():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, None],
-            "risk_band": ["high", "high", "medium", "already_silent"],
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
-            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
-            "reason_1": ["Recharges fell sharply", "Fewer minutes", None, None],
-            "reason_2": ["Data use stopped", None, None, None],
-            "reason_3": [None, None, None, None],
-            "scored_at": [STAMP] * 4,
-        }
+    The campaign screens are about what the guardrails removed, so this file needs a
+    customer the `low_risk` guard actually excludes. Everything else comes from the
+    shared fixture in `conftest.py`.
+    """
+    return customers.assign(
+        risk_band=["high", "high", "medium", "low"],
+        value_tier=["high", "high", "medium", "very_low"],
+        value_12m_base_lyd=[100.0, 80.0, 60.0, 40.0],
     )
 
 
@@ -112,6 +98,70 @@ def demo(built):
     return load_demo(built)
 
 
+@pytest.fixture
+def screen(built, monkeypatch):
+    """Run the real page scripts over the same hand-made files as the pure-layer tests."""
+    from streamlit.testing.v1 import AppTest
+
+    monkeypatch.syspath_prepend(str(PROJECT_ROOT / "app"))
+    import _shared
+
+    monkeypatch.setattr(DemoPaths, "from_environment", classmethod(lambda cls: built))
+    monkeypatch.setattr(
+        _shared, "campaign_directories", lambda: campaign_directories(built.campaign_dir.parent)
+    )
+    _shared.refresh()
+
+    def open_page(name):
+        app = AppTest.from_file(str(PROJECT_ROOT / "app" / name), default_timeout=30).run()
+        assert not app.exception, [error.message for error in app.exception]
+        return app
+
+    yield open_page
+    _shared.refresh()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Home.py",
+        "pages/1_Overview.py",
+        "pages/2_Subscriber.py",
+        "pages/3_Campaign_builder.py",
+        "pages/4_Message_preview.py",
+        "pages/5_Released.py",
+    ],
+)
+def test_every_dashboard_page_renders(screen, name):
+    screen(name)
+
+
+def test_dashboard_review_requires_a_selection_and_refreshes_the_message(screen, built):
+    app = screen("pages/3_Campaign_builder.py")
+    original = built.campaign_path.read_bytes()
+    next(item for item in app.text_input if item.label == "Your name").set_value("Test reviewer")
+    approve = next(button for button in app.button if button.label == "Approve selected")
+    approve.click().run()
+    assert not app.exception
+    assert any("Pick at least one subscriber" in error.value for error in app.error)
+    assert built.campaign_path.read_bytes() == original
+
+    app.multiselect[0].set_value(["NA"])
+    next(button for button in app.button if button.label == "Approve selected").click().run()
+    assert not app.exception
+    released = released_campaign(load_campaign(built.campaign_path))
+    assert set(released.subscriber_id) == {"0001", "NA"}
+
+    preview = screen("pages/4_Message_preview.py")
+    customers = next(item for item in preview.selectbox if item.label == "Approved customer")
+    assert set(customers.options) == {"0001", "NA"}
+    customers.set_value("NA").run()
+    arabic = preview.text_area[0].value
+    assert any("\u0600" <= character <= "\u06ff" for character in arabic)
+    preview.radio[0].set_value("en").run()
+    assert not preview.exception and preview.text_area[0].value != arabic
+
+
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
@@ -125,6 +175,14 @@ def test_a_complete_checkout_loads_everything(demo, bundle, offers):
     assert len(demo.decisions) == 4
     assert len(demo.offers) == len(offers)
     assert demo.campaign_path is not None
+
+
+def test_literal_na_id_keeps_its_subscriber_view_and_recharge_card(demo):
+    found = subscriber_view(demo, "NA")
+    assert found is not None
+    assert found["subscriber_id"] == "NA"
+    assert found["usual_card_lyd"] == 5.0
+    assert found["churn_probability"] == 0.3
 
 
 def test_an_empty_checkout_names_the_command_for_each_missing_output(tmp_path):
@@ -196,7 +254,7 @@ def test_one_subscriber_joins_the_portfolio_the_decision_and_the_almadar_view(de
     assert subscriber["bundle_held"] == "PAYG"
     assert subscriber["recommended_offer_id"] == "SABAH_1"
     assert subscriber["status"] == "approved"
-    assert subscriber["reasons"] == ["Recharges fell sharply", "Data use stopped"]
+    assert subscriber["reasons"] == ["No recharge for 21 days", "Outgoing minutes down 80%"]
 
 
 def test_a_subscriber_with_no_reasons_gets_an_empty_list_not_a_blank_string(demo):
@@ -229,7 +287,7 @@ def test_a_single_customer_export_behaves_like_a_batch(tmp_path, bundle, portfol
     subscriber = subscriber_view(demo, "0001")
     assert subscriber["risk_band"] == "high"
     assert isinstance(subscriber["churn_probability"], float)
-    assert subscriber["reasons"] == ["Recharges fell sharply", "Data use stopped"]
+    assert subscriber["reasons"] == ["No recharge for 21 days", "Outgoing minutes down 80%"]
     assert group_counts(demo.portfolio, "value_tier", VALUE_TIERS)["customers"].sum() == 1
     assert expected_churners(demo.portfolio) == pytest.approx(0.5)
 

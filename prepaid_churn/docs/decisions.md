@@ -7,9 +7,18 @@ Every entry says what was decided, why, and what it rules out.
 ## 1. We do not build on Ahmed's `customer_churn_prediction/` module
 
 Date: 2026-09-13.
+The reasoning below was reordered on 2026-09-25; the decision and every finding are unchanged.
 
 Taha asked for an independent audit of the existing churn module before reusing it.
-The audit found problems serious enough to start fresh in `prepaid_churn/`:
+
+**The deciding reason is the data, not the code.**
+The Maven and IBM Telco datasets describe a fictional company, which IBM states itself, and both are postpaid and a single snapshot in time.
+This module serves prepaid subscribers of a Libyan operator, where there is no contract to cancel and churn is a monthly behaviour that has to be observed rather than an event that gets recorded.
+No amount of repair turns invented postpaid contract records into prepaid behaviour, so a different foundation was needed whatever state the code had been in.
+
+**The audit also found faults in the code.**
+They are listed here because they are the mistakes this module was then built to avoid, not because they decided the outcome.
+Every one of them could have been fixed; the dataset mismatch could not.
 
 - **Label leak from dropping "Joined" customers.**
   The Maven dataset has 4,720 Stayed, 1,869 Churned and 454 Joined customers.
@@ -30,10 +39,14 @@ The audit found problems serious enough to start fresh in `prepaid_churn/`:
   The champion was picked by test ROC-AUC (0.9280 vs 0.9278, within noise) and the 0.63 threshold was tuned on the test set.
   The discount engine then ignores that threshold and hardcodes 0.60 and 0.35.
 - Smaller issues: dead and contradictory `DISCOUNT_TIERS` config, 120 negative monthly charges left unhandled, gender and age feeding discount decisions, report numbers that no code produces (the 75% acceptance rate and the strategy comparison), no tests, and about 100 MB of datasets committed to git.
-- The Maven and IBM Telco data describe a fictional company (IBM calls it fictional), and it is a postpaid, single-snapshot dataset.
+
+Each fault above has a matching rule in this module.
+The leak became the no-leakage rule of T4 and T5, the in-sample headline became the single frozen test of T7, the uncalibrated probabilities became the mandatory calibration check of decision 13, and the tuned threshold became the rule that every choice is made on validation customers only.
 
 Ahmed's folder stays untouched on this branch.
 If `prepaid_churn/` works, the team deletes the old folder later.
+
+This entry is not a judgement of Ahmed's work as a whole, and the audit was of the code in the repository rather than of the person who wrote it.
 
 ## 2. No two-tower architecture
 
@@ -85,6 +98,14 @@ Rejected:
 - Cell2Cell and the 100k Teradata data: real but US postpaid from around 2000, with churn deliberately enriched to about 29% and 50%.
 - Iranian UCI churn: only 3,150 rows and a mix of pay-as-you-go and contract customers.
 - KKBox: real and time-stamped but music streaming, not telecom.
+
+The trade-off we accepted, stated plainly because it is the largest limitation in the project:
+- **Four months is short, and we chose it anyway.**
+  Two months feed the features, one carries the label, and one is spare.
+  That leaves one month-to-month change per customer and no seasonality, no trend and no long history.
+  Cell2Cell has longer histories, so this was a real choice rather than the only option.
+  We took prepaid behaviour over history length, because a model of postpaid contract customers cannot be repointed at a prepaid market (decision 1), while a short history still supports the question we actually ask.
+  Almost every later limitation traces back to this line, including the T12 result that a sequence model has nothing to work with over two steps (decision 28).
 
 Known limits, stated in the model card:
 - Provenance is undocumented (it looks like an Indian operator: "circle" regions and rupee amounts).
@@ -793,7 +814,80 @@ Retention is the response the campaign is trying to produce, and getting that si
 The two datasets are downloaded on demand into `data/external/`, which is git-ignored.
 Both are under non-commercial licences and neither is ours to redistribute, so unlike the Kaggle data in `data/raw/` (decision 9) they are never committed.
 
-## 31. The app may propose a campaign, and every campaign keeps its own directory
+## 31. The Mix families leave the catalogue, and a removal is recorded rather than silent
+
+Date: 2026-09-22.
+
+Ali confirmed that Almadar no longer sells the five Mix families, answering the question T16 left open on 2026-09-19.
+He had removed the same 20 packages from his own catalogue on 2026-09-18 in commit `62040af`, which showed the removal was deliberate but never recorded a reason.
+The catalogue now holds 37 packages in 12 families, which is exactly what `Ali_Branch` held, so the difference T16 pinned with a test is closed.
+
+Deleting the rows alone was not acceptable.
+The files in `data/almadar/source/` are byte-for-byte copies of the operator's own export (port step 1), and `check_against_source` required every row in them to appear in the catalogue exactly once.
+Editing the source file to match would have destroyed the evidence, and relaxing the check would have allowed any package to disappear unnoticed, which is precisely how the Mix question arose.
+
+So a removal is now recorded.
+`data/almadar/excluded.csv` holds one row per package that the operator file lists but the operator no longer sells, each with its source row, a reason, the person who decided and the date.
+`check_against_source` requires every source row to be either in the catalogue exactly once or recorded there, so the integrity guarantee is unchanged while the catalogue is free to shrink.
+"Unknown" in that check now means a row that is not in the operator file at all, which an excluded row still is.
+
+Removing Mix narrows the action space, and that is a real consequence rather than a detail.
+They were the only metered packages carrying both data and voice.
+What is left with voice is the Family share tier, which the membership guard already excludes because we cannot establish eligibility, and the 1 LYD morning pass, which the cannibalisation guard blocks above the base monthly rung.
+A voice-only customer above that rung therefore has no eligible offer at all.
+`tests/test_retention.py` now pins that as the expected answer, with the reasoning written beside it, instead of asserting that a Mix package is chosen.
+
+The committed `reports/decisions.md` was regenerated, and only the 20 Mix rows left its per-offer table.
+Every headline number is unchanged, because the readiness run proposes no offers at all.
+
+## 32. The decision report is written beside its campaign
+
+Date: 2026-09-22.
+
+Taha found that `churn decide` rewrote the committed `reports/decisions.md`, so running the documented command left a tracked file dirty and could replace the recorded readiness run with another run's numbers.
+Every campaign needs its own output directory, and a run may use a different budget, so the report is campaign-specific and does not belong at a fixed path in the repository.
+
+`--report` now defaults to `decisions.md` inside `--output-dir`.
+Passing `--report` explicitly still writes wherever it is told, which is how the committed readiness report is refreshed on purpose.
+A test runs the documented command and asserts that the committed report is untouched.
+
+The other report-writing commands keep their fixed defaults, because each one regenerates the same committed file from the same committed input; the fresh-clone check of T9 depends on exactly that.
+
+## 33. Readiness must cover the served answers and the real review screens
+
+Date: 2026-09-22.
+
+Ali asked whether every ticket was finished and requested an end-to-end run with the available data.
+All tickets are Done, but the initial checkout had no local churn bundle, and a passing unit suite alone could not show what an evaluator or consumer would receive.
+The frozen README rebuild reproduced the expected artifacts without changing existing reports, and the live run is recorded in [reports/end_to_end.md](../reports/end_to_end.md).
+No model choice was changed because of this check.
+
+The serving boundary must preserve a literal `NA` subscriber ID just as the input and campaign boundaries do.
+Pandas' string dtype still recognises missing-value tokens, so the service portfolio and demo view use an ID converter while numeric columns keep their missing-value behavior.
+Empty or duplicate portfolio IDs are rejected at startup rather than letting a lookup return an arbitrary row.
+
+An approved offer can disappear from the current catalogue after the immutable campaign was reviewed, as the Mix removal made concrete.
+The service withholds such rows and reports degraded health; it does not invalidate or rewrite the campaign's audit history.
+A new campaign and review are needed to propose a current package.
+The dashboard's approved-message selector reads this same filtered service state.
+
+The API requires printable ASCII credentials without spaces and rejects non-ASCII presented credentials with 401.
+This prevents a malformed header from reaching `compare_digest`, whose string comparison raises on non-ASCII input.
+There is no change to the two-role access model.
+
+The integration checker previously counted only refusal failures, so degraded health or unavailable risk could still end with "Every check passed."
+Health, available portfolio risk and the model release gate are now readiness requirements too, and a failure returns exit code 1.
+Unavailable LYD at risk is not printed as zero.
+Its Arabic output is UTF-8 even when redirected on Windows, where the default code page caused the actual CLI acceptance run to crash.
+
+The dashboard's actual scripts are now exercised on the shared hand-made fixtures with Streamlit `AppTest`.
+The review-to-message test covers empty-selection refusal, individual approval, cache refresh and both message languages.
+Live acceptance reviews used a separate QA copy; the original 2,911-proposal campaign received no approvals.
+
+Delivery remains on `Ali_Branch` because Ali explicitly forbade commits or pushes to `tahaDev` in this task.
+That current instruction takes precedence over the earlier shared-branch convention in decision 24.
+
+## 34. The app may propose a campaign, and every campaign keeps its own directory
 
 Date: 2026-09-22.
 
@@ -819,3 +913,51 @@ It also says the service loads the campaign at startup, so a new release is serv
 
 One more thing was wrong and is fixed: an empty selection in the approval box meant "approve everything", so a reviewer who clicked Approve with nothing selected approved every pending proposal in the campaign.
 Reviewing everything is now a separate checkbox that says how many rows it covers, and an empty selection is an error rather than a mass approval.
+
+## 35. Error bars on the frozen test numbers, and they change nothing
+
+Date: 2026-09-25.
+
+While recapping T4, Ali asked how sure we are of the published test numbers.
+Every figure in `reports/evaluation_all.md` comes from one draw of 9,677 test customers, 421 of whom churned, and none of them had an interval.
+"0.348 beats 0.277" was stated as a fact without saying how much of it could be the luck of which customers landed in the test group.
+
+`churn uncertainty` answers that with a bootstrap.
+It resamples the frozen test predictions 2,000 times, 9,677 customers drawn with replacement each time, seed 42, and reports the 2.5th and 97.5th percentiles of each measure.
+Both models are scored on the same resampled customers every time, so the difference between them is paired.
+
+It is built so that it cannot change anything.
+It trains, calibrates and chooses nothing.
+Only the champion's calibrator is saved, so the baseline's is re-derived by repeating the validation-only freeze with the recorded date, and the command refuses to continue unless that repeat reproduces the saved champion's test predictions exactly.
+Its estimates match `reports/evaluation_all.md` to the last digit, and that report was not regenerated.
+Reading the frozen predictions again is not a second evaluation: the models, the calibrators and every choice are the ones scored once on 2026-09-19.
+No result of it may be used to justify a change to a model, feature or threshold.
+
+What it found, from [reports/uncertainty.md](../reports/uncertainty.md):
+
+- LightGBM PR-AUC 0.348, 95% interval 0.301 to 0.400; logistic regression 0.277, 0.238 to 0.324.
+- The difference is 0.071, interval 0.040 to 0.102, and LightGBM scored higher in all 2,000 resamples, so the champion's lead is not luck of the draw.
+- All four checks of decision 13 still pass at the unfavourable end of their intervals: capture at least 57.3%, PR-AUC at least 7.1 times the churn rate, a calibration gap of at most 0.5 points, and a lead over the baseline of at least 0.040.
+- The baseline's own capture interval reaches down to 48.7%, below the 50% bar, so the baseline alone would not have been a safe release.
+- The drop from validation to test, 0.458 to 0.348, is more than twice the half-width of the test interval, so the later month, Kaggle's label and the optimism of having chosen on validation move the numbers more than sampling luck does.
+
+What it does not cover: training randomness, which would need models retrained on other splits and each scored on the spent test window, and a different month or operator, which only new data can measure.
+
+## 36. The high-value flag stays, as a comparison tool only
+
+Date: 2026-09-25.
+
+The T4 recap found that `churn build-dataset --high-value` builds a dataset that no later command reads.
+The product path (`bundle`, `score`, `tiers`, `decide`, the service and the app) always uses `data/processed/all/`.
+The high-value slice in `reports/evaluation_all.md` does not come from the flag either: `churn evaluate` applies the same rule to the main test set, with its own 70th-percentile cutoff (`HIGH_VALUE_QUANTILE`).
+
+It stays, for two reasons.
+The upGrad case study this data comes from predicts churn only for high-value customers, the top 30% by average recharge over the first two months, and the flag is how our numbers can be set beside work that follows the case study.
+Ours is computed among active customers only (decision 12), so the population is close to the case study's, not identical.
+It is also small, tested and off by default, and removing it would reopen a settled choice for no gain to the product.
+
+What changed is only the text, so nobody reads more into the flag than it does.
+T4, the settled choices in TICKETS.md, the README and the model card now say that it exists for comparison and that the product never uses it.
+It must not be carried through `churn evaluate` on this data: the test customers were scored once on 2026-09-19, so a model trained on the high-value dataset could only be tested by scoring them a second time.
+The T7 slice, PR-AUC 0.383 at 2.9% churn, is the answer to how the model does on these customers.
+`reports/dataset_high_value.md` stays as the record of the population's size: 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.

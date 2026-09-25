@@ -11,7 +11,12 @@ import numpy as np
 import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, log_loss, precision_recall_curve
+from sklearn.metrics import (
+    average_precision_score,
+    log_loss,
+    precision_recall_curve,
+    roc_auc_score,
+)
 from sklearn.model_selection import StratifiedKFold
 
 from prepaid_churn.training import metrics, predict
@@ -340,3 +345,216 @@ def evaluation_report(
             "",
         ]
     )
+
+
+# ---------------------------------------------------------------------------
+# Uncertainty on the frozen test metrics
+# ---------------------------------------------------------------------------
+#
+# The test window was scored once, on 2026-09-19, and every figure in the evaluation
+# report is a single number from one draw of 9,677 customers. Resampling those same
+# frozen predictions says how much the numbers would move had a different set of
+# customers landed in the test group. It trains, calibrates and chooses nothing, and
+# nothing it reports may be used to justify a change to a model, feature or threshold.
+
+BOOTSTRAP_REPEATS = 2000
+INTERVAL = (0.025, 0.975)
+MEASURES = ("pr_auc", "roc_auc", "capture", "lift", "calibration_gap")
+
+
+def frozen_test_probabilities(
+    models: dict, saved: Champion, validation: pd.DataFrame, test: pd.DataFrame
+) -> dict[str, np.ndarray]:
+    """Every model's calibrated test predictions, exactly as they were frozen.
+
+    Only the champion's calibrator is saved, so the baseline's is re-derived by
+    repeating the validation-only freeze with the recorded date. The freeze is
+    deterministic, and this refuses to continue unless the repeat reproduces the saved
+    champion's predictions exactly: an interval around different predictions would be
+    an interval around a model nobody evaluated.
+    """
+    champion, choices = freeze(models, validation, saved.chosen_at)
+    if champion.name != saved.name or not np.array_equal(
+        champion.predict(test), saved.predict(test)
+    ):
+        raise ValueError(
+            "Repeating the freeze did not reproduce the saved champion, so these would not "
+            "be the frozen predictions. Rebuild with `churn evaluate --chosen-at "
+            f"{saved.chosen_at}` first."
+        )
+    return {
+        name: choices[name]["calibrator"].transform(predict(model, test))
+        for name, model in models.items()
+    }
+
+
+def _score(y: np.ndarray, probabilities: dict) -> dict[str, float]:
+    """The published test measures, computed the same way the release gate computes them."""
+    rate = float(y.mean())
+    row = {"churn_rate": rate}
+    for name, probability in probabilities.items():
+        pr_auc = float(average_precision_score(y, probability))
+        row[f"{name}.pr_auc"] = pr_auc
+        row[f"{name}.roc_auc"] = float(roc_auc_score(y, probability))
+        row[f"{name}.capture"] = float(
+            top_share_metrics(probability, y, (CAPTURE_SHARE,))["recall"].iloc[0]
+        )
+        row[f"{name}.lift"] = pr_auc / rate
+        row[f"{name}.calibration_gap"] = abs(float(np.mean(probability)) - rate)
+    return row
+
+
+def resample_metrics(
+    y, probabilities: dict, repeats: int = BOOTSTRAP_REPEATS, seed: int = SEED
+) -> pd.DataFrame:
+    """The test measures on `repeats` bootstrap resamples of the same frozen predictions.
+
+    Every model is scored on the same resampled customers each time, so a difference
+    between two models is paired: it reflects how they rank the same people rather
+    than which people happened to be drawn. A resample with only one class cannot be
+    scored and is drawn again; the generator is seeded, so the result is reproducible.
+    """
+    y = np.asarray(y)
+    probabilities = {name: np.asarray(p) for name, p in probabilities.items()}
+    rng = np.random.default_rng(seed)
+    rows = []
+    while len(rows) < repeats:
+        index = rng.integers(0, len(y), len(y))
+        sample = y[index]
+        if sample.min() == sample.max():
+            continue
+        rows.append(_score(sample, {name: p[index] for name, p in probabilities.items()}))
+    return pd.DataFrame(rows)
+
+
+def interval(samples: pd.Series) -> tuple[float, float]:
+    low, high = samples.quantile(list(INTERVAL))
+    return float(low), float(high)
+
+
+def _release_rows(point: dict, samples: pd.DataFrame, champion: str, baseline) -> dict:
+    """Each release check at the unfavourable end of its interval."""
+    checks = [
+        ("capture", f"{champion}.capture", f">= {MIN_CAPTURE}", "low", MIN_CAPTURE),
+        ("better_than_chance", f"{champion}.lift", f">= {MIN_LIFT}", "low", MIN_LIFT),
+        (
+            "calibration",
+            f"{champion}.calibration_gap",
+            f"<= {MAX_CALIBRATION_GAP}",
+            "high",
+            MAX_CALIBRATION_GAP,
+        ),
+    ]
+    rows = {}
+    for check, column, required, worst, limit in checks:
+        low, high = interval(samples[column])
+        holds = low >= limit if worst == "low" else high <= limit
+        rows[check] = {
+            "estimate": round(point[column], 4),
+            "95% interval": f"[{low:.4f}, {high:.4f}]",
+            "required": required,
+            "holds at the worst end": "yes" if holds else "no",
+        }
+    if baseline is not None:
+        difference = samples[f"{champion}.pr_auc"] - samples[f"{baseline}.pr_auc"]
+        low, high = interval(difference)
+        rows["better_than_baseline"] = {
+            "estimate": round(point[f"{champion}.pr_auc"] - point[f"{baseline}.pr_auc"], 4),
+            "95% interval": f"[{low:.4f}, {high:.4f}]",
+            "required": "> 0",
+            "holds at the worst end": "yes" if low > 0 else "no",
+        }
+    return rows
+
+
+def uncertainty_report(
+    y,
+    probabilities: dict,
+    champion: str,
+    chosen_at: str,
+    repeats: int = BOOTSTRAP_REPEATS,
+    seed: int = SEED,
+) -> str:
+    """The frozen test measures with 95% intervals, and whether each release check holds."""
+    from prepaid_churn.profile import markdown_table
+
+    y = np.asarray(y)
+    point = _score(y, probabilities)
+    samples = resample_metrics(y, probabilities, repeats, seed)
+    names = [champion, *[name for name in probabilities if name != champion]]
+    baseline = BASELINE if BASELINE in probabilities and BASELINE != champion else None
+
+    labels = {
+        "pr_auc": "PR-AUC (primary)",
+        "roc_auc": "ROC-AUC",
+        "capture": f"Churners in the riskiest {CAPTURE_SHARE:.0%}",
+        "lift": "PR-AUC divided by the churn rate",
+        "calibration_gap": "Gap between mean prediction and churn rate",
+    }
+
+    def cell(name: str, measure: str) -> str:
+        column = f"{name}.{measure}"
+        low, high = interval(samples[column])
+        return f"{point[column]:.4f} [{low:.4f}, {high:.4f}]"
+
+    table = pd.DataFrame(
+        {name: {labels[measure]: cell(name, measure) for measure in MEASURES} for name in names}
+    )
+
+    lines = [
+        "# Uncertainty on the frozen test metrics",
+        "",
+        "Generated by `uv run churn uncertainty`.",
+        f"The test predictions frozen on {chosen_at} are resampled {repeats:,} times: "
+        f"{len(y):,} customers drawn with replacement each time, seed {seed}.",
+        "Each cell is the published estimate followed by its 95% interval.",
+        "",
+        "**This analysis changes nothing.**",
+        "It trains, calibrates and chooses nothing, and it re-derives exactly the predictions "
+        "that were scored once for `evaluation_all.md`.",
+        "It puts error bars on numbers that are already published, and none of its results "
+        "may be used to justify a change to a model, feature or threshold.",
+        "",
+        "## 95% intervals",
+        "",
+        markdown_table(table),
+        "",
+    ]
+
+    if baseline is not None:
+        difference = samples[f"{champion}.pr_auc"] - samples[f"{baseline}.pr_auc"]
+        low, high = interval(difference)
+        wins = int((difference > 0).sum())
+        estimate = point[f"{champion}.pr_auc"] - point[f"{baseline}.pr_auc"]
+        lines += [
+            f"## Is {champion} really better than the baseline?",
+            "",
+            f"PR-AUC difference: {estimate:.4f}, 95% interval [{low:.4f}, {high:.4f}].",
+            f"{champion} scored higher in {wins:,} of {repeats:,} resamples "
+            f"({wins / repeats:.1%}).",
+            "Both models are scored on the same resampled customers every time, so the "
+            "difference is paired and does not depend on which customers were drawn.",
+            "",
+        ]
+
+    lines += [
+        "## Do the four release checks still hold at the unlucky end?",
+        "",
+        "Each check passed on the published estimate (decision 13).",
+        "This asks whether it would still pass at the unfavourable end of its interval: the "
+        "lower end for capture, lift and the baseline difference, the upper end for the "
+        "calibration gap.",
+        "",
+        markdown_table(pd.DataFrame(_release_rows(point, samples, champion, baseline)).T),
+        "",
+        "## What these intervals cover, and what they do not",
+        "",
+        "They cover test sampling: how much the numbers depend on which customers happened "
+        "to land in the test group.",
+        "They do not cover training randomness, which would need models retrained on other "
+        "splits and each scored on the spent test window; the project forbids that.",
+        "They do not cover a different month or a different operator, which only new data "
+        "can measure.",
+        "",
+    ]
+    return "\n".join(lines)

@@ -113,6 +113,36 @@ def run_evaluate(args: argparse.Namespace) -> None:
     print(f"Release gate {'passed' if gate['passed'] else 'FAILED'} ({model_dir / GATE_FILE})")
 
 
+def run_uncertainty(args: argparse.Namespace) -> None:
+    import joblib
+    import pandas as pd
+
+    from prepaid_churn.evaluation import frozen_test_probabilities, uncertainty_report
+    from prepaid_churn.windows import LABEL
+
+    variant = args.data_dir.name
+    model_dir = MODELS_DIR / variant
+    saved_path = model_dir / "champion.joblib"
+    if not saved_path.exists():
+        raise FileNotFoundError(f"{saved_path} not found. Run `uv run churn evaluate` first.")
+    models = {}
+    for name in ("logistic_regression", "lightgbm"):
+        path = model_dir / f"{name}.joblib"
+        if not path.exists():
+            raise FileNotFoundError(f"{path} not found. Run `uv run churn train` first.")
+        models[name] = joblib.load(path)
+    saved = joblib.load(saved_path)
+    validation = pd.read_parquet(args.data_dir / "validation.parquet")
+    test = pd.read_parquet(args.data_dir / "test.parquet")
+    probabilities = frozen_test_probabilities(models, saved, validation, test)
+    report = uncertainty_report(
+        test[LABEL], probabilities, saved.name, saved.chosen_at, repeats=args.repeats
+    )
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(report, encoding="utf-8")
+    print(f"Intervals on the frozen test metrics ({args.repeats:,} resamples) in {args.report}")
+
+
 def run_bundle(args: argparse.Namespace) -> None:
     import joblib
     import pandas as pd
@@ -213,11 +243,15 @@ def run_decide(args: argparse.Namespace) -> None:
     decisions, comparison = propose(inputs, offers, policy)
     campaign = build_campaign(inputs, decisions, comparison, offers, policy)
     path = save_campaign(campaign, args.output_dir)
+    # The report belongs to the campaign, not to the repository. Every run uses a new
+    # output directory and may use a different budget, so a fixed default would let the
+    # documented command overwrite the committed readiness report with another run's.
+    report_path = args.report or args.output_dir / "decisions.md"
     report = decisions_report(decisions, comparison, offers, policy)
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(report, encoding="utf-8")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(report, encoding="utf-8")
     print(f"{decisions['status'].eq('proposed').sum()} proposals in {path}; none are approved.")
-    print(f"Decision report: {args.report}")
+    print(f"Decision report: {report_path}")
 
 
 def run_approve(args: argparse.Namespace) -> None:
@@ -307,6 +341,7 @@ def run_sequence_benchmark(args: argparse.Namespace) -> None:
 
 def run_check_integration(args: argparse.Namespace) -> None:
     import os
+    import sys
 
     from prepaid_churn.api import CHATBOT_KEY_VARIABLE, COPILOT_KEY_VARIABLE
     from prepaid_churn.client import check
@@ -325,6 +360,10 @@ def run_check_integration(args: argparse.Namespace) -> None:
         keys[COPILOT_KEY_VARIABLE],
         args.subscriber_id,
     )
+    # Redirected Windows output otherwise uses the local code page, which cannot
+    # encode the Arabic offer names this check promises to show.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     print(result.text)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -392,6 +431,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evaluate.set_defaults(handler=run_evaluate)
 
+    uncertainty = commands.add_parser(
+        "uncertainty",
+        help="Put 95%% intervals on the frozen test metrics; changes no model (T7).",
+    )
+    uncertainty.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
+    uncertainty.add_argument("--repeats", type=int, default=2000)
+    uncertainty.add_argument("--report", type=Path, default=REPORTS_DIR / "uncertainty.md")
+    uncertainty.set_defaults(handler=run_uncertainty)
+
     bundle = commands.add_parser(
         "bundle", help="Package the champion that passed its release gate (ticket T8)."
     )
@@ -448,7 +496,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget", type=float, default=None, help="Override campaign budget in LYD."
     )
     decide.add_argument("--output-dir", type=Path, default=CAMPAIGN_DIR)
-    decide.add_argument("--report", type=Path, default=REPORTS_DIR / "decisions.md")
+    decide.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="Where to write the report; defaults to decisions.md inside --output-dir.",
+    )
     decide.add_argument(
         "--tiers-only",
         action="store_true",

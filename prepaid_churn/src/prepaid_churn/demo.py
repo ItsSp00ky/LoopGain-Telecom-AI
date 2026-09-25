@@ -138,7 +138,7 @@ def load_demo(paths: DemoPaths) -> DemoState:
 
     view = None
     if paths.view_path.exists():
-        view = pd.read_csv(paths.view_path, dtype={"id": str})
+        view = pd.read_csv(paths.view_path, converters={"id": str})
     else:
         missing.append(("almadar view", PRODUCED_BY["almadar view"]))
 

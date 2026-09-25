@@ -6,6 +6,7 @@ import pytest
 from conftest import build_population
 
 from prepaid_churn.almadar import (
+    ALMADAR_DIR,
     PAY_AS_YOU_GO,
     STATUSES,
     VIEW_COLUMNS,
@@ -13,6 +14,7 @@ from prepaid_churn.almadar import (
     almadar_view,
     bundle_held,
     check_against_source,
+    load_excluded,
     load_market,
     load_offers,
     lyd_rate,
@@ -133,8 +135,8 @@ def test_extra_columns_are_refused(two_offers):
 
 def test_real_catalogue_is_valid_and_complete():
     offers = load_offers()
-    assert len(offers) == 57
-    assert offers["family_en"].nunique() == 17
+    assert len(offers) == 37
+    assert offers["family_en"].nunique() == 12
     assert offers[["source_file", "source_row", "collected"]].notna().all().all()
 
 
@@ -142,12 +144,57 @@ def test_real_catalogue_matches_the_operator_file():
     assert check_against_source(load_offers()) == []
 
 
-def test_ali_catalogue_is_the_catalogue_without_mix():
-    # Ali_Branch kept 37 packages in 12 families; the 20 Mix packages are the difference.
+def test_the_catalogue_now_matches_ali_s():
+    """Ali confirmed on 2026-09-22 that the Mix families are no longer sold.
+
+    His catalogue held 37 packages in 12 families and ours held the same plus the 20 Mix
+    packages; removing them closes the difference that T16 recorded as an open question.
+    """
     offers = load_offers()
-    without_mix = offers[~offers["offer_id"].str.startswith("MIX_")]
-    assert len(without_mix) == 37
-    assert without_mix["family_en"].nunique() == 12
+    assert len(offers) == 37
+    assert offers["family_en"].nunique() == 12
+    assert offers["offer_id"].str.startswith("MIX_").sum() == 0
+
+
+def test_every_removed_package_is_recorded_with_a_reason():
+    """A package may leave the catalogue, but never silently."""
+    excluded = load_excluded()
+    assert len(excluded) == 20
+    assert excluded["offer_id"].str.startswith("MIX_").all()
+    assert excluded["family_en"].nunique() == 5
+    assert excluded["reason"].str.len().gt(20).all()
+    assert excluded["decided_by"].eq("Ali Marghem").all()
+
+
+def test_the_source_file_still_holds_every_package():
+    """The operator file is a byte-for-byte copy and is not edited when we drop a package."""
+    source = ALMADAR_DIR / "source" / "internet_offers_data_v4.csv"
+    rows = source.read_text(encoding="utf-8-sig").splitlines()
+    assert len(rows) - 1 == 57  # header plus every package the operator published
+
+
+def test_dropping_a_package_without_recording_it_is_caught():
+    offers = load_offers()
+    assert check_against_source(offers) == []
+    short = offers[offers["offer_id"] != "SABAH_1"]
+    assert check_against_source(short) == [
+        "source/internet_offers_data_v4.csv: source rows missing [57], repeated [], unknown []"
+    ]
+
+
+def test_a_package_cannot_be_in_the_catalogue_and_excluded_at_once():
+    offers = load_offers()
+    excluded = load_excluded()
+    clash = pd.DataFrame([{**excluded.iloc[0].to_dict(), "source_row": 57}])
+    problems = check_against_source(offers, excluded=clash)
+    assert problems[0] == (
+        "source/internet_offers_data_v4.csv: source rows [57] are both in the catalogue "
+        "and recorded as excluded"
+    )
+    # The twenty real Mix rows are no longer recorded by this stand-in, so they read as
+    # missing; the clashing row is reported once, not also as unknown.
+    assert "missing [33, 34, 35, 36" in problems[1]
+    assert "unknown []" in problems[1]
 
 
 def test_a_changed_price_is_caught():
@@ -158,9 +205,9 @@ def test_a_changed_price_is_caught():
 
 def test_a_stated_volume_must_be_marked_stated():
     offers = load_offers()
-    offers.loc[offers["offer_id"] == "MIX_DIA_1", "volume_source"] = "name"
+    offers.loc[offers["offer_id"] == "FAM_70", "volume_source"] = "name"
     assert check_against_source(offers) == [
-        "MIX_DIA_1: the source states the volume (3.0), so volume_source must be 'stated'"
+        "FAM_70: the source states the volume (70.0), so volume_source must be 'stated'"
     ]
 
 

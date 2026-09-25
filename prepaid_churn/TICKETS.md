@@ -9,15 +9,71 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-25 by Taha + Claude (every ticket closed; session log written for the next session).
+**Last updated:** 2026-09-25 by Taha + Claude (`Ali_Branch` merged into `tahaDev` through `f0156e2`; Ali's notes follow the list below).
 
 **New session? Read [docs/session_log.md](docs/session_log.md) after this Handoff.** It is the log of the 2026-09-19 to 2026-09-25 session: what was done in what order, the mistakes caught, how to run things on Taha's machine, and what is on disk but not in git.
 
 **Open right now, in order:**
 1. The demo app. Taha tried it after the rework and said it is "still somehow heavy and somehow random, I didn't understand it". Ask him what felt random before changing anything; the details and the likely causes are in the session log.
 2. The final report draft (`SIC_AI_Capstone Project_Final Report - Loop Gain.docx` at the repository root, not in git) needs three checks before it is sent; they are listed in the session log.
-3. The open questions below that name Ali.
+3. The one open question below that names Ali: the source links for the Almadar files. He answered the other three on 2026-09-22.
 4. Talking points and the results chart for the final presentation are in [docs/presentation/](docs/presentation/talking_points.md).
+5. Ali is still walking through the module step by step on `Ali_Branch` (next is T5), while decision 24 names `tahaDev` as the only branch. Agree with him which branch is shared before either of you pushes again.
+
+**Ali's step-by-step recap, 2026-09-25**
+
+- Ali is walking through the module from T1, confirming or changing each step; every change goes to `Ali_Branch` only.
+- Steps 1 to 3 changed wording, not results: T1 now leads with the finding that shapes the product, decision 1 leads with the dataset mismatch, and decision 5 states the four-month trade-off.
+- Step 4 (T4) added error bars on the frozen test numbers with `churn uncertainty` (decision 35), which changes no model and reproduces `evaluation_all.md` exactly.
+  The champion's lead over the baseline held in all 2,000 resamples, and all four release checks pass at the unfavourable end of their intervals.
+- Step 4 also settled `--high-value`: it stays as a comparison with the upGrad case study, the product never uses it, and it must not be evaluated on the spent test window (decision 36).
+  T4 now says 107 window features, with the 126 of `dataset_all.md` explained by T5's 19.
+- Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
+- Next: step 5, the T5 features.
+
+**Ali's branch sync, 2026-09-22**
+
+- Merged `origin/tahaDev` through `d38377d`, preserving its commit history and all of the Ali readiness fixes.
+- Taha's campaign picker, single-load snapshots, campaign and subscriber proposal controls, and Released screen are included.
+  The approval controls retain an explicit review-all checkbox and refuse an empty selection.
+- Both branches added decision 31 independently; the Mix catalogue decision stays 31 and Taha's dashboard decision is now 34, with its references updated.
+- The page tests use only the hand-made campaign directory and select widgets by label where the new controls changed their order.
+  The Released screen is included in the render checks.
+- Validation: 426 tests passed, none skipped; lint and formatting pass.
+  `tahaDev` is read as the source branch and is not committed or pushed to.
+
+**Ali's end-to-end readiness check, 2026-09-22**
+
+- All 22 tickets remain Done; this was the explicitly requested T21 acceptance review, not a new model experiment.
+- The full README rebuild reproduced the frozen bundle and tiers, scored 30,000 subscribers and proposed 2,911 offers from the current 37-package catalogue.
+  Existing tracked model and research reports reproduced unchanged.
+- The live API, CLI consumer and all five Streamlit pages passed, including individual approval and Arabic/English message preview on an isolated QA campaign.
+  The original new campaign is unreviewed at `artifacts/campaigns/e2e-20260922`; all temporary servers were stopped.
+- Fixed identifier parsing and ambiguous IDs, malformed API credentials, serving retired approvals, false-positive integration checks and redirected Arabic CLI output (decision 33).
+  Dashboard regressions now execute the page scripts and approval-to-preview flow on the shared hand-made fixtures.
+- Validation: 420 tests pass with none skipped, including the optional LSTM test; lint and formatting pass.
+  Third-party test adapter and Keras/Torch deprecation warnings remain.
+- Ready for a local demo and HTTP consumer testing with the available data; operator performance and campaign effectiveness remain unvalidated.
+  The Almadar source links remain open, and no new operator data is required for the completed fixes.
+- [The acceptance report](reports/end_to_end.md) records evidence, limitations and exact startup commands for this checkout.
+- Delivery stays on `Ali_Branch` under Ali's explicit instruction in this task; no commit or push targets `tahaDev`.
+  Earlier branch directions below are historical and do not supersede that instruction.
+
+**Ali's session, 2026-09-22**
+
+- Ali is working on `Ali_Branch`, which was fast-forwarded onto Taha's `73762df`; `tahaDev` is not written to from this checkout.
+  Every commit of both branches is in this history, so nothing diverges yet, but the two branch tips will drift if both are pushed. Agree one branch before the next session.
+- **Ali's answers:** he agrees with decisions 15 to 17, 24 and 25; the folder keeps the name `prepaid_churn/`; the Mix families are no longer sold.
+- **The Mix packages are out.** The catalogue is 37 packages in 12 families, matching Ali's own, and the 20 retired ones are recorded in `data/almadar/excluded.csv` with a reason, a name and a date (decision 31).
+  `check_against_source` now requires every operator row to be in the catalogue exactly once or recorded as excluded, so a package can never leave silently again.
+- **Consequence worth knowing:** Mix held the only metered data-and-voice packages, so a voice-only customer above the base monthly rung now has no eligible offer.
+  That is pinned as the expected answer in `tests/test_retention.py`, not treated as a bug.
+- **`churn decide` no longer dirties a tracked file** (decision 32): `--report` defaults beside the campaign, and a test runs the documented command and asserts the committed report is untouched.
+- **The duplicated fixtures are gone.** The four subscribers lived in four test files; Taha's version is now the single one in `tests/conftest.py`.
+  `test_demo.py` keeps one documented override, because its campaign screens need a customer the `low_risk` guard actually excludes.
+- `reports/decisions.md` was regenerated and lost only its 20 Mix rows; every headline number is unchanged, because the readiness run proposes nothing.
+- Validation: 400 prepaid tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group), lint and formatting green.
+- **Still open for Ali:** the source links for the Almadar files, the only question of his that remains.
 
 **Where the module is now**
 
@@ -38,7 +94,7 @@ Update this section at the end of every working session.
 - **T17 is done, so every ticket in this file is closed.**
   It measured the assumption behind T11 on two public randomised trials: targeting by uplift and targeting by risk are not the same ranking, and on Criteo the risk ranking is worse than random (decision 30).
   The telecom dataset the action plan names, Orange Belgium, is too small to answer, and the report says so rather than picking a winner.
-- **The demo app was reworked after Taha used it (decision 31):** a campaign picker in the sidebar, proposing a campaign or a single offer from the screens, a Released screen that shows what was approved and where it lives, and a fix for the approval box, where an empty selection used to approve every pending proposal.
+- **The demo app was reworked after Taha used it (decision 34):** a campaign picker in the sidebar, proposing a campaign or a single offer from the screens, a Released screen that shows what was approved and where it lives, and a fix for the approval box, where an empty selection used to approve every pending proposal.
   Keep demo campaigns small: 500 customers is a 1.7 MB snapshot that loads instantly, the whole base is 80 MB and is what made the app feel heavy.
 - **What is left:** nothing in this file.
   The open questions below still stand, and the next real work is whatever the team needs for the presentation and the demo.
@@ -96,7 +152,7 @@ Update this section at the end of every working session.
 - Run against this checkout on 2026-09-21: `/health` reports degraded with no bundle, `/catalogue` serves all 57 packages, `/portfolio/summary` summarises 30,000 subscribers with `risk_available` false, and no offer is released because none was approved.
 - Outputs are read once at startup, so restart the service after a new `churn approve` release; `/health` shows which campaign is being served.
 - T14 is implemented: five Streamlit screens over the released outputs, with the named approval step on the campaign screen.
-  Taha used it on 2026-09-22 and it grew a campaign picker, a way to propose a campaign or a single offer from the screen, and a Released screen (decision 31).
+  Taha used it on 2026-09-22 and it grew a campaign picker, a way to propose a campaign or a single offer from the screen, and a Released screen (decision 34).
 - T14 validation: 325 prepaid tests, lint and formatting pass; 26 of those tests are new.
 - Start it with `uv run streamlit run app/Home.py`; set `PREPAID_CHURN_CAMPAIGN_DIR` and `PREPAID_CHURN_PORTFOLIO` to show a campaign other than the first.
 - `streamlit` is the fourth dependency added on this delivery; decision 22 records why, and charts use the Altair that Streamlit already installs.
@@ -133,7 +189,7 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - Ali's parallel work on `Ali_Branch` was reviewed and is being combined into this module (decisions 15, 16 and 17).
   Every step is logged in [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
 - Almadar Aljadid is now the operator (decision 16), and the customer MVP comes first, built to plug into the team platform (decision 17).
-- T16 is done: `data/almadar/` holds all 57 Almadar packages and the market facts, each with a status (`docs/almadar.md`).
+- T16 is done: `data/almadar/` holds the 37 Almadar packages still sold and the market facts, each with a status; the 20 Mix packages the operator retired are recorded in `excluded.csv` (`docs/almadar.md`).
 - T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
@@ -160,15 +216,17 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
    The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
-- **Ali's agreement:** answered in practice on 2026-09-20, when Ali adopted this tree as his baseline and built on it (decision 18).
-  He should still say whether he disagrees with anything decisions 15 to 17 took or left out, and now also with decisions 24 and 25.
-- **Folder name:** the module now covers more than churn; rename `prepaid_churn/` (for example to `cvm/`, like Ali's package) once Ali agrees.
+- **Ali's agreement: answered on 2026-09-22.**
+  Ali agrees with decisions 15 to 17 and with 24 and 25, and disagrees with nothing taken or left out.
+- **Folder name: answered on 2026-09-22.**
+  Ali chose to keep `prepaid_churn/`; the rename is not happening, so every path in the docs and the action plan stays as it is.
 - **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
-- **Mix packages:** Ali removed the five Mix families (20 data-and-voice packages) in commit `62040af` of 2026-09-18.
-  That commit shows the removal was deliberate and handled, but not why; ask whether the operator still sells them (`docs/almadar.md`).
+- **Mix packages: answered on 2026-09-22.**
+  Ali confirmed the operator no longer sells the five Mix families, so the 20 packages are out of the catalogue and recorded in `data/almadar/excluded.csv` with the reason (decision 31).
+  The catalogue is now 37 packages in 12 families, matching his.
 - **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
-- **`churn decide` overwrites a committed report:** it rewrites `reports/decisions.md`, so running the documented command leaves a tracked file dirty.
-  Ali's call: a `--report` path, or write it beside the campaign.
+- **`churn decide` overwrites a committed report: fixed on 2026-09-22.**
+  `--report` now defaults to `decisions.md` inside `--output-dir`, so the documented command leaves the committed report alone (decision 32).
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
   We use the upGrad prepaid data instead (decisions 1 and 5), because the IBM data is fictional and postpaid.
   Taha should tell the team leader so the action plan matches the work.
@@ -196,6 +254,7 @@ Reasons are in [docs/decisions.md](docs/decisions.md).
 - **Eligibility:** only customers active in the current month are trained on, validated and scored (decision 12).
 - **High-value filter:** optional flag, off by default.
   When on, it keeps customers whose average recharge amount over the two feature months is at or above the 70th percentile (the top 30%).
+  It is for comparison with the upGrad case study only; the product never uses it (decision 36).
 - **Models:** logistic regression baseline and LightGBM, with probability calibration.
   PCA is never a model input, because it destroys per-customer explanations.
   PCA is allowed only for the T10 segment plot.
@@ -259,6 +318,12 @@ Acceptance:
 - The "Findings" subsection below states, with numbers, what the report confirms or changes for T2, T3 and T4.
 
 Findings (from `reports/profile.md`, 69,999 customers, 172 columns):
+- **The finding that shapes the whole product: most churn has already happened.**
+  59.9% of month 9 churners were already usage-inactive in month 8.
+  Customers inactive in month 8 churn at 77.9%; customers active in month 8 churn at 4.4%.
+  So the raw label rate of 10.19% is mostly people who had already stopped, and predicting them is not a retention opportunity.
+  Scoring only the customers still active in the current month is what turns this into a useful question, and it is why the evaluated churn rate is 4.35% rather than 10.19% (decision 12).
+  This drives the eligibility question in the Handoff section.
 - Missing values come in exactly two blocks, and both mean "nothing happened", so they become 0:
   - Voice block: 29 minute columns always go missing together (agreement 1.0 with `onnet_mou`), for 3.9%, 3.8% and 5.3% of customers in months 6, 7 and 8.
     For 100% of those customers, total incoming and outgoing minutes are 0.
@@ -275,9 +340,6 @@ Findings (from `reports/profile.md`, 69,999 customers, 172 columns):
 - Usage-based inactivity is 6.8%, 6.4% and 7.8% in months 6, 7 and 8; recharge-based inactivity is only 1.6%, 1.8% and 3.5%.
   Most usage-inactive customers still recharged (5.8% of all customers in month 8), so the two definitions disagree.
   We keep the usage-based definition, because Kaggle's month 9 label uses it.
-- 59.9% of month 9 churners were already usage-inactive in month 8.
-  Customers inactive in month 8 churn at 77.9%; customers active in month 8 churn at 4.4%.
-  This drives the eligibility question in the Handoff section.
 
 ## T2 - Input data contract
 
@@ -333,6 +395,7 @@ Scope, in `src/prepaid_churn/windows.py`:
 - `window_label`: window A uses our usage rule on month 8; window B uses Kaggle's month 9 label.
 - Eligibility: only customers active in the current month (decision 12).
 - Optional high-value filter: average airtime plus data recharge amount over the two window months in the top 30%, computed among eligible customers of that window.
+  It exists to compare with the upGrad case study's population; nothing downstream reads its output (decision 36).
 - Customer split 70/15/15, stratified by the window A label, seed 42.
 - `churn build-dataset [--high-value]` writes `train`, `validation` and `test` Parquet files to `data/processed/all/` (or `high_value/`) and a summary to `reports/dataset_all.md` (or `dataset_high_value.md`).
 
@@ -341,10 +404,12 @@ Acceptance:
 - Tests prove no customer appears in more than one split.
 - Window A and window B have identical feature columns.
 
-Result on the real data (`reports/dataset_all.md`): 107 features.
+Result on the real data: 107 window features.
+`reports/dataset_all.md` shows 126, because `build-dataset` now also adds the 19 features of T5.
 Train 45,858 rows (4.65% churn), validation 9,812 (4.61%), test 9,677 (4.35%).
 Our computed month 8 label and Kaggle's month 9 label give almost the same churn rate, which supports that our rule matches Kaggle's definition.
-High-value only: 13,708, 3,024 and 2,942 rows.
+High-value only (`reports/dataset_high_value.md`): 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.
+It must not be carried through `churn evaluate`, because the test window is spent; the T7 high-value slice answers how the model does on these customers (decision 36).
 
 ## T5 - Features
 
@@ -409,6 +474,7 @@ Scope, in `src/prepaid_churn/evaluation.py`:
 - Risk bands from validation only: `high` from the best-F1 threshold, `medium` above the validation churn rate, `low` below.
 - `freeze` saves everything to `artifacts/models/all/champion.joblib` before the test window is scored.
 - `churn evaluate` then scores test customers in window B once and writes `reports/evaluation_all.md`: metrics for both models, precision and recall at the top 5%, 10% and 20%, risk bands, a reliability table (instead of an image, so it reads in Markdown), and the high-value slice.
+- Added on 2026-09-25 (decision 35): `churn uncertainty` resamples the frozen test predictions to put 95% intervals on the published numbers and writes `reports/uncertainty.md`; it trains and chooses nothing.
 
 Acceptance:
 - `reports/evaluation_all.md` compares logistic regression and LightGBM on window B.
@@ -441,6 +507,11 @@ Success thresholds (decision 13), checked against these test results:
 
 The thresholds were written down after this test run, at the instructor's request, so this pass is reported honestly as a check, not as a pre-registered result.
 From now on they are a gate for every new model (retraining, a new month or an operator's own data), checked before the model is used (T8).
+
+How sure these numbers are (decision 35, `reports/uncertainty.md`, 2,000 paired resamples of the frozen predictions, nothing changed):
+- LightGBM PR-AUC 0.348, 95% interval 0.301 to 0.400; logistic regression 0.277, 0.238 to 0.324.
+- LightGBM scored higher than the baseline in all 2,000 resamples; the difference is 0.071, interval 0.040 to 0.102.
+- All four thresholds still pass at the unfavourable end of their intervals; the closest to its bar is capture, at 57.3% against 50%.
 
 ## T8 - Model bundle and batch scoring
 
@@ -690,7 +761,7 @@ Findings (2026-09-22, after Taha used it):
   It is parsed once now, and the app can propose a campaign over as few customers as it likes: 500 customers is a 1.7 MB snapshot that loads instantly.
 - A campaign picker in the sidebar names the campaign every screen is reading, its size and how many offers are approved in it.
 - The Campaign builder proposes a new campaign (customers considered, budget, name) through the same path as `churn decide`, and the Subscriber screen proposes for one customer.
-  Neither picks a package and neither approves anything (decision 31).
+  Neither picks a package and neither approves anything (decision 34).
 - A new Released screen answers "I approved it, where did it go": the approved rows, the package beside each one, the reviewer, the three files and the chatbot endpoint that serves them.
 - Fixed a real hazard: an empty selection in the approval box used to mean "approve every pending proposal". It is an error now, and reviewing them all is a separate checkbox that says how many.
 - Taha's own 15 approvals from that session are intact in `artifacts/campaigns/full-base-30000`, which is still in the picker.
@@ -711,6 +782,11 @@ Findings (2026-09-21):
 - 26 new tests; 325 prepaid tests, lint and formatting pass.
 - `streamlit` is added as a dependency; charts use Altair, which Streamlit already installs.
 - Limitations: outputs are cached per session and reread after a review or a restart, and the app is a local development server, not a deployed one.
+
+Readiness follow-up (Ali, 2026-09-22):
+- All five page scripts passed `AppTest` on the rebuilt 30,000-subscriber export, and the Streamlit server passed HTTP startup.
+- Literal `NA` IDs now retain their Almadar view, and chart widths use the current Streamlit argument.
+- Permanent hand-made regressions cover rendering, empty-selection refusal, individual approval, refreshed message selection and Arabic/English previews.
 
 ## T15 - Integration service for the chatbot and copilot
 
@@ -753,6 +829,11 @@ Findings (2026-09-21):
 - Limitations: outputs are loaded once, so a new release is served after a restart; the keys are service-to-service access control, not per-user authorization, and assume the service is not exposed publicly.
 - T20 still owns `docs/integration.md`, the example client and the walkthrough with the chatbot and copilot owners.
 
+Readiness follow-up (Ali, 2026-09-22):
+- The real API served the frozen bundle, 30,000 subscribers and 37 current packages with health `ok`.
+- Portfolio IDs preserve literal text and reject empty or duplicate identifiers; malformed non-ASCII credentials return 401.
+- Approvals for packages absent from the current catalogue are withheld and explained in health (decision 33).
+
 ## T16 - Almadar catalogue and market facts
 
 **Owner:** Claude
@@ -777,7 +858,8 @@ Acceptance:
 - The package count matches `Ali_Branch`'s catalogue (37 packages in 12 families), or the difference is explained.
 
 Findings (details in `docs/almadar.md`):
-- 57 packages in 17 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
+- 37 packages in 12 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
+- The operator file lists 57; the 20 Mix packages Ali confirmed retired on 2026-09-22 are in `excluded.csv` with a reason, a name and a date, and the check requires every source row to be in one place or the other (decision 31).
 - The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed in commit `62040af` without saying why; they stay until he says the operator no longer sells them (a test pins the difference).
 - Data volumes: 31 packages state them, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
 - Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.
@@ -878,7 +960,7 @@ Findings (2026-09-21):
 
 ## T20 - Integration check with the team platform
 
-**Owner:** Taha + Claude
+**Owner:** Taha + Claude; Ali for the 2026-09-22 readiness follow-up
 **Status:** Done
 **Depends on:** T15
 
@@ -919,6 +1001,11 @@ Walkthrough (2026-09-22), which is the acceptance:
 - 390 prepaid tests, lint and formatting pass; 11 of them are T20's.
 - Reopen this ticket if a response shape turns out to be wrong when the chatbot and the copilot are actually built; the network ML and antenna owners have not read the guide yet, and neither consumes this module today.
 
+Readiness follow-up (Ali, 2026-09-22):
+- The real consumer and CLI passed all five refusals over the rebuilt artifacts and an isolated reviewed campaign.
+- Degraded health, unavailable portfolio risk and a failed release gate now fail the check; unavailable LYD at risk stays unavailable.
+- Redirected Arabic output now uses UTF-8, with a subprocess regression for a Western Windows code page.
+
 ## T21 - Code and logic review
 
 **Owner:** Ali (review requested and implemented with Codex)
@@ -944,6 +1031,8 @@ Findings:
 - Calibration uses two model prediction calls instead of five; the focused density benchmark is 4.00 times faster.
 - The frozen champion choices and real-data test results are unchanged.
 - No new infrastructure, dependencies or business logic were introduced.
+- The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](reports/end_to_end.md).
+  Validation now passes 420 tests with none skipped; the frozen model and prior research results are unchanged.
 
 ## Future work (needs real operator data)
 

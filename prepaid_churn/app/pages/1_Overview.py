@@ -55,12 +55,12 @@ with risk_column:
             icon=":material/info:",
         )
     else:
-        st.altair_chart(ordered_bar(bands, RISK_BANDS), use_container_width=True)
+        st.altair_chart(ordered_bar(bands, RISK_BANDS), width="stretch")
         st.dataframe(readable(bands), width="stretch", hide_index=True)
 
 with tier_column:
     st.subheader("By value tier")
-    st.altair_chart(ordered_bar(tiers, VALUE_TIERS), use_container_width=True)
+    st.altair_chart(ordered_bar(tiers, VALUE_TIERS), width="stretch")
     st.dataframe(readable(tiers), width="stretch", hide_index=True)
 
 st.caption(

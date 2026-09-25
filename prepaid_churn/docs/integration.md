@@ -33,6 +33,7 @@ uv run churn serve
 ```
 
 On Windows PowerShell, use `$env:PREPAID_CHURN_CHATBOT_KEY = "..."` instead of `export`.
+Use two different random keys of at least 24 printable ASCII characters, without spaces.
 
 | Where | Base URL |
 |---|---|
@@ -60,7 +61,8 @@ Ask for readiness before your first call, and read the answer rather than retryi
 ```
 
 `status` is `ok` only when the bundle predicts and there is a portfolio to summarise.
-`degraded` means some endpoints answer 503, and `problems` says which output is missing.
+`degraded` means an output is missing or invalid, or approved offers have been withheld after leaving the current catalogue; `problems` explains why.
+An endpoint needing a missing output answers 503; a withheld offer answers 404, like any other unavailable offer.
 The outputs are read once at startup, so a new release is served after a restart, and `campaign_id` tells you which campaign you are looking at.
 
 The OpenAPI page at `/docs` is generated from the response models, so it is always the current field list.
@@ -95,7 +97,7 @@ Nothing can be created, changed or approved through this service, and no offer a
 The customer asks what they can get today.
 Two calls, and nothing invented between them.
 
-`GET /catalogue` returns all 57 packages; one row:
+`GET /catalogue` returns all 37 packages; one row:
 
 ```json
 {
@@ -312,7 +314,7 @@ Run on 2026-09-21 against a service holding the 30,000-subscriber base and a rev
 - serving 30000 subscribers and 2 approved offers from campaign 0bdfa31a0531...
 
 ## Chatbot, with the chatbot key
-- /catalogue: 57 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
+- /catalogue: 37 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
 - /subscribers/70008/retention: SABAH_1, approved 2026-09-21T22:46:21+00:00
 - the chatbot may say: مكافأة من الكتالوج: الصبح (06:00-11:00)؛ قيمة موجبة وفق افتراضات الاحتفاظ. [offer_reason_ar] - الصبح [offer.name_ar]
 
@@ -333,7 +335,8 @@ Run on 2026-09-21 against a service holding the 30,000-subscriber base and a rev
 Every check passed.
 ```
 
-The command exits 1 if any refusal did not happen, so it can run in a check rather than being read by eye.
+The command exits 1 if any refusal did not happen, health is degraded, portfolio risk is unavailable or the model release gate has not passed.
+Missing risk is printed as unavailable, and redirected output uses UTF-8 to preserve Arabic on Windows.
 
 ## 10. Changing this contract
 

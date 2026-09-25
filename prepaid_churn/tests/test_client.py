@@ -7,13 +7,15 @@ The service is started here the way `churn serve` starts it, so a mistake in the
 between the two shows up as a failing test rather than during integration week.
 """
 
+import os
 import socket
+import subprocess
+import sys
 import threading
 import time
 from contextlib import closing, contextmanager
 from dataclasses import replace
 
-import pandas as pd
 import pytest
 import uvicorn
 
@@ -59,43 +61,6 @@ def running(app):
     finally:
         server.should_exit = True
         thread.join(timeout=STARTUP_SECONDS)
-
-
-@pytest.fixture
-def customers():
-    """Four subscribers, as in `test_api.py`: one approved, one rejected, two unreviewed."""
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, 0.2],
-            "risk_band": ["high"] * 4,
-            "value_tier": ["high"] * 4,
-            "value_status": ["scenario"] * 4,
-            "value_12m_base_lyd": [100.0] * 4,
-            "bundle_held": ["PAYG"] * 4,
-            "uses_voice": [True] * 4,
-            "uses_data": [True] * 4,
-        }
-    )
-
-
-@pytest.fixture
-def portfolio():
-    return pd.DataFrame(
-        {
-            "subscriber_id": ["0001", "0002", "NA", "0004"],
-            "churn_probability": [0.5, 0.4, 0.3, None],
-            "risk_band": ["high", "high", "medium", "already_silent"],
-            "reason_1": ["No recharge for 21 days"] * 3 + [None],
-            "reason_2": ["Outgoing minutes down 80%"] * 3 + [None],
-            "reason_3": [None] * 4,
-            "value_tier": ["high", "high", "medium", "very_low"],
-            "monthly_spend_lyd": [40.0, 30.0, 20.0, 5.0],
-            "value_12m_base_lyd": [100.0, 80.0, 60.0, None],
-            "value_status": ["scenario", "scenario", "scenario", "already_silent"],
-            "scored_at": [STAMP] * 4,
-        }
-    )
 
 
 @pytest.fixture
@@ -181,6 +146,41 @@ def test_the_check_reports_a_working_seam(service):
     assert "high risk, probability 0.5" in result.text
 
 
+@pytest.mark.parametrize("missing", ["bundle", "risk", "release_gate"])
+def test_the_check_fails_when_the_service_is_not_ready(service, monkeypatch, missing):
+    """Correct refusals do not make unavailable risk ready for a consumer."""
+    read_health, read_portfolio = client.health, client.portfolio_summary
+
+    def health(base_url):
+        state = read_health(base_url)
+        if missing == "bundle":
+            state.update(status="degraded", bundle_loaded=False, problems=["Bundle missing"])
+        return state
+
+    def portfolio(base_url, key):
+        summary = read_portfolio(base_url, key)
+        if missing == "risk":
+            summary["risk_available"] = False
+            for group in summary["by_risk_band"]:
+                group["lyd_at_risk"] = None
+        if missing == "release_gate":
+            summary["release_gate_passed"] = False
+        return summary
+
+    monkeypatch.setattr(client, "health", health)
+    monkeypatch.setattr(client, "portfolio_summary", portfolio)
+    result = client.check(service, CHATBOT_KEY, COPILOT_KEY, "0001")
+    assert result.failures
+    assert "Every check passed." not in result.text
+    if missing == "risk":
+        assert "LYD at risk: unavailable" in result.text
+    monkeypatch.setenv(CHATBOT_KEY_VARIABLE, CHATBOT_KEY)
+    monkeypatch.setenv(COPILOT_KEY_VARIABLE, COPILOT_KEY)
+    with pytest.raises(SystemExit) as exit_code:
+        main(["check-integration", "--url", service, "--subscriber-id", "0001"])
+    assert exit_code.value.code == 1
+
+
 def test_a_refusal_that_does_not_happen_is_a_failure():
     """The check has to fail when access control lets a call through, not only when it errors."""
     result = client.CheckResult()
@@ -217,6 +217,35 @@ def test_the_command_needs_both_keys(service, monkeypatch, capsys):
         main(["check-integration", "--url", service, "--subscriber-id", "0001"])
     assert exit_code.value.code == 1
     assert CHATBOT_KEY_VARIABLE in capsys.readouterr().err
+
+
+def test_the_redirected_command_preserves_arabic_on_windows(service):
+    """A pipe with a Western code page must not crash before writing its report."""
+    environment = {
+        **os.environ,
+        CHATBOT_KEY_VARIABLE: CHATBOT_KEY,
+        COPILOT_KEY_VARIABLE: COPILOT_KEY,
+        "PYTHONIOENCODING": "cp1252",
+    }
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from prepaid_churn.cli import main; main()",
+            "check-integration",
+            "--url",
+            service,
+            "--subscriber-id",
+            "0001",
+        ],
+        env=environment,
+        capture_output=True,
+        timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
+    report = completed.stdout.decode("utf-8")
+    assert "Every check passed." in report
+    assert any("\u0600" <= character <= "\u06ff" for character in report)
 
 
 def test_the_guide_describes_the_service_that_is_running(service):
