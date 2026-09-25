@@ -982,3 +982,44 @@ They are more cautious than LightGBM's defaults, and only the tree count is fitt
 
 T12's LSTM is an experiment, and its ticket early-stops it on validation customers.
 It lost to LightGBM, so that choice could only have flattered the loser.
+
+## 38. A fifth release check for the next model: calibration where offers are made
+
+Date: 2026-09-26.
+
+Decision 13's calibration check compares the mean prediction with the observed churn rate, and the current champion passes it easily (0.13 points).
+Its probabilities are still off inside the range.
+On test, tenths 7 to 9 by predicted risk (1.1% to 10.9%) were expected to hold 98 leavers and held 134, about 3.7 standard deviations beyond chance, while the riskiest tenth was expected to hold 283 and held 259.
+The two errors cancel in the mean, so the check could not see them.
+A smaller version already shows on the validation customers the calibrator was fitted on (121 leavers against 100 predicted in those tenths), so part of it is the fixed shape of a sigmoid and part is the later month.
+
+T11 multiplies each probability by money and proposes offers only in the high and medium bands, so calibration matters most inside those bands.
+Counted by band from the frozen test predictions, read only as in decision 35:
+
+| Band | Customers | Predicted leavers | Actual leavers | Actual against predicted |
+|---|---|---|---|---|
+| high | 450 | 199 | 173 | -13% |
+| medium | 1,238 | 135 | 148 | +10% |
+| low | 7,989 | 75 | 100 | +34% |
+
+The largest miss is in the low band, where no offer is made.
+
+The next model must also pass a fifth check, written down now, before that model exists:
+
+5. **Calibration where offers are made:** in the high band and in the medium band separately, the number of customers who actually left must be within 20% of the number the model predicted (the sum of its probabilities), or within two standard deviations of chance if that is wider.
+   The standard deviation of chance is the square root of the sum of p × (1 - p) over the band's customers: the spread the count would show if every probability were exactly right.
+
+Why these levels:
+
+- A 20% error in a band's predicted leavers is a 20% error in the money T11 expects from that band, and we take that as the most a retention team could accept when splitting a budget between bands.
+  Like decision 13's levels, it is a minimum, not a number fitted to a result.
+- The allowance of two standard deviations keeps a small band from failing by chance alone: a model whose probabilities are exactly right passes each band at least 95% of the time.
+- The low band is left out because no money is spent there; its miss is reported in the model card instead.
+
+Scope:
+
+- It applies to every model evaluated after this date, starting with the retrain on an operator's own data (decisions 11 and 16).
+- It does not apply to the current champion, whose gate was recorded on 2026-09-19 with decision 13's four checks.
+  Measured the same way, the current champion would pass it (-13% and +10%).
+- When the check is coded, the recorded gate must stay as it is, so the rebuild with `--chosen-at 2026-09-19` still reproduces bundle `lightgbm-2026-09-19-ef9430fb` byte for byte.
+- Unlike decision 13's four checks, which were written after the test they were checked against, this one is written before the model it will judge is tested.

@@ -9,9 +9,9 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-25 by Ali (step-by-step recap of the module, now at T4; prior notes retained).
+**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T7; prior notes retained).
 
-**Ali's step-by-step recap, 2026-09-25**
+**Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
 - Ali is walking through the module from T1, confirming or changing each step; every change goes to `Ali_Branch` only.
 - Steps 1 to 3 changed wording, not results: T1 now leads with the finding that shapes the product, decision 1 leads with the dataset mismatch, and decision 5 states the four-month trade-off.
@@ -22,8 +22,10 @@ Update this section at the end of every working session.
 - Step 5 (T5) changed text only: the two share descriptions in `features.py` now say what the data shows, and T5 answers its own open question (the four share features carry 3.0% of the gain).
 - Step 6 (T6) found that the model's top signal is partly temporary absence: roamers are 52% of the churners, and 26% of customers silent in month 8 were active again in month 9.
   That is now a model card limitation, and the early-stopping change T6 made without a decision entry is recorded as decision 37.
+- Step 7 (T7) found that the calibration check only sees the average, where two errors cancel; the largest miss is in the low band, which holds 24% of the leavers and gets no offer.
+  The model card no longer claims more than the average shows, and decision 38 sets a fifth check, on the high and medium bands, for the next model before it is tested.
 - Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 7, T7 calibration and evaluation.
+- Next: step 8, T8 bundle and scoring.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -258,6 +260,9 @@ Reasons are in [docs/decisions.md](docs/decisions.md).
   2. Better than chance: PR-AUC is at least 3 times the churn rate.
   3. Better than the baseline: the champion's PR-AUC is higher than logistic regression's on the same test.
   4. Calibration: the mean predicted churn rate is within 1 percentage point of the observed rate.
+
+  From the next model on, a fifth check is set in advance (decision 38): in the high and medium bands separately, actual leavers must be within 20% of the predicted number, or within two standard deviations of chance if that is wider.
+  It does not apply to the current champion, whose gate was recorded with the four checks above.
 - **Human approval** (decision 14): the system only proposes retention offers.
   A named person approves or rejects them before any offer is sent or shown by the chatbot, and every approval is logged.
 - **Operator** (decision 16): Almadar Aljadid.
@@ -502,8 +507,13 @@ Result on the test window (months 7 and 8, Kaggle's month 9 label, unseen custom
 
 - Contacting the riskiest 10% catches 61.5% of churners at 26.8% precision; the riskiest 20% catches 79.8%.
 - Risk bands: `high` 450 customers with 38.4% churn, `medium` 1,238 with 11.9%, `low` 7,989 with 1.3%.
-- Calibration: LightGBM without class weights was already well calibrated (sigmoid and none tie at 0.1142 log loss).
+  The low band still holds 100 of the 421 leavers (24%), and T11 makes it no offer.
+- Calibration: LightGBM without class weights was already well calibrated on average (sigmoid and none tie at 0.1142 log loss).
   On test, the mean prediction is 4.22% against 4.35% observed, and the top tenth predicts 29.2% against 26.8% observed.
+  Added on 2026-09-26 from the frozen predictions, read only: the average hides two errors that cancel.
+  Tenths 7 to 9 (predicted 1.1% to 10.9%) expected 98 leavers and had 134, while the riskiest tenth expected 283 and had 259.
+  By band, the high band had 173 leavers against 199 predicted (-13%), the medium band 148 against 135 (+10%) and the low band 100 against 75 (+34%), so the largest miss is where T11 spends nothing (model card, Calibration).
+  Decision 38 adds a check on the high and medium bands for the next model.
 - High-value slice: ROC-AUC 0.906, PR-AUC 0.383 at 2.9% churn.
 - Test is lower than validation (ROC-AUC 0.928, PR-AUC 0.458): it is a later month, Kaggle's label instead of ours, and unseen customers.
   This gap is the honest estimate of production performance.

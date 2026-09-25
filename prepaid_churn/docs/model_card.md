@@ -127,6 +127,9 @@ How sure these numbers are: resampling the frozen test predictions 2,000 times (
 LightGBM beat the baseline in all 2,000 paired resamples, and every check above still passes at the unfavourable end of its interval.
 The intervals cover which customers landed in the test group; they do not cover training randomness or a different month or operator.
 
+From the next model on, a fifth check applies: calibration inside the high and medium bands, where offers are made (decision 38).
+It is set before that model is tested, and it does not apply to the current champion.
+
 ### Honest setup, and what selection costs
 
 No deliberately naive variant was run, so no naive-versus-honest table is offered rather than a fabricated one.
@@ -155,8 +158,30 @@ Method: **sigmoid**, chosen by 5-fold cross-validated log loss on validation cus
 Calibration is mandatory here, because T11 multiplies the probability by money.
 A probability consumed as a monetary expectation has to mean what it says.
 
-The evidence that it does: on test, the mean predicted probability is 0.0422 against an observed 0.0435, a gap of 0.0013.
-The reliability table in `reports/evaluation_all.md` gives all ten bins; the riskiest bin predicts 0.2923 and observes 0.2676.
+On average it does: on test, the mean predicted probability is 0.0422 against an observed 0.0435, a gap of 0.0013.
+Inside the range it does less well, and the average hides it because two errors cancel.
+From the reliability table in `reports/evaluation_all.md`:
+
+| Test customers | Predicted leavers | Actual leavers |
+|---|---|---|
+| Tenths 7 to 9 by predicted risk (1.1% to 10.9%), 2,903 customers | 98 | 134 |
+| The riskiest tenth (10.9% and above), 968 customers | 283 | 259 |
+
+The gap in tenths 7 to 9 is about 3.7 standard deviations, far beyond chance.
+A smaller version already shows on the validation customers the calibrator was fitted on (121 leavers against 100 predicted), so part of it is the fixed shape of a sigmoid and part is the later month.
+
+What it costs depends on the band, because T11 proposes offers only in the high and medium bands (counted from the frozen test predictions, decision 38):
+
+| Band on test | Customers | Predicted leavers | Actual leavers | Actual against predicted |
+|---|---|---|---|---|
+| high | 450 | 199 | 173 | -13% |
+| medium | 1,238 | 135 | 148 | +10% |
+| low | 7,989 | 75 | 100 | +34% |
+
+The ranking is not affected, so the riskiest customers are still found first.
+Where money is spent, expected values are somewhat too high in the high band and too low in the medium band, which tilts a budget toward the high band; that error is small next to the assumed 5% share of churners saved.
+The largest miss is in the low band, where T11 spends nothing: it holds 100 of the 421 leavers (24%), and the model expected 75.
+None of this can be corrected with the test customers, which were scored once; decision 38 adds a check on the high and medium bands for the next model.
 
 Thresholds, both fixed on validation and stored in the bundle manifest:
 
