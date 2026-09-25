@@ -297,6 +297,12 @@ Acceptance:
 - The "Findings" subsection below states, with numbers, what the report confirms or changes for T2, T3 and T4.
 
 Findings (from `reports/profile.md`, 69,999 customers, 172 columns):
+- **The finding that shapes the whole product: most churn has already happened.**
+  59.9% of month 9 churners were already usage-inactive in month 8.
+  Customers inactive in month 8 churn at 77.9%; customers active in month 8 churn at 4.4%.
+  So the raw label rate of 10.19% is mostly people who had already stopped, and predicting them is not a retention opportunity.
+  Scoring only the customers still active in the current month is what turns this into a useful question, and it is why the evaluated churn rate is 4.35% rather than 10.19% (decision 12).
+  This drives the eligibility question in the Handoff section.
 - Missing values come in exactly two blocks, and both mean "nothing happened", so they become 0:
   - Voice block: 29 minute columns always go missing together (agreement 1.0 with `onnet_mou`), for 3.9%, 3.8% and 5.3% of customers in months 6, 7 and 8.
     For 100% of those customers, total incoming and outgoing minutes are 0.
@@ -313,9 +319,6 @@ Findings (from `reports/profile.md`, 69,999 customers, 172 columns):
 - Usage-based inactivity is 6.8%, 6.4% and 7.8% in months 6, 7 and 8; recharge-based inactivity is only 1.6%, 1.8% and 3.5%.
   Most usage-inactive customers still recharged (5.8% of all customers in month 8), so the two definitions disagree.
   We keep the usage-based definition, because Kaggle's month 9 label uses it.
-- 59.9% of month 9 churners were already usage-inactive in month 8.
-  Customers inactive in month 8 churn at 77.9%; customers active in month 8 churn at 4.4%.
-  This drives the eligibility question in the Handoff section.
 
 ## T2 - Input data contract
 

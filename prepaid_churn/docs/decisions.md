@@ -99,6 +99,14 @@ Rejected:
 - Iranian UCI churn: only 3,150 rows and a mix of pay-as-you-go and contract customers.
 - KKBox: real and time-stamped but music streaming, not telecom.
 
+The trade-off we accepted, stated plainly because it is the largest limitation in the project:
+- **Four months is short, and we chose it anyway.**
+  Two months feed the features, one carries the label, and one is spare.
+  That leaves one month-to-month change per customer and no seasonality, no trend and no long history.
+  Cell2Cell has longer histories, so this was a real choice rather than the only option.
+  We took prepaid behaviour over history length, because a model of postpaid contract customers cannot be repointed at a prepaid market (decision 1), while a short history still supports the question we actually ask.
+  Almost every later limitation traces back to this line, including the T12 result that a sequence model has nothing to work with over two steps (decision 28).
+
 Known limits, stated in the model card:
 - Provenance is undocumented (it looks like an Indian operator: "circle" regions and rupee amounts).
 - Only four months, so there is one short history per customer.
