@@ -24,6 +24,8 @@ Update this section at the end of every working session.
   That is now a model card limitation, and the early-stopping change T6 made without a decision entry is recorded as decision 37.
 - Step 7 (T7) found that the calibration check only sees the average, where two errors cancel; the largest miss is in the low band, which holds 24% of the leavers and gets no offer.
   The model card no longer claims more than the average shows, and decision 38 sets a fifth check, on the high and medium bands, for the next model before it is tested.
+- Step 8 (T8) found that the contract and the scorer only accept June to August exports, so an operator's current base cannot be scored as it is.
+  That is now a model card limitation, a T8 finding and the open ticket T22.
 - Step 9 (T9): CLAUDE.md still told every session to work on `tahaDev`; it now says Ali works on `Ali_Branch` only and Taha's work arrives by merge (decision 39).
   Taha's `f2cc724` on `tahaDev` (a session log and presentation material) is not merged yet.
 - Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
@@ -96,6 +98,7 @@ Update this section at the end of every working session.
 - **The demo app was reworked after Taha used it (decision 34):** a campaign picker in the sidebar, proposing a campaign or a single offer from the screens, a Released screen that shows what was approved and where it lives, and a fix for the approval box, where an empty selection used to approve every pending proposal.
   Keep demo campaigns small: 500 customers is a 1.7 MB snapshot that loads instantly, the whole base is 80 MB and is what made the app feel heavy.
 - **What is left:** nothing in this file.
+  Since 2026-09-26 one ticket is open again: T22, scoring and retraining on any calendar months.
   The open questions below still stand, and the next real work is whatever the team needs for the presentation and the demo.
 
 **For Ali: what changed on our side**
@@ -582,6 +585,10 @@ Findings:
 - Nothing is computed from the scored batch except the month end date, which the data contract already requires on at least one row.
 - Data contract: `id` may now be a number or text, so an operator can export a salted hash of the phone number (decision 17); `docs/data_contract.md` was regenerated.
 - `shap` was removed from the dependencies (LightGBM computes SHAP itself), and with it numba, llvmlite, slicer and tqdm.
+- Found in the 2026-09-26 recap: the contract and the scorer only accept June to August.
+  Column names carry the month number, every date must fall in the month its column names, the `vbc_3g` names cover only June to September, and the scorer always reads months 7 and 8.
+  On the hand-made fixture, the same export with its dates three months later was refused ("date in month 6 failed"), and one with honest names for months 9 to 11 was refused for missing June to August columns.
+  So an operator's current base cannot be scored without rewriting its dates; T22 is the fix.
 
 ## T9 - Documentation
 
@@ -1060,9 +1067,30 @@ Findings:
 - The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](reports/end_to_end.md).
   Validation now passes 420 tests with none skipped; the frozen model and prior research results are unchanged.
 
+## T22 - Score and retrain on any calendar months
+
+**Owner:** unclaimed
+**Status:** Open
+**Depends on:** T2, T4, T8
+
+Why: decision 11 says what can be sold is the pipeline retrained on an operator's own export, but the input edge only accepts June to August (T8 findings, 2026-09-26).
+Inside, the pipeline already uses relative months (T4's `prev_` and `cur_`), so the fix is at the edge.
+
+Scope:
+- The data contract and `validate` accept any consecutive calendar months, including a window that crosses a year end.
+- The `vbc_3g` column names cover all twelve months.
+- `churn score` takes the export's two latest months as previous and current, instead of the fixed months 7 and 8.
+- `churn build-dataset` builds its windows from the export's own months and label month, instead of 6 to 9.
+- The Kaggle files keep working unchanged.
+
+Acceptance:
+- The hand-made fixture relabelled to November, December and January, which have the same month lengths as June, July and August, validates and scores to exactly the same probabilities, bands and reasons.
+- An export whose dates do not fall in the months its columns name is still refused.
+- The contract's text changes, so its fingerprint changes: the bundle is rebuilt from the existing champion and gate with `churn bundle`, keeps version `lightgbm-2026-09-19-ef9430fb`, and the README rebuild still leaves every committed report unchanged.
+
 ## Future work (needs real operator data)
 
 - Airtime advance limits learnt from repayment history (T19 is the rule-based first step).
 - Network-quality features (dropped calls, outages) from the network ML team, through the T20 field contract.
 - Uplift models on our own customers, once a campaign with a holdout group has run.
-- Retraining on Almadar's own export, which is what a commercial deployment requires (decisions 11 and 16).
+- Retraining on Almadar's own export, which is what a commercial deployment requires (decisions 11 and 16); T22 has to come first.

@@ -251,6 +251,10 @@ Stated plainly, because this is the section an evaluator should read hardest.
 - **Provenance is undocumented.** The upGrad file gives no collection method, no sampling frame and no date range beyond four consecutive months.
 - **One short history per customer.** Four months total, and only two of them feed features, so nothing seasonal or long-range can be learned. This is also why the T12 sequence benchmark is expected to lose.
 - **Educational licence.** The Kaggle competition terms allow education only, so a model fitted on this data cannot be sold or deployed commercially (decision 11).
+- **Only June to August exports can be scored.**
+  The data contract names months by number and requires every date to fall in the month its column names, and the scorer always reads months 7 and 8.
+  An operator's current base is refused unless its dates are rewritten into June to August, which is error-prone and shifts the recency features by the difference in month lengths.
+  Ticket T22 moves this edge to match the inside of the pipeline, which already uses relative months (T4).
 - **The test window is spent.** It was scored once, on 2026-09-19. No model, feature or threshold may change because of those numbers, and any future comparison must be against them rather than a re-scored test.
 - **Churn is inactivity, so a dual-SIM subscriber who still receives calls but places none elsewhere looks retained.** The receiving-SIM hypothesis from `Ali_Branch` is testable only on real Libyan data.
 - **One month of silence is not always churn.**
