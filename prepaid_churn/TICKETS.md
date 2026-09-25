@@ -19,8 +19,9 @@ Update this section at the end of every working session.
   The champion's lead over the baseline held in all 2,000 resamples, and all four release checks pass at the unfavourable end of their intervals.
 - Step 4 also settled `--high-value`: it stays as a comparison with the upGrad case study, the product never uses it, and it must not be evaluated on the spent test window (decision 36).
   T4 now says 107 window features, with the 126 of `dataset_all.md` explained by T5's 19.
+- Step 5 (T5) changed text only: the two share descriptions in `features.py` now say what the data shows, and T5 answers its own open question (the four share features carry 3.0% of the gain).
 - Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 5, the T5 features.
+- Next: step 6, T6 training.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -424,6 +425,15 @@ Acceptance:
 Result: 19 new features, 126 in total.
 Medians in the train set, churners vs non-churners: 6 vs 3 days since the last recharge, `trend_total_og_mou` 0.35 vs 0.50, `diff_arpu` -89.5 vs +2.8.
 The "receiving SIM" idea did not hold here: churners have a lower incoming share (0.30 vs 0.47), not a higher one; T7's feature importance will show whether the shares help at all.
+
+Answered on 2026-09-25 from the trained LightGBM's gain and the train customers, not the test window:
+- The 19 features are 15% of the columns and carry 25.1% of the gain; `trend_total_mou` ranks 2nd of 126 (8.4%).
+- The four share features carry 3.0% of the gain, and the best, `cur_incoming_share`, ranks 21st, so they help a little.
+- Churn by fifths of incoming share, lowest to highest: 8.6%, 4.9%, 4.0%, 2.2% and 3.6%.
+  A low share goes with churn; a likely reading is that incoming calls tie people to their number.
+- The second-SIM idea behind the on-net share has weak support among customers with call minutes: churn is 5.3% in the lowest fifth, 6.7% in the highest and 3.1% to 3.6% in between.
+  Those whose on-net share fell by more than 0.1 churn at 5.2%, against 4.2% for a stable share.
+- The descriptions in `FEATURES` now say what the data shows instead of the two hypotheses.
 
 ## T6 - Training
 
