@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import joblib
 import numpy as np
@@ -11,6 +12,7 @@ from prepaid_churn.bundle import BundleError, save_bundle
 from prepaid_churn.cli import OUTPUT_CONTRACT_PATH, main
 from prepaid_churn.schema import InvalidExportError
 from prepaid_churn.scoring import (
+    LOW_RISK_REASON,
     OUTPUT_COLUMN_NAMES,
     SILENT_BAND,
     SILENT_REASON,
@@ -59,13 +61,32 @@ def test_one_customer_alone_scores_like_inside_the_batch(export, bundle):
         pd.testing.assert_frame_equal(alone, whole.iloc[[row]].reset_index(drop=True))
 
 
+def with_thresholds(bundle, high: float, medium: float):
+    """The same bundle and probabilities with other band thresholds, to choose the bands."""
+    champion = replace(bundle.champion, high_threshold=high, medium_threshold=medium)
+    return replace(bundle, champion=champion)
+
+
 def test_reasons_name_a_factor_and_its_value(export, bundle):
-    scores = score(export, bundle, SCORED_AT)
+    scores = score(export, with_thresholds(bundle, high=0.0, medium=0.0), SCORED_AT)
     active = scores[scores["risk_band"] != SILENT_BAND]
+    assert (active["risk_band"] == "high").all()
     reasons = active[["reason_1", "reason_2", "reason_3"]].stack()
     assert len(reasons) > 0, "no active customer got a reason"
     assert reasons.str.contains(": ").all()
     assert not reasons.str.contains("_").any()  # plain words, not column names
+    assert not reasons.eq(LOW_RISK_REASON).any()
+
+
+def test_low_risk_customers_get_one_plain_line_instead_of_reasons(export, bundle):
+    """SHAP always finds a few small upward pushes, which would read as warning signs."""
+    scores = score(export, with_thresholds(bundle, high=2.0, medium=1.5), SCORED_AT)
+    low = scores[scores["risk_band"] == "low"]
+    assert len(low) == (scores["risk_band"] != SILENT_BAND).sum() > 0
+    assert (low["reason_1"] == LOW_RISK_REASON).all()
+    assert low[["reason_2", "reason_3"]].isna().all().all()
+    unchanged = score(export, bundle, SCORED_AT)
+    pd.testing.assert_series_equal(scores["churn_probability"], unchanged["churn_probability"])
 
 
 def test_an_invalid_export_is_rejected_before_scoring(export, bundle):

@@ -213,7 +213,8 @@ Cite these field names when the copilot quotes a number, and say the assumption 
 }
 ```
 
-`reasons` are the model's own factors, already written as sentences, in the order the model ranked them.
+`reasons` are the model's own factors, each a short label with the customer's value, in the order the model ranked them.
+A `low` subscriber gets one line instead, "Low risk: nothing stands out", and an already silent one gets "No calls and no mobile data this month" (decision 40).
 Quote them; do not paraphrase them into a story, and do not add a reason the list does not contain.
 They explain the score, not the customer: "no recharge on the last recharge day" is what the model reacted to, not a diagnosis.
 

@@ -238,8 +238,9 @@ class SubscriberResponse(BaseModel):
 
     The opposite rule to `RetentionResponse`: the employee asking is allowed to see the
     risk and the value, because they are deciding what to do for this customer.
-    The reasons are the model's own plain-language factors from the scoring export, so
-    the copilot quotes them rather than inventing an explanation.
+    The reasons are the model's own factors from the scoring export, each a short label
+    with the customer's value, so the copilot quotes them rather than inventing an
+    explanation. A `low` subscriber gets one line saying so instead (decision 40).
     """
 
     model_config = ConfigDict(extra="forbid", protected_namespaces=())
@@ -251,7 +252,10 @@ class SubscriberResponse(BaseModel):
     risk_band: str | None = None
     reasons: list[str] = Field(
         default_factory=list,
-        description="Why the model raised this customer's risk, in the order it ranked them.",
+        description=(
+            "Why the model raised this customer's risk, in the order it ranked them; "
+            "a `low` subscriber gets one line saying the risk is low instead."
+        ),
     )
     value_tier: str | None = None
     value_status: str | None = Field(

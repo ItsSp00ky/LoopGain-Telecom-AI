@@ -190,7 +190,9 @@ Thresholds, both fixed on validation and stored in the bundle manifest:
 
 ## Explainability
 
-Every scored subscriber gets up to three reasons in plain language, written as sentences rather than as `feature = value, shap = +0.14`.
+Every `high` or `medium` subscriber gets up to three reasons, each a short label with the customer's value, such as "Days since the last recharge, at the end of this month: 26", rather than `feature = value, shap = +0.14`.
+A `low` subscriber gets one line instead, "Low risk: nothing stands out" (decision 40).
+SHAP measures the push away from the average customer, so even a very safe customer has a few small upward pushes, and listing them would read as warning signs.
 
 They are exact SHAP contributions, not an approximation: LightGBM computes them from its own trees through `pred_contrib`, so no background sample is needed and there is no sampling noise.
 For the logistic regression baseline, each feature's share of the log-odds is its coefficient times its standardised value.

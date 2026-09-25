@@ -1040,3 +1040,20 @@ So, until Ali and Taha agree on one branch:
 - Taha keeps working on `tahaDev`; this entry does not decide which branch becomes the final one.
 
 CLAUDE.md and the handoff now say this.
+
+## 40. Reasons only for customers whose risk is above average
+
+Date: 2026-09-26.
+
+Every active subscriber used to get three reasons, including the 22,779 of the unlabelled base in the `low` band.
+SHAP measures each factor's push away from the average customer, so even a very safe customer has a few small upward pushes.
+A customer at 0.7% risk was given "Amount recharged on the last recharge day this month: 0", "Local incoming minutes this month: 31.5" and "Days since the last recharge, at the end of this month: 7", and the integration guide tells the copilot to quote reasons as they are.
+An employee would read them as warning signs about a customer who is very unlikely to go silent.
+
+So only `high` and `medium` subscribers, whose risk is above the validation churn rate, get the model's reasons.
+A `low` subscriber gets one line, "Low risk: nothing stands out", the same way an already silent one gets "No calls and no mobile data this month".
+The model, the probability and the band are unchanged; only the text beside them changed.
+The reasons of the other bands are computed exactly as before, and a subscriber scored alone still gets the same row as inside a batch.
+
+The model card and the integration guide also said the reasons are "written as sentences".
+They are short labels with the customer's value, and both documents now say so.

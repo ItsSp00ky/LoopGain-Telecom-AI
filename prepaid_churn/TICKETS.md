@@ -26,6 +26,7 @@ Update this section at the end of every working session.
   The model card no longer claims more than the average shows, and decision 38 sets a fifth check, on the high and medium bands, for the next model before it is tested.
 - Step 8 (T8) found that the contract and the scorer only accept June to August exports, so an operator's current base cannot be scored as it is.
   That is now a model card limitation, a T8 finding and the open ticket T22.
+  Low-band customers no longer get "reasons for churn" that read as warning signs: only high and medium ones do, and a low one gets one plain line (decision 40).
 - Step 9 (T9): CLAUDE.md still told every session to work on `tahaDev`; it now says Ali works on `Ali_Branch` only and Taha's work arrives by merge (decision 39).
   Taha's `f2cc724` on `tahaDev` (a session log and presentation material) is not merged yet.
 - Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
@@ -589,6 +590,8 @@ Findings:
   Column names carry the month number, every date must fall in the month its column names, the `vbc_3g` names cover only June to September, and the scorer always reads months 7 and 8.
   On the hand-made fixture, the same export with its dates three months later was refused ("date in month 6 failed"), and one with honest names for months 9 to 11 was refused for missing June to August columns.
   So an operator's current base cannot be scored without rewriting its dates; T22 is the fix.
+- Changed on 2026-09-26 (decision 40): only `high` and `medium` subscribers get the model's reasons, and a `low` one gets "Low risk: nothing stands out".
+  Before, all 22,779 low-band customers of the unlabelled base got three "reasons for churn" that read as warning signs; probabilities and bands are unchanged.
 
 ## T9 - Documentation
 
