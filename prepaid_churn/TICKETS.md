@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T7; prior notes retained).
+**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T9; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -24,8 +24,10 @@ Update this section at the end of every working session.
   That is now a model card limitation, and the early-stopping change T6 made without a decision entry is recorded as decision 37.
 - Step 7 (T7) found that the calibration check only sees the average, where two errors cancel; the largest miss is in the low band, which holds 24% of the leavers and gets no offer.
   The model card no longer claims more than the average shows, and decision 38 sets a fifth check, on the high and medium bands, for the next model before it is tested.
+- Step 9 (T9): CLAUDE.md still told every session to work on `tahaDev`; it now says Ali works on `Ali_Branch` only and Taha's work arrives by merge (decision 39).
+  Taha's `f2cc724` on `tahaDev` (a session log and presentation material) is not merged yet.
 - Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 8, T8 bundle and scoring.
+- Next: finish steps 8 and 9, then step 10, T10 value tiers.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -75,6 +77,7 @@ Update this section at the end of every working session.
 
 - **One branch.** Ali built his delivery on top of `tahaDev` `bfb28ab`, so `tahaDev` was fast-forwarded to `Ali_Branch` `ae38840` instead of porting 9,000 lines by hand (decision 24).
   Both of us work on `tahaDev` from here; `Ali_Branch` stays as the record and is not worked on.
+  Superseded on 2026-09-22: Ali works on `Ali_Branch` only and Taha on `tahaDev`, and Taha's work reaches `Ali_Branch` by merge (decision 39).
 - **Ali's delivery was checked here before it was taken**: 379 tests, lint and formatting green, and a full rebuild that reproduced bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef` with no committed report changed.
   His review of our files (identifiers read as text, stricter export and bundle checks, one calibration prediction instead of three) moves no model, feature or threshold, which that rebuild proves.
 - **The MVP is complete end to end**: T16, T8, T18, T10, T11, T15, T14, T9, T19 and now T20.

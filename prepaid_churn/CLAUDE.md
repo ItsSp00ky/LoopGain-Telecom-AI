@@ -10,7 +10,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 - The real goal is the team's one platform: GIS planning, network ML, this module, a customer chatbot and an employee copilot (decision 17).
   Every ticket is judged by whether it helps that integration, and the customer MVP comes before any extra experiment.
 - Taha and Ali Marghem work on it together, each with their own session.
-  Both branches met on 2026-09-21: `Ali_Branch` was built on this tree, so `tahaDev` was fast-forwarded to it and is now the only branch (decision 24).
+  Both branches met on 2026-09-21 (decision 24), and since 2026-09-22 there are two again: Ali works on `Ali_Branch`, Taha on `tahaDev`, and Taha's work reaches `Ali_Branch` by merge (decision 39).
   The repo is the only shared memory: anything decided in a chat must be written into TICKETS.md or docs/decisions.md.
 - The module must stay ready to integrate with the team's customer chatbot and employee copilot through fixed input and output contracts (decision 10), and ready to retrain on a Libyan operator's own data (decision 11).
 - The older `customer_churn_prediction/` folder is Ahmed's earlier module.
@@ -18,7 +18,8 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 
 ## Hard rules
 
-- Work on `tahaDev`, the branch both of us share (decision 24).
+- Ali's sessions work and push on `Ali_Branch` only, and never commit or push to `tahaDev` (decision 39).
+  Bring Taha's work in by merging `origin/tahaDev` into `Ali_Branch`, and only when Ali asks for it.
   Pull before you start, claim a ticket by writing your name in its Owner field, and push when it is done.
   Do not pull or merge `main`, and push only what this module owns.
 - The raw Kaggle files in `data/raw/` are committed on purpose (decision 9); do not remove them.

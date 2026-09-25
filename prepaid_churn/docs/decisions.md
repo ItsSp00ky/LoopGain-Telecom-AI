@@ -1023,3 +1023,20 @@ Scope:
   Measured the same way, the current champion would pass it (-13% and +10%).
 - When the check is coded, the recorded gate must stay as it is, so the rebuild with `--chosen-at 2026-09-19` still reproduces bundle `lightgbm-2026-09-19-ef9430fb` byte for byte.
 - Unlike decision 13's four checks, which were written after the test they were checked against, this one is written before the model it will judge is tested.
+
+## 39. Ali works on Ali_Branch, and Taha's work arrives by merge
+
+Date: 2026-09-26.
+
+Decision 24 made `tahaDev` the one shared branch, and CLAUDE.md still told every session to work there.
+Since 2026-09-22 Ali has worked on `Ali_Branch` only and forbidden commits or pushes to `tahaDev`.
+Decision 33 recorded that for one task and the handoff called the older directions historical, but a new session reads CLAUDE.md first and would have pushed to `tahaDev`.
+On 2026-09-26 `Ali_Branch` was 12 commits ahead of `tahaDev`, and `tahaDev` held one commit of Taha's (`f2cc724`, a session log and presentation material) that `Ali_Branch` did not.
+
+So, until Ali and Taha agree on one branch:
+
+- Ali's sessions work and push on `Ali_Branch` only, and never commit or push to `tahaDev`.
+- Taha's work reaches `Ali_Branch` by merging `origin/tahaDev` into it, keeping Taha's history as the merge of 2026-09-22 did, and only when Ali asks for it.
+- Taha keeps working on `tahaDev`; this entry does not decide which branch becomes the final one.
+
+CLAUDE.md and the handoff now say this.
