@@ -9,7 +9,15 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-22 by Taha + Claude (every ticket closed; the demo app reworked after Taha used it).
+**Last updated:** 2026-09-25 by Taha + Claude (every ticket closed; session log written for the next session).
+
+**New session? Read [docs/session_log.md](docs/session_log.md) after this Handoff.** It is the log of the 2026-09-19 to 2026-09-25 session: what was done in what order, the mistakes caught, how to run things on Taha's machine, and what is on disk but not in git.
+
+**Open right now, in order:**
+1. The demo app. Taha tried it after the rework and said it is "still somehow heavy and somehow random, I didn't understand it". Ask him what felt random before changing anything; the details and the likely causes are in the session log.
+2. The final report draft (`SIC_AI_Capstone Project_Final Report - Loop Gain.docx` at the repository root, not in git) needs three checks before it is sent; they are listed in the session log.
+3. The open questions below that name Ali.
+4. Talking points and the results chart for the final presentation are in [docs/presentation/](docs/presentation/talking_points.md).
 
 **Where the module is now**
 

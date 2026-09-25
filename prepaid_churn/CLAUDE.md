@@ -1,6 +1,6 @@
 # Instructions for Claude sessions on the prepaid churn module
 
-Read this first, then [TICKETS.md](TICKETS.md) (start with its Handoff section), then [docs/decisions.md](docs/decisions.md).
+Read this first, then [TICKETS.md](TICKETS.md) (start with its Handoff section), then [docs/session_log.md](docs/session_log.md) (the last long session, and how to run things on Taha's machine), then [docs/decisions.md](docs/decisions.md).
 When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
 
 ## Context
@@ -89,6 +89,8 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `docs/model_card.md` | T9 model card: intended and out-of-scope use, data, metrics, limits; every figure names its report |
 | `docs/integration.md` | T20 guide for the chatbot, copilot, network ML and antenna owners: endpoints, grounding rules, what to index, what we need from them |
 | `docs/decisions.md` | Why every decision was made |
+| `docs/session_log.md` | The 2026-09-19 to 2026-09-25 session: timeline, mistakes caught, machine notes, open feedback |
+| `docs/presentation/` | Talking points for mentoring and the final presentation, and the results chart (`make_chart.py` redraws it) |
 | `docs/ali_branch_merge.md` | Step log and port table for combining `Ali_Branch` into this module |
 | `src/prepaid_churn/cli.py` | `churn` command |
 | `reports/` | Generated reports with aggregate numbers (committed) |
