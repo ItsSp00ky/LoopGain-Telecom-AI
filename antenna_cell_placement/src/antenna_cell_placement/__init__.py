@@ -11,20 +11,26 @@ from antenna_cell_placement.config import (
     EQUIPMENT_MODEL_PATH,
     RECOMMENDATIONS_CSV,
 )
-from antenna_cell_placement.data_cleaning import clean_pipeline
-from antenna_cell_placement.feature_engineering import (
-    GeospatialFeatureExtractor,
-    enrich_physical_sites_pipeline,
-)
-from antenna_cell_placement.placement_model import (
-    train_all_models_pipeline,
-    SUITABILITY_FEATURE_COLS,
-)
-from antenna_cell_placement.site_optimizer import (
-    CellSiteOptimizer,
-    run_optimizer_pipeline,
-)
-from antenna_cell_placement.map_visualizer import generate_interactive_map
+# Lazy compatibility exports: importing the public planner never imports ML.
+_EXPORTS = {
+    'clean_pipeline': 'data_cleaning',
+    'GeospatialFeatureExtractor': 'feature_engineering',
+    'enrich_physical_sites_pipeline': 'feature_engineering',
+    'train_all_models_pipeline': 'placement_model',
+    'SUITABILITY_FEATURE_COLS': 'placement_model',
+    'CellSiteOptimizer': 'site_optimizer',
+    'run_optimizer_pipeline': 'site_optimizer',
+    'generate_interactive_map': 'map_visualizer',
+}
+
+
+def __getattr__(name):
+    if name not in _EXPORTS:
+        raise AttributeError(name)
+    from importlib import import_module
+    value = getattr(import_module('antenna_cell_placement.' + _EXPORTS[name]), name)
+    globals()[name] = value
+    return value
 
 __all__ = [
     "clean_pipeline",

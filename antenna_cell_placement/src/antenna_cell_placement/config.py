@@ -111,3 +111,14 @@ ESA_WORLDCOVER_TILES = [
 ]
 OSM_DIR = EXTERNAL_DATA_DIR / "osm"
 OSM_LIBYA_PBF = OSM_DIR / "libya-latest.osm.pbf"
+
+# Integrated planning inputs. Raw downloads are deliberately excluded from Git.
+ADMIN0_GEOJSON_PATH = EXTERNAL_DATA_DIR / "admin_boundaries" / "lby_admin0.geojson"
+WORLDCOVER_DIR = EXTERNAL_DATA_DIR / "worldcover_2021"
+WORLDCOVER_EVALUATION_REPORT = REPORTS_DIR / "worldcover_integration.json"
+OSM_BUILDINGS_DIR = EXTERNAL_DATA_DIR / "osm_libya_2026_09_19"
+OSM_BUILDINGS_GPKG = OSM_BUILDINGS_DIR / "libya-260919-free.gpkg"
+BUILDINGS_EVALUATION_REPORT = REPORTS_DIR / "buildings_integration.json"
+OSM_CONTEXT_EVALUATION_REPORT = REPORTS_DIR / "osm_context_integration.json"
+PLANNING_OUTPUT_DIR = REPORTS_DIR / "integrated_planning"
+SOURCE_LOCK_PATH = MODULE_DIR / "sources" / "planning_sources.lock.json"

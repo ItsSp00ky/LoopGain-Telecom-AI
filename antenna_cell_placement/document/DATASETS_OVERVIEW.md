@@ -1,5 +1,7 @@
 # Datasets Used — Antenna Cell Placement Project
 
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+
 This document lists every dataset used in the project, split into what already powers the current nationwide model and what is being added for the new Tripoli pilot (H3 expansion-need analysis).
 
 ---

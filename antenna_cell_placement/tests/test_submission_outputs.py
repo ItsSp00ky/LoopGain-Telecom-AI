@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pandas as pd
 from antenna_cell_placement.placement_model import SUITABILITY_FEATURE_COLS
-from antenna_cell_placement.site_optimizer import CellSiteOptimizer
+from antenna_cell_placement.legacy_site_optimizer import CellSiteOptimizer
 
 
 class SubmissionOutputTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class SubmissionOutputTests(unittest.TestCase):
         optimizer.suitability_model.predict_proba.return_value = np.array([[.2,.8]])
         with tempfile.TemporaryDirectory() as folder:
             directory = Path(folder)
-            with patch('antenna_cell_placement.site_optimizer.RECOMMENDATIONS_CSV', directory/'recommendations.csv'), patch('antenna_cell_placement.site_optimizer.REPORTS_DIR', directory), patch('antenna_cell_placement.opencellid.annotate_candidates', side_effect=lambda frame: frame):
+            with patch('antenna_cell_placement.legacy_site_optimizer.RECOMMENDATIONS_CSV', directory/'recommendations.csv'), patch('antenna_cell_placement.legacy_site_optimizer.REPORTS_DIR', directory), patch('antenna_cell_placement.opencellid.annotate_candidates', side_effect=lambda frame: frame):
                 result = optimizer.find_optimal_placements()
             csv = pd.read_csv(directory/'recommendations.csv')
             geojson = json.loads((directory/'recommended_cell_placements.geojson').read_text())

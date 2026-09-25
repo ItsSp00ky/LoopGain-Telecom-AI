@@ -1,4 +1,5 @@
-# Keep generated reports and binary artifacts out of GitHub language statistics.
+# Keep hashes of reviewed data and source code stable across Windows and Linux.
+# Preserve the existing generated-artifact classification.
 data/cleaned/*.html linguist-generated=true
 data/cleaned/*.csv linguist-generated=true
 eval_reports/*.html linguist-generated=true
@@ -8,3 +9,13 @@ models/*.joblib binary
 data/cleaned/*.parquet binary
 data/cleaned/h3/*.parquet binary
 data/cleaned/h3/*.geojson linguist-generated=true
+/data/external/** -text
+/data/cleaned/*.csv text eol=lf
+/sources/*.json text eol=lf
+/src/**/*.py text eol=lf
+/tools/*.py text eol=lf
+/tests/*.py text eol=lf
+/integrated_demo/** -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
+/integrated_release/** -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
+
+/eval_reports/integrated_ml_comparison/** -text whitespace=cr-at-eol

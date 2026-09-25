@@ -1,10 +1,12 @@
 # Antenna cell placement: completed work and integration handoff
 
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+
 Updated: 23 September 2026. Comparison and validation runs: 22 September 2026.
 
-**Status: comparison and phase-2 verification completed; branch integration not yet implemented.**
+**Historical handoff:** The plan below records the pre-integration audit. Its implemented replacement is described in [INTEGRATED_PLANNING.md](INTEGRATED_PLANNING.md).
 
-**Submission follow-up (23 September):** The public output/wording cleanup and portable demo have now been implemented and verified. See [submission readiness](SUBMISSION_READINESS.md). The full Ahmed integration described below remains planned; the findings below record the earlier audited state.
+**Submission follow-up (23 September):** The public output/wording cleanup and portable demo have now been implemented and verified. See [submission readiness](SUBMISSION_READINESS.md). The findings below record the earlier audited state; see the integration update above for current behavior.
 
 
 This document explains what has been built and checked, what the results mean, and how to combine `mahalm_antenna_cell_placement` with `ahmed_cell_placement`. It is a handoff for the team or the next implementation session. Proposed modules, commands and acceptance checks below are plans, not claims of completed work.

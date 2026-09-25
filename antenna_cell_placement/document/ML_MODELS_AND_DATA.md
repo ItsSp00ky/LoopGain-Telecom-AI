@@ -1,14 +1,16 @@
 # ML models and data: what the system learns and how to evaluate it
 
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+
 **Submission update (2026-09-23):** The public demo now describes planning priorities for engineering review and omits equipment, frequency-band and bandwidth advice. The coordinate response exposes an experimental site-pattern score, not an installation-suitability verdict. The controlled hard-negative comparison remains 0.876141 versus 0.885208; population-only baselines are 0.594538 and 0.571961 respectively. These are the same frozen examples and recipe, not demonstrated RF improvement. [Submission guide](SUBMISSION_READINESS.md) and [portable demo](../submission/index.html).
 
-Historical equipment-model results below describe research experiments, not the current public outputs. Legacy point-planning commands retain their existing model/features; the submission Tripoli map explicitly uses the separate phase-2 GIS v2 artifacts. No model has been promoted and no full branch merge is included.
+Historical equipment-model results below describe research experiments, not the current public outputs. The preserved submission Tripoli map uses separate phase-2 artifacts. Its historical behavior is distinct from the integrated public planner; no ML model has been promoted.
 
 Updated: 2026-09-22. This is the primary model/data reference. Historical numbers below come from saved reports, not from a new blind field trial. The implementation plan is in [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md).
 
 ## 1. Purpose and decision boundary
 
-**Phase 2 update:** the separate GIS v2 pipeline, model comparison, inventory audit and preliminary rooftop shortlist are documented in [PHASE2_GIS_AND_ROOFTOPS.md](PHASE2_GIS_AND_ROOFTOPS.md). Feature definitions described below as current refer to the legacy serving pipeline unless explicitly marked v2. The new command is `antenna-placement phase2`; it does not automatically replace serving artifacts. The local Microsoft footprints provide no usable heights, so building outputs are survey candidates, not tallest-building recommendations.
+**Phase 2 update:** the separate GIS v2 pipeline, model comparison, inventory audit and preliminary rooftop shortlist are documented in [PHASE2_GIS_AND_ROOFTOPS.md](PHASE2_GIS_AND_ROOFTOPS.md). Feature definitions described below as current refer to the legacy serving pipeline unless explicitly marked v2. The research command is now `antenna-placement experimental phase2`; it does not automatically replace serving artifacts. The local Microsoft footprints provide no usable heights, so building outputs are survey candidates, not tallest-building recommendations.
 
 The project screens locations for telecom planning review. Its main classifier estimates how similar a location is to observed cell-site locations under a particular sampling scheme. A score of 0.9 does **not** mean a 90% chance that a new tower is needed, that a permit will be granted, or that coverage will improve.
 
@@ -20,7 +22,7 @@ The planning objective should eventually become additional service benefit under
 
 | Component | Method | Target/output | Current role |
 |---|---|---|---|
-| Serving suitability model | LightGBM binary classifier | Observed site versus sampled non-site; score 0–1 | Used by nationwide recommendations and H3 centroid multiplier |
+| Serving suitability model | LightGBM binary classifier | Observed site versus sampled non-site; score 0–1 | Historical experimental recommendations and H3 multiplier only; excluded from integrated public ranking |
 | Suitability challenger | XGBoost binary classifier | Same sampled classification task | Compared during legacy training; not saved as the serving artifact |
 | Equipment recommender | Random Forest, four classes | Reproduce rule-derived equipment tiers | Provisional tier suggestion; not independently validated equipment design |
 | H3 expansion score | Weighted formula | Relative area priority | Tripoli planning screen; not a trained demand or coverage model |
@@ -131,8 +133,8 @@ Run from the module folder:
 
 ```powershell
 uv run antenna-placement clean
-uv run antenna-placement features
-uv run antenna-placement train-experiment --output-dir eval_reports/experiment_v1
+uv run antenna-placement experimental features
+uv run antenna-placement experimental train-experiment --output-dir eval_reports/experiment_v1
 ```
 
 The output directory must be new. Existing experiments cannot be overwritten through this command. It writes:
@@ -222,9 +224,9 @@ Some high-scoring hexes already contain sites. Label these as demand/densificati
 uv sync
 uv run python -m unittest discover -s tests -v
 uv run antenna-placement clean
-uv run antenna-placement features
-uv run antenna-placement train-experiment --output-dir eval_reports/my_new_experiment
-uv run antenna-placement h3-all --city Tripoli
+uv run antenna-placement experimental features
+uv run antenna-placement experimental train-experiment --output-dir eval_reports/my_new_experiment
+uv run antenna-placement experimental h3-all --city Tripoli
 ```
 
 The local pre-existing `.venv` may refer to a deleted interpreter. Recreate/sync it using a working Python 3.12 runtime before using these commands. Avoid claiming tests passed based only on the presence of this guide; use the implementation verification report for the actual run.

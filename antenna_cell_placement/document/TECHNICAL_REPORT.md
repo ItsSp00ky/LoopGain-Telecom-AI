@@ -414,10 +414,10 @@ uv run antenna-placement clean
 uv run antenna-placement opencellid
 
 # 2. Extract multi-layer geospatial features from WorldPop & DEM
-uv run antenna-placement features
+uv run antenna-placement experimental features
 
 # 3. Train LightGBM placement and equipment models with 5-fold CV
-uv run antenna-placement train
+uv run antenna-placement experimental train
 
 # 4. Scan coverage gaps and rank the Top 50 recommendations
 uv run antenna-placement recommend

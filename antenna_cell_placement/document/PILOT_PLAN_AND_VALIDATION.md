@@ -1,8 +1,10 @@
 > **Status update — 2026-09-22:** This document records an earlier design/run. Current model/data definitions, metric corrections, implemented fixes and remaining work are maintained in [ML_MODELS_AND_DATA.md](ML_MODELS_AND_DATA.md) and [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md). Historical figures here are not evidence of measured coverage, independent equipment validation or a completed RF planner.
 
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+
 # Tripoli Pilot — Plan, Validation and Known Weaknesses
 
-This document covers the H3 expansion-need pilot for Tripoli: what has been built, the plan from here, how the work is tested and validated, and an honest list of weaknesses with their fixes and current status. Numbers below come from the run of 2026-09-20 (`uv run antenna-placement h3-all --city Tripoli`).
+This document covers the H3 expansion-need pilot for Tripoli: what has been built, the plan from here, how the work is tested and validated, and an honest list of weaknesses with their fixes and current status. Numbers below come from the run of 2026-09-20 (`uv run antenna-placement experimental h3-all --city Tripoli`).
 
 ---
 
@@ -93,7 +95,7 @@ Open `eval_reports/h3_expansion_map_Tripoli.html`, walk the top-20 hexes and rec
 | Operator traffic or Cloudflare below municipality level | Cloudflare is constant inside a city (2 distinct values across the whole Tripoli grid) | Intra-city demand weighting |
 | Expert labels (good / not suitable) | Only way to test the *planning* judgment rather than historical correlation | Supervised calibration of the weights |
 
-### 3.6 Train / validate / test protocol for the ML models (`antenna-placement evaluate`)
+### 3.6 Train / validate / test protocol for the ML models (`antenna-placement experimental evaluate`)
 The hex score is a rule, so its hold-out is "hide real sites" (§3.3). The two trained models are evaluated like this, with a fixed seed and the shipped hyper-parameters:
 
 | Stage | Suitability model (LightGBM) | Equipment recommender (Random Forest) |
@@ -180,8 +182,8 @@ If retraining does not reach the targets we still report the measured numbers; t
 ```bash
 cd antenna_cell_placement
 uv sync
-uv run antenna-placement h3-all --city Tripoli        # ~5 min; grid, enrich, score, validate, map
+uv run antenna-placement experimental h3-all --city Tripoli        # ~5 min; grid, enrich, score, validate, map
 uv run python -m unittest discover -s tests            # 32 tests
-uv run antenna-placement evaluate                      # municipality-held-out model evaluation (~2 min)
+uv run antenna-placement experimental evaluate                      # municipality-held-out model evaluation (~2 min)
 ```
 Individual steps: `h3-grid`, `enrich-h3`, `expansion-score`, `validate-h3`, `h3-map` (all accept `--city`). Raw inputs must exist in `data/external/{buildings,landcover,osm}/` (paths in `config.py`).

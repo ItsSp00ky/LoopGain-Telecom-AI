@@ -1,0 +1,273 @@
+{
+  "candidate_count": 2223,
+  "eligible_count": 162,
+  "selected_count": 20,
+  "interpretation": "Matched candidates and constraints; overlap measures ranking differences, not RF benefit. No outcome labels are available.",
+  "comparisons": {
+    "population_only": {
+      "selected_candidate_ids": [
+        "candidate-be5139d2b2b3",
+        "candidate-2bbb3561ef05",
+        "candidate-36a5779089a2",
+        "candidate-0380ac960cab",
+        "candidate-22ae66fbdb6d",
+        "candidate-479d4b6f0fa4",
+        "candidate-ccfe3893535f",
+        "candidate-9e8e596c50d2",
+        "candidate-1eac0f258df5",
+        "candidate-eca9589a20c4",
+        "candidate-cc887cf168e6",
+        "candidate-74d5f2d124a1",
+        "candidate-7ca58ddef5c0",
+        "candidate-890801e6ac28",
+        "candidate-c1ce68e3af03",
+        "candidate-5f345b2d0d76",
+        "candidate-6d9c7b03ec7b",
+        "candidate-462bd1d311c3",
+        "candidate-79151bc2c1e9",
+        "candidate-031ab911abbd"
+      ],
+      "overlap_with_explainable": 0.4,
+      "spearman_with_explainable": 0.5829434586436453
+    },
+    "gap_only": {
+      "selected_candidate_ids": [
+        "candidate-47e65592273e",
+        "candidate-e738219f7b58",
+        "candidate-857d2d8d506d",
+        "candidate-80efe99e808d",
+        "candidate-56b74834ee29",
+        "candidate-db3721e569e1",
+        "candidate-9e8e596c50d2",
+        "candidate-4f28fb1b8b17",
+        "candidate-22f81c181380",
+        "candidate-61da08118837",
+        "candidate-7db8de163223",
+        "candidate-03ccdb5f1a88",
+        "candidate-958209bcee81",
+        "candidate-36b594fa9a70",
+        "candidate-07afdea4131a",
+        "candidate-b3d7b1db90cd",
+        "candidate-3f0760afe475",
+        "candidate-c3950471aa65",
+        "candidate-6a1f39f50585",
+        "candidate-841dcec70426"
+      ],
+      "overlap_with_explainable": 0.1,
+      "spearman_with_explainable": 0.09960892569588221
+    },
+    "explainable": {
+      "selected_candidate_ids": [
+        "candidate-0380ac960cab",
+        "candidate-64581136f4df",
+        "candidate-c3950471aa65",
+        "candidate-ccfe3893535f",
+        "candidate-6be36134271d",
+        "candidate-19eb32a24d1e",
+        "candidate-22f81c181380",
+        "candidate-2bbb3561ef05",
+        "candidate-479d4b6f0fa4",
+        "candidate-22ae66fbdb6d",
+        "candidate-106242330329",
+        "candidate-1d8a5c39b11a",
+        "candidate-c5037f11e1c2",
+        "candidate-6d9c7b03ec7b",
+        "candidate-d4dd7dc1283f",
+        "candidate-5d8ea8b9e3fd",
+        "candidate-79151bc2c1e9",
+        "candidate-b3b6ac714454",
+        "candidate-8657a0f31d4e",
+        "candidate-36a5779089a2"
+      ],
+      "overlap_with_explainable": 1.0,
+      "spearman_with_explainable": 1.0
+    },
+    "ml_only": {
+      "selected_candidate_ids": [
+        "candidate-22f81c181380",
+        "candidate-6a9150ca6ec2",
+        "candidate-958209bcee81",
+        "candidate-19eb32a24d1e",
+        "candidate-6a1f39f50585",
+        "candidate-6e024990601f",
+        "candidate-979795fc3b7e",
+        "candidate-0554fb0af478",
+        "candidate-300c26e1a305",
+        "candidate-ccfe3893535f",
+        "candidate-07afdea4131a",
+        "candidate-2a1c72e3dff4",
+        "candidate-a735b1042543",
+        "candidate-a4ed8ca17c63",
+        "candidate-fa3bdc3a21cd",
+        "candidate-03ccdb5f1a88",
+        "candidate-e0b0279ca9b0",
+        "candidate-2006df8dd9fb",
+        "candidate-6abad5fe196d",
+        "candidate-3340e2edbf10"
+      ],
+      "overlap_with_explainable": 0.15,
+      "spearman_with_explainable": 0.10733444262385312
+    },
+    "experimental_combination": {
+      "selected_candidate_ids": [
+        "candidate-6a9150ca6ec2",
+        "candidate-64581136f4df",
+        "candidate-19eb32a24d1e",
+        "candidate-ccfe3893535f",
+        "candidate-22f81c181380",
+        "candidate-6be36134271d",
+        "candidate-be5139d2b2b3",
+        "candidate-f8ca8aff1195",
+        "candidate-2a1c72e3dff4",
+        "candidate-dc44c24767ac",
+        "candidate-a735b1042543",
+        "candidate-5d8ea8b9e3fd",
+        "candidate-fa3bdc3a21cd",
+        "candidate-cf58aaa19bcf",
+        "candidate-22ae66fbdb6d",
+        "candidate-a4ed8ca17c63",
+        "candidate-2d3c6af831fe",
+        "candidate-733a6b592329",
+        "candidate-07afdea4131a",
+        "candidate-c26fdd1b1c0d"
+      ],
+      "overlap_with_explainable": 0.35,
+      "spearman_with_explainable": 0.7799229706404953
+    }
+  },
+  "weight_sensitivity": [
+    {
+      "component": "demand_component",
+      "factor": 0.5,
+      "shortlist_overlap": 0.9,
+      "spearman": 0.9757092019667654
+    },
+    {
+      "component": "demand_component",
+      "factor": 1.5,
+      "shortlist_overlap": 1.0,
+      "spearman": 0.9827566010548139
+    },
+    {
+      "component": "known_site_gap_component",
+      "factor": 0.5,
+      "shortlist_overlap": 1.0,
+      "spearman": 0.990863171978136
+    },
+    {
+      "component": "known_site_gap_component",
+      "factor": 1.5,
+      "shortlist_overlap": 0.8,
+      "spearman": 0.9926668275561313
+    },
+    {
+      "component": "road_access_component",
+      "factor": 0.5,
+      "shortlist_overlap": 0.6,
+      "spearman": 0.9268241738004921
+    },
+    {
+      "component": "road_access_component",
+      "factor": 1.5,
+      "shortlist_overlap": 0.9,
+      "spearman": 0.9837699224202292
+    },
+    {
+      "component": "terrain_component",
+      "factor": 0.5,
+      "shortlist_overlap": 1.0,
+      "spearman": 0.9987234682150307
+    },
+    {
+      "component": "terrain_component",
+      "factor": 1.5,
+      "shortlist_overlap": 1.0,
+      "spearman": 0.9989161130798901
+    }
+  ],
+  "ml_interpretation": "Existing-site pattern recognition, not a deployment-success probability. Combination multiplier is an unvalidated research assumption; primary rank is unchanged.",
+  "cutoff_sensitivity": [
+    {
+      "constraint": "min_gap_distance_m",
+      "factor": 0.5,
+      "eligible_count": 634,
+      "selected_count": 20,
+      "overlap_with_default": 0.15
+    },
+    {
+      "constraint": "min_gap_distance_m",
+      "factor": 1.5,
+      "eligible_count": 25,
+      "selected_count": 6,
+      "overlap_with_default": 0.1
+    },
+    {
+      "constraint": "min_population_5km",
+      "factor": 0.5,
+      "eligible_count": 162,
+      "selected_count": 20,
+      "overlap_with_default": 1.0
+    },
+    {
+      "constraint": "min_population_5km",
+      "factor": 1.5,
+      "eligible_count": 162,
+      "selected_count": 20,
+      "overlap_with_default": 1.0
+    },
+    {
+      "constraint": "max_road_distance_m",
+      "factor": 0.5,
+      "eligible_count": 63,
+      "selected_count": 15,
+      "overlap_with_default": 0.65
+    },
+    {
+      "constraint": "max_road_distance_m",
+      "factor": 1.5,
+      "eligible_count": 229,
+      "selected_count": 20,
+      "overlap_with_default": 1.0
+    },
+    {
+      "constraint": "min_candidate_separation_m",
+      "factor": 0.5,
+      "eligible_count": 162,
+      "selected_count": 20,
+      "overlap_with_default": 0.35
+    },
+    {
+      "constraint": "min_candidate_separation_m",
+      "factor": 1.5,
+      "eligible_count": 162,
+      "selected_count": 19,
+      "overlap_with_default": 0.45
+    }
+  ],
+  "missing_data_stress": [
+    {
+      "removed_evidence": "population_data_available",
+      "affected_candidates": 223,
+      "eligible_count": 147,
+      "selected_count": 20,
+      "affected_candidates_selected": 0
+    },
+    {
+      "removed_evidence": "terrain_data_available",
+      "affected_candidates": 223,
+      "eligible_count": 147,
+      "selected_count": 20,
+      "affected_candidates_selected": 0
+    },
+    {
+      "removed_evidence": "worldcover_data_available",
+      "affected_candidates": 223,
+      "eligible_count": 147,
+      "selected_count": 20,
+      "affected_candidates_selected": 0
+    }
+  ],
+  "model_sha256": "b507ae315b4dab1d86c903bfbea712d0288238bcba3a6dee2d61e96a42e0f16a",
+  "candidate_file_sha256": "195721d8f2dd4fddb45724d7b3312d27c43a2886a21c1959ddcce205c3a69764",
+  "primary_rank_unchanged": true
+}

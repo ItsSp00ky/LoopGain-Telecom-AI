@@ -1,5 +1,7 @@
 # Phase 2: GIS feature version 2 and preliminary rooftop review
 
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+
 Updated 2026-09-22. This implements Milestone 2 of the improvement plan plus a preliminary building-footprint shortlist. It is separate from the older command `enrich-h3`, which adds building, land-cover and OSM aggregates.
 
 ## What the system can decide

@@ -1,5 +1,7 @@
 # Implementation plan and acceptance gates
 
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+
 Updated 2026-09-22. The user authorized planning, implementation and documentation improvements. This plan unifies the H3 pilot and population maximum-coverage roadmap. The current milestone fixes data/evaluation integrity and establishes a reproducible experiment; later stages need separate engineering validation and, in some cases, new operator data.
 
 ## Milestone 1: data and evaluation integrity — implemented and verified

@@ -1,0 +1,244 @@
+{
+  "attribution": "\u00a9 ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium",
+  "class_legend": {
+    "10": "Tree cover",
+    "100": "Moss and lichen",
+    "20": "Shrubland",
+    "30": "Grassland",
+    "40": "Cropland",
+    "50": "Built-up",
+    "60": "Bare / sparse vegetation",
+    "70": "Snow and ice",
+    "80": "Permanent water bodies",
+    "90": "Herbaceous wetland",
+    "95": "Mangroves"
+  },
+  "crs": "EPSG:4326",
+  "dataset": "ESA WorldCover 10 m 2021 v200",
+  "doi": "https://doi.org/10.5281/zenodo.7254221",
+  "license": "CC-BY-4.0",
+  "resolution_m": 10,
+  "retrieved_utc": "2026-09-19T20:29:46.457202+00:00",
+  "source_base_url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map",
+  "tile_count": 27,
+  "tile_size_degrees": 3,
+  "tiles": [
+    {
+      "bytes": 2199838,
+      "etag": "58858ba8275e83c630f032dfe3c8f804",
+      "filename": "ESA_WorldCover_10m_2021_v200_N18E021_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:39:31 GMT",
+      "sha256": "7ee5c3302505df5428269d28f60bc7ac7df6e29abe52ecefe3956d60e1f4d49c",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N18E021_Map.tif"
+    },
+    {
+      "bytes": 2116320,
+      "etag": "613cb2dfb90f92aaa69ba7e5910751a7",
+      "filename": "ESA_WorldCover_10m_2021_v200_N18E024_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:40:08 GMT",
+      "sha256": "60ee77726309ea41f9a8be21a5f419c2422a5f3836af5316ae44033b46a846e1",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N18E024_Map.tif"
+    },
+    {
+      "bytes": 2233362,
+      "etag": "da7622ea14bf463eea90c550666d4c67",
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E009_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:45:09 GMT",
+      "sha256": "fef9e7552117582af9aa83c14fbcc5c9a481b4ba8d70db3430bb01aaca98a2c5",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E009_Map.tif"
+    },
+    {
+      "bytes": 2264984,
+      "etag": "1c1ee57b95cb43e476b4962ab6adcf0f",
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E012_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:46:19 GMT",
+      "sha256": "2c07a884ed9619d7a24ee70557441c8bebd477e9fbb944cebd3770628fb678f7",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E012_Map.tif"
+    },
+    {
+      "bytes": 3492243,
+      "etag": "1540039906cb06fac9877bcdf3997293",
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E015_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:45:34 GMT",
+      "sha256": "1871d90e1849be9865d469b200f8459716846a2674872cf05480a7d72b47ee6e",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E015_Map.tif"
+    },
+    {
+      "bytes": 3822933,
+      "etag": "61f6bcc0dda72ad63ec4a95e7df86fd1",
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E018_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:46:07 GMT",
+      "sha256": "7fe20522413214f2dffb7bebdeedf34d66c2a8ee6a34fbe00a6b374d6fd874c0",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E018_Map.tif"
+    },
+    {
+      "bytes": 2111865,
+      "etag": "5d33d9bfddfec3f0e9f2a0f6b2ed9a23",
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E021_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:40:01 GMT",
+      "sha256": "22a797248259312024c60be3993ee34bead822dfe8ce4dd3062ce4706baa78a3",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E021_Map.tif"
+    },
+    {
+      "bytes": 2159625,
+      "etag": "d339c94a47cc8b5d360aa85d90a32465",
+      "filename": "ESA_WorldCover_10m_2021_v200_N21E024_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:38:53 GMT",
+      "sha256": "73772c2d70dba17e54f3b7e50695acef29bed86a8d895c29af06bd5b0a119d89",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N21E024_Map.tif"
+    },
+    {
+      "bytes": 3787490,
+      "etag": "83de402313629f8597da2f725c6b7854",
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E009_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:42:41 GMT",
+      "sha256": "a22af15ba8bd8b15e64f6b0247bde046b522318e4aa7794cec0b47f6a658049c",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E009_Map.tif"
+    },
+    {
+      "bytes": 5961754,
+      "etag": "1648b4bf17884323c2410b179e7c6a2e",
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E012_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:43:33 GMT",
+      "sha256": "4a37eec64198a9639a1a866607457e2815fd32e78f0d35c51799cbbe2a639143",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E012_Map.tif"
+    },
+    {
+      "bytes": 2404743,
+      "etag": "412cd0b2cb20b755c39e4fa7171a9f20",
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E015_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:42:54 GMT",
+      "sha256": "d3ff0452040fdee0fb1cfe42affe0893bc8fec15ae52427e739614d692461179",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E015_Map.tif"
+    },
+    {
+      "bytes": 2130579,
+      "etag": "96996a3bf5536aeac9cb9af71074b8b1",
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E018_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:46:53 GMT",
+      "sha256": "7dc54d524c35d5874c51b933dcb7dd65f7cda3467a02fe9f2851c15f6c8785bf",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E018_Map.tif"
+    },
+    {
+      "bytes": 2719284,
+      "etag": "aae8c0b9774af63fa8c358877969cf5a",
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E021_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:39:55 GMT",
+      "sha256": "1f5a9756dfbb4f9b9c97a7ea66c00dd4cb9506933118e3813a2d3ec884714051",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E021_Map.tif"
+    },
+    {
+      "bytes": 2125067,
+      "etag": "d6fa1377325327b523b7ddb26faa05bc",
+      "filename": "ESA_WorldCover_10m_2021_v200_N24E024_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:42:35 GMT",
+      "sha256": "64c62a7e6b61ea9da7945d8de23e9a35723c6720fd8ec6ffa55ea304f2e27e31",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N24E024_Map.tif"
+    },
+    {
+      "bytes": 2224694,
+      "etag": "0ebe11ee2aad2dcbd5d4a3777480e795",
+      "filename": "ESA_WorldCover_10m_2021_v200_N27E009_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:40:18 GMT",
+      "sha256": "aef8081e8a4c03eb981915483aa205f86207c80ed6c6dba56c2fdce6fe60ad29",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N27E009_Map.tif"
+    },
+    {
+      "bytes": 4167970,
+      "etag": "f2fef55f60da1f52627b20f67c90fc16",
+      "filename": "ESA_WorldCover_10m_2021_v200_N27E012_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:50:56 GMT",
+      "sha256": "fd0321e5afa73238a739520c613c3bc8dd07fdf2c48a657a313a1cd216037659",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N27E012_Map.tif"
+    },
+    {
+      "bytes": 3462553,
+      "etag": "2c817e928f425967ebe3dc1360810f17",
+      "filename": "ESA_WorldCover_10m_2021_v200_N27E015_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:41:45 GMT",
+      "sha256": "c7c42e0cc5944e116629cc91e3a86d608fad562a8e4bb696be520d9fd3a943a5",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N27E015_Map.tif"
+    },
+    {
+      "bytes": 2325178,
+      "etag": "b9ca6bc3ff62e71179cc8d4aac8d6e7e",
+      "filename": "ESA_WorldCover_10m_2021_v200_N27E018_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:45:48 GMT",
+      "sha256": "9b2c5a15a4d647265a2de8d879acd3f9b61d077a1638c7ced77e2ba4ee170cd1",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N27E018_Map.tif"
+    },
+    {
+      "bytes": 3299758,
+      "etag": "8fee37b102303d431bf4e6d8e9f74b95",
+      "filename": "ESA_WorldCover_10m_2021_v200_N27E021_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:40:21 GMT",
+      "sha256": "4488341ae4d29f08f143825e1a6a514070bf04e9f997a816b1c82cb6c4384cff",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N27E021_Map.tif"
+    },
+    {
+      "bytes": 3188627,
+      "etag": "5c9f64fc7aeff523c53aa1fc5b86ac5d",
+      "filename": "ESA_WorldCover_10m_2021_v200_N27E024_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:51:01 GMT",
+      "sha256": "4b64c3ce51ee7cdabebb9c394b092bfeb7f8d254cde72e08e9c2433649cbeba6",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N27E024_Map.tif"
+    },
+    {
+      "bytes": 7390188,
+      "etag": "1a2f6960d5cbb45c61e6a6af79d15e28",
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E009_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:53:19 GMT",
+      "sha256": "99e18cc08817a9b904d475672aa570a843556667166a415907ab81a54017fb25",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E009_Map.tif"
+    },
+    {
+      "bytes": 40748945,
+      "etag": "b9a099e47403b722cac4d401869e834d-5",
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E012_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:51:34 GMT",
+      "sha256": "46ef1f435ffe0555e64400e433e9f82858249e3ece209dec74e7fe8f8ddf9ed9",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E012_Map.tif"
+    },
+    {
+      "bytes": 8309685,
+      "etag": "bc1e749e37caa1e9ab84cfc028a5d29a",
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E015_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:48:51 GMT",
+      "sha256": "91d10f336c4db152bbb65d949248459a2d08897e4b087f7d2e1277fd4f712f51",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E015_Map.tif"
+    },
+    {
+      "bytes": 16121976,
+      "etag": "c8a55e12320acc4a3e59e2c1d4a751a5-2",
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E018_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:55:19 GMT",
+      "sha256": "62189700d3be564980595c96fb25c99807b8f4060e4b779c1a080163d7ecfb4a",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E018_Map.tif"
+    },
+    {
+      "bytes": 19464908,
+      "etag": "01cec8fdd1d67aeafe0f04d41da0fcba-3",
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E021_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:50:40 GMT",
+      "sha256": "263dbc1d15cbc1789d501fc60bd8e7f1a68bc3cc3ce438d8502521d4a6ad2aa7",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E021_Map.tif"
+    },
+    {
+      "bytes": 10013926,
+      "etag": "38dad9530fb35cda26770bd8e23a09ef-2",
+      "filename": "ESA_WorldCover_10m_2021_v200_N30E024_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:49:06 GMT",
+      "sha256": "61b56625a26162974d35512f0c78aaea8e2c6ce834c66cc52a1eaa77f87ce026",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N30E024_Map.tif"
+    },
+    {
+      "bytes": 77461995,
+      "etag": "36fd7b37335936a94af841dc4aaab833-10",
+      "filename": "ESA_WorldCover_10m_2021_v200_N33E009_Map.tif",
+      "last_modified": "Wed, 26 Oct 2022 12:49:14 GMT",
+      "sha256": "e8f0191fca3b0d1bab98e25137a033eb85cfa4d95978ae99b84ef1331df61534",
+      "url": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N33E009_Map.tif"
+    }
+  ],
+  "total_bytes": 237710490
+}
