@@ -1057,3 +1057,34 @@ The reasons of the other bands are computed exactly as before, and a subscriber 
 
 The model card and the integration guide also said the reasons are "written as sentences".
 They are short labels with the customer's value, and both documents now say so.
+
+## 41. The value scenario's assumptions do not hold, and T23 will replace it
+
+Date: 2026-09-26.
+
+T10's 12-month value assumes a customer keeps this month's churn risk for twelve months and never comes back after going silent (decision 19).
+Decision 19 noted that the one-month probability had not been validated as a 12-month hazard.
+Ali's recap checked both assumptions on the validation customers, whose month-9 outcome no decision had used, and left the test customers untouched.
+
+Validation customers still active in month 8, by the band their months 6 and 7 gave them:
+
+| Band | Customers | Risk predicted for month 8 | Churn in month 9 |
+|---|---|---|---|
+| high | 282 | 43.2% | 11.0% |
+| medium | 1,034 | 10.6% | 8.1% |
+| low | 8,044 | 0.9% | 3.6% |
+
+- Risk does not stay constant: after a month it moves most of the way back toward the average, down for the high band and up for the low band.
+- Silence is not always final: 28.1% of the 452 validation customers silent in month 8 were active again in month 9, close to the 26.3% of train customers found in T6.
+
+What that does:
+
+- Under constant risk, a customer's expected loss, risk times 12-month value, peaks near 20% risk and falls after it.
+  At 40 LYD a month it is 17 LYD at 5% risk, 30 LYD at 20%, 23 LYD at 43% and 4 LYD at 90%.
+- A 43%-risk customer is expected to stay 1.3 months; if those who stay kept the 11% measured in month 9, it would be 3.9 months.
+- So the value of high-risk customers is understated and that of low-risk customers overstated, while counting no comebacks overstates every loss.
+- T11 ranks candidates by risk × share saved × value - cost, so its order between medium- and high-risk customers, the "LYD at risk" figures and the campaign's equal-spend comparison all inherit these assumptions.
+
+Nothing changes before the presentation.
+The tiers report, the model card and T10 now say that the assumptions fail, and ticket T23 replaces the scenario with one built on measured risk after the first month and on comebacks.
+The rates T23 needs come from validation customers only; the churn model, its thresholds and the spent test window stay as they are.

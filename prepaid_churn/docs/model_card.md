@@ -245,6 +245,11 @@ Consequences worth stating next to any dinar figure:
 The 12-month value used by T11 is a scenario, not a measured lifetime value (decision 19).
 It assumes a constant monthly hazard and is reported in three variants, with the hazard multiplied by 1.5, 1.0 and 0.5.
 
+Checked on 2026-09-26 on the validation customers, neither that assumption nor the assumption that nobody comes back holds (decision 41).
+Risk moves back toward the average after a month: high-band customers who stayed active churned at 11.0% the next month, not the 43.2% predicted.
+And 28.1% of customers silent in one month were active the next, while the scenario counts every silence as permanent.
+Under constant risk, risk times value peaks near 20% risk, so the value of high-risk customers, and T11's reason to spend on them, is understated; ticket T23 replaces the scenario.
+
 ## Limitations
 
 Stated plainly, because this is the section an evaluator should read hardest.

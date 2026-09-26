@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T9; prior notes retained).
+**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T10; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -31,8 +31,10 @@ Update this section at the end of every working session.
   Taha's `f2cc724` on `tahaDev` (a session log and presentation material) is not merged yet.
   The README rebuild now writes every committed report except the three research ones, and a fresh clone ran it on 2026-09-26 with `git status` empty.
   The model card, T9 and the brief say exactly what was reproduced, and a test checks the uncertainty ranges the card quotes.
+- Step 10 (T10) found, on the validation customers, that the 12-month value's constant-risk and no-comeback assumptions do not hold, which undervalues high-risk customers in T11 (decision 41).
+  That is written into the tiers report, the model card and T10, and T23 is open for the fix; no number changed.
 - Validation: 436 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 10, T10 value tiers.
+- Next: step 11, T11 retention decisions.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -101,7 +103,7 @@ Update this section at the end of every working session.
 - **The demo app was reworked after Taha used it (decision 34):** a campaign picker in the sidebar, proposing a campaign or a single offer from the screens, a Released screen that shows what was approved and where it lives, and a fix for the approval box, where an empty selection used to approve every pending proposal.
   Keep demo campaigns small: 500 customers is a 1.7 MB snapshot that loads instantly, the whole base is 80 MB and is what made the app feel heavy.
 - **What is left:** nothing in this file.
-  Since 2026-09-26 one ticket is open again: T22, scoring and retraining on any calendar months.
+  Since 2026-09-26 two tickets are open again: T22, scoring and retraining on any calendar months, and T23, a 12-month value built on measured risk and comebacks.
   The open questions below still stand, and the next real work is whatever the team needs for the presentation and the demo.
 
 **For Ali: what changed on our side**
@@ -661,6 +663,10 @@ Findings (2026-09-20):
 - Tests cover absent/invalid inputs, ties, missing activity, silent customers, ID preservation, artifact corruption, future-field exclusion, single-customer consistency and CLI integration.
 - 202 prepaid tests pass; lint, format and locked offline sync pass.
 - No churn model was retrained, no real-data test evaluation was repeated, and no raw or customer-level artifact was added to Git.
+- Checked on 2026-09-26 on the validation customers (decision 41): the scenario's constant-risk and no-comeback assumptions do not hold.
+  High-band customers who stayed active in month 8 churned at 11.0% in month 9, not the 43.2% predicted, and low-band ones at 3.6% instead of 0.9%.
+  28.1% of those silent in month 8 were active again in month 9.
+  So the 12-month value of high-risk customers is understated, and T11's ranking inherits it; T23 is the fix.
 
 ## T11 - Retention decision layer
 
@@ -1095,6 +1101,27 @@ Acceptance:
 - The hand-made fixture relabelled to November, December and January, which have the same month lengths as June, July and August, validates and scores to exactly the same probabilities, bands and reasons.
 - An export whose dates do not fall in the months its columns name is still refused.
 - The contract's text changes, so its fingerprint changes: the bundle is rebuilt from the existing champion and gate with `churn bundle`, keeps version `lightgbm-2026-09-19-ef9430fb`, and the README rebuild still leaves every committed report unchanged.
+
+## T23 - A 12-month value built on measured risk and comebacks
+
+**Owner:** unclaimed
+**Status:** Open
+**Depends on:** T10, T11
+
+Why: the 12-month value assumes a customer keeps this month's risk for a year and never comes back after going silent, and both assumptions fail on the validation customers (decision 41).
+Under them, risk times value peaks near 20% risk, so T11 gives its riskiest customers less reason for an offer than medium-risk ones.
+
+Scope:
+- The value an offer protects is the value if the customer stays this month: this month's spend, then later months at risks measured on validation customers who stayed active, by risk band.
+- A customer who goes silent can come back, at the rate measured on validation customers.
+- The low, base and high scenarios stay, as sensitivities around the measured rates.
+- T11, the service's "LYD at risk" and the demo use the new value; the tiers report, decision 19, the model card, the integration guide and the brief get the new numbers.
+
+Acceptance:
+- At the same spend, a customer at 43% risk carries a larger expected loss than one at 20%, and one at 90% the largest.
+- The measured rates are fitted on validation customers only and stored in the versioned tier artifact, so nothing is fitted on the batch being scored.
+- The churn model, its thresholds and the spent test window are unchanged, and the README rebuild still reproduces every report the change does not touch.
+- The campaign numbers that change are reported next to the old ones, not silently replaced.
 
 ## Future work (needs real operator data)
 

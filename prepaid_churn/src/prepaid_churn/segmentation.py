@@ -196,6 +196,12 @@ def tiers_report(train: pd.DataFrame, model: TierModel, comparison: ClusterCompa
         "For monthly churn probability p, expected months = sum((1-p)^m, m=1..12).",
         "This assumes a constant hazard, constant monthly spend, no reactivation, no growth, "
         "no discounting and no margin adjustment.",
+        "The constant hazard and the absence of reactivation were checked on 2026-09-26 "
+        "against the validation customers' next month, and neither holds (decision 41): "
+        "risk moves back toward the average after a month, and 28.1% of customers silent in "
+        "one month were active the next.",
+        "These amounts therefore understate high-risk customers and overstate low-risk ones; "
+        "ticket T23 replaces this scenario.",
         "The horizon starts at the next month end; p=0 gives 12 months and p=1 gives zero.",
         "We multiply expected months by the two-month average spend in LYD.",
         "The low/base/high scenarios multiply p by 1.5/1/0.5, clipped to [0,1].",
