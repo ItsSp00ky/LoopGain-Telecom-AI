@@ -63,7 +63,9 @@ Ask for readiness before your first call, and read the answer rather than retryi
 `status` is `ok` only when the bundle predicts and there is a portfolio to summarise.
 `degraded` means an output is missing or invalid, or approved offers have been withheld after leaving the current catalogue; `problems` explains why.
 An endpoint needing a missing output answers 503; a withheld offer answers 404, like any other unavailable offer.
-The outputs are read once at startup, so a new release is served after a restart, and `campaign_id` tells you which campaign you are looking at.
+The campaign is read again whenever a reviewer approves an offer, so a new approval is served on your next request without a restart, and `approved_offers` goes up when it lands.
+`campaign_id` tells you which campaign you are looking at.
+The model and the scored portfolio are read at startup, so a new model or scoring run is served after a restart.
 
 The OpenAPI page at `/docs` is generated from the response models, so it is always the current field list.
 Generate your client from `/openapi.json` rather than hand-writing request models.

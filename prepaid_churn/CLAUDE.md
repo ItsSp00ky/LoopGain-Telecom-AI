@@ -70,7 +70,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/campaign.py` | T11 authoritative proposal snapshots, named reviews and approved-only release |
 | `src/prepaid_churn/retention_report.py` | T11 aggregate report with every cost and effect assumption |
 | `src/prepaid_churn/operator_market.py` | T16 operator catalogue and market facts (loading, rules, check against the operator file); T18 `operator_view` |
-| `src/prepaid_churn/service.py` | T15 read-only integration state and its payload builders (`load_state`, `health`, `catalogue`, `retention`, `portfolio_summary`, and `subscriber` from T20) |
+| `src/prepaid_churn/service.py` | T15 read-only integration state and its payload builders (`load_state`, `refresh_campaign` from decision 47, `health`, `catalogue`, `retention`, `portfolio_summary`, and `subscriber` from T20) |
 | `src/prepaid_churn/api.py` | T15 FastAPI app, per-consumer API keys and the response models that generate `/docs` |
 | `src/prepaid_churn/privacy.py` | T15 pseudonymous IDs: the Libyan phone-number check and the salted `pseudonymize` helper |
 | `src/prepaid_churn/client.py` | T20 example client for the other components, standard library only, and the `check` behind `churn check-integration` |

@@ -21,6 +21,7 @@ Two boundaries this module owns, which `campaign.py` explicitly left to T15:
 
 import hmac
 import os
+import threading
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Path, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +36,7 @@ from prepaid_churn.service import (
     health,
     load_state,
     portfolio_summary,
+    refresh_campaign,
     retention,
     subscriber,
 )
@@ -112,7 +114,12 @@ def keys_from_environment(environ: dict | None = None) -> ApiKeys:
 
 
 class LatestOutputs(BaseModel):
-    loaded_at: str = Field(description="When this process read the outputs it is serving.")
+    loaded_at: str = Field(
+        description=(
+            "When this process started and read its outputs; the campaign is read again "
+            "whenever a review changes it, which `approved_offers` shows."
+        )
+    )
     scored_at: str | None = Field(
         default=None,
         description="Latest scoring time in the portfolio export; null without a bundle.",
@@ -352,6 +359,15 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
     )
     app.state.service = state
     app.state.keys = keys
+    # The endpoints run in a thread pool, so two requests can notice the same review at
+    # once; the lock makes one of them read the campaign and the other use that read.
+    refresh_lock = threading.Lock()
+
+    def with_current_campaign() -> ServiceState:
+        """The state, with the campaign reread if a review changed it (decision 47)."""
+        with refresh_lock:
+            app.state.service = refresh_campaign(app.state.service)
+            return app.state.service
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     def read_health() -> dict:
@@ -360,7 +376,7 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
         No key is required: a liveness probe has no secret to offer, and the answer holds
         no customer data. It reports nothing beyond versions, counts and timestamps.
         """
-        return health(app.state.service)
+        return health(with_current_campaign())
 
     @app.get(
         "/catalogue",
@@ -387,7 +403,7 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
         proposal, a proposal nobody reviewed, and a proposal a reviewer rejected. Telling
         the customer which one it was would tell them an offer was considered and refused.
         """
-        offer = retention(app.state.service, subscriber_id)
+        offer = retention(with_current_campaign(), subscriber_id)
         if offer is None:
             raise HTTPException(
                 status_code=404,
@@ -436,7 +452,9 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
 
 
 def build_app(paths: ServicePaths, keys: ApiKeys | None = None) -> FastAPI:
-    """Load every output once, then serve it. Called by `churn serve`.
+    """Load every output, then serve it; the campaign is reread when a review changes it.
+
+    Called by `churn serve`.
 
     The keys are resolved before anything is read, so a missing one fails immediately
     rather than after a bundle load whose result was about to be served without them.

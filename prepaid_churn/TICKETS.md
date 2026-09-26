@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T11; prior notes retained).
+**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T16; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -39,13 +39,15 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 432 tests pass, none skipped; lint and formatting green.
+- Validation: 434 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
 - Every offer is now assumed to keep the same 5% of leavers (decision 46); the 10% for the morning pass had nothing behind it and doubled the claimed value.
   The delivery costs were checked against published averages and kept.
-- Next: step 15, the T15 integration service.
+- Step 15 (T15): the service now reads the campaign again when a review changes it, so an approval reaches the chatbot without a restart (decision 47).
+  No chatbot or copilot has called the service yet; Ali is asking their owners for one real call each.
+- Next: step 16, the T16 operator catalogue and market facts.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -159,7 +161,7 @@ Update this section at the end of every working session.
 - Start it with `uv run churn serve` after setting `PREPAID_CHURN_CHATBOT_KEY` and `PREPAID_CHURN_COPILOT_KEY`; neither has a default and the service refuses to start without both.
 - The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the chatbot and copilot owners.
 - Run against this checkout on 2026-09-21: `/health` reports degraded with no bundle, `/catalogue` serves all 57 packages, `/portfolio/summary` summarises 30,000 subscribers with `risk_available` false, and no offer is released because none was approved.
-- Outputs are read once at startup, so restart the service after a new `churn approve` release; `/health` shows which campaign is being served.
+- The campaign is read again when `churn approve` changes it, so an approval is served without a restart (decision 47); a new model or scoring run still needs one, and `/health` shows which campaign is being served.
 - T14 is implemented: five Streamlit screens over the released outputs, with the named approval step on the campaign screen.
   Taha used it on 2026-09-22 and it grew a campaign picker, a way to propose a campaign or a single offer from the screen, and a Released screen (decision 34).
 - T14 validation: 325 prepaid tests, lint and formatting pass; 26 of those tests are new.
@@ -821,13 +823,19 @@ Findings (2026-09-21):
 - `lyd_at_risk` is value weighted by churn probability, and is null rather than zero when an export carries no risk estimate.
 - 52 new tests; 299 prepaid tests, lint and formatting pass.
 - Run against this checkout on 2026-09-21: degraded with no bundle, all 57 packages served, 30,000 subscribers summarised with `risk_available` false, zero approved offers.
-- Limitations: outputs are loaded once, so a new release is served after a restart; the keys are service-to-service access control, not per-user authorization, and assume the service is not exposed publicly.
+- Limitations: the bundle and the portfolio are loaded once, so a new model or scoring run is served after a restart (the campaign is read again when a review changes it, since decision 47); the keys are service-to-service access control, not per-user authorization, and assume the service is not exposed publicly.
 - T20 still owns `docs/integration.md`, the example client and the walkthrough with the chatbot and copilot owners.
 
 Readiness follow-up (Ali, 2026-09-22):
 - The real API served the frozen bundle, 30,000 subscribers and 37 current packages with health `ok`.
 - Portfolio IDs preserve literal text and reject empty or duplicate identifiers; malformed non-ASCII credentials return 401.
 - Approvals for packages absent from the current catalogue are withheld and explained in health (decision 33).
+
+Recap (Ali, 2026-09-26):
+- The service now reads the campaign again when `churn approve` changes it, so an approval reaches the chatbot on its next request without a restart (decision 47).
+- A test approves an offer after the app has started and gets it from the chatbot endpoint; with the reread switched off, the test fails.
+- The real service did the same on a copy of the demo campaign: 404 before `churn approve`, 200 after, in the same process.
+- No chatbot or copilot has called the service yet; Ali is asking their owners for one real call each.
 
 ## T16 - Operator catalogue and market facts
 

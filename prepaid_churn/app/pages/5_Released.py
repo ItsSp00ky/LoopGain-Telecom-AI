@@ -108,7 +108,7 @@ st.markdown(
     unreviewed one returns: the chatbot cannot tell the difference, so a customer can
     never learn that an offer was considered and refused.
 
-    The service reads the campaign once when it starts, so restart `uv run churn serve`
-    after approving to serve what is on this page.
+    A running `uv run churn serve` reads the campaign again after every approval, so the
+    chatbot gets what is on this page on its next request, without a restart.
     """
 )

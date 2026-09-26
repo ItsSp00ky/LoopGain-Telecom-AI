@@ -191,8 +191,9 @@ Each key is accepted only on its own endpoints, so a leaked chatbot key cannot r
 Subscriber IDs are pseudonymous: an ID shaped like a Libyan mobile number is refused, and `prepaid_churn.privacy.pseudonymize` is the supported way for an operator to hash numbers before exporting them.
 The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the other teams.
 
-Outputs are read once when the service starts, so restart it after a new `churn approve` release.
-`/health` reports the campaign it is holding, so you can see what is being served.
+The campaign is read again whenever `churn approve` changes it, so an approval reaches the chatbot on its next request without a restart (decision 47).
+A new model or a new scoring run is read at startup, so restart the service after one.
+`/health` reports the campaign it is holding and how many offers are approved, so you can see what is being served.
 Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null.
 An approved package that has left the current catalogue is withheld, and health explains that a new campaign needs to be created and reviewed.
 

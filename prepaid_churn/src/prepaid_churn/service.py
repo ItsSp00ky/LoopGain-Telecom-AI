@@ -13,15 +13,18 @@ through `released_campaign`, never from the derived `released.csv`.
 T11 made the JSON the authority so that editing a CSV cannot approve an offer, and a
 service that served the CSV would quietly hand that authority back.
 
-Everything is loaded once, into a frozen state, and the functions below only read it.
-An endpoint that opened a file per request would eventually read a campaign that was
-half-written, and `churn approve` rewrites those files in place.
-The cost is that a new release is served after a restart, which `/health` makes visible
-by reporting the campaign it is holding.
+Everything is loaded into a frozen state, and the functions below only read it.
+The campaign is the one output that changes while the service runs, because reviewers
+approve offers with `churn approve`, so `refresh_campaign` rereads it when its file
+changes (decision 47).
+That is safe because `churn approve` replaces `proposals.json` in one step (`os.replace`
+in `campaign.py`), so a read sees the old campaign or the new one, never half of each.
+A new model or a new scoring run is still read at startup, and `/health` reports what the
+service is holding.
 """
 
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pandas as pd
@@ -108,7 +111,7 @@ class ServicePaths:
 
 @dataclass(frozen=True)
 class ServiceState:
-    """Everything the endpoints answer from, loaded once."""
+    """Everything the endpoints answer from; only the campaign is ever read again."""
 
     offers: pd.DataFrame
     approved: pd.DataFrame
@@ -121,6 +124,10 @@ class ServiceState:
     campaign_id: str | None = None
     campaign_created_at: str | None = None
     campaign_error: str | None = None
+    # Where the campaign was read from, and the file's modified time and size just before
+    # that read; `refresh_campaign` compares them to notice a new review.
+    campaign_path: Path | None = None
+    campaign_signature: tuple[int, int] | None = None
 
     @property
     def model_version(self) -> str | None:
@@ -221,6 +228,32 @@ def _load_campaign(
     )
 
 
+def _file_signature(path: Path) -> tuple[int, int] | None:
+    """When the file last changed and how big it is, or None when there is no file.
+
+    Every review adds events to `proposals.json`, so the size alone grows with each one;
+    the modified time covers a campaign replaced by another of the same size.
+    """
+    try:
+        stat = path.stat()
+    except FileNotFoundError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
+
+
+def _withhold_retired(
+    approved: pd.DataFrame, offers: pd.DataFrame, campaign_error: str | None
+) -> tuple[pd.DataFrame, str | None]:
+    """Drop approvals whose package has left the current catalogue, and say so (decision 33)."""
+    unavailable = ~approved["recommended_offer_id"].isin(offers["offer_id"])
+    if not unavailable.any():
+        return approved, campaign_error
+    return approved.loc[~unavailable].copy(), (
+        f"{int(unavailable.sum())} approved offers are no longer in the current catalogue; "
+        "they are withheld. Create and review a new campaign."
+    )
+
+
 def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
     if not path.exists():
         return None, f"{path.name} not found. Run `uv run churn tiers` first."
@@ -239,27 +272,25 @@ def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
 
 
 def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceState:
-    """Read every output the service serves, once.
+    """Read every output the service serves.
 
     A missing bundle, campaign or export is recorded rather than raised: the endpoints
     that need one answer 503 with the reason, and the ones that do not keep working.
 
     `campaign` lets a caller pass a snapshot it has already parsed; the service itself
-    never does.
+    never does. That state records no file signature, because nothing says the caller's
+    copy matches the file, so `refresh_campaign` would read the file rather than trust it.
     """
     bundle, bundle_error, smoke_passed = _load_bundle(paths.bundle_dir)
+    # The signature is taken before the read: a review saved during the read then shows up
+    # as a change on the next request, instead of being recorded as already read.
+    signature = None if campaign is not None else _file_signature(paths.campaign_path)
     approved, campaign_id, created_at, campaign_error = _load_campaign(
         paths.campaign_path, campaign
     )
     portfolio, portfolio_error = _load_portfolio(paths.portfolio_path)
     offers = load_offers(paths.offers_path)
-    unavailable = ~approved["recommended_offer_id"].isin(offers["offer_id"])
-    if unavailable.any():
-        campaign_error = (
-            f"{int(unavailable.sum())} approved offers are no longer in the current catalogue; "
-            "they are withheld. Create and review a new campaign."
-        )
-        approved = approved.loc[~unavailable].copy()
+    approved, campaign_error = _withhold_retired(approved, offers, campaign_error)
     return ServiceState(
         offers=offers,
         approved=approved,
@@ -272,6 +303,34 @@ def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceStat
         campaign_id=campaign_id,
         campaign_created_at=created_at,
         campaign_error=campaign_error,
+        campaign_path=paths.campaign_path,
+        campaign_signature=signature,
+    )
+
+
+def refresh_campaign(state: ServiceState) -> ServiceState:
+    """The same state, or a copy holding the campaign as its file is now (decision 47).
+
+    While nobody reviews, this costs one `stat` and returns the state it was given.
+    After `churn approve`, the next call reads the campaign again, so a new approval
+    reaches the chatbot without a restart. A campaign that fails to load serves no offers,
+    exactly as at startup, and is read again when its file next changes.
+    Only the campaign is read: the bundle, the catalogue and the portfolio stay as loaded.
+    """
+    if state.campaign_path is None:
+        return state
+    signature = _file_signature(state.campaign_path)
+    if signature == state.campaign_signature:
+        return state
+    approved, campaign_id, created_at, campaign_error = _load_campaign(state.campaign_path)
+    approved, campaign_error = _withhold_retired(approved, state.offers, campaign_error)
+    return replace(
+        state,
+        approved=approved,
+        campaign_id=campaign_id,
+        campaign_created_at=created_at,
+        campaign_error=campaign_error,
+        campaign_signature=signature,
     )
 
 

@@ -14,7 +14,7 @@ from prepaid_churn.api import (
     keys_from_environment,
 )
 from prepaid_churn.bundle import save_bundle
-from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
+from prepaid_churn.campaign import build_campaign, review_campaign, review_file, save_campaign
 from prepaid_churn.cli import build_parser
 from prepaid_churn.operator_market import load_offers
 from prepaid_churn.privacy import pseudonymize
@@ -23,6 +23,7 @@ from prepaid_churn.service import (
     ServiceConfigurationError,
     ServicePaths,
     load_state,
+    refresh_campaign,
 )
 
 STAMP = "2026-09-20T12:00:00+00:00"
@@ -233,6 +234,21 @@ def test_the_chatbot_is_never_told_a_churn_probability(client, served, keys):
     assert "0.87" not in text
     assert "churn" not in text
     assert "probability" not in text
+
+
+def test_an_approval_reaches_the_chatbot_without_a_restart(client, tmp_path):
+    """A reviewer approves while the service runs, and the next request serves it."""
+    assert chatbot(client, "/subscribers/0004/retention").status_code == 404
+    review_file(tmp_path / "campaign" / "proposals.json", "Ali Marghem", "approved", ["0004"])
+    response = chatbot(client, "/subscribers/0004/retention")
+    assert response.status_code == 200
+    assert response.json()["subscriber_id"] == "0004"
+    assert client.get("/health").json()["latest_outputs"]["approved_offers"] == 2
+
+
+def test_an_unchanged_campaign_is_not_read_again(served):
+    """While nobody reviews, a request costs one `stat` and keeps the state it had."""
+    assert refresh_campaign(served) is served
 
 
 def test_the_reviewer_name_stays_inside_the_operator(client):

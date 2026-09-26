@@ -525,6 +525,7 @@ The success thresholds and test metrics travel with the summary from the bundle'
 Every output is loaded once at startup and held in a frozen state.
 An endpoint that opened a file per request would eventually read a campaign that `churn approve` was halfway through rewriting.
 The cost is that a newly approved campaign is served only after a restart; `/health` reports the campaign fingerprint and load time so an operator can see exactly what is being served.
+Since 2026-09-26 the campaign is read again when its file changes, so an approval no longer needs a restart (decision 47).
 
 The service was run against this checkout on 2026-09-21.
 It reports degraded with no bundle, serves all 57 catalogue packages, summarises the 30,000-row tiers-only export with `risk_available` false and every `lyd_at_risk` null, and returns zero approved offers, because no real campaign has been approved.
@@ -807,6 +808,7 @@ The cost is a directory per proposal, which is why the sidebar now has a picker 
 
 **Nowhere to see what was approved.** There is a Released screen now: the approved rows, the package beside each one, who approved it and when, the three files that hold it, and the one endpoint the chatbot reads it from.
 It also says the service loads the campaign at startup, so a new release is served after a restart, which was true before and written nowhere a reviewer would look.
+Decision 47 removed that restart on 2026-09-26, and the screen now says so.
 
 One more thing was wrong and is fixed: an empty selection in the approval box meant "approve everything", so a reviewer who clicked Approve with nothing selected approved every pending proposal in the campaign.
 Reviewing everything is now a separate checkbox that says how many rows it covers, and an empty selection is an error rather than a mass approval.
@@ -1126,3 +1128,31 @@ The delivery costs were checked in the same recap and not changed:
 - So the 25% (metered) and 35% (unlimited) shares of price sit inside published averages; a bonus that uses spare off-peak capacity probably costs less, and none of this is the operator's own cost.
 
 If the morning pass should keep an advantage, it belongs in a lower delivery cost for off-peak products, which has a reason behind it, rather than in a larger share kept, which has none.
+
+## 47. The service reads the campaign again when a review changes it
+
+Date: 2026-09-26.
+
+Decision 21 loaded every output once, at startup, so an offer approved with `churn approve` reached the chatbot only after someone restarted the service.
+Nothing reminded anyone to do that, and a reviewer who approves an offer expects the chatbot to have it, so Ali chose in the T15 recap to remove the restart.
+
+What changed:
+
+- Before answering `/health` or `/subscribers/{id}/retention`, the service compares the modified time and size of `proposals.json` with the ones it read; when they differ, it reads the campaign again.
+- While nobody reviews, that costs one file check per request and nothing is read.
+- The bundle, the catalogue and the scored portfolio are still read once, so a new model or a new scoring run still needs a restart.
+- A campaign that fails to load serves no offers and `/health` says why, exactly as at startup; it is read again when its file next changes.
+- `loaded_at` in `/health` stays the time the service started; `approved_offers` goes up when an approval lands.
+
+Why it is safe:
+
+- Decision 21 feared an endpoint reading a campaign that `churn approve` was halfway through rewriting.
+  `churn approve` writes the new file beside the old one and swaps it in with one `os.replace`, so a read sees the old campaign or the new one, never half of each.
+- The service still reads only `proposals.json`, the authority, and never the CSV views written after it (decision 14).
+- On Windows a file cannot be replaced while another program is reading it, so an approval saved in the few milliseconds the service spends reading the file fails with an error, and nothing is written; repeating it works.
+  This was checked on Ali's machine on 2026-09-26; the demo app reading the campaign at that moment has the same effect, and did before this change.
+
+How it was checked:
+
+- A test approves an offer after the app has started and then gets it from the chatbot endpoint; with the reread switched off, the same test fails.
+- The real service, started with `churn serve` on a copy of the demo campaign, answered 404 for a pending offer, then 200 after `churn approve`, in the same process.
