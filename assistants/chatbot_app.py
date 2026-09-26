@@ -21,11 +21,6 @@ EXAMPLES = [
 ]
 
 
-@st.cache_resource(show_spinner=False)
-def _complete() -> llm.Complete:
-    return llm.groq_complete()
-
-
 def _new_conversation(subscriber: str) -> None:
     st.session_state.messages = []
     st.session_state.turns = []
@@ -87,14 +82,15 @@ prompt = st.chat_input("Ask about packages or offers") or st.session_state.pop("
 if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
-    tools = chatbot_tools.build_tools(BASE_URL, CHATBOT_KEY, subscriber or None)
+    arabic = chatbot_tools.is_arabic(prompt)
+    tools = chatbot_tools.build_tools(BASE_URL, CHATBOT_KEY, subscriber or None, arabic)
     with st.spinner("Looking it up..."):
         turn = llm.run_turn(
-            chatbot_tools.SYSTEM_PROMPT,
+            chatbot_tools.system_prompt(arabic),
             st.session_state.messages,
             prompt,
             tools,
-            _complete(),
+            llm.groq_complete(),
             chatbot_tools.fallback,
         )
     st.session_state.messages += [

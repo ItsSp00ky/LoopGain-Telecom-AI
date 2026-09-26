@@ -36,7 +36,7 @@ In campaign `ui-2026-09-22-200`, subscriber `70016` has an approved offer and ev
 
 | It can | Through | Guard in code |
 |---|---|---|
-| Find packages ("the cheapest 5G", "something with calls") | `find_packages` over `GET /catalogue` | Filtering and sorting are done in Python, so the model never compares prices |
+| Find packages ("the cheapest 5G", "the 10 with the most data") | `find_packages` over `GET /catalogue` | Filtering and sorting are done in Python, so the model never compares prices; 5 packages by default, up to 10 on request, with the total that matched and the order used |
 | Say whether Almadar approved an offer for the signed-in customer | `my_offer` over `GET /subscribers/{id}/retention` | The tool takes no arguments: the ID comes from the sign-in, is never sent to Groq, and cannot be swapped for another customer's |
 | Find an Almadar shop | `find_service_point` | Waiting for the service-point list; until then it says the locations are not available |
 
@@ -48,6 +48,7 @@ Every reply is checked before it is shown:
 - A tool error, an unreachable service, or Groq being down or rate-limited gives "not available right now", never a guess.
 
 Under each reply, "What I looked up" shows every tool call and exactly what it returned.
+Tool results come in the customer's language only, detected from their message, and the model is told which language to reply in.
 
 ## The service-point list (waiting for Taha)
 

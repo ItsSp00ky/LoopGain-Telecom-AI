@@ -100,7 +100,6 @@ def groq_complete(api_key: str | None = None) -> Complete:
                 messages=messages,
                 tools=tools or None,
                 tool_choice="auto" if tools else None,
-                parallel_tool_calls=False,
                 temperature=0,
                 reasoning_effort="low",
                 include_reasoning=False,
@@ -140,6 +139,15 @@ def _run(tool: Tool | None, request: ToolRequest) -> tuple[dict, dict]:
         return arguments, {"error": str(error)}
 
 
+def _facts(value):
+    """A tool result without its identifiers, whose digits ("SABAH_1") are not figures."""
+    if isinstance(value, dict):
+        return {k: _facts(v) for k, v in value.items() if not (k == "id" or k.endswith("_id"))}
+    if isinstance(value, list):
+        return [_facts(v) for v in value]
+    return value
+
+
 def run_turn(
     system_prompt: str,
     history: list[dict],
@@ -158,13 +166,16 @@ def run_turn(
     for _ in range(MAX_TOOL_ROUNDS + 1):
         try:
             reply = complete(messages, schemas)
-        except ModelUnavailable:
-            return Turn(fallback(calls, user_text), calls, "the language model is unavailable")
+        except ModelUnavailable as error:
+            # The first line of Groq's own message says which: key, rate limit or request.
+            detail = (str(error).splitlines() or [""])[0][:200]
+            reason = f"the language model is unavailable ({detail})"
+            return Turn(fallback(calls, user_text), calls, reason)
         if not reply.tool_requests:
             text = (reply.content or "").strip()
             # Earlier replies in the conversation were checked when they were given.
             sources = [m["content"] for m in history] + [user_text]
-            invented = ungrounded(text, sources + [json.dumps(c.result) for c in calls])
+            invented = ungrounded(text, sources + [json.dumps(_facts(c.result)) for c in calls])
             if not text:
                 return Turn(fallback(calls, user_text), calls, "the model gave no answer")
             if has_phone_number(text):

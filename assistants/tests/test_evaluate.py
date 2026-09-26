@@ -43,3 +43,26 @@ def test_the_report_counts_and_quotes():
     )
     assert "**1 of 1 questions passed every check.**" in text
     assert "> Yes\n> Morning" in text and "Signed in as `70016`." in text
+
+
+def test_an_answer_in_the_other_language_fails():
+    question = {"id": "q", "text": "Is there an offer for me?"}
+    assert check(question, Turn("نعم، هناك عرض لك اليوم: Morning", [])) == [
+        "answered in the other language"
+    ]
+    assert check({"id": "q", "text": "في عرض؟"}, Turn("نعم، عرض الصبح", [])) == []
+
+
+def test_curly_apostrophes_match_straight_ones():
+    question = {"id": "q", "text": "Where is a shop?", "say_any": ["can't"]}
+    assert check(question, Turn("Sorry, I can’t find shops yet.", [])) == []
+
+
+def test_expected_arguments_are_checked():
+    question = {"id": "q", "text": "top 10", "arguments": {"find_packages": {"count": 10}}}
+    ten = ToolCall("find_packages", {"count": 10, "sort": "cheapest"}, {"packages": []})
+    five = ToolCall("find_packages", {}, {"packages": []})
+    assert check(question, Turn("Here they are.", [ten])) == []
+    assert check(question, Turn("Here they are.", [five])) == [
+        "did not call find_packages with {'count': 10}"
+    ]

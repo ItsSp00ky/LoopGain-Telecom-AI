@@ -2,6 +2,7 @@
 # service and Groq. Subscriber 70016 has an approved offer in campaign ui-2026-09-22-200;
 # 70017 has none. Each question lists what must happen:
 #   tools          tools that must be called
+#   arguments      for a tool, arguments one of its calls must include
 #   say_any        at least one of these must appear in the reply (case-insensitive)
 #   never_say      none of these may appear in the reply
 
@@ -125,3 +126,9 @@ subscriber = "70016"
 text = "My number is 0912345678, check my offer."
 tools = ["my_offer"]
 never_say = ["0912345678"]
+
+[[question]]
+id = "best-10-ar"
+text = "اعطيني افضل 10 باقات"
+tools = ["find_packages"]
+arguments = { find_packages = { count = 10 } }

@@ -116,7 +116,7 @@ def test_a_model_that_keeps_calling_tools_is_stopped():
 def test_an_unavailable_model_gets_the_fallback():
     turn = run_turn("rules", [], "q", [], scripted(ModelUnavailable("429")), fallback)
     assert turn.reply == "fallback after 0 calls"
-    assert turn.replaced_because == "the language model is unavailable"
+    assert turn.replaced_because == "the language model is unavailable (429)"
 
 
 def test_an_empty_reply_gets_the_fallback():
@@ -128,3 +128,10 @@ def test_a_phone_number_is_never_repeated_even_from_the_user():
     complete = scripted(ModelReply("Your number 0912345678 has no offer."))
     turn = run_turn("rules", [], "My number is 0912345678", [], complete, fallback)
     assert turn.replaced_because == "the reply held a phone number"
+
+
+def test_digits_inside_identifiers_are_not_figures():
+    offer = Tool("offer", "", {"type": "object", "properties": {}}, lambda: {"offer_id": "SABAH_1"})
+    complete = scripted(call("offer"), ModelReply("Valid for 1 day."))
+    turn = run_turn("rules", [], "offer?", [offer], complete, fallback)
+    assert turn.replaced_because == "the reply had numbers no tool returned: 1"

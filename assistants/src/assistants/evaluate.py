@@ -8,9 +8,11 @@ This is the only code that spends Groq tokens; the unit tests never call Groq.
 
 import argparse
 import os
+import re
 import sys
 import time
 import tomllib
+import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -23,20 +25,31 @@ ROOT = Path(__file__).parents[2]
 CHATBOT_NEVER_SAY = ["high risk", "medium risk", "low risk", "risk band", "probability"]
 
 
+def _mostly_arabic(text: str) -> bool:
+    return len(re.findall(r"[\u0600-\u06ff]", text)) > len(re.findall(r"[A-Za-z]", text))
+
+
 def check(question: dict, turn: llm.Turn) -> list[str]:
     """Every expectation of `question` that `turn` failed, in plain words."""
     failures = []
-    reply = turn.reply.casefold()
+    # The model writes narrow no-break spaces ("5\u202fLYD"); compare what a reader sees.
+    reply = unicodedata.normalize("NFKC", turn.reply).replace("\u2019", "'").casefold()
     called = [call.name for call in turn.calls]
     for tool in question.get("tools", []):
         if tool not in called:
             failures.append(f"did not call {tool}")
+    for tool, expected in question.get("arguments", {}).items():
+        made = [call.arguments for call in turn.calls if call.name == tool]
+        if not any(expected.items() <= arguments.items() for arguments in made):
+            failures.append(f"did not call {tool} with {expected}")
     say_any = question.get("say_any", [])
     if say_any and not any(text.casefold() in reply for text in say_any):
         failures.append("said none of: " + ", ".join(say_any))
     for text in question.get("never_say", []) + CHATBOT_NEVER_SAY:
         if text.casefold() in reply:
             failures.append(f"said {text!r}")
+    if _mostly_arabic(turn.reply) != chatbot_tools.is_arabic(question["text"]):
+        failures.append("answered in the other language")
     if "%" in turn.reply and "%" not in question["text"]:
         failures.append("gave a percentage nobody asked about")
     if turn.replaced_because:
@@ -102,15 +115,19 @@ def run_chatbot(base_url: str, pause: float) -> str:
     for number, question in enumerate(questions["question"]):
         if number:
             time.sleep(pause)
-        tools = chatbot_tools.build_tools(base_url, key, question.get("subscriber"))
+        arabic = chatbot_tools.is_arabic(question["text"])
+        tools = chatbot_tools.build_tools(base_url, key, question.get("subscriber"), arabic)
         turn = llm.run_turn(
-            chatbot_tools.SYSTEM_PROMPT,
+            chatbot_tools.system_prompt(arabic),
             [],
             question["text"],
             tools,
             complete,
             chatbot_tools.fallback,
         )
+        if (turn.replaced_because or "").startswith("the language model is unavailable"):
+            # Every later question would fail the same way; say why and stop.
+            raise SystemExit(f"Stopped at {question['id']}: {turn.replaced_because}")
         failures = check(question, turn)
         results.append((question, turn, failures))
         print(f"{question['id']}: {'pass' if not failures else 'FAIL ' + '; '.join(failures)}")

@@ -22,5 +22,9 @@ secondaryBackgroundColor = "#e9f2f7"
 [client]
 toolbarMode = "minimal"
 
+# Answer only on this computer: the apps hold a Groq key and a service key.
+[server]
+address = "127.0.0.1"
+
 [browser]
 gatherUsageStats = false

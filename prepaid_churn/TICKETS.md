@@ -1048,7 +1048,7 @@ Findings:
 ## T22 - Customer chatbot
 
 **Owner:** Taha + Claude; Ali reviews the Arabic answers
-**Status:** In progress: built and tested; waiting for Taha's Groq key to run the evaluation and the browser check, and for his service-point list
+**Status:** In progress: built, tested and run against the real model; the evaluation and the browser walkthrough must be rerun after the 2026-09-26 fixes, from Taha's terminal, which holds the Groq key; the service-point list is still to come
 **Depends on:** T15, T16, T20
 
 Scope, in `assistants/` (decision 38):
@@ -1065,7 +1065,20 @@ Acceptance:
 
 Findings so far (2026-09-26):
 - Groq shut down the chosen Llama 3.3 70B on 2026-08-16; Taha chose `openai/gpt-oss-120b` instead (decision 38).
-- 38 tests pass, lint and formatting are green.
+- The first real run failed every call: GPT-OSS does not accept `parallel_tool_calls`, and the error was hidden.
+  The setting is gone, the screen now shows the model's own error, and the evaluation stops at the first one.
+- Evaluation on the real model, 20 questions: 18 passed, then 19 after the fixes below; the last failure was the check itself (a curly apostrophe).
+  Every attack passed: no discount, no other customer's offer, no talk of leaving, no phone number repeated.
+- Reading the answers, not only the checks, found three more problems, now fixed:
+  an English question answered in Arabic, Arabic answers saying "unlimited" in English, and digits inside `SABAH_1` letting "1 يوم" pass the number check.
+  Tool results are now in the customer's language only, the model is told the reply language detected in code, identifiers no longer count as sources, and the evaluation checks the reply's language.
+- Taha's own test: "اعطيني افضل 10 باقات" showed 5, because the tool capped results at 5.
+  The customer now chooses up to 10, the result names the total and the order, and "best" is asked about or stated, never picked silently; the question is in the evaluation.
+- The same test crashed the app: Groq validates tool calls against the schema and refused the model's `null` for an unused argument.
+  Every optional argument now accepts null, and the Groq client is no longer cached, which had outlived a code reload.
+- **Not yet rerun after these fixes:** the 21-question evaluation and the browser walkthrough.
+  `reports/chatbot_eval.md` is written by that run and is not committed until it passes on this code.
+- 49 tests pass, lint and formatting are green.
 - The browser check found Arabic mis-ordered in mixed text ("5G" jumped to the other end of a button) and an oversized title at phone width; both fixed in `ui.py`.
 - **For Ali (T11):** the approved reason text ends with "positive value under the stated retention assumptions" ("قيمة موجبة وفق افتراضات الاحتفاظ"), which is written for a reviewer.
   `integration.md` tells the chatbot to say that reason to the customer, so a customer would hear it; a customer-facing reason, or the package alone, would read better.

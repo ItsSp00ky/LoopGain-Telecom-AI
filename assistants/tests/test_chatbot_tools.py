@@ -117,24 +117,24 @@ def test_a_bad_price_is_an_error_the_model_sees():
 
 def test_my_offer_hides_the_ids_and_the_price():
     client = FakeClient(offer=OFFER)
-    result = my_offer("http://service", "chatbot-key", "70016", client)
+    result = my_offer("http://service", "chatbot-key", "70016", True, client)
     assert client.asked == [("http://service", "chatbot-key", "70016")]
     text = json.dumps(result, ensure_ascii=False)
     assert "70016" not in text and "abc123" not in text
     assert "price_lyd" not in result["offer"]["package"]
-    assert result["offer"]["reason_ar"] == OFFER["offer_reason_ar"]
+    assert result["offer"]["reason"] == OFFER["offer_reason_ar"]
 
 
 def test_no_offer_and_no_sign_in_say_so():
-    assert my_offer("u", "k", "70017", FakeClient(offer=None))["offer"] is None
+    assert my_offer("u", "k", "70017", client=FakeClient(offer=None))["offer"] is None
     client = FakeClient(offer=OFFER)
-    assert "not signed in" in my_offer("u", "k", None, client)["say"]
+    assert "not signed in" in my_offer("u", "k", None, client=client)["say"]
     assert client.asked == []
 
 
 def test_my_offer_takes_no_arguments_and_is_bound_to_the_session():
     client = FakeClient(offer=OFFER)
-    tools = {tool.name: tool for tool in build_tools("u", "k", "70016", client)}
+    tools = {tool.name: tool for tool in build_tools("u", "k", "70016", client=client)}
     assert tools["my_offer"].parameters["properties"] == {}
     tools["my_offer"].run()
     tools["my_offer"].run()
@@ -143,7 +143,7 @@ def test_my_offer_takes_no_arguments_and_is_bound_to_the_session():
 
 
 def test_the_chatbot_has_exactly_its_three_tools():
-    names = [tool.name for tool in build_tools("u", "k", "70016", FakeClient())]
+    names = [tool.name for tool in build_tools("u", "k", "70016", client=FakeClient())]
     assert names == ["find_packages", "my_offer", "find_service_point"]
 
 
@@ -152,8 +152,10 @@ def test_service_points_wait_for_their_data():
 
 
 def test_fallback_uses_only_tool_data_in_the_customers_language():
-    offer = ToolCall("my_offer", {}, my_offer("u", "k", "70016", FakeClient(offer=OFFER)))
-    arabic = fallback([offer], "في عرض ليا؟")
+    client = FakeClient(offer=OFFER)
+    offer_ar = ToolCall("my_offer", {}, my_offer("u", "k", "70016", True, client))
+    offer = ToolCall("my_offer", {}, my_offer("u", "k", "70016", False, client))
+    arabic = fallback([offer_ar], "في عرض ليا؟")
     assert arabic == "مكافأة من الكتالوج: الصبح (06:00-11:00). - ar Morning"
     assert fallback([offer], "any offer?") == "Catalogue bonus: Morning (06:00-11:00). - Morning"
     none = ToolCall("my_offer", {}, {"offer": None, "say": "..."})
@@ -167,10 +169,72 @@ def test_fallback_uses_only_tool_data_in_the_customers_language():
 
 
 def test_service_errors_surface_from_the_bound_tools():
-    tools = build_tools("u", "k", "70016", FakeClient(error=ServiceError("down", 503)))
+    tools = build_tools("u", "k", "70016", client=FakeClient(error=ServiceError("down", 503)))
     with pytest.raises(ServiceError):
         tools[0].run()
 
 
 def test_arabic_detection():
     assert is_arabic("شن أرخص باقة؟") and not is_arabic("cheapest package?")
+
+
+def test_results_come_in_one_language_only():
+    english = find_packages(CATALOGUE, needs="voice")["packages"][0]
+    assert english["name"] == "Morning" and english["validity"] == "1 day"
+    assert "name_ar" not in english and "validity_ar" not in english
+    arabic = find_packages(CATALOGUE, True, needs="voice")["packages"][0]
+    assert arabic["name"] == "ar Morning" and arabic["validity"] == "1 يوم"
+    assert find_packages(CATALOGUE, period="hours")["packages"][0]["validity"] == "1 hour"
+    assert find_packages(CATALOGUE, period="month")["packages"][0]["validity"] == "30 days"
+
+
+def test_the_bound_language_reaches_both_tools():
+    client = FakeClient(offer=OFFER)
+    tools = {tool.name: tool for tool in build_tools("u", "k", "70016", True, client)}
+    assert tools["find_packages"].run(needs="voice")["packages"][0]["name"] == "ar Morning"
+    assert tools["my_offer"].run()["offer"]["reason"] == OFFER["offer_reason_ar"]
+
+
+def test_validity_and_amounts_read_naturally_in_each_language():
+    by_id = {row["offer_id"]: row for row in CATALOGUE}
+    three_days = row("DAY_QTR", 2.0, 72, "Net 1/4", data_gb=0.25)
+    assert chatbot_tools.package_view(three_days, True)["validity"] == "3 أيام"
+    assert chatbot_tools.package_view(three_days, False)["validity"] == "3 days"
+    assert chatbot_tools.package_view(by_id["M5G_100"], True)["validity"] == "30 يوم"
+    assert chatbot_tools.package_view(by_id["M5G_100"], True)["data"] == "100 جيجا"
+    family = chatbot_tools.package_view(by_id["FAM_70"], True)
+    assert family["voice"] == "300 دقيقة"
+    assert chatbot_tools.package_view(by_id["SABAH_1"], True)["data"] == "غير محدود"
+
+
+def test_the_prompt_names_the_detected_language():
+    assert chatbot_tools.system_prompt(True).endswith("Write your whole reply in Arabic.\n")
+    assert "latest message is in English" in chatbot_tools.system_prompt(False)
+
+
+def test_the_customer_chooses_how_many_up_to_ten():
+    many = [row(f"P{i:02d}", float(i), 720, f"Package {i}", data_gb=1.0) for i in range(1, 16)]
+    assert len(find_packages(many)["packages"]) == 5
+    ten = find_packages(many, count=10)
+    assert len(ten["packages"]) == 10 and ten["shown"] == 10 and ten["matched"] == 15
+    assert len(find_packages(many, count=40)["packages"]) == 10
+    assert len(find_packages(many, count="3")["packages"]) == 3
+    assert find_packages(CATALOGUE, network="5G", count=10)["shown"] == 2
+
+
+def test_the_order_used_is_named():
+    assert find_packages(CATALOGUE)["order"] == "cheapest first"
+    assert find_packages(CATALOGUE, sort="most_data")["order"] == "most data first"
+    assert find_packages(CATALOGUE, sort="longest")["order"] == "longest validity first"
+
+
+def test_every_optional_argument_accepts_null():
+    """Groq checks tool calls against the schema, and the model fills unused fields with null."""
+    tools = {tool.name: tool for tool in build_tools("u", "k", "70016", client=FakeClient())}
+    for name in ("find_packages", "find_service_point"):
+        for field, spec in tools[name].parameters["properties"].items():
+            assert "null" in spec["type"], (name, field)
+            if "enum" in spec:
+                assert None in spec["enum"], (name, field)
+    nulls = dict.fromkeys(tools["find_packages"].parameters["properties"])
+    assert tools["find_packages"].run(**nulls)["shown"] == 5
