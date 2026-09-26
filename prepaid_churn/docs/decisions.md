@@ -1124,3 +1124,24 @@ What changed, all from that one number:
 - A 1,000 LYD campaign over the 30,000 unlabelled customers proposes 2,954 offers instead of 2,911, with 11,733 LYD of assumed net value instead of 6,387, because values grow while Almadar's catalogue prices do not.
   At the same spend, targeting by risk alone is valued at 9,074 LYD and random at 2,298; 2,803 of the offers are still the morning pass.
 - The churn model, its thresholds, its reports and the spent test window are untouched, because the model never sees LYD.
+
+## 43. The holdout is a permanent control group
+
+Date: 2026-09-26.
+
+T11 holds out about 10% of customers from every campaign with a SHA-256 lottery over the subscriber ID and the policy seed, 42 in `retention.toml`.
+The seed never changes, so every campaign holds out the same customers: 2,965 of the 30,000 in the unlabelled base, who never get a retention offer.
+Nothing said whether that was intended; Ali's recap of T11 made it a choice.
+
+From now on it is deliberate:
+
+- The same customers stay out of every campaign as a permanent control group, a common design in customer marketing, sometimes called a universal control group.
+- It gives the cleanest long-run measure: after several campaigns, churn among customers who were offered bonuses can be compared with churn among customers who never were, and the model chose neither group.
+- The cost is that about 10% of customers never get a retention bonus; they keep everything else the operator sells.
+- Changing the seed would reshuffle the group and end that comparison, so the seed changes only with a new decision entry.
+
+Review it after the first measured campaign: the fraction can shrink once the effect is known, and the group can be rotated when a measurement cycle ends.
+
+The same recap made the campaign report say what its equal-spend comparison can show.
+The targeted plan maximises the assumed net value and is then scored with it, so it wins by construction; the comparison checks the allocation against its own assumptions, not whether targeting works.
+The offer mix follows the same way from the assumed share saved: at the 70 LYD anchor, 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% of churners instead of 5%.

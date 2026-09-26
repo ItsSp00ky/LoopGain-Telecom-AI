@@ -334,6 +334,10 @@ def test_report_states_assumptions_and_equal_spend(customers, offers, policy):
     assert "fractional last inclusion" in report
     assert "not an experimentally measured benefit" in report
     assert "not a cumulative annual" in report
+    assert "highest by construction" in report  # the comparison cannot prove targeting
+    assert "permanent control group" in report  # the same seed holds out the same customers
+    proposed = result["status"].eq("proposed")
+    assert ("not from measured response" in report) == bool(proposed.any())
 
 
 def test_live_input_path_uses_frozen_tier_rate_and_existing_bundle(raw, trained, bundle, offers):

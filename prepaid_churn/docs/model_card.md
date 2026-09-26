@@ -274,6 +274,9 @@ Stated plainly, because this is the section an evaluator should read hardest.
   Every customer here has the same home circle (`circle_id` 109), so roaming mostly means being away from that region, and roamers who went silent came back more often (35% against 17%).
   In Libya roaming would mostly mean being abroad, so this signal is likely to behave differently there, which is one more reason the model must be retrained on the operator's own data (decisions 11 and 16).
 - **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5%, or 10% for the morning product, and it is not measured. T17 is the ticket that would start to measure it.
+  That assumption also decides the offer mix: 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass.
+  The campaign report's equal-spend comparison scores the targeted plan with the same assumed value it maximises, so it wins by construction and shows nothing about whether targeting works.
+  The holdout, the same customers in every campaign (decision 43), is what can measure it.
 - **No network-quality features.** Dropped calls and outages are not in this data. T20 defines the field contract for the network ML team to supply them later.
 - **Age on network is a snapshot**, not a per-month value, so tenure carries the timing limitation recorded in T4.
 - **Monthly recharge counters can overlap**, so the frequency measure is a count proxy rather than deduplicated transactions (T10).

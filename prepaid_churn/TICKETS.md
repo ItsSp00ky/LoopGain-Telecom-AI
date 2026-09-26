@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T10; prior notes retained).
+**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T11; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -35,8 +35,10 @@ Update this section at the end of every working session.
   That is written into the tiers report, the model card and T10, and T23 is open for the fix; no number changed.
 - Ali moved the ARPU anchor from 40 to 70 LYD, citing Almadar's bundle prices and Mordor Intelligence's Libya market figures (decision 42).
   Every LYD amount is 1.75 times larger, the tier artifact is `tiers-v1-efc9739afad4`, T19 advises more, and a 1,000 LYD campaign proposes 2,954 offers instead of 2,911; the churn model is untouched.
+- Step 11 (T11): the campaign report, the model card and the brief now say that the equal-spend comparison wins by construction and that one assumption picks 95% of the offers.
+  The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Validation: 436 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 11, T11 retention decisions.
+- Next: step 12, the T12 sequence benchmark.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -724,6 +726,10 @@ Findings (2026-09-20):
 - 247 prepaid tests, lint and formatting pass; tests use hand-made data, including the full bundle-to-decision path and positive approval/rejection scenarios.
 - No real customer campaign was approved, sent or released; no customer-level artifacts were committed.
 - Local reviewer names are not authentication, and caps are per campaign rather than annual; T15 and a future spending ledger must address those boundaries before shared operational use.
+- Checked in the 2026-09-26 recap: the equal-spend comparison scores the targeted plan with the same assumed net value it maximises, so it wins by construction; it checks the allocation, not whether targeting works.
+  At the 70 LYD anchor, 2,803 of 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% instead of 5%, and the budget cut 300 high-band customers whose value the constant-risk scenario understates (decision 41).
+  The campaign report, the model card and the brief now say so.
+- The holdout is the same customers in every campaign, because the lottery uses only the subscriber ID and a fixed seed; decision 43 makes that a deliberate permanent control group.
 
 ## T12 - Sequence benchmark (syllabus Ch 8, Ch 9 RNN)
 
