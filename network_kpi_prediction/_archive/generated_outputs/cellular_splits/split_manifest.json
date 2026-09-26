@@ -1,0 +1,144 @@
+{
+  "ratios": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "carriers": {
+    "350": {
+      "total_rows": 363,
+      "train": {
+        "count": 254,
+        "start_date": "2025-09-20",
+        "end_date": "2026-06-02",
+        "pct": 69.97
+      },
+      "val": {
+        "count": 54,
+        "start_date": "2026-06-03",
+        "end_date": "2026-07-26",
+        "pct": 14.88
+      },
+      "test": {
+        "count": 55,
+        "start_date": "2026-07-27",
+        "end_date": "2026-09-19",
+        "pct": 15.15
+      }
+    },
+    "400": {
+      "total_rows": 363,
+      "train": {
+        "count": 254,
+        "start_date": "2025-09-20",
+        "end_date": "2026-06-02",
+        "pct": 69.97
+      },
+      "val": {
+        "count": 54,
+        "start_date": "2026-06-03",
+        "end_date": "2026-07-26",
+        "pct": 14.88
+      },
+      "test": {
+        "count": 55,
+        "start_date": "2026-07-27",
+        "end_date": "2026-09-19",
+        "pct": 15.15
+      }
+    },
+    "1556": {
+      "total_rows": 363,
+      "train": {
+        "count": 254,
+        "start_date": "2025-09-20",
+        "end_date": "2026-06-02",
+        "pct": 69.97
+      },
+      "val": {
+        "count": 54,
+        "start_date": "2026-06-03",
+        "end_date": "2026-07-26",
+        "pct": 14.88
+      },
+      "test": {
+        "count": 55,
+        "start_date": "2026-07-27",
+        "end_date": "2026-09-19",
+        "pct": 15.15
+      }
+    },
+    "1700": {
+      "total_rows": 363,
+      "train": {
+        "count": 254,
+        "start_date": "2025-09-20",
+        "end_date": "2026-06-02",
+        "pct": 69.97
+      },
+      "val": {
+        "count": 54,
+        "start_date": "2026-06-03",
+        "end_date": "2026-07-26",
+        "pct": 14.88
+      },
+      "test": {
+        "count": 55,
+        "start_date": "2026-07-27",
+        "end_date": "2026-09-19",
+        "pct": 15.15
+      }
+    },
+    "3500": {
+      "total_rows": 363,
+      "train": {
+        "count": 254,
+        "start_date": "2025-09-20",
+        "end_date": "2026-06-02",
+        "pct": 69.97
+      },
+      "val": {
+        "count": 54,
+        "start_date": "2026-06-03",
+        "end_date": "2026-07-26",
+        "pct": 14.88
+      },
+      "test": {
+        "count": 55,
+        "start_date": "2026-07-27",
+        "end_date": "2026-09-19",
+        "pct": 15.15
+      }
+    },
+    "6200": {
+      "total_rows": 363,
+      "train": {
+        "count": 254,
+        "start_date": "2025-09-20",
+        "end_date": "2026-06-02",
+        "pct": 69.97
+      },
+      "val": {
+        "count": 54,
+        "start_date": "2026-06-03",
+        "end_date": "2026-07-26",
+        "pct": 14.88
+      },
+      "test": {
+        "count": 55,
+        "start_date": "2026-07-27",
+        "end_date": "2026-09-19",
+        "pct": 15.15
+      }
+    }
+  },
+  "summary": {
+    "total_rows": 2178,
+    "train_rows": 1524,
+    "val_rows": 324,
+    "test_rows": 330,
+    "train_pct": 69.97,
+    "val_pct": 14.88,
+    "test_pct": 15.15
+  }
+}
