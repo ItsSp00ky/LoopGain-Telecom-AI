@@ -28,6 +28,17 @@ from antenna_cell_placement.config import (
 )
 
 
+def nearest_operator_distance(tree, coordinates, exclude_self=False):
+    """Exclude one colocated query point only if it exists in this operator index."""
+    if tree is None:
+        return np.full(len(coordinates), np.nan, dtype=np.float32)
+    if not exclude_self:
+        return tree.query(coordinates, k=1)[0].astype(np.float32)
+    distances, _ = tree.query(coordinates, k=2)
+    selected = np.where(distances[:, 0] < 1e-6, distances[:, 1], distances[:, 0])
+    return np.where(np.isfinite(selected), selected, np.nan).astype(np.float32)
+
+
 class GeospatialFeatureExtractor:
     """
     Centralized extractor for geospatial, environmental, and infrastructure features
@@ -114,10 +125,10 @@ class GeospatialFeatureExtractor:
         self.site_tree_all = cKDTree(coords_all)
         self.existing_site_coords = coords_all
 
-        lib_idx = df_sites[df_sites["has_libyana"] == 1].index
-        mad_idx = df_sites[df_sites["has_almadar"] == 1].index
         self.site_tree_libyana = None
         self.site_tree_almadar = None
+        lib_idx = df_sites[df_sites["has_libyana"] == 1].index
+        mad_idx = df_sites[df_sites["has_almadar"] == 1].index
 
         if len(lib_idx) > 0:
             coords_lib = np.array([(pt.x, pt.y) for pt in gdf.loc[lib_idx, "geometry"]])
@@ -265,18 +276,8 @@ class GeospatialFeatureExtractor:
                 densities.append(np.maximum(0, counts - int(is_existing_site)).astype(np.int32))
             site_dens_1km, site_dens_3km, site_dens_5km, site_dens_10km = densities
 
-            if self.site_tree_libyana is not None:
-                d_lib, _ = self.site_tree_libyana.query(utm_coords, k=(2 if is_existing_site else 1))
-                # A site only excludes itself from an operator tree when it belongs to it.
-                if is_existing_site:
-                    d_lib = np.where(np.isclose(d_lib[:, 0], 0, atol=1e-6), d_lib[:, 1], d_lib[:, 0])
-                dist_to_libyana_m = d_lib.astype(np.float32)
-
-            if self.site_tree_almadar is not None:
-                d_mad, _ = self.site_tree_almadar.query(utm_coords, k=(2 if is_existing_site else 1))
-                if is_existing_site:
-                    d_mad = np.where(np.isclose(d_mad[:, 0], 0, atol=1e-6), d_mad[:, 1], d_mad[:, 0])
-                dist_to_almadar_m = d_mad.astype(np.float32)
+            dist_to_libyana_m = nearest_operator_distance(self.site_tree_libyana, utm_coords, is_existing_site)
+            dist_to_almadar_m = nearest_operator_distance(self.site_tree_almadar, utm_coords, is_existing_site)
 
         # Build feature DataFrame
         df_features = pd.DataFrame({

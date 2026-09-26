@@ -1,233 +1,87 @@
-"""
-Command-line Interface (CLI) for Antenna Cell Placement AI Module.
-Provides modular commands to clean data, engineer features, train AI models,
-generate placement recommendations, and predict suitability for custom coordinates.
-"""
-
+"""Public planning commands and an explicit experimental research namespace."""
 import argparse
-import sys
+import json
 from pathlib import Path
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-
-from antenna_cell_placement.config import (
-    CLEANED_RADIO_TOWERS_CSV,
-    CLEANED_PHYSICAL_SITES_CSV,
-    CLEANED_SITES_PARQUET,
-    SUITABILITY_MODEL_PATH,
-    MODEL_METRICS_PATH,
-    RECOMMENDATIONS_CSV,
-    CLEANED_MAP_HTML,
-)
-
-console = Console()
+import sys
 
 
-def cmd_clean(args):
-    """Run data cleaning and physical site consolidation."""
-    from antenna_cell_placement.data_cleaning import clean_pipeline
-    console.print(Panel("[bold green]Running Data Cleaning & Mast Consolidation Pipeline[/bold green]"))
-    df_towers, df_sites = clean_pipeline()
-    console.print(f"[bold cyan]✓ Processed {len(df_towers)} radio antennas into {len(df_sites)} physical mast sites.[/bold cyan]")
-
-
-def cmd_opencellid(args):
-    """Import and assess supplementary OpenCellID observations."""
-    from antenna_cell_placement.opencellid import import_pipeline
-    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
-    import_pipeline(getattr(args, "path", OPENCELLID_RAW_PATH))
-
-
-def cmd_features(args):
-    """Run geospatial feature engineering with WorldPop, SRTM DEM, and OCHA roads."""
-    from antenna_cell_placement.feature_engineering import enrich_physical_sites_pipeline
-    console.print(Panel("[bold green]Running Geospatial Feature Engineering Pipeline[/bold green]"))
-    df_enriched = enrich_physical_sites_pipeline()
-    console.print(
-        f"[bold cyan]✓ Enriched {len(df_enriched)} sites with "
-        f"{len(df_enriched.columns)} multi-source attributes.[/bold cyan]"
-    )
-
-
-def cmd_train(args):
-    """Train placement suitability and equipment recommendation models."""
-    from antenna_cell_placement.placement_model import train_all_models_pipeline
-    console.print(Panel("[bold green]Training Placement Suitability & Equipment Recommendation AI Models[/bold green]"))
-    results = train_all_models_pipeline()
-    m = results["suitability"]
-
-    table = Table(title="AI Placement Model Benchmark Performance")
-    table.add_column("Metric", style="cyan", justify="left")
-    table.add_column("LightGBM Score", style="green", justify="right")
-    table.add_row("ROC-AUC", f"{m['roc_auc']:.4f}")
-    table.add_row("PR-AUC", f"{m['pr_auc']:.4f}")
-    table.add_row("Accuracy", f"{m['accuracy']:.4f}")
-    table.add_row("F1-Score", f"{m['f1_score']:.4f}")
-    table.add_row("Precision", f"{m['precision']:.4f}")
-    table.add_row("Recall", f"{m['recall']:.4f}")
-    table.add_row("Brier Score", f"{m['brier_score']:.4f}")
-    console.print(table)
-
-
-def cmd_recommend(args):
-    """Run coverage gap optimizer and rank top new cell site placements."""
-    from antenna_cell_placement.site_optimizer import run_optimizer_pipeline
-    console.print(Panel("[bold green]Running Coverage Gap Optimization & Site Placement Ranking[/bold green]"))
-    recs = run_optimizer_pipeline()
-
-    table = Table(title="Top 10 AI Recommended Cell Placements for Libya")
-    table.add_column("Rank", style="bold yellow")
-    table.add_column("Municipality", style="cyan")
-    table.add_column("Settlement", style="magenta")
-    table.add_column("Suitability", style="green")
-    table.add_column("Priority", style="bold green")
-    table.add_column("Equipment Tier", style="white")
-    table.add_column("5km Pop", style="blue")
-    table.add_column("Gap (km)", style="red")
-
-    for _, row in recs.head(10).iterrows():
-        table.add_row(
-            str(int(row["recommendation_rank"])),
-            str(row["municipality_name"]),
-            str(row["nearest_settlement_name"]),
-            f"{row['placement_suitability_score']:.3f}",
-            f"{row['deployment_priority_score']:.2f}",
-            str(row["recommended_equipment_tier"]).replace("_Macro", ""),
-            f"{int(row['population_sum_5km']):,}",
-            f"{row['dist_to_nearest_site_m'] / 1000.0:.1f} km",
-        )
-    console.print(table)
-
-
-def cmd_map(args):
-    """Generate interactive geospatial maps."""
-    from antenna_cell_placement.map_visualizer import generate_interactive_map
-    console.print(Panel("[bold green]Generating Interactive Geospatial Coverage & Recommendation Maps[/bold green]"))
-    map_path = generate_interactive_map()
-    console.print(f"[bold cyan]✓ Interactive map saved to: {map_path}[/bold cyan]")
-
-
-def cmd_predict(args):
-    """Predict placement suitability and recommended equipment for a custom coordinate."""
-    import joblib
-    from antenna_cell_placement.feature_engineering import GeospatialFeatureExtractor
-    from antenna_cell_placement.placement_model import SUITABILITY_FEATURE_COLS
-    import pandas as pd
-
-    lat = float(args.lat)
-    lon = float(args.lon)
-
-    console.print(Panel(f"[bold green]Evaluating Custom Candidate Site at ({lat:.4f}, {lon:.4f})[/bold green]"))
-
-    extractor = GeospatialFeatureExtractor()
-    extractor.load_layers()
-    df_sites = pd.read_parquet(CLEANED_SITES_PARQUET)
-    extractor.set_existing_sites(df_sites)
-
-    features = extractor.extract_features([lon], [lat], is_existing_site=False)
-
-    suit_model = joblib.load(SUITABILITY_MODEL_PATH)
-    eq_model = joblib.load(SUITABILITY_MODEL_PATH.parent / "equipment_recommendation_model.joblib")
-
-    score = suit_model.predict_proba(features[SUITABILITY_FEATURE_COLS])[0, 1]
-
-    eq_features = [
-        "population_density_1km",
-        "population_sum_3km",
-        "population_sum_5km",
-        "elevation_m",
-        "elevation_prominence_3km",
-        "terrain_slope_deg",
-        "dist_to_nearest_road_m",
-        "dist_to_nearest_settlement_m",
-        "dist_to_nearest_site_m",
-        "site_density_3km",
-        "site_density_5km",
-    ]
-    tier = eq_model.predict(features[eq_features])[0]
-
-    table = Table(title=f"AI Placement Assessment: ({lat:.4f}, {lon:.4f})")
-    table.add_column("Parameter", style="cyan")
-    table.add_column("Value", style="green")
-
-    table.add_row("Placement Suitability Score", f"{score:.4f} ({'HIGHLY SUITABLE' if score >= 0.75 else ('MODERATE' if score >= 0.50 else 'LOW')})")
-    table.add_row("Recommended Equipment Tier", str(tier))
-    table.add_row("Municipality", str(features['municipality_name'].iloc[0]))
-    table.add_row("Nearest City / Town", f"{features['nearest_settlement_name'].iloc[0]} ({features['dist_to_nearest_settlement_m'].iloc[0] / 1000.0:.1f} km)")
-    table.add_row("Population Density (1km²)", f"{features['population_density_1km'].iloc[0]:.1f} people/km²")
-    table.add_row("5km Population Catchment", f"{int(features['population_sum_5km'].iloc[0]):,} people")
-    table.add_row("Distance to Nearest Cell Tower", f"{features['dist_to_nearest_site_m'].iloc[0] / 1000.0:.2f} km")
-    table.add_row("Distance to Nearest Road", f"{features['dist_to_nearest_road_m'].iloc[0]:.1f} meters")
-    table.add_row("Ground Elevation", f"{features['elevation_m'].iloc[0]:.1f} m ASL")
-    table.add_row("Elevation Prominence (3km)", f"{features['elevation_prominence_3km'].iloc[0]:.1f} m")
-    if features["cloudflare_data_available"].iloc[0]:
-        table.add_row(
-            "Regional HTTP Traffic Share (52w)",
-            f"{features['cloudflare_http_requests_share_52w_pct'].iloc[0]:.3f}%",
-        )
-        table.add_row(
-            "Regional Digital Demand Score",
-            f"{features['cloudflare_regional_demand_score'].iloc[0]:.3f}",
-        )
-
-    console.print(table)
-
-
-def cmd_all(args):
-    """Run full end-to-end pipeline."""
-    cmd_clean(args)
-    cmd_features(args)
-    cmd_train(args)
-    cmd_recommend(args)
-    cmd_map(args)
-    console.print(Panel("[bold green]✓ Entire AI Antenna Cell Placement Pipeline Completed Successfully![/bold green]"))
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="AI Antenna Cell Placement Optimization CLI - Team Loop Gain",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-
-    subparsers.add_parser("clean", help="Clean raw SQLite/JSON and consolidate physical cell sites")
-    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
-    oc_parser = subparsers.add_parser("opencellid", help="Import OpenCellID cells and review recommendation proximity")
-    oc_parser.add_argument("--path", type=Path, default=OPENCELLID_RAW_PATH)
-    subparsers.add_parser("features", help="Engineer geospatial, demographic, and topography features")
-    subparsers.add_parser("train", help="Train placement suitability and equipment recommendation models")
-    subparsers.add_parser("recommend", help="Find coverage gaps and output prioritized new site recommendations")
-    subparsers.add_parser("map", help="Generate interactive Leaflet coverage and recommendation maps")
-    subparsers.add_parser("all", help="Run full end-to-end pipeline")
-
-    pred_parser = subparsers.add_parser("predict", help="Predict suitability for custom (lat, lon) coordinates")
-    pred_parser.add_argument("--lat", type=float, required=True, help="Latitude (WGS84)")
-    pred_parser.add_argument("--lon", type=float, required=True, help="Longitude (WGS84)")
-
-    args = parser.parse_args()
-
-    if not args.command:
-        parser.print_help()
-        sys.exit(0)
-
-    commands = {
-        "clean": cmd_clean,
-        "opencellid": cmd_opencellid,
-        "features": cmd_features,
-        "train": cmd_train,
-        "recommend": cmd_recommend,
-        "map": cmd_map,
-        "all": cmd_all,
-        "predict": cmd_predict,
-    }
-
-    cmd_fn = commands.get(args.command)
-    if cmd_fn:
-        cmd_fn(args)
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == 'experimental':
+        if len(argv) > 1 and argv[1] == 'compare':
+            return experimental_compare(argv[2:])
+        from antenna_cell_placement.legacy_cli import main as research_main
+        return research_main(argv[1:])
+    parser = argparse.ArgumentParser(description='Integrated antenna planning priorities for engineering review')
+    sub = parser.add_subparsers(dest='command', required=True)
+    sub.add_parser('doctor', help='Verify required input hashes and optional source availability')
+    for command in ('recommend', 'all'):
+        plan = sub.add_parser(command, help='Run corrected GIS, explainable ranking, comparisons and offline maps')
+        plan.add_argument('--output-dir', type=Path)
+        plan.add_argument('--scope', choices=['Tripoli', 'national'], default='Tripoli')
+        plan.add_argument('--operator', choices=['all', 'almadar', 'libyana'], default='all')
+        plan.add_argument('--resolution', type=int, choices=range(6, 10), default=8)
+        plan.add_argument('--top-k', type=int, default=20)
+        plan.add_argument('--min-gap-m', type=float, default=3000.)
+        plan.add_argument('--min-population', type=float, default=300.)
+        plan.add_argument('--max-road-m', type=float, default=4000.)
+        plan.add_argument('--separation-m', type=float, default=2500.)
+        plan.add_argument('--no-rooftops', action='store_true')
+    for command in ('assess', 'predict'):
+        assess = sub.add_parser(command, help='Assess a coordinate with the same corrected GIS and strict rules')
+        assess.add_argument('--lat', required=True, type=float)
+        assess.add_argument('--lon', required=True, type=float)
+        assess.add_argument('--operator', choices=['all', 'almadar', 'libyana'], default='all')
+    maps = sub.add_parser('map', help='Report the verified offline map for an existing completed run')
+    maps.add_argument('--run-dir', required=True, type=Path)
+    sub.add_parser('experimental', help='Historical ML/H3 research commands; compare --run-dir DIR --model FILE')
+    args = parser.parse_args(argv)
+    if args.command == 'doctor':
+        from antenna_cell_placement.source_integrity import verify_sources
+        report = verify_sources()
+        print(json.dumps(report, indent=2))
+        return 0 if report['required_ready'] else 1
+    if args.command in ('assess', 'predict'):
+        from antenna_cell_placement.placement import assess_coordinate
+        print(json.dumps(assess_coordinate(args.lat, args.lon, args.operator), indent=2, allow_nan=False))
+    elif args.command == 'map':
+        from antenna_cell_placement.source_integrity import sha256
+        manifest = json.loads((args.run_dir / 'manifest.json').read_text(encoding='utf-8'))
+        path = args.run_dir / 'planning_map.html'
+        if manifest.get('status') != 'completed' or sha256(path) != manifest['artifacts']['planning_map.html']:
+            raise ValueError('Run incomplete or map changed')
+        print(path.resolve())
     else:
-        parser.print_help()
+        from antenna_cell_placement.integrated_optimizer import PlanningConstraints
+        from antenna_cell_placement.planning_pipeline import run_planning
+        constraints = PlanningConstraints(args.min_gap_m, args.min_population, args.max_road_m, args.separation_m, args.top_k)
+        run_planning(args.output_dir, args.scope, args.operator, args.resolution, constraints, not args.no_rooftops)
+    return 0
 
 
-if __name__ == "__main__":
-    main()
+def experimental_compare(argv):
+    parser = argparse.ArgumentParser(description='Optional ML comparison; never changes the primary shortlist')
+    parser.add_argument('--run-dir', required=True, type=Path)
+    parser.add_argument('--model', required=True, type=Path, help='Trusted local GIS-v2 research model')
+    parser.add_argument('--output-dir', required=True, type=Path)
+    args = parser.parse_args(argv)
+    import pandas as pd
+    from antenna_cell_placement.source_integrity import sha256
+    from antenna_cell_placement.integrated_optimizer import PlanningConstraints
+    from antenna_cell_placement.planning_comparison import compare_rankings
+    from antenna_cell_placement.planning_pipeline import write_json
+    manifest = json.loads((args.run_dir / 'manifest.json').read_text(encoding='utf-8'))
+    path = args.run_dir / 'comparison_candidates.parquet'
+    if manifest.get('status') != 'completed' or sha256(path) != manifest['artifacts'][path.name]:
+        raise ValueError('Comparison requires an unchanged, completed planning run')
+    pool, report = compare_rankings(pd.read_parquet(path), PlanningConstraints(**manifest['constraints']), args.model)
+    args.output_dir.mkdir(parents=True, exist_ok=False)
+    pool.to_csv(args.output_dir / 'matched_candidates.csv', index=False)
+    report.update(model_sha256=sha256(args.model), candidate_file_sha256=sha256(path), primary_rank_unchanged=True)
+    write_json(args.output_dir / 'comparison.json', report)
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

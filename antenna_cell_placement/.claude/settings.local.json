@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sI --max-time 15 https://download.geofabrik.de/africa/libya-latest.osm.pbf)",
+      "Bash(curl -sL --max-time 120 -o data/external/osm/libya-latest.osm.pbf https://download.geofabrik.de/africa/libya-latest.osm.pbf)",
+      "Bash(curl -sL --max-time 60 https://raw.githubusercontent.com/microsoft/GlobalMLBuildingFootprints/main/dataset-links.csv -o /tmp/dataset-links.csv)",
+      "Read(//tmp/**)",
+      "Bash(curl -sL --max-time 600 -C - -w \"HTTP:%{http_code} SIZE:%{size_download}\\\\n\" -o data/external/buildings/libya_122012230.csv.gz \"https://bfppub.z5.web.core.windows.net/2026-08-13/global-buildings.geojsonl/RegionName=Libya/quadkey=122012230/part-00037-110f5303-ff85-4c71-a2bf-c6070024fec8.c000.csv.gz\")",
+      "Bash(curl -sL --max-time 300 -C - -w \"HTTP:%{http_code} SIZE:%{size_download}\\\\n\" -o data/external/buildings/libya_122012231.csv.gz \"https://bfppub.z5.web.core.windows.net/2026-08-13/global-buildings.geojsonl/RegionName=Libya/quadkey=122012231/part-00162-110f5303-ff85-4c71-a2bf-c6070024fec8.c000.csv.gz\")",
+      "Bash(curl -sL --max-time 900 -C - -w \"HTTP:%{http_code} SIZE:%{size_download}\\\\n\" -o data/external/osm/libya-latest.osm.pbf https://download.geofabrik.de/africa/libya-latest.osm.pbf)"
+    ]
+  }
+}

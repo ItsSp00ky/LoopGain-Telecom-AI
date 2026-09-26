@@ -1,0 +1,2 @@
+# Generated/vendor files: preserve bytes and upstream spacing.
+* -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol

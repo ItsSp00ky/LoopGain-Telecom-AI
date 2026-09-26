@@ -1,0 +1,12 @@
+{
+  "raw_observations": 4258,
+  "legacy_radio_groups": 2338,
+  "network_scoped_radio_groups": 2338,
+  "cross_network_legacy_key_collisions": 0,
+  "physical_sites": 2115,
+  "clusters_with_diameter_over_50m": 5,
+  "max_cluster_diameter_m": 87.06420149401015,
+  "groups_with_reported_bandwidth": 623,
+  "groups_with_repeat_observation_bandwidth_inflation": 0,
+  "policy": "Scoped audit table is authoritative for observed bandwidth provenance; legacy estimated site capacity fields are not v2 ML inputs. Stable mast IDs are retained pending review of flagged clusters."
+}

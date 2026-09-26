@@ -39,3 +39,14 @@ Thumbs.db
 *.log
 dataset_profiles.txt
 *.zip
+
+# Heavy raw geospatial tiles and elevation archives (>100MB)
+*.hgt
+Libya_SRTM/
+
+# Local demo folder of NTFS junctions/hardlinks pointing at the real datasets
+Project_Datasets_Showcase/
+
+# SQLite runtime journal files (transient, regenerated on open)
+*.sqlite3-shm
+*.sqlite3-wal

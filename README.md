@@ -60,7 +60,7 @@ The repository is organized into three modular AI subsystems:
 - **Objective**: Geospatial machine learning system predicting optimal geographic locations for deploying new cellular antenna towers across Libya with **0.9862 ROC-AUC** and **0.9794 PR-AUC**.
 - **Geospatial & Demographic Intelligence**: Fuses crowdsourced cellular radio telemetry with WorldPop 1km gridded population density, SRTM 250m Digital Elevation Model (topography/prominence), UN OCHA road transportation networks, and Libyan administrative boundaries.
 - **Optimization Engine**: Identifies unserved coverage gaps, ranks the Top 50 prioritized new site deployments, and recommends equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
-- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md) and the comprehensive [`Technical Report`](antenna_cell_placement/TECHNICAL_REPORT.md).
+- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md), the comprehensive [`Technical Report`](antenna_cell_placement/TECHNICAL_REPORT.md), and the [`Telecom GIS, RF & AI Planning Roadmap`](antenna_cell_placement/TELECOM_GIS_RF_AI_ROADMAP.md).
 
 ---
 
@@ -73,6 +73,7 @@ LoopGain-Telecom-AI/
 │
 ├── customer_churn_prediction/         # Module 1: Customer Churn & Retention Engine
 │   ├── README.md                      # Detailed Churn Module Documentation
+│   ├── TECHNICAL_REPORT.md            # Churn Modeling & Value Engine Specification
 │   ├── pyproject.toml                 # uv Package Config & CLI entry points
 │   ├── uv.lock                        # Deterministic dependency lockfile
 │   ├── churn_datasets/                # Telecom datasets (Maven Telecom, IBM, Cell2Cell)
@@ -80,13 +81,21 @@ LoopGain-Telecom-AI/
 │   ├── eval_reports/                  # ROC, PR, and feature importance charts
 │   └── src/customer_churn_prediction/ # Feature engineering, trainers & discount engine
 │
-├── customer_support_chatbot/          # Module 2: Telecom Customer Chatbot (Placeholder)
+├── customer_support_chatbot/          # Module 2: Telecom Customer Chatbot (Planned)
 │   ├── README.md                      # Module Overview
 │   └── src/customer_support_chatbot/  # Chatbot source package
 │
-└── antenna_cell_placement/            # Module 3: Antenna Placement AI (Placeholder)
-    ├── README.md                      # Module Overview
-    └── src/antenna_cell_placement/    # Placement optimization package
+└── antenna_cell_placement/            # Module 3: Antenna Placement AI
+    ├── README.md                      # Detailed Antenna Module Documentation
+    ├── TECHNICAL_REPORT.md            # Comprehensive Engineering & Decisioning Report
+    ├── TELECOM_GIS_RF_AI_ROADMAP.md   # Telecom GIS, RF & AI Planning Roadmap
+    ├── pyproject.toml                 # uv Package Config & CLI entry points
+    ├── uv.lock                        # Deterministic dependency lockfile
+    ├── Libyan_cells_dataset/          # Raw crowdsourced telecom datasets
+    ├── data/                          # Geospatial data (DEM, WorldPop, Roads, Admin, Radar)
+    ├── models/                        # Champion AI Models (LightGBM & RF)
+    ├── eval_reports/                  # Coverage maps, ROC curves & recommendations
+    └── src/antenna_cell_placement/    # Geospatial AI pipeline package
 ```
 
 ---

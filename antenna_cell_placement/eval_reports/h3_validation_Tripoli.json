@@ -1,0 +1,160 @@
+{
+  "city": "Tripoli",
+  "scorable_hexes": 2216,
+  "masked_hexes": {
+    "water_hexes": 771,
+    "uninhabited_hexes": 0
+  },
+  "weights": {
+    "population_demand": 0.35,
+    "building_urban_demand": 0.25,
+    "network_gap": 0.25,
+    "landuse_demand": 0.15
+  },
+  "known_site_recovery": {
+    "n_folds": 5,
+    "hide_fraction": 0.2,
+    "sites_in_grid": 713,
+    "mean_auc_expansion_score": 0.7160045864623139,
+    "mean_auc_population_only": 0.7674435098730181,
+    "mean_recall_top10pct_expansion_score": 0.3503913399103006,
+    "mean_recall_top10pct_population_only": 0.3721165844346526,
+    "mean_recall_top25pct_expansion_score": 0.5742517451224634,
+    "mean_auc_expansion_score_unserved": 0.680124209952091,
+    "mean_auc_population_only_unserved": 0.7236070285612762,
+    "mean_recall_top10pct_expansion_score_unserved": 0.31291789823840016,
+    "mean_recall_top10pct_population_only_unserved": 0.3262890996321321,
+    "folds": [
+      {
+        "fold": 0,
+        "hidden_sites": 151,
+        "positive_hexes": 137,
+        "auc_expansion_score": 0.7223486165092006,
+        "auc_population_only": 0.7711806981879974,
+        "recall_top10pct_expansion_score": 0.3722627737226277,
+        "recall_top10pct_population_only": 0.40875912408759124,
+        "recall_top25pct_expansion_score": 0.583941605839416,
+        "unserved_hexes": 1832,
+        "unserved_positive_hexes": 59,
+        "auc_expansion_score_unserved": 0.6817373598325159,
+        "auc_population_only_unserved": 0.7204489183324252,
+        "recall_top10pct_expansion_score_unserved": 0.3559322033898305,
+        "recall_top10pct_population_only_unserved": 0.3898305084745763
+      },
+      {
+        "fold": 1,
+        "hidden_sites": 155,
+        "positive_hexes": 142,
+        "auc_expansion_score": 0.7339393157401497,
+        "auc_population_only": 0.785572887663493,
+        "recall_top10pct_expansion_score": 0.33098591549295775,
+        "recall_top10pct_population_only": 0.36619718309859156,
+        "recall_top25pct_expansion_score": 0.5845070422535211,
+        "unserved_hexes": 1842,
+        "unserved_positive_hexes": 69,
+        "auc_expansion_score_unserved": 0.7013985956824182,
+        "auc_population_only_unserved": 0.7627005730073485,
+        "recall_top10pct_expansion_score_unserved": 0.2898550724637681,
+        "recall_top10pct_population_only_unserved": 0.3188405797101449
+      },
+      {
+        "fold": 2,
+        "hidden_sites": 134,
+        "positive_hexes": 120,
+        "auc_expansion_score": 0.6918853371501272,
+        "auc_population_only": 0.7479604007633588,
+        "recall_top10pct_expansion_score": 0.3416666666666667,
+        "recall_top10pct_population_only": 0.35,
+        "recall_top25pct_expansion_score": 0.5666666666666667,
+        "unserved_hexes": 1826,
+        "unserved_positive_hexes": 53,
+        "auc_expansion_score_unserved": 0.6690344688141834,
+        "auc_population_only_unserved": 0.706802243293001,
+        "recall_top10pct_expansion_score_unserved": 0.3018867924528302,
+        "recall_top10pct_population_only_unserved": 0.3584905660377358
+      },
+      {
+        "fold": 3,
+        "hidden_sites": 140,
+        "positive_hexes": 129,
+        "auc_expansion_score": 0.7233185871935163,
+        "auc_population_only": 0.7762059705151491,
+        "recall_top10pct_expansion_score": 0.3875968992248062,
+        "recall_top10pct_population_only": 0.3953488372093023,
+        "recall_top25pct_expansion_score": 0.5736434108527132,
+        "unserved_hexes": 1830,
+        "unserved_positive_hexes": 57,
+        "auc_expansion_score_unserved": 0.6745233077052473,
+        "auc_population_only_unserved": 0.7181306339735407,
+        "recall_top10pct_expansion_score_unserved": 0.3333333333333333,
+        "recall_top10pct_population_only_unserved": 0.2807017543859649
+      },
+      {
+        "fold": 4,
+        "hidden_sites": 160,
+        "positive_hexes": 144,
+        "auc_expansion_score": 0.7085310757185757,
+        "auc_population_only": 0.7562975922350922,
+        "recall_top10pct_expansion_score": 0.3194444444444444,
+        "recall_top10pct_population_only": 0.3402777777777778,
+        "recall_top25pct_expansion_score": 0.5625,
+        "unserved_hexes": 1840,
+        "unserved_positive_hexes": 67,
+        "auc_expansion_score_unserved": 0.6739273177260903,
+        "auc_population_only_unserved": 0.7099527742000656,
+        "recall_top10pct_expansion_score_unserved": 0.2835820895522388,
+        "recall_top10pct_population_only_unserved": 0.2835820895522388
+      }
+    ]
+  },
+  "weight_sensitivity": [
+    {
+      "weight": "population_demand",
+      "factor": 0.5,
+      "spearman_rank_correlation": 0.9821548364067592,
+      "top50_overlap": 0.88
+    },
+    {
+      "weight": "population_demand",
+      "factor": 1.5,
+      "spearman_rank_correlation": 0.9927383312947545,
+      "top50_overlap": 0.94
+    },
+    {
+      "weight": "building_urban_demand",
+      "factor": 0.5,
+      "spearman_rank_correlation": 0.9941523414887388,
+      "top50_overlap": 0.92
+    },
+    {
+      "weight": "building_urban_demand",
+      "factor": 1.5,
+      "spearman_rank_correlation": 0.9969951656481418,
+      "top50_overlap": 0.92
+    },
+    {
+      "weight": "network_gap",
+      "factor": 0.5,
+      "spearman_rank_correlation": 0.9659131946732245,
+      "top50_overlap": 0.86
+    },
+    {
+      "weight": "network_gap",
+      "factor": 1.5,
+      "spearman_rank_correlation": 0.9662940396502864,
+      "top50_overlap": 0.86
+    },
+    {
+      "weight": "landuse_demand",
+      "factor": 0.5,
+      "spearman_rank_correlation": 0.9946921669233223,
+      "top50_overlap": 1.0
+    },
+    {
+      "weight": "landuse_demand",
+      "factor": 1.5,
+      "spearman_rank_correlation": 0.9972161401512497,
+      "top50_overlap": 0.96
+    }
+  ]
+}

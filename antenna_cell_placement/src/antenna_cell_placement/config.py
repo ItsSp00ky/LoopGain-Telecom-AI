@@ -74,3 +74,51 @@ OPERATOR_NAMES = {
     ("606", "00"): "Libyana",
     ("606", "01"): "Al-Madar",
 }
+
+# Pilot City Configuration (H3 expansion-need analysis)
+# Tripoli bbox covers the full Tripoli admin2 polygon (lon 13.07-13.60, lat 32.63-32.92)
+# plus the western Janzour suburbs; the northern edge sits on the coastline.
+PILOT_CITY_BBOXES = {
+    "Tripoli": {"min_lat": 32.60, "max_lat": 32.95, "min_lon": 12.95, "max_lon": 13.65},
+}
+DEFAULT_PILOT_CITY = "Tripoli"
+
+# H3 Planning Grid
+H3_RESOLUTION = 8  # ~0.74 km^2 average hexagon area
+H3_OUTPUT_DIR = CLEANED_DATA_DIR / "h3"
+H3_GRID_GEOJSON_TEMPLATE = str(H3_OUTPUT_DIR / "h3_grid_{city}.geojson")
+H3_FEATURE_TABLE_PARQUET_TEMPLATE = str(H3_OUTPUT_DIR / "h3_features_{city}.parquet")
+H3_EXPANSION_SCORE_CSV_TEMPLATE = str(REPORTS_DIR / "h3_expansion_scores_{city}.csv")
+H3_EXPANSION_SCORE_GEOJSON_TEMPLATE = str(REPORTS_DIR / "h3_expansion_scores_{city}.geojson")
+H3_VALIDATION_JSON_TEMPLATE = str(REPORTS_DIR / "h3_validation_{city}.json")
+H3_EXPANSION_MAP_HTML_TEMPLATE = str(REPORTS_DIR / "h3_expansion_map_{city}.html")
+
+# Hexes that are mostly open water, or have no population and no road access,
+# are excluded before scoring so they don't distort the normalization ranges.
+H3_WATER_MASK_PCT = 50.0
+H3_UNINHABITED_MAX_ROAD_DIST_M = 3000.0
+
+# Phase 2 External Data Paths (buildings, land cover, OSM - Tripoli pilot)
+BUILDINGS_DIR = EXTERNAL_DATA_DIR / "buildings"
+MS_BUILDING_FOOTPRINTS_TILES = [
+    BUILDINGS_DIR / "libya_122012230.csv.gz",
+    BUILDINGS_DIR / "libya_122012231.csv.gz",
+]
+LANDCOVER_DIR = EXTERNAL_DATA_DIR / "landcover"
+ESA_WORLDCOVER_TILES = [
+    LANDCOVER_DIR / "ESA_WorldCover_10m_2021_v200_N30E012_Map.tif",
+    LANDCOVER_DIR / "ESA_WorldCover_10m_2021_v200_N33E012_Map.tif",
+]
+OSM_DIR = EXTERNAL_DATA_DIR / "osm"
+OSM_LIBYA_PBF = OSM_DIR / "libya-latest.osm.pbf"
+
+# Integrated planning inputs. Raw downloads are deliberately excluded from Git.
+ADMIN0_GEOJSON_PATH = EXTERNAL_DATA_DIR / "admin_boundaries" / "lby_admin0.geojson"
+WORLDCOVER_DIR = EXTERNAL_DATA_DIR / "worldcover_2021"
+WORLDCOVER_EVALUATION_REPORT = REPORTS_DIR / "worldcover_integration.json"
+OSM_BUILDINGS_DIR = EXTERNAL_DATA_DIR / "osm_libya_2026_09_19"
+OSM_BUILDINGS_GPKG = OSM_BUILDINGS_DIR / "libya-260919-free.gpkg"
+BUILDINGS_EVALUATION_REPORT = REPORTS_DIR / "buildings_integration.json"
+OSM_CONTEXT_EVALUATION_REPORT = REPORTS_DIR / "osm_context_integration.json"
+PLANNING_OUTPUT_DIR = REPORTS_DIR / "integrated_planning"
+SOURCE_LOCK_PATH = MODULE_DIR / "sources" / "planning_sources.lock.json"
