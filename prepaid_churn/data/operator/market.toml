@@ -1,8 +1,8 @@
-# Almadar Aljadid market facts used by the module (ticket T16, decision 16).
-# The packages themselves are in offers.csv; docs/almadar.md explains both files.
+# The operator market facts used by the module (ticket T16, decision 16).
+# The packages themselves are in offers.csv; docs/operator.md explains both files.
 #
 # Every table has a status and a source:
-#   confirmed  - stated in an operator document in data/almadar/source/, or a public fact
+#   confirmed  - stated in an operator document in data/operator/source/, or a public fact
 #   measured   - computed from the data in this repo
 #   reported   - stated by a teammate, with no document in the repo yet
 #   assumption - a team estimate: replace it with operator data or defend it in the report
@@ -11,12 +11,10 @@
 
 [operator]
 status = "confirmed"
-source = "Public MCC-MNC numbering for Libya"
-name = "Almadar Aljadid"
-name_ar = "المدار الجديد"
+source = "A real Libyan mobile operator; its name is kept out of this project (decision 45)"
+name = "Libyan mobile operator"
+name_ar = "مشغل اتصالات ليبي"
 mcc = 606
-mnc = "01"
-competitor = "Libyana"
 
 [recharge_cards]
 status = "reported"
@@ -28,7 +26,7 @@ status = "confirmed"
 source = "source/Pay-as-you-go tariffs.md"
 voice_onnet_first_3_minutes_lyd = 0.090
 voice_onnet_after_3_minutes_lyd_per_minute = 0.050
-voice_to_libyana_lyd_per_minute = 0.090
+voice_to_other_operator_lyd_per_minute = 0.090
 voice_to_landline_lyd_per_minute = 0.040
 sms_local_lyd = 0.050
 sms_international_lyd = 0.250
@@ -63,15 +61,15 @@ note = "Not available while the balance is negative, so it cannot be combined wi
 # Chosen by Ali on 2026-09-26 (decision 42), replacing the 40 LYD team estimate of 2026-09-19.
 # Mordor Intelligence, Libya Telecom MNO Market: data and internet were 44.9% of operator
 # revenue in 2025, and use is projected to pass 12 GB per subscriber a month by 2030.
-# 12 GB costs 31 to 35 LYD with Almadar's Net 10 (30 LYD) and Net 20 (35 LYD) bundles;
+# 12 GB costs 31 to 35 LYD with the operator's Net 10 (30 LYD) and Net 20 (35 LYD) bundles;
 # divided by the 44.9% data share that gives 69 to 78 LYD a month, and 70 is taken.
 [arpu]
 status = "assumption"
-source = "Ali, 2026-09-26 (decision 42): Almadar's Net 10 and Net 20 prices for 12 GB a month, divided by the 44.9% data share of Libyan MNO revenue in 2025 (Mordor Intelligence, Libya Telecom MNO Market)"
+source = "Ali, 2026-09-26 (decision 42): the operator's Net 10 and Net 20 prices for 12 GB a month, divided by the 44.9% data share of Libyan MNO revenue in 2025 (Mordor Intelligence, Libya Telecom MNO Market)"
 monthly_lyd = 70.0
 
 # T18 turns the source currency into LYD with one fixed rate: arpu.monthly_lyd divided by
-# this mean, so the average active customer spends exactly the Almadar ARPU.
+# this mean, so the average active customer spends exactly the operator's ARPU.
 # The rate never depends on the batch being viewed.
 [reference_spend]
 status = "measured"

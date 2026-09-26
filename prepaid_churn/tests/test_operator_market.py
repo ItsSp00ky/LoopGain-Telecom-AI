@@ -5,13 +5,13 @@ import pandas as pd
 import pytest
 from conftest import build_population
 
-from prepaid_churn.almadar import (
-    ALMADAR_DIR,
+from prepaid_churn.cli import main
+from prepaid_churn.operator_market import (
+    OPERATOR_DIR,
     PAY_AS_YOU_GO,
     STATUSES,
     VIEW_COLUMNS,
     InvalidCatalogueError,
-    almadar_view,
     bundle_held,
     check_against_source,
     load_excluded,
@@ -19,11 +19,11 @@ from prepaid_churn.almadar import (
     load_offers,
     lyd_rate,
     nearest_card,
+    operator_view,
     validate_market,
     validate_offers,
     view_report,
 )
-from prepaid_churn.cli import main
 from prepaid_churn.windows import WINDOW_A, WINDOW_B, active_in_current_month
 
 MARKET = {
@@ -37,7 +37,7 @@ MARKET = {
 def two_offers() -> pd.DataFrame:
     """A metered bundle and the morning pass, as they appear in offers.csv."""
     common = {
-        "operator": "Almadar Aljadid",
+        "operator": "Libyan mobile operator",
         "network": None,
         "voice_minutes": None,
         "members": None,
@@ -168,7 +168,7 @@ def test_every_removed_package_is_recorded_with_a_reason():
 
 def test_the_source_file_still_holds_every_package():
     """The operator file is a byte-for-byte copy and is not edited when we drop a package."""
-    source = ALMADAR_DIR / "source" / "internet_offers_data_v4.csv"
+    source = OPERATOR_DIR / "source" / "internet_offers_data_v4.csv"
     rows = source.read_text(encoding="utf-8-sig").splitlines()
     assert len(rows) - 1 == 57  # header plus every package the operator published
 
@@ -275,36 +275,38 @@ def test_view_reads_only_the_window_months(raw):
     from prepaid_churn.clean import clean
     from prepaid_churn.schema import validate
 
-    before = almadar_view(clean(validate(raw)), WINDOW_A, MARKET, load_offers())
+    before = operator_view(clean(validate(raw)), WINDOW_A, MARKET, load_offers())
     changed = raw.copy()
     for column in ("total_rech_amt_8", "max_rech_amt_8", "monthly_3g_8", "sachet_2g_8"):
         changed[column] = changed[column] + 7
-    after = almadar_view(clean(validate(changed)), WINDOW_A, MARKET, load_offers())
+    after = operator_view(clean(validate(changed)), WINDOW_A, MARKET, load_offers())
     assert list(before.columns) == list(VIEW_COLUMNS)
     pd.testing.assert_frame_equal(before, after)
 
 
 def test_one_customer_alone_is_viewed_like_inside_the_batch():
     population = build_population()
-    whole = almadar_view(population, WINDOW_B, MARKET, load_offers())
-    alone = almadar_view(population.iloc[[0]], WINDOW_B, MARKET, load_offers())
+    whole = operator_view(population, WINDOW_B, MARKET, load_offers())
+    alone = operator_view(population.iloc[[0]], WINDOW_B, MARKET, load_offers())
     pd.testing.assert_frame_equal(alone, whole.iloc[[0]])
 
 
 def test_view_report_states_every_assumption():
     population = build_population()
-    view = almadar_view(population, WINDOW_B, MARKET, load_offers())
+    view = operator_view(population, WINDOW_B, MARKET, load_offers())
     report = view_report(view, active_in_current_month(population, WINDOW_B), MARKET, "x.csv")
-    for expected in ("Almadar ARPU", "| assumption |", "| measured |", "| reported |", "PAYG"):
+    for expected in ("Operator ARPU", "| assumption |", "| measured |", "| reported |", "PAYG"):
         assert expected in report
 
 
-def test_almadar_view_command(raw, tmp_path):
+def test_operator_view_command(raw, tmp_path):
     source, output, report = tmp_path / "export.csv", tmp_path / "view.csv", tmp_path / "r.md"
     raw.to_csv(source, index=False)
-    main(["almadar-view", "--input", str(source), "--output", str(output), "--report", str(report)])
+    main(
+        ["operator-view", "--input", str(source), "--output", str(output), "--report", str(report)]
+    )
     assert len(pd.read_csv(output)) == len(raw)
-    assert report.read_text(encoding="utf-8").startswith("# T18 Almadar view")
+    assert report.read_text(encoding="utf-8").startswith("# T18 operator view")
 
 
 @pytest.mark.parametrize("value", [0, -1, np.inf, np.nan, "500", True])

@@ -1,7 +1,7 @@
 """Read-only integration state for the chatbot and the copilot (ticket T15, decision 21).
 
 Every answer the service gives comes from a file that another command already wrote:
-the gated bundle (T8), the Almadar catalogue (T16), the value and risk export (T10) and
+the gated bundle (T8), the operator's catalogue (T16), the value and risk export (T10) and
 the reviewed campaign (T11).
 Nothing here trains, scores, decides or approves, and there is no write path at all
 (decision 17).
@@ -26,9 +26,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from prepaid_churn.almadar import OFFERS_PATH, load_offers
 from prepaid_churn.bundle import Bundle, load_bundle, smoke_check
 from prepaid_churn.campaign import RELEASE_COLUMNS, load_campaign, released_campaign
+from prepaid_churn.operator_market import OFFERS_PATH, load_offers
 
 
 class ServiceUnavailable(RuntimeError):
@@ -314,7 +314,7 @@ def _scored_at(state: ServiceState) -> str | None:
 
 
 def catalogue(state: ServiceState) -> list[dict]:
-    """Every Almadar package the chatbot may talk about, with its collection date."""
+    """Every operator package the chatbot may talk about, with its collection date."""
     columns = [name for name in CATALOGUE_COLUMNS if name in state.offers.columns]
     return _json_safe(state.offers[columns])
 

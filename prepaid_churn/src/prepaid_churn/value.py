@@ -13,12 +13,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from prepaid_churn.almadar import lyd_rate
 from prepaid_churn.bundle import Bundle
 from prepaid_churn.clean import clean
 from prepaid_churn.data import LABEL_COLUMN
 from prepaid_churn.evaluation import recharge_amount
 from prepaid_churn.features import add_features
+from prepaid_churn.operator_market import lyd_rate
 from prepaid_churn.schema import ID, validate
 from prepaid_churn.scoring import SCORING_WINDOW, SILENT_BAND, OutputColumn, score
 from prepaid_churn.windows import active_in_current_month, window_features
@@ -48,7 +48,7 @@ VALUE_COLUMNS = (
     OutputColumn(
         "monthly_spend_lyd",
         "nonnegative number",
-        "Mean monthly recharge at the frozen T18 assumed LYD rate; not observed Almadar revenue.",
+        "Mean monthly recharge at the frozen T18 assumed LYD rate; not observed operator revenue.",
     ),
     OutputColumn("tenure", "nonnegative number", "Age-on-network snapshot in days."),
     OutputColumn(

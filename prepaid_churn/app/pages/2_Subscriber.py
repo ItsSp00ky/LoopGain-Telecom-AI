@@ -1,10 +1,9 @@
-"""Screen 2 - one customer: risk, reasons, tier, the Almadar bundle held and the offer."""
+"""Screen 2 - one customer: risk, reasons, tier, the operator's bundle held and the offer."""
 
 import pandas as pd
 import streamlit as st
 from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state, use_campaign
 
-from prepaid_churn.almadar import InvalidCatalogueError, load_market
 from prepaid_churn.bundle import BundleError
 from prepaid_churn.demo import (
     CAMPAIGNS_DIR,
@@ -14,6 +13,7 @@ from prepaid_churn.demo import (
     subscriber_view,
     utc_today,
 )
+from prepaid_churn.operator_market import InvalidCatalogueError, load_market
 from prepaid_churn.privacy import looks_like_phone_number
 from prepaid_churn.retention import NO_OFFER, RetentionError
 
@@ -102,7 +102,7 @@ st.divider()
 profile_column, reason_column = st.columns([1, 2])
 
 with profile_column:
-    st.subheader("In Almadar terms")
+    st.subheader("In operator terms")
     st.markdown(
         f"**Monthly spend** {lyd(subscriber.get('monthly_spend_lyd'), digits=2)}  \n"
         f"**Usual recharge card** {lyd(subscriber.get('usual_card_lyd'), digits=0)}  \n"
@@ -113,7 +113,7 @@ with profile_column:
         f"Spend is converted at the assumed {load_market()['arpu']['monthly_lyd']:.0f} LYD "
         "monthly ARPU of T18 (decision 42). "
         "The bundle held is inferred from the real monthly and short pack purchases in "
-        "the source data, not from an Almadar subscription record."
+        "the source data, not from an operator subscription record."
     )
 
 with reason_column:
@@ -204,7 +204,7 @@ else:
     one.metric("Assumed delivery cost", lyd(cost, digits=2))
     two.metric("Assumed net value", lyd(value, digits=2))
     st.caption(
-        "Both figures are assumptions from `data/almadar/retention.toml`, not measured "
+        "Both figures are assumptions from `data/operator/retention.toml`, not measured "
         "profit or causal uplift. An offer is sent only after a named reviewer approves "
         "it on the campaign screen."
     )

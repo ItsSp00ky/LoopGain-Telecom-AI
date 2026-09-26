@@ -15,16 +15,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from prepaid_churn.almadar import ALMADAR_DIR, PAY_AS_YOU_GO, bundle_held, validate_offers
 from prepaid_churn.bundle import Bundle
 from prepaid_churn.clean import clean
 from prepaid_churn.data import LABEL_COLUMN
+from prepaid_churn.operator_market import OPERATOR_DIR, PAY_AS_YOU_GO, bundle_held, validate_offers
 from prepaid_churn.schema import validate
 from prepaid_churn.scoring import SCORING_WINDOW
 from prepaid_churn.value import TIERS, TierModel, tier_export
 from prepaid_churn.windows import window_features
 
-POLICY_PATH = ALMADAR_DIR / "retention.toml"
+POLICY_PATH = OPERATOR_DIR / "retention.toml"
 NO_OFFER = "NO_OFFER"
 REASONS = {
     "already_silent": ("No offer: already inactive.", "لا عرض: المشترك غير نشط حالياً."),

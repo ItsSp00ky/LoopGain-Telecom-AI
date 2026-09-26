@@ -2,7 +2,7 @@
 
 The Streamlit screens in `app/` are a thin surface over this module.
 Nothing here recomputes a score, a tier or an offer.
-Every figure comes from a file that `churn tiers`, `churn almadar-view` and `churn decide`
+Every figure comes from a file that `churn tiers`, `churn operator-view` and `churn decide`
 already wrote, and the loading goes through `service.load_state`, so the screens and the
 T15 endpoints answer from the same state and cannot drift apart.
 
@@ -18,9 +18,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from prepaid_churn.almadar import OFFERS_PATH, load_offers
 from prepaid_churn.campaign import campaign_rows, load_campaign
 from prepaid_churn.data import PROJECT_ROOT
+from prepaid_churn.operator_market import OFFERS_PATH, load_offers
 from prepaid_churn.retention import REASONS
 from prepaid_churn.service import ServicePaths, ServiceState, load_state
 from prepaid_churn.value import TIERS
@@ -32,7 +32,7 @@ PRODUCED_BY = {
     "portfolio": "uv run churn tiers --tiers-only",
     "campaign": "uv run churn decide --tiers-only --output-dir artifacts/campaigns/<name>",
     "bundle": "uv run churn bundle",
-    "almadar view": "uv run churn almadar-view",
+    "operator view": "uv run churn operator-view",
 }
 
 RISK_BANDS = ("high", "medium", "low", "already_silent")
@@ -49,7 +49,7 @@ CAMPAIGNS_DIR = PROJECT_ROOT / "artifacts" / "campaigns"
 @dataclass(frozen=True)
 class DemoPaths:
     portfolio_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
-    view_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
+    view_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "operator_view.csv"
     campaign_dir: Path = CAMPAIGNS_DIR / "retention"
     bundle_dir: Path = PROJECT_ROOT / "artifacts" / "bundle"
     offers_path: Path = OFFERS_PATH
@@ -140,7 +140,7 @@ def load_demo(paths: DemoPaths) -> DemoState:
     if paths.view_path.exists():
         view = pd.read_csv(paths.view_path, converters={"id": str})
     else:
-        missing.append(("almadar view", PRODUCED_BY["almadar view"]))
+        missing.append(("operator view", PRODUCED_BY["operator view"]))
 
     return DemoState(
         service=service,
@@ -398,8 +398,8 @@ def customer_message(subscriber: dict, offer: dict | None, language: str = "ar")
         return str(reason).strip()
     name = offer.get(f"name_{language}") or offer.get("name_en") or offer.get("offer_id")
     if language == "ar":
-        return f"المدار الجديد: هديتك {name}. {reason}".strip()
-    return f"Almadar Aljadid: your gift {name}. {reason}".strip()
+        return f"هديتك: {name}. {reason}".strip()
+    return f"Your gift: {name}. {reason}".strip()
 
 
 def utc_today() -> str:

@@ -14,7 +14,7 @@ who exports subscribers to us has one supported way to hide theirs before they d
 import hashlib
 import re
 
-# Libyana 091/092 and Almadar 094/095, with or without a +218 country prefix.
+# The Libyan mobile prefixes 091, 092, 094 and 095, with or without a +218 country prefix.
 # This is Ali's pattern, kept with all three of his corrections, because each one came
 # from a real miss and the reasons still apply here:
 #
@@ -34,7 +34,7 @@ import re
 MSISDN_PATTERN = re.compile(
     r"(?<![0-9a-zA-Z])"  # not inside a longer alphanumeric token
     r"(?:\+?218[ -]?(?:0[ -]?)?|0[ -]?)"  # +218 or 218 with an optional trunk 0, or a bare 0
-    r"9[1245]"  # Libyana 91/92, Almadar 94/95
+    r"9[1245]"  # the Libyan mobile prefixes 91, 92, 94 and 95
     r"(?:[ -]?[0-9]){7}"  # seven more digits, however they are grouped
     r"(?![0-9])"
 )

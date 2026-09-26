@@ -1,14 +1,14 @@
-"""Almadar Aljadid packages and market facts (ticket T16, decision 16).
+"""The operator's packages and market facts (ticket T16, decisions 16 and 45).
 
-`data/almadar/offers.csv` lists what the operator sells, one row per package.
-It is curated from the operator's own file in `data/almadar/source/`, and
+`data/operator/offers.csv` lists what the operator sells, one row per package.
+It is curated from the operator's own file in `data/operator/source/`, and
 `check_against_source` proves that every price, volume, minute count, member count
 and speed the operator states still matches that file.
-`data/almadar/market.toml` holds every other fact a calculation needs, each with a
-status and a source. `docs/almadar.md` explains both files.
+`data/operator/market.toml` holds every other fact a calculation needs, each with a
+status and a source. `docs/operator.md` explains both files.
 
-`almadar_view` (ticket T18) shows each real customer in Almadar terms: monthly spend
-in LYD, the usual recharge card and the Almadar bundle the customer would hold. It
+`operator_view` (ticket T18) shows each real customer in the operator's terms: monthly spend
+in LYD, the usual recharge card and the operator's bundle the customer would hold. It
 reads only the two feature months of a window and never changes a churn feature.
 """
 
@@ -26,12 +26,12 @@ from prepaid_churn.data import PROJECT_ROOT
 from prepaid_churn.schema import ID, summarize_failures
 from prepaid_churn.windows import Window, window_features
 
-ALMADAR_DIR = PROJECT_ROOT / "data" / "almadar"
-OFFERS_PATH = ALMADAR_DIR / "offers.csv"
-EXCLUDED_PATH = ALMADAR_DIR / "excluded.csv"
-MARKET_PATH = ALMADAR_DIR / "market.toml"
+OPERATOR_DIR = PROJECT_ROOT / "data" / "operator"
+OFFERS_PATH = OPERATOR_DIR / "offers.csv"
+EXCLUDED_PATH = OPERATOR_DIR / "excluded.csv"
+MARKET_PATH = OPERATOR_DIR / "market.toml"
 
-OPERATORS = ("Almadar Aljadid",)
+OPERATORS = ("Libyan mobile operator",)
 # Where a package's data volume comes from: the operator file states it, it is read from
 # the package name ("نت 20" is 20 GB), a teammate reported it, or nobody knows it.
 VOLUME_SOURCES = ("stated", "name", "reported", "none")
@@ -130,7 +130,7 @@ def validate_offers(offers: pd.DataFrame) -> pd.DataFrame:
         return OFFERS_SCHEMA.validate(offers, lazy=True)
     except SchemaErrors as errors:
         raise InvalidCatalogueError(
-            summarize_failures(errors.failure_cases, "The Almadar catalogue breaks its rules")
+            summarize_failures(errors.failure_cases, "The operator catalogue breaks its rules")
         ) from None
 
 
@@ -197,7 +197,7 @@ def load_excluded(path: str | Path = EXCLUDED_PATH) -> pd.DataFrame:
 
 def check_against_source(
     offers: pd.DataFrame,
-    directory: str | Path = ALMADAR_DIR,
+    directory: str | Path = OPERATOR_DIR,
     excluded: pd.DataFrame | None = None,
 ) -> list[str]:
     """Problems where the catalogue no longer matches the operator's own file.
@@ -282,7 +282,7 @@ def validate_market(facts: dict) -> dict:
         problems.append("- recharge_cards.values_lyd: must be a non-empty list of positive cards")
     if problems:
         raise InvalidCatalogueError(
-            f"The Almadar market facts break their rules ({len(problems)} problems):\n"
+            f"The operator market facts break their rules ({len(problems)} problems):\n"
             + "\n".join(problems)
         )
     return facts
@@ -306,7 +306,7 @@ def load_market(path: str | Path = MARKET_PATH) -> dict:
         return validate_market(tomllib.load(f))
 
 
-# --- T18: the real customers in Almadar terms (decision 16) -------------------------
+# --- T18: the real customers in the operator's terms (decision 16) -------------------------
 
 PAY_AS_YOU_GO = "PAYG"
 MONTHLY_FAMILY = "Monthly offers"
@@ -315,7 +315,7 @@ VIEW_COLUMNS = (ID, "monthly_spend_lyd", "usual_card_lyd", "bundle_held", "bundl
 
 
 def lyd_rate(market: dict) -> float:
-    """LYD per unit of the source currency, so the reference customer spends the Almadar ARPU."""
+    """LYD per unit of the source currency, so the reference customer spends the operator's ARPU."""
     validate_market(market)
     return market["arpu"]["monthly_lyd"] / market["reference_spend"]["mean_monthly_recharge"]
 
@@ -341,16 +341,18 @@ def nearest_card(amount_lyd: pd.Series, cards: list[float]) -> pd.Series:
 def _package_for(amount_lyd: pd.Series, family: pd.DataFrame) -> np.ndarray:
     """The dearest package of a family the amount pays for, or the cheapest one if none."""
     if family.empty:
-        raise InvalidCatalogueError("The Almadar view needs both monthly and daily offer families.")
+        raise InvalidCatalogueError(
+            "The operator view needs both monthly and daily offer families."
+        )
     family = family.sort_values("price_lyd")
     position = np.searchsorted(family["price_lyd"].to_numpy(), amount_lyd.to_numpy(), "right")
     return family["offer_id"].to_numpy()[np.clip(position - 1, 0, len(family) - 1)]
 
 
 def bundle_held(frame: pd.DataFrame, rate: float, offers: pd.DataFrame) -> pd.Series:
-    """The Almadar data bundle matching each customer's packs in the current month.
+    """The operator data bundle matching each customer's packs in the current month.
 
-    A monthly pack buyer gets the dearest Almadar monthly bundle their data spend pays
+    A monthly pack buyer gets the dearest operator monthly bundle their data spend pays
     for; a buyer of short packs only gets the daily pack their average data recharge
     pays for; everybody else is on pay-as-you-go.
     """
@@ -364,7 +366,7 @@ def bundle_held(frame: pd.DataFrame, rate: float, offers: pd.DataFrame) -> pd.Se
     return pd.Series(held, index=frame.index, dtype="str")
 
 
-def almadar_view(
+def operator_view(
     cleaned: pd.DataFrame, window: Window, market: dict, offers: pd.DataFrame
 ) -> pd.DataFrame:
     """One row per customer: spend in LYD, usual recharge card and the bundle held."""
@@ -388,7 +390,7 @@ def almadar_view(
 
 
 def view_report(view: pd.DataFrame, active: pd.Series, market: dict, source: str) -> str:
-    """Markdown summary of the Almadar view of the active customers, with every assumption."""
+    """Markdown summary of the operator view of the active customers, with every assumption."""
     from prepaid_churn.profile import markdown_table
 
     shown = view[active.to_numpy()]
@@ -422,19 +424,19 @@ def view_report(view: pd.DataFrame, active: pd.Series, market: dict, source: str
     arpu, reference = market["arpu"], market["reference_spend"]
     return "\n".join(
         [
-            "# T18 Almadar view of the real customers",
+            "# T18 operator view of the real customers",
             "",
-            f"Generated by `uv run churn almadar-view` from `{source}`.",
+            f"Generated by `uv run churn operator-view` from `{source}`.",
             f"{len(shown)} customers active in the current month; {int((~active).sum())} already "
             "silent customers are left out, as in scoring (decision 12).",
             "The behaviour is real (upGrad prepaid data from another market); the money and the "
-            "packages are Almadar's (decision 16).",
+            "packages are the operator's (decision 16).",
             "",
             "## Assumptions",
             "",
             "| What | Value | Status | Source |",
             "|---|---|---|---|",
-            f"| Almadar ARPU | {arpu['monthly_lyd']:.0f} LYD per month | {arpu['status']} | "
+            f"| Operator ARPU | {arpu['monthly_lyd']:.0f} LYD per month | {arpu['status']} | "
             f"{arpu['source']} |",
             f"| Reference monthly recharge | {reference['mean_monthly_recharge']:.2f} in the "
             f"source currency | {reference['status']} | {reference['source']} |",
@@ -442,12 +444,12 @@ def view_report(view: pd.DataFrame, active: pd.Series, market: dict, source: str
             "ARPU divided by the reference recharge |",
             f"| Recharge cards | {', '.join(map(str, market['recharge_cards']['values_lyd']))} LYD"
             f" | {market['recharge_cards']['status']} | {market['recharge_cards']['source']} |",
-            "| Bundle held | monthly pack buyers get the dearest Almadar monthly bundle their data "
-            "spend pays for; short-pack buyers get the daily pack their average data recharge "
+            "| Bundle held | monthly pack buyers get the dearest operator monthly bundle their "
+            "data spend pays for; short-pack buyers get the daily pack their average data recharge "
             "pays for; everybody else is pay-as-you-go | assumption | T18 rule |",
             "",
             "Monthly spend is the average airtime plus data recharge of the two window months.",
-            "The usual card is the Almadar card nearest to the customer's average airtime "
+            "The usual card is the operator's card nearest to the customer's average airtime "
             "recharge.",
             f"This base's mean spend is {spend.mean():.2f} LYD; it differs from the ARPU because "
             "the rate is fixed on the training customers, not on the viewed batch.",

@@ -77,7 +77,7 @@ def health(base_url: str) -> dict:
 
 
 def catalogue(base_url: str, chatbot_key: str) -> list[dict]:
-    """Every Almadar package the chatbot may talk about (T16)."""
+    """Every operator package the chatbot may talk about (T16)."""
     return get(base_url, "/catalogue", chatbot_key)["offers"]
 
 

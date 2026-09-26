@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from prepaid_churn.almadar import load_market, load_offers
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import (
     build_campaign,
@@ -19,6 +18,7 @@ from prepaid_churn.campaign import (
 )
 from prepaid_churn.cli import main
 from prepaid_churn.data import REPORTS_DIR
+from prepaid_churn.operator_market import load_market, load_offers
 from prepaid_churn.retention import (
     NO_OFFER,
     RetentionError,

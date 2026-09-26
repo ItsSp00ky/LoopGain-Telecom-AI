@@ -13,7 +13,7 @@ PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 BUNDLE_DIR = PROJECT_ROOT / "artifacts" / "bundle"
 SCORES_PATH = PROJECT_ROOT / "artifacts" / "scores" / "scores.csv"
-VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
+VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "operator_view.csv"
 TIER_MODEL_PATH = PROJECT_ROOT / "artifacts" / "tiers" / "tiers.json"
 TIERS_PATH = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
 CAMPAIGN_DIR = PROJECT_ROOT / "artifacts" / "campaigns" / "retention"
@@ -174,29 +174,29 @@ def run_score(args: argparse.Namespace) -> None:
     print(f"{len(scores)} subscribers scored with {bundle.version} into {args.output}: {counts}")
 
 
-def run_almadar_view(args: argparse.Namespace) -> None:
-    from prepaid_churn.almadar import almadar_view, load_market, load_offers, view_report
+def run_operator_view(args: argparse.Namespace) -> None:
     from prepaid_churn.clean import clean
+    from prepaid_churn.operator_market import load_market, load_offers, operator_view, view_report
     from prepaid_churn.schema import validate
     from prepaid_churn.scoring import SCORING_WINDOW
     from prepaid_churn.windows import active_in_current_month
 
     market = load_market()
     cleaned = clean(validate(load_raw(args.input), labeled=False))
-    view = almadar_view(cleaned, SCORING_WINDOW, market, load_offers())
+    view = operator_view(cleaned, SCORING_WINDOW, market, load_offers())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     view.to_csv(args.output, index=False, encoding="utf-8")
     active = active_in_current_month(cleaned, SCORING_WINDOW)
     report = view_report(view, active, market, args.input.name)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(report, encoding="utf-8")
-    print(f"Almadar view of {len(view)} customers in {args.output}, summary in {args.report}")
+    print(f"operator view of {len(view)} customers in {args.output}, summary in {args.report}")
 
 
 def run_fit_tiers(args: argparse.Namespace) -> None:
     import pandas as pd
 
-    from prepaid_churn.almadar import load_market
+    from prepaid_churn.operator_market import load_market
     from prepaid_churn.segmentation import compare_clusters, tiers_report, write_cluster_plots
     from prepaid_churn.value import apply_tiers, fit_tiers, save_tiers
 
@@ -227,9 +227,9 @@ def run_tiers(args: argparse.Namespace) -> None:
 def run_decide(args: argparse.Namespace) -> None:
     from dataclasses import replace
 
-    from prepaid_churn.almadar import load_offers
     from prepaid_churn.bundle import load_bundle
     from prepaid_churn.campaign import build_campaign, save_campaign
+    from prepaid_churn.operator_market import load_offers
     from prepaid_churn.retention import decision_inputs, load_policy, propose
     from prepaid_churn.retention_report import decisions_report
     from prepaid_churn.value import load_tiers
@@ -276,8 +276,8 @@ def run_approve(args: argparse.Namespace) -> None:
 
 def run_advance(args: argparse.Namespace) -> None:
     from prepaid_churn.advance import advice_report, advise
-    from prepaid_churn.almadar import load_market
     from prepaid_churn.clean import clean
+    from prepaid_churn.operator_market import load_market
     from prepaid_churn.schema import validate
     from prepaid_churn.scoring import SCORING_WINDOW
 
@@ -425,12 +425,13 @@ def build_parser() -> argparse.ArgumentParser:
     score.set_defaults(handler=run_score)
 
     view = commands.add_parser(
-        "almadar-view", help="Show every customer in Almadar money and packages (ticket T18)."
+        "operator-view",
+        help="Show every customer in the operator's money and packages (ticket T18).",
     )
     view.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
     view.add_argument("--output", type=Path, default=VIEW_PATH)
-    view.add_argument("--report", type=Path, default=REPORTS_DIR / "almadar_view.md")
-    view.set_defaults(handler=run_almadar_view)
+    view.add_argument("--report", type=Path, default=REPORTS_DIR / "operator_view.md")
+    view.set_defaults(handler=run_operator_view)
 
     fit_tiers = commands.add_parser(
         "fit-tiers", help="Freeze value cutoffs on training window A and compare clusters (T10)."
@@ -554,9 +555,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
-    from prepaid_churn.almadar import InvalidCatalogueError
     from prepaid_churn.bundle import BundleError
     from prepaid_churn.client import ServiceError
+    from prepaid_churn.operator_market import InvalidCatalogueError
     from prepaid_churn.retention import RetentionError
     from prepaid_churn.schema import InvalidExportError
     from prepaid_churn.service import ServiceConfigurationError

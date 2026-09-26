@@ -378,7 +378,7 @@ def output_contract_markdown() -> str:
         "no risk or monetary fields are released.",
         "Rejected and unreviewed proposals cannot enter that file.",
         "`--tiers-only` supports a readiness run without a churn bundle and proposes no offers.",
-        "Effects and costs are assumptions in `data/almadar/retention.toml`; "
+        "Effects and costs are assumptions in `data/operator/retention.toml`; "
         "[../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.",
         "Local reviewer names are an audit record, not authentication; "
         "access control belongs to T15.",

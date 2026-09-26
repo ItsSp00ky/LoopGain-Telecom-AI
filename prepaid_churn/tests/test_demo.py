@@ -3,7 +3,6 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
-from prepaid_churn.almadar import load_offers
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import (
     build_campaign,
@@ -35,10 +34,11 @@ from prepaid_churn.demo import (
     sms_parts,
     subscriber_view,
 )
+from prepaid_churn.operator_market import load_offers
 from prepaid_churn.retention import NO_OFFER, load_policy, propose
 
 STAMP = "2026-09-20T12:00:00+00:00"
-ARABIC = "المدار الجديد: هديتك نت الصباح."
+ARABIC = "هديتك: نت الصباح."
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def customers(customers):
 
 @pytest.fixture
 def built(tmp_path, bundle, customers, offers, policy, portfolio):
-    """A checkout with a bundle, a reviewed campaign, a portfolio and an Almadar view."""
+    """A checkout with a bundle, a reviewed campaign, a portfolio and an operator view."""
     save_bundle(bundle, tmp_path / "bundle")
     decisions, comparison = propose(customers, offers, policy)
     campaign = build_campaign(customers, decisions, comparison, offers, policy, STAMP)
@@ -84,10 +84,10 @@ def built(tmp_path, bundle, customers, offers, policy, portfolio):
             "bundle_held": ["PAYG", "MO_20", "PAYG", "PAYG"],
             "bundle_price_lyd": [None, 35.0, None, None],
         }
-    ).to_csv(tmp_path / "almadar_view.csv", index=False)
+    ).to_csv(tmp_path / "operator_view.csv", index=False)
     return DemoPaths(
         portfolio_path=tmp_path / "tiers.csv",
-        view_path=tmp_path / "almadar_view.csv",
+        view_path=tmp_path / "operator_view.csv",
         campaign_dir=tmp_path / "campaign",
         bundle_dir=tmp_path / "bundle",
     )
@@ -194,7 +194,12 @@ def test_an_empty_checkout_names_the_command_for_each_missing_output(tmp_path):
             bundle_dir=tmp_path / "none",
         )
     )
-    assert {what for what, _ in demo.missing} == {"portfolio", "bundle", "campaign", "almadar view"}
+    assert {what for what, _ in demo.missing} == {
+        "portfolio",
+        "bundle",
+        "campaign",
+        "operator view",
+    }
     assert all(how.startswith("uv run churn") for _, how in demo.missing)
     assert demo.has_risk is False
     # The catalogue is committed, so it is there even in an unbuilt checkout.
@@ -247,7 +252,7 @@ def test_a_tiers_only_export_reports_no_bands_and_no_money_at_risk(portfolio):
 # ---------------------------------------------------------------------------
 
 
-def test_one_subscriber_joins_the_portfolio_the_decision_and_the_almadar_view(demo):
+def test_one_subscriber_joins_the_portfolio_the_decision_and_the_operator_view(demo):
     subscriber = subscriber_view(demo, "0001")
     assert subscriber["risk_band"] == "high"
     assert subscriber["value_tier"] == "high"
@@ -476,7 +481,7 @@ def test_the_app_proposes_through_the_same_engine(tmp_path, population, bundle):
     """Proposing from a screen has to be the `churn decide` path, not a shortcut of its own."""
     from conftest import build_population_raw
 
-    from prepaid_churn.almadar import load_market
+    from prepaid_churn.operator_market import load_market
     from prepaid_churn.value import fit_tiers, save_tiers
     from prepaid_churn.windows import build_datasets
 

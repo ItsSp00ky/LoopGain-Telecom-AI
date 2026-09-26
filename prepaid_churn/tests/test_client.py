@@ -20,7 +20,6 @@ import pytest
 import uvicorn
 
 from prepaid_churn import api, client
-from prepaid_churn.almadar import load_offers
 from prepaid_churn.api import (
     CHATBOT_KEY_VARIABLE,
     COPILOT_KEY_VARIABLE,
@@ -31,6 +30,7 @@ from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
 from prepaid_churn.cli import main
 from prepaid_churn.data import PROJECT_ROOT
+from prepaid_churn.operator_market import load_offers
 from prepaid_churn.retention import load_policy, propose
 from prepaid_churn.service import ServicePaths, load_state
 

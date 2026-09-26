@@ -12,8 +12,8 @@ SALT = "a-salt-long-enough-to-use"
 @pytest.mark.parametrize(
     "number",
     [
-        "0912345678",  # Libyana, written nationally
-        "0945678901",  # Almadar
+        "0912345678",  # a Libyan mobile number, written nationally
+        "0945678901",  # another Libyan mobile prefix
         "+218912345678",  # international, no trunk zero
         "218912345678",
         "+2180912345678",  # international with the trunk zero kept

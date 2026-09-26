@@ -33,7 +33,7 @@ Update this section at the end of every working session.
   The model card, T9 and the brief say exactly what was reproduced, and a test checks the uncertainty ranges the card quotes.
 - Step 10 (T10) found, on the validation customers, that the 12-month value's constant-risk and no-comeback assumptions do not hold, which undervalues high-risk customers in T11 (decision 41).
   That is written into the tiers report, the model card and T10, and T23 is open for the fix; no number changed.
-- Ali moved the ARPU anchor from 40 to 70 LYD, citing Almadar's bundle prices and Mordor Intelligence's Libya market figures (decision 42).
+- Ali moved the ARPU anchor from 40 to 70 LYD, citing the operator's bundle prices and Mordor Intelligence's Libya market figures (decision 42).
   Every LYD amount is 1.75 times larger, the tier artifact is `tiers-v1-efc9739afad4`, T19 advises more, and a 1,000 LYD campaign proposes 2,954 offers instead of 2,911; the churn model is untouched.
 - Step 11 (T11): the campaign report, the model card and the brief now say that the equal-spend comparison wins by construction and that one assumption picks 95% of the offers.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
@@ -41,6 +41,8 @@ Update this section at the end of every working session.
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
 - Validation: 431 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
+- At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
+  Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
 - Next: step 15, the T15 integration service.
 
 **Ali's branch sync, 2026-09-22**
@@ -66,7 +68,7 @@ Update this section at the end of every working session.
 - Validation: 420 tests pass with none skipped, including the optional LSTM test; lint and formatting pass.
   Third-party test adapter and Keras/Torch deprecation warnings remain.
 - Ready for a local demo and HTTP consumer testing with the available data; operator performance and campaign effectiveness remain unvalidated.
-  The Almadar source links remain open, and no new operator data is required for the completed fixes.
+  The operator source links remain open, and no new operator data is required for the completed fixes.
 - [The acceptance report](reports/end_to_end.md) records evidence, limitations and exact startup commands for this checkout.
 - Delivery stays on `Ali_Branch` under Ali's explicit instruction in this task; no commit or push targets `tahaDev`.
   Earlier branch directions below are historical and do not supersede that instruction.
@@ -76,7 +78,7 @@ Update this section at the end of every working session.
 - Ali is working on `Ali_Branch`, which was fast-forwarded onto Taha's `73762df`; `tahaDev` is not written to from this checkout.
   Every commit of both branches is in this history, so nothing diverges yet, but the two branch tips will drift if both are pushed. Agree one branch before the next session.
 - **Ali's answers:** he agrees with decisions 15 to 17, 24 and 25; the folder keeps the name `prepaid_churn/`; the Mix families are no longer sold.
-- **The Mix packages are out.** The catalogue is 37 packages in 12 families, matching Ali's own, and the 20 retired ones are recorded in `data/almadar/excluded.csv` with a reason, a name and a date (decision 31).
+- **The Mix packages are out.** The catalogue is 37 packages in 12 families, matching Ali's own, and the 20 retired ones are recorded in `data/operator/excluded.csv` with a reason, a name and a date (decision 31).
   `check_against_source` now requires every operator row to be in the catalogue exactly once or recorded as excluded, so a package can never leave silently again.
 - **Consequence worth knowing:** Mix held the only metered data-and-voice packages, so a voice-only customer above the base monthly rung now has no eligible offer.
   That is pinned as the expected answer in `tests/test_retention.py`, not treated as a bug.
@@ -85,7 +87,7 @@ Update this section at the end of every working session.
   `test_demo.py` keeps one documented override, because its campaign screens need a customer the `low_risk` guard actually excludes.
 - `reports/decisions.md` was regenerated and lost only its 20 Mix rows; every headline number is unchanged, because the readiness run proposes nothing.
 - Validation: 400 prepaid tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group), lint and formatting green.
-- **Still open for Ali:** the source links for the Almadar files, the only question of his that remains.
+- **Still open for Ali:** the source links for the operator's files, the only question of his that remains.
 
 **Where the module is now**
 
@@ -123,7 +125,7 @@ Update this section at the end of every working session.
      Worth a `--report` flag or a campaign-local path.
    - `test_api.py` and `test_demo.py` each build their own copy of the same four subscribers, and `tests/test_client.py` now makes three.
      If you touch those fixtures, moving them into `conftest.py` would be a good small cleanup; we left them alone rather than editing your tests.
-4. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
+4. Please still answer the open questions below that name you; the Mix packages and the source links for the operator's files are the two that block nothing but weaken the report.
 5. Your Claude can start from this, in the repo:
 
    > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and then finished T20, so every MVP ticket is closed. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 to 26 in `prepaid_churn/docs/decisions.md`, and steps 13 to 15 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
@@ -165,7 +167,7 @@ Update this section at the end of every working session.
 - Approving on screen writes through the same locked, audited path as `churn approve`, and only approved rows reach `released.csv`.
 - **For T11 to consider:** the approved Arabic message is 102 characters, so it sends and bills as two SMS parts; one part is 70 characters once any Arabic is present.
 - T10, T11, T14 and T15 are complete; the next product work is T20 integration checks, which needs Taha and the chatbot and copilot owners rather than code alone.
-- T9 is done: [docs/model_card.md](docs/model_card.md) covers intended and out-of-scope use, the data, the frozen metrics and thresholds, calibration, explanations, the approval step, the Almadar assumptions, limitations, ethics, selection bias and maintenance.
+- T9 is done: [docs/model_card.md](docs/model_card.md) covers intended and out-of-scope use, the data, the frozen metrics and thresholds, calibration, explanations, the approval step, the operator's assumptions, limitations, ethics, selection bias and maintenance.
 - T9 validation: 341 prepaid tests, lint and formatting pass; 16 of those tests compare the card's figures against the reports they cite.
 - **The fresh-clone check was rerun on 2026-09-21 and passed:** the README pipeline rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, and `git status` showed no changed report.
 - That confirms T21, T15, T14 and the four new dependencies did not move the frozen champion or any committed number.
@@ -192,10 +194,10 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
   The current champion passes all four thresholds.
 - Ali's parallel work on `Ali_Branch` was reviewed and is being combined into this module (decisions 15, 16 and 17).
   Every step is logged in [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
-- Almadar Aljadid is now the operator (decision 16), and the customer MVP comes first, built to plug into the team platform (decision 17).
-- T16 is done: `data/almadar/` holds the 37 Almadar packages still sold and the market facts, each with a status; the 20 Mix packages the operator retired are recorded in `excluded.csv` (`docs/almadar.md`).
+- The target is a real Libyan mobile operator, not named in this project (decisions 16 and 45), and the customer MVP comes first, built to plug into the team platform (decision 17).
+- T16 is done: `data/operator/` holds the 37 operator packages still sold and the market facts, each with a status; the 20 Mix packages the operator retired are recorded in `excluded.csv` (`docs/operator.md`).
 - T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
-- T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
+- T18 is done: `churn operator-view` shows every customer in LYD and operator packages, at the 40 LYD ARPU Taha chose (`reports/operator_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
 - T20 is done: the guide, the example client, `churn check-integration` and the copilot's subscriber lookup that the walkthrough found missing.
 - `tahaDev` now also carries Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`; they are Ali's work, and the team has to see them before anything reaches `main`.
@@ -205,9 +207,9 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
   T20 is accepted from the consumer side by its owner (decision 26 and the T20 Findings); reopen it if a response shape turns out to be wrong when the chatbot and the copilot are built.
 
 **Next steps, in order (the MVP path from decision 17)**
-1. T16 Almadar catalogue and market facts (done).
+1. T16 operator catalogue and market facts (done).
 2. T8 model bundle, batch scoring and the output contract (done).
-3. T18 Almadar view of the real customers (done).
+3. T18 operator view of the real customers (done).
 4. T10 value tiers and T11 offers with human approval (done).
 5. T15 integration service (done, Ali), then T20 integration check (done, Taha + Claude).
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
@@ -220,12 +222,12 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
   Ali agrees with decisions 15 to 17 and with 24 and 25, and disagrees with nothing taken or left out.
 - **Folder name: answered on 2026-09-22.**
   Ali chose to keep `prepaid_churn/`; the rename is not happening, so every path in the docs and the action plan stays as it is.
-- **Almadar sources:** Ali's Almadar files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
+- **Operator sources:** Ali's operator files have no source links; ask him where each came from (website page, app screenshot or shop) so T16 rows can cite them.
 - **Mix packages: answered on 2026-09-22.**
-  Ali confirmed the operator no longer sells the five Mix families, so the 20 packages are out of the catalogue and recorded in `data/almadar/excluded.csv` with the reason (decision 31).
+  Ali confirmed the operator no longer sells the five Mix families, so the 20 packages are out of the catalogue and recorded in `data/operator/excluded.csv` with the reason (decision 31).
   The catalogue is now 37 packages in 12 families, matching his.
-- **Almadar ARPU:** 70 LYD per month since 2026-09-26 (decision 42), from Almadar's bundle prices and Mordor Intelligence's Libya market figures; it replaced the 40 LYD Taha chose on 2026-09-19.
-  It is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
+- **Operator ARPU:** 70 LYD per month since 2026-09-26 (decision 42), from the operator's bundle prices and Mordor Intelligence's Libya market figures; it replaced the 40 LYD Taha chose on 2026-09-19.
+  It is still an assumption, so replace it if an operator figure appears (one number in `data/operator/market.toml`).
 - **`churn decide` overwrites a committed report: fixed on 2026-09-22.**
   `--report` now defaults to `decisions.md` inside `--output-dir`, so the documented command leaves the committed report alone (decision 32).
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
@@ -270,8 +272,8 @@ Reasons are in [docs/decisions.md](docs/decisions.md).
   It does not apply to the current champion, whose gate was recorded with the four checks above.
 - **Human approval** (decision 14): the system only proposes retention offers.
   A named person approves or rejects them before any offer is sent or shown by the chatbot, and every approval is logged.
-- **Operator** (decision 16): Almadar Aljadid.
-  The churn model trains on real upGrad customers in their original units; the business layer shows them in Almadar terms (T18).
+- **Operator** (decision 16): a real Libyan mobile operator, not named in this project (decision 45).
+  The churn model trains on real upGrad customers in their original units; the business layer shows them in the operator's terms (T18).
 - **MVP first** (decision 17): one customer use case, integrated with the chatbot and copilot, before any extra experiment.
   No LLM in any path that sets an offer, price or credit limit; pseudonymous IDs; separate API keys for the chatbot and the copilot.
 - **Ali's work** (decision 15): ported by hand from `Ali_Branch`, never merged with git, and every port logged in `docs/ali_branch_merge.md`.
@@ -599,7 +601,7 @@ Findings:
 
 Scope:
 - README with setup, data, every command and the full pipeline run.
-- Model card, starting from `Ali_Branch`'s `docs/model_cards/TEMPLATE.md`: data, churn definition, windows, metrics, success thresholds and their results, the human approval step, the Almadar view and its assumptions (decision 16), and limitations (single 4-month window, undocumented data provenance, behaviour from another market, educational license).
+- Model card, starting from `Ali_Branch`'s `docs/model_cards/TEMPLATE.md`: data, churn definition, windows, metrics, success thresholds and their results, the human approval step, the operator view and its assumptions (decision 16), and limitations (single 4-month window, undocumented data provenance, behaviour from another market, educational license).
 - The employee copilot indexes these documents (decision 17), so every fact in them names its source and date.
 
 Acceptance:
@@ -670,12 +672,12 @@ Findings (2026-09-20):
 **Depends on:** T8, T10, T16, T18
 
 Scope:
-- Action space: the real Almadar catalogue (T16) plus "no offer".
+- Action space: the real operator catalogue (T16) plus "no offer".
   "No offer" wins whenever no offer has a positive expected value, and the report says how often that happens.
 - Expected value per customer and offer: churn probability x share of churners the offer saves x 12-month value (T10) - offer cost.
   The share saved and every cost are assumptions in one config file and are printed in the report; none is presented as a measured fact.
   Costs use the delivery cost estimates from T16 and are labelled as estimates.
-- Offers prefer Almadar's own off-peak and bonus-data products (for example the 1 LYD morning pass, 06:00 to 11:00) over price discounts.
+- Offers prefer the operator's own off-peak and bonus-data products (for example the 1 LYD morning pass, 06:00 to 11:00) over price discounts.
 - Guardrails, adapted from `Ali_Branch` (`src/cvm/decision/`):
   - a per-customer spend cap relative to the customer's value;
   - a total budget filled greedily by expected net value;
@@ -701,7 +703,7 @@ Acceptance:
 
 Findings (2026-09-20):
 - `retention.py` follows the existing pure-function and thin-CLI patterns, adapting Ali's guardrails, budget comparison and decision-log design (decision 20; port log step 8).
-- `data/almadar/retention.toml` declares the budget, per-customer campaign cap, holdout, saved-share assumptions and delivery-cost estimates in one file.
+- `data/operator/retention.toml` declares the budget, per-customer campaign cap, holdout, saved-share assumptions and delivery-cost estimates in one file.
 - Decisions use the same raw export for gated risk, frozen value and the mapped held bundle; no model is trained or reevaluated.
 - Only positive-value catalogue bonuses can be proposed; no offer is explicit for low risk, inactivity, unavailable risk, holdout, guard failures, nonpositive value and budget exhaustion.
 - Cheap unlimited products are blocked above the 35 LYD base monthly rung; unknown 5G and family eligibility also excludes a product.
@@ -729,7 +731,7 @@ Findings (2026-09-20):
 Scope:
 - One Streamlit app, adapted from `Ali_Branch`'s Command Center (`apps/`):
   - Overview: customers and LYD at risk by risk band and value tier, the model version and its test results.
-  - Subscriber view: churn probability, top reasons, value tier, the Almadar bundle held and the proposed offer for one customer.
+  - Subscriber view: churn probability, top reasons, value tier, the operator's bundle held and the proposed offer for one customer.
   - Campaign builder: set a budget, see the proposed customers, holdout size, expected cost and value, and the equal-spend comparison, then approve or reject proposals under a reviewer name (the T11 approval step).
   - Customer message preview: the Arabic text of an approved offer as the customer would see it by SMS or in the chatbot.
 - It reads the model bundle and decision output; it contains no model logic of its own.
@@ -774,7 +776,7 @@ Findings (2026-09-21):
 
 Readiness follow-up (Ali, 2026-09-22):
 - All five page scripts passed `AppTest` on the rebuilt 30,000-subscriber export, and the Streamlit server passed HTTP startup.
-- Literal `NA` IDs now retain their Almadar view, and chart widths use the current Streamlit argument.
+- Literal `NA` IDs now retain their operator view, and chart widths use the current Streamlit argument.
 - Permanent hand-made regressions cover rendering, empty-selection refusal, individual approval, refreshed message selection and Arabic/English previews.
 
 ## T15 - Integration service for the chatbot and copilot
@@ -789,7 +791,7 @@ Scope:
 - A small FastAPI app that only reads the latest released outputs; it has no model logic, and nothing can be created, changed or approved through it.
 - Endpoints:
   - `GET /health`: bundle loaded, smoke prediction passed, date of the latest outputs.
-  - `GET /catalogue`: the Almadar packages (T16), for the chatbot.
+  - `GET /catalogue`: the operator's packages (T16), for the chatbot.
   - `GET /subscribers/{id}/retention`, for the chatbot: the offer and its reason only if a reviewer approved it (T11), never the churn probability; 404 when there is no approved offer.
   - `GET /portfolio/summary`, for the copilot: customers and LYD at risk by risk band and value tier, plus the model version, its test metrics and the success-threshold results.
 - Access control: separate API keys for the chatbot and the copilot, each accepted only on its own endpoints.
@@ -823,22 +825,22 @@ Readiness follow-up (Ali, 2026-09-22):
 - Portfolio IDs preserve literal text and reject empty or duplicate identifiers; malformed non-ASCII credentials return 401.
 - Approvals for packages absent from the current catalogue are withheld and explained in health (decision 33).
 
-## T16 - Almadar catalogue and market facts
+## T16 - Operator catalogue and market facts
 
 **Owner:** Claude
 **Status:** Done
 **Depends on:** nothing
 
-Why: the retention offers (T11) and the team's customer chatbot both need the real prepaid packages, and Ali collected Almadar's (decision 16).
+Why: the retention offers (T11) and the team's customer chatbot both need the real prepaid packages, and Ali collected the operator's (decision 16).
 
 Scope:
-- Keep Ali's Almadar source files unchanged in `data/almadar/source/`.
-- `data/almadar/offers.csv`, one row per package: offer ID, operator, family, Arabic and English name, price in LYD, validity, data volume or unlimited, minutes, speed caps, time window, where the volume comes from, source row and collection date.
+- Keep Ali's operator source files unchanged in `data/operator/source/`.
+- `data/operator/offers.csv`, one row per package: offer ID, operator, family, Arabic and English name, price in LYD, validity, data volume or unlimited, minutes, speed caps, time window, where the volume comes from, source row and collection date.
   It holds only what the operator sells, so the chatbot can read it as is.
-- `data/almadar/market.toml`: recharge cards, pay-as-you-go tariffs, the two emergency credit products, the ARPU assumption and the delivery cost estimate, each with its status (confirmed, reported, assumption or estimate) and source.
+- `data/operator/market.toml`: recharge cards, pay-as-you-go tariffs, the two emergency credit products, the ARPU assumption and the delivery cost estimate, each with its status (confirmed, reported, assumption or estimate) and source.
   TOML instead of YAML, because Python reads it without a new dependency.
-- A loader and validation in `src/prepaid_churn/almadar.py`, and `docs/almadar.md` explaining the files and how to refresh them (prices change, so every row keeps its collection date).
-- Libyana can be added later as rows with its own operator value.
+- A loader and validation in `src/prepaid_churn/operator_market.py`, and `docs/operator.md` explaining the files and how to refresh them (prices change, so every row keeps its collection date).
+- The other Libyan operator can be added later as rows with its own operator value.
 - Share `offers.csv` with the chatbot owners: it is the action plan's "Offer / Package Catalogue".
 
 Acceptance:
@@ -846,7 +848,7 @@ Acceptance:
 - A test validates the files: required columns, positive prices, known operator, unique IDs, and a status on every market value.
 - The package count matches `Ali_Branch`'s catalogue (37 packages in 12 families), or the difference is explained.
 
-Findings (details in `docs/almadar.md`):
+Findings (details in `docs/operator.md`):
 - 37 packages in 12 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
 - The operator file lists 57; the 20 Mix packages Ali confirmed retired on 2026-09-22 are in `excluded.csv` with a reason, a name and a date, and the check requires every source row to be in one place or the other (decision 31).
 - The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed in commit `62040af` without saying why; they stay until he says the operator no longer sells them (a test pins the difference).
@@ -855,28 +857,28 @@ Findings (details in `docs/almadar.md`):
 - The recharge cards are `reported` (no operator document yet); ARPU (40 LYD) is an assumption and delivery costs are estimates.
   Since 2026-09-26 the ARPU is 70 LYD (decision 42).
 
-## T18 - Almadar view of the real customers
+## T18 - Operator view of the real customers
 
 **Owner:** Claude
 **Status:** Done
 **Depends on:** T4, T16
 
-Why: decision 16; value, offers, emergency credit and the app speak Almadar's money and packages, while the churn model stays on real behaviour.
+Why: decision 16; value, offers, emergency credit and the app speak the operator's money and packages, while the churn model stays on real behaviour.
 
-Scope, in `src/prepaid_churn/almadar.py`:
-- One scale factor from the source currency to LYD, anchored on Almadar's ARPU assumption in `data/almadar/market.toml`, so the shape of real spending is kept.
+Scope, in `src/prepaid_churn/operator_market.py`:
+- One scale factor from the source currency to LYD, anchored on the operator's ARPU assumption in `data/operator/market.toml`, so the shape of real spending is kept.
 - Monthly value in LYD from the current month's recharges.
-- Usual recharge card: each customer's typical recharge mapped to the nearest Almadar card (5, 10, 20, 40 or 100 LYD).
-- Bundle held in the current month: customers with a monthly data pack (upGrad `monthly_2g`, `monthly_3g`) get the Almadar monthly bundle their data spend in LYD would buy; customers with only short packs (`sachet_2g`, `sachet_3g`) get a daily pack; the rest are pay-as-you-go.
+- Usual recharge card: each customer's typical recharge mapped to the nearest operator card (5, 10, 20, 40 or 100 LYD).
+- Bundle held in the current month: customers with a monthly data pack (upGrad `monthly_2g`, `monthly_3g`) get the operator's monthly bundle their data spend in LYD would buy; customers with only short packs (`sachet_2g`, `sachet_3g`) get a daily pack; the rest are pay-as-you-go.
 - Uses only the feature months of a window, never the label month.
-- `churn almadar-view` writes the view for a dataset and `reports/almadar_view.md` with the distributions, the share on each bundle and every assumption.
+- `churn operator-view` writes the view for a dataset and `reports/operator_view.md` with the distributions, the share on each bundle and every assumption.
 
 Acceptance:
 - Unit tests for each mapping rule on hand-made frames.
 - The report lists every assumption with its status.
 - The view never changes a churn feature or the model.
 
-Findings (`reports/almadar_view.md`, rules in `docs/almadar.md`):
+Findings (`reports/operator_view.md`, rules in `docs/operator.md`):
 - Taha chose the 40 LYD ARPU on 2026-09-19.
   The rate is 40 LYD over 537.17, the mean monthly recharge of the 64,509 customers active in month 8 of `train.csv` (stored in `market.toml` as a measured fact), so 1 unit of the source currency is 0.074464 LYD.
 - On the scoring base (Kaggle's `test.csv`, 27,582 active customers): mean spend 39.39 LYD a month, median 22.08, 10th percentile 5.21, 90th percentile 82.13.
@@ -892,7 +894,7 @@ Findings (`reports/almadar_view.md`, rules in `docs/almadar.md`):
 **Status:** Done
 **Depends on:** T16, T18
 
-Why: Almadar's two emergency credit products (an airtime advance of 1, 3 or 5 LYD and a 5 LYD data advance) are the most Libyan part of Ali's work, and a safe limit can be set from real recharge behaviour.
+Why: the operator's two emergency credit products (an airtime advance of 1, 3 or 5 LYD and a 5 LYD data advance) are the most Libyan part of Ali's work, and a safe limit can be set from real recharge behaviour.
 
 Scope:
 - Rule-based advice, adapted from `Ali_Branch`'s `conf/advance.yaml` and `src/cvm/decision/advance_limit.py`: never advance more than the customer's usual recharge card can clear (affordability ceiling).
@@ -1043,4 +1045,4 @@ Acceptance:
 - Airtime advance limits learnt from repayment history (T19 is the rule-based first step).
 - Network-quality features (dropped calls, outages) from the network ML team, through the T20 field contract.
 - Uplift models on our own customers, once a campaign with a holdout group has run.
-- Retraining on Almadar's own export, which is what a commercial deployment requires (decisions 11 and 16); T22 has to come first.
+- Retraining on the operator's own export, which is what a commercial deployment requires (decisions 11 and 16); T22 has to come first.

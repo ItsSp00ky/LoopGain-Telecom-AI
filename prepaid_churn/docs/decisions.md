@@ -89,7 +89,7 @@ Date: 2026-09-14.
 Chosen: the upGrad "Telecom Churn Case Study" data, Kaggle hackathon version, `train.csv` (69,999 customers).
 
 Why:
-- It is **prepaid**, like the Libyan market (Libyana and Al-Madar), and churn means inactivity, not a cancelled contract.
+- It is **prepaid**, like the Libyan market (both Libyan mobile operators are prepaid), and churn means inactivity, not a cancelled contract.
 - It is a **monthly panel** (months 6, 7, 8 plus a month 9 label), so features can come from months before the label month.
 - It has real versions of the signals a Libyan operator would use: on-net and off-net minutes, incoming and outgoing calls, recharge count, amount and date, night packs, social-network packs, roaming, and age on network.
 
@@ -204,8 +204,8 @@ Date: 2026-09-19.
 Taha and the team want the product as close to the real market as possible, and may try to sell it.
 
 Findings:
-- Nothing in the repo contains real Libyana or Al-Madar packages or prices; only tower locations and operator codes (in the antenna module).
-- Al-Madar publishes its data packages on its website; Libyana's site blocks automated requests but works in a normal browser.
+- Nothing in the repo contains real Libyan operator packages or prices; only tower locations and operator codes (in the antenna module).
+- One Libyan operator publishes its data packages on its website; the other's site blocks automated requests but works in a normal browser.
   T16 builds a real package catalogue from these official sources, with a collection date on every row.
 - The Orange Belgium Churn-Uplift dataset in the action plan is real: 11,896 customers of a real phone retention campaign with a random control group.
   It is postpaid, its features are anonymized, and its license is non-commercial (CC BY-NC-ND 4.0), so this module does not use it.
@@ -275,7 +275,7 @@ What the review found:
 - `Ali_Branch` shares no history with `main` or `tahaDev`: it is a separate repository pushed as a branch, with its own files at the repo root.
 - Its churn labels come from a formula Ali wrote (`src/cvm/synthesis/hazard.py`), applied to 100,000 generated subscribers built from Cell2Cell (US postpaid, around 2000).
   So its churn, value and uplift results measure that formula, as Ali's own docs say.
-- It also holds real, valuable work: Almadar Aljadid's published packages, prices, recharge cards and emergency credit rules, a careful offer engine design, an HTTP contract for the chatbot and copilot with grounding rules for LLMs, and a list of serving bugs found the hard way.
+- It also holds real, valuable work: the operator's published packages, prices, recharge cards and emergency credit rules, a careful offer engine design, an HTTP contract for the chatbot and copilot with grounding rules for LLMs, and a list of serving bugs found the hard way.
 
 Decided:
 - This module stays the base: real data, `uv`, and the frozen T7 champion.
@@ -285,8 +285,8 @@ Decided:
 - `Ali_Branch` stays on GitHub untouched, as the record of his work.
 
 Taken (the ticket that uses each piece is in brackets):
-- Almadar catalogue, tariffs, recharge cards and emergency credit rules (T16).
-- Mapping money onto Almadar's scale (T18).
+- Operator catalogue, tariffs, recharge cards and emergency credit rules (T16).
+- Mapping money onto the operator's scale (T18).
 - Offer engine design: the real catalogue as the action space, "no offer" as a real option, the guardrails including the cannibalisation guard keyed on the bundle a customer holds, the equal-spend comparison, the holdout and the decision log (T11).
 - Serving lessons: everything a scoring run needs travels inside the bundle, pinned library versions, a smoke prediction at load time, and one-row batches as a test case (T8).
 - The API and screen designs, and the grounding rules for LLM consumers (T14, T15, T20).
@@ -304,20 +304,20 @@ Conflicts between the two efforts, and how they are settled:
 - Data in git: `Ali_Branch` never commits data; the raw Kaggle files stay committed here (decision 9).
 - Churn definition: `Ali_Branch` uses "30 days without a top-up"; we keep the usage-based rule, because the only real label (Kaggle's month 9) uses it.
 
-## 16. Almadar Aljadid is the operator, and real customers are shown in Almadar terms
+## 16. A real Libyan operator's catalogue, and real customers shown in its terms
 
 Date: 2026-09-19.
 
-Almadar Aljadid (MCC-MNC 606-01) is the only Libyan operator with real, confirmed data in the project: its published packages, prices, recharge cards and emergency credit rules, collected by Ali on 2026-09-18.
-Libyana has none yet, so this updates decision 11: the module targets Almadar, and Libyana can be added later as more rows in the same catalogue.
+A real Libyan mobile operator, not named in this project (decision 45), is the only one with real, confirmed data here: its published packages, prices, recharge cards and emergency credit rules, collected by Ali on 2026-09-18.
+The other Libyan operator has none yet, so this updates decision 11: the module targets the first, and the other can be added later as more rows in the same catalogue.
 
 How the two datasets meet:
 - The churn model keeps training on the real upGrad customers in their original units.
   The T7 champion stays frozen.
-- The business layer (value, offers, emergency credit, app) shows each real customer in Almadar terms (T18): money in LYD, the Almadar bundle they would hold, and their usual recharge card.
+- The business layer (value, offers, emergency credit, app) shows each real customer in the operator's terms (T18): money in LYD, the operator's bundle they would hold, and their usual recharge card.
 - The conversion is one documented scale anchored on stated assumptions, kept in one file with a status per value (confirmed, assumption or estimate).
 
-What the report must say: the behaviour comes from a real prepaid operator in another market; the prices, packages and money are Almadar's; real use needs retraining on Almadar's own export (decision 11).
+What the report must say: the behaviour comes from a real prepaid operator in another market; the prices, packages and money are the operator's; real use needs retraining on the operator's own export (decision 11).
 
 ## 17. The customer MVP comes first, built to plug into the team platform
 
@@ -331,12 +331,12 @@ The instructor's review of the action plan asked to:
 The team's final goal is one platform: GIS planning, network ML, this customer module, a customer chatbot and an employee copilot.
 In the action plan, Taha owns the chatbot, the copilot and the integration, and Ali owns customer intelligence and the chatbot.
 
-Our MVP use case: "Which active prepaid customers are likely to stop using their line next month, and which approved Almadar offer should each one get?"
+Our MVP use case: "Which active prepaid customers are likely to stop using their line next month, and which approved operator offer should each one get?"
 The MVP path is T16, T8, T18, T10, T11, T15, T20, T14 and T9.
 T19 comes after the MVP works end to end.
 
 How the module links to each part of the platform (extends decision 10):
-- **Customer chatbot:** reads the Almadar catalogue (T16) and, for the one subscriber it is talking to, the approved offer and its reason (T15).
+- **Customer chatbot:** reads the operator's catalogue (T16) and, for the one subscriber it is talking to, the approved offer and its reason (T15).
   It never sees a churn probability.
 - **Employee copilot:** reads portfolio summaries (T15) and indexes this module's documents (model card, contracts, decisions) for retrieval with citations.
   It gets no subscriber rows and has no way to create, change or approve an offer.
@@ -419,7 +419,7 @@ It does not fit models, join stale risk CSVs, invent probabilities or reevaluate
 The catalogue remains the action space, plus an explicit `NO_OFFER` outcome.
 All interventions are bonus grants of existing products, not personalized price discounts.
 
-All T11 policy and delivery-cost assumptions are in `data/almadar/retention.toml`.
+All T11 policy and delivery-cost assumptions are in `data/operator/retention.toml`.
 Defaults: 1,000 LYD campaign budget, 15% of the base T10 value as the per-customer campaign cap, approximately 10% holdout and seed 42.
 Delivery estimates start from T16: 25% of catalogue price for metered products and 35% for unlimited products.
 The assumed share of churners saved is 5% for ordinary bonuses and 10% for the preferred morning product, `SABAH_1`.
@@ -438,7 +438,7 @@ Guardrails apply before allocation:
 
 The cap covers this campaign only; no annual cumulative limit is claimed without a cross-campaign spending ledger.
 The morning product's 06:00-11:00 restriction is included in both Arabic and English reasons.
-The source export cannot establish off-peak preference, incremental usage or actual Almadar subscriptions.
+The source export cannot establish off-peak preference, incremental usage or actual operator subscriptions.
 Each customer gets the best feasible candidate by assumed net value, with preference then offer ID as tie-breaks.
 Greedy allocation ranks customers by that net value, then subscriber ID, skipping a best candidate that does not fit the remaining budget.
 This is not a globally optimal knapsack solver and does not replace an unaffordable candidate with a smaller alternative.
@@ -577,7 +577,7 @@ The subscriber screen refuses an ID shaped like a Libyan mobile number before lo
 Date: 2026-09-21.
 
 Ali took T19 as the first experiment after the MVP.
-Almadar sells two emergency credit products, both confirmed from the operator's own documents and recorded by T16.
+The operator sells two emergency credit products, both confirmed from its own documents and recorded by T16.
 The airtime advance is 1, 3 or 5 LYD, offered when the balance is at or below 0.5 LYD.
 The data advance is a flat 5 LYD for 2 GB over 72 hours, offered when the balance is at or below 1 LYD.
 
@@ -589,7 +589,7 @@ There is no repayment model and there will not be one until an operator supplies
 Nothing in the module estimates a probability of repayment, so no figure in the report is a default rate.
 `Ali_Branch` also caps by loyalty tier, by a share of customer value, by monthly cumulative exposure and by a chronic-distress screen.
 None of those were ported: they need a repayment model, an advance history, a tenure tier or balance-level fields that this data does not contain.
-Libyana's Credit Loan, with its tenure gate, grace period and line reset, describes a different operator and is not quoted for Almadar.
+The other Libyan operator's credit loan, with its tenure gate, grace period and line reset, is a different product and is not quoted here.
 
 One rule is applied: never advise a debt larger than 0.6 of the customer's typical top-up.
 The fraction is ported from `Ali_Branch` with his reason intact, and the code refuses any fraction at or above 1.
@@ -687,7 +687,7 @@ What was not added, although the walkthrough asked for it:
 - A list or search endpoint ("the 200 riskiest customers").
   Serving customer-level rows in bulk over HTTP is what decision 17's de-identification rule exists to prevent, and the analyst case is already covered by the committed exports and the demo app.
 - The package a customer holds and their spend, for the chatbot.
-  The Almadar view is this module's assumption (decision 16), not an operator fact, and the operator's own systems answer it correctly and in real time.
+  The operator view is this module's assumption (decision 16), not an operator fact, and the operator's own systems answer it correctly and in real time.
 - The emergency credit advice (T19).
   It is a proposal for a person, and no review step exists for it yet; a credit limit needs an approval as much as an offer does (decision 14).
 - The review queue.
@@ -715,16 +715,16 @@ Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
 Date: 2026-09-22.
 
-Ali confirmed that Almadar no longer sells the five Mix families, answering the question T16 left open on 2026-09-19.
+Ali confirmed that the operator no longer sells the five Mix families, answering the question T16 left open on 2026-09-19.
 He had removed the same 20 packages from his own catalogue on 2026-09-18 in commit `62040af`, which showed the removal was deliberate but never recorded a reason.
 The catalogue now holds 37 packages in 12 families, which is exactly what `Ali_Branch` held, so the difference T16 pinned with a test is closed.
 
 Deleting the rows alone was not acceptable.
-The files in `data/almadar/source/` are byte-for-byte copies of the operator's own export (port step 1), and `check_against_source` required every row in them to appear in the catalogue exactly once.
+The files in `data/operator/source/` are byte-for-byte copies of the operator's own export (port step 1), and `check_against_source` required every row in them to appear in the catalogue exactly once.
 Editing the source file to match would have destroyed the evidence, and relaxing the check would have allowed any package to disappear unnoticed, which is precisely how the Mix question arose.
 
 So a removal is now recorded.
-`data/almadar/excluded.csv` holds one row per package that the operator file lists but the operator no longer sells, each with its source row, a reason, the person who decided and the date.
+`data/operator/excluded.csv` holds one row per package that the operator file lists but the operator no longer sells, each with its source row, a reason, the person who decided and the date.
 `check_against_source` requires every source row to be either in the catalogue exactly once or recorded there, so the integrity guarantee is unchanged while the catalogue is free to shrink.
 "Unknown" in that check now means a row that is not in the operator file at all, which an excluded row still is.
 
@@ -997,7 +997,7 @@ Source: Mordor Intelligence, Libya Telecom MNO Market, public summary read on 20
 - Data and internet services were 44.9% of Libyan mobile operator revenue in 2025.
 - Data use is projected to pass 12 GB per subscriber a month by 2030.
 
-Derivation, with Almadar's own monthly bundle prices from `offers.csv` (Net 10 at 30 LYD, Net 20 at 35 LYD):
+Derivation, with the operator's own monthly bundle prices from `offers.csv` (Net 10 at 30 LYD, Net 20 at 35 LYD):
 
 - 12 GB a month costs about 31 LYD by linear interpolation between those two bundles, or 35 LYD when the 20 GB bundle is bought.
 - Divided by the 44.9% data share, that is 69 to 78 LYD a month in total; 70 LYD is taken, near the low end.
@@ -1008,7 +1008,7 @@ What the estimate is not, as the review in this session pointed out:
 - Dividing one customer's data spend by a market-wide revenue share assumes every customer spends like the whole market, and most prepaid SIMs do not buy a 10 to 20 GB bundle every month.
 - So 70 LYD may be high for the average prepaid SIM; 40 LYD was no better founded, because it was also a bundle price rather than an average.
 
-It stays an `assumption` in `data/almadar/market.toml` until an operator or regulator figure replaces it: mobile service revenue divided by mobile subscriptions, from one source and one year.
+It stays an `assumption` in `data/operator/market.toml` until an operator or regulator figure replaces it: mobile service revenue divided by mobile subscriptions, from one source and one year.
 
 What changed, all from that one number:
 
@@ -1016,7 +1016,7 @@ What changed, all from that one number:
   The viewed base now spends 68.94 LYD a month on average instead of 39.39, and 66.8% of active customers are nearest the 5 LYD card instead of 88.9%.
 - The tier cutoffs in LYD scale with it but every customer keeps the same tier, because the tiers rank customers; the artifact version moves from `tiers-v1-cd15525cb3ef` to `tiers-v1-efc9739afad4`.
 - T19 advises more: the median typical top-up is 3.30 LYD instead of 1.89, 30.6% are declined instead of 46.1%, and the data advance suits 18.3% instead of 4.65%.
-- A 1,000 LYD campaign over the 30,000 unlabelled customers proposes 2,954 offers instead of 2,911, with 11,733 LYD of assumed net value instead of 6,387, because values grow while Almadar's catalogue prices do not.
+- A 1,000 LYD campaign over the 30,000 unlabelled customers proposes 2,954 offers instead of 2,911, with 11,733 LYD of assumed net value instead of 6,387, because values grow while the operator's catalogue prices do not.
   At the same spend, targeting by risk alone is valued at 9,074 LYD and random at 2,298; 2,803 of the offers are still the morning pass.
 - The churn model, its thresholds, its reports and the spent test window are untouched, because the model never sees LYD.
 
@@ -1063,3 +1063,25 @@ What stays is one note in the model selection part of the model card and the bri
   The permanent holdout of decision 43 is what will provide that data.
 
 Nothing in the product changes: the champion, its reports, the bundle and every other command are as they were.
+
+## 45. The operator is not named
+
+Date: 2026-09-26.
+
+The packages, prices, recharge cards and emergency credit rules in this module come from a real Libyan mobile operator (decision 16).
+Ali asked that the instructor learn that the data is real and Libyan, but not which operator it came from.
+
+So the module no longer names it:
+
+- In every document, report, test and screen it is "the operator", or "a Libyan mobile operator" where it is introduced, and its catalogue rows carry the label `Libyan mobile operator`.
+- Its Arabic name, its competitor's name and its network code (the MNC) are gone; MCC 606 stays, because it only says Libya.
+- Files and commands follow: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
+- The customer message starts "Your gift:" instead of the operator's name.
+
+What this does not hide:
+
+- Git history and old commit messages still contain the name; rewriting a shared history would break every teammate's clone, so it is left.
+- The antenna module and the root `CODE_REVIEW.md` belong to the team's other parts and still name both Libyan operators, from public tower data.
+- The catalogue keeps the operator's own package names, short codes and service names, which someone who knows the Libyan market could recognise.
+
+Nothing about the model, the numbers or the offers changes; only names do.

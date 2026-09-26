@@ -23,8 +23,8 @@ from prepaid_churn.advance import (
     typical_topup,
     zero_residual_products,
 )
-from prepaid_churn.almadar import InvalidCatalogueError, load_market
 from prepaid_churn.clean import clean
+from prepaid_churn.operator_market import InvalidCatalogueError, load_market
 from prepaid_churn.schema import validate
 from prepaid_churn.windows import WINDOW_A
 
@@ -299,4 +299,6 @@ def test_the_report_states_every_assumption_and_the_finding(advice, market):
     ):
         assert phrase in report, f"the report no longer explains {phrase!r}"
     assert f"{MAX_DEBT_FRACTION:g}" in report
-    assert "Libyana" in report  # the correction that its Credit Loan does not transfer
+    assert (
+        "the other Libyan operator" in report
+    )  # the correction that its credit loan does not transfer

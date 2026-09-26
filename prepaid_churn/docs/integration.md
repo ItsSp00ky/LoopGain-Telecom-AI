@@ -73,7 +73,7 @@ Generate your client from `/openapi.json` rather than hand-writing request model
 | Endpoint | Key | What it answers |
 |---|---|---|
 | `GET /health` | none | Whether the bundle predicts, and which outputs are being served |
-| `GET /catalogue` | chatbot | Every Almadar package on sale, with its collection date |
+| `GET /catalogue` | chatbot | Every operator package on sale, with its collection date |
 | `GET /subscribers/{id}/retention` | chatbot | The approved offer for one subscriber, or 404 |
 | `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test results |
 | `GET /subscribers/{id}/risk` | copilot | One subscriber's risk, the model's reasons, and their value tier |
@@ -102,7 +102,7 @@ Two calls, and nothing invented between them.
 ```json
 {
   "offer_id": "HR5G_1",
-  "operator": "Almadar Aljadid",
+  "operator": "Libyan mobile operator",
   "family_ar": "باقات الساعة",
   "family_en": "Hourly 5G",
   "name_ar": "نت ساعة 1_5G",
@@ -231,7 +231,7 @@ Ask if you need one, rather than working around it:
 
 | Question | Why there is no endpoint |
 |---|---|
-| "What package am I on, and what do I spend?" (chatbot) | The Almadar view (T18) exists as a file but is an assumption of this module, not an operator fact. The operator's own systems answer it correctly and in real time. |
+| "What package am I on, and what do I spend?" (chatbot) | The operator view (T18) exists as a file but is an assumption of this module, not an operator fact. The operator's own systems answer it correctly and in real time. |
 | "How much credit can I borrow?" (chatbot) | The T19 advice is a proposal for a person, and no reviewer step exists for it yet. An offer needs an approval (decision 14) and so does a credit limit. |
 | "Give me the 200 riskiest customers" (copilot) | A bulk customer-level export over HTTP is what the de-identification rule exists to prevent (decision 17). Analysts read the committed exports or the demo app. |
 | "What is waiting for review, and what did we approve this week?" (copilot) | Campaign state is written by `churn decide` and `churn approve` and shown in the demo app. Serving it would put a review queue in a read-only service. |
@@ -263,9 +263,9 @@ docs/model_card.md        intended use, metrics, limitations, ethics
 docs/decisions.md         why every non-obvious choice was made
 docs/data_contract.md     the input contract
 docs/output_contract.md   every column this module writes
-docs/almadar.md           the catalogue, the market facts and their statuses
+docs/operator.md           the catalogue, the market facts and their statuses
 docs/integration.md       this file
-reports/*.md              the evaluation, tiers, retention, Almadar view and emergency credit results
+reports/*.md              the evaluation, tiers, retention, operator view and emergency credit results
 ```
 
 Do not index anything with one row per customer: `data/raw/`, `artifacts/` and every campaign directory.

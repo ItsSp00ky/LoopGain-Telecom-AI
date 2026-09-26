@@ -10,7 +10,6 @@ import pandas as pd
 import streamlit as st
 from _shared import configure, lyd, missing_banner, ordered_bar, refresh, state, use_campaign
 
-from prepaid_churn.almadar import InvalidCatalogueError
 from prepaid_churn.bundle import BundleError
 from prepaid_churn.campaign import review_file
 from prepaid_churn.demo import (
@@ -23,6 +22,7 @@ from prepaid_churn.demo import (
     propose_offers,
     utc_today,
 )
+from prepaid_churn.operator_market import InvalidCatalogueError
 from prepaid_churn.retention import NO_OFFER, RetentionError
 
 configure("Campaign builder", icon="campaign")

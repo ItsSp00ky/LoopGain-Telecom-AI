@@ -4,7 +4,6 @@ from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
 
-from prepaid_churn.almadar import load_offers
 from prepaid_churn.api import (
     API_KEY_HEADER,
     CHATBOT_KEY_VARIABLE,
@@ -17,6 +16,7 @@ from prepaid_churn.api import (
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
 from prepaid_churn.cli import build_parser
+from prepaid_churn.operator_market import load_offers
 from prepaid_churn.privacy import pseudonymize
 from prepaid_churn.retention import load_policy, propose
 from prepaid_churn.service import (
@@ -179,7 +179,7 @@ def test_the_chatbot_gets_every_package_with_its_collection_date(client, offers)
     assert body["count"] == len(offers)
     assert {row["offer_id"] for row in body["offers"]} == set(offers["offer_id"])
     assert all(row["collected"] for row in body["offers"])
-    assert all(row["operator"] == "Almadar Aljadid" for row in body["offers"])
+    assert all(row["operator"] == "Libyan mobile operator" for row in body["offers"])
     morning = next(row for row in body["offers"] if row["offer_id"] == "SABAH_1")
     assert (morning["valid_from_hour"], morning["valid_to_hour"]) == (6, 11)
 

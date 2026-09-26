@@ -1,8 +1,8 @@
 # Prepaid Churn
 
-Customer module of the Loop Gain capstone (Samsung Innovation Campus): churn risk, value and retention offers for prepaid subscribers of Almadar Aljadid in Libya.
+Customer module of the Loop Gain capstone (Samsung Innovation Campus): churn risk, value and retention offers for prepaid subscribers of a Libyan mobile operator.
 Churn means a subscriber goes inactive: no incoming or outgoing calls and no mobile data in a month.
-The model learns from real prepaid customers (upGrad data); prices, packages and money are Almadar's (decision 16).
+The model learns from real prepaid customers (upGrad data); prices, packages and money are the operator's (decision 16).
 The team's chatbot and copilot use its outputs (decision 17).
 
 **New here (for example Ali):** read the Handoff section of [TICKETS.md](TICKETS.md) first; it says how to rebuild everything and what comes next.
@@ -45,7 +45,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
 | `uv run churn check-integration --subscriber-id <id>` | T20 | Calls a running service the way the chatbot and the copilot do, and reports what came back |
-| `uv run churn almadar-view [--input <file>]` | T18 | Shows every customer in Almadar money and packages; writes `reports/almadar_view.md` |
+| `uv run churn operator-view [--input <file>]` | T18 | Shows every customer in the operator's money and packages; writes `reports/operator_view.md` |
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
@@ -67,7 +67,7 @@ uv run churn evaluate --chosen-at 2026-09-19
 uv run churn uncertainty
 uv run churn bundle
 uv run churn score
-uv run churn almadar-view
+uv run churn operator-view
 uv run churn fit-tiers
 uv run churn tiers
 uv run churn advance
@@ -88,7 +88,7 @@ What was checked, and when:
 
 `fit-tiers` and `tiers` build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
 To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
-The Almadar packages and market facts are in `data/almadar/` ([docs/almadar.md](docs/almadar.md)).
+The operator packages and market facts are in `data/operator/` ([docs/operator.md](docs/operator.md)).
 
 ## Value tiers without new operator data
 
@@ -123,7 +123,7 @@ The CSV columns are defined in [docs/output_contract.md](docs/output_contract.md
 
 ## Retention proposals and human review
 
-T11 uses the real catalogue, frozen risk and value outputs, and explicitly assumed costs and retention effects from `data/almadar/retention.toml`.
+T11 uses the real catalogue, frozen risk and value outputs, and explicitly assumed costs and retention effects from `data/operator/retention.toml`.
 It grants catalogue products as bonuses, without changing retail prices.
 With the existing gated churn bundle available:
 
@@ -182,7 +182,7 @@ On Windows PowerShell, use `$env:PREPAID_CHURN_CHATBOT_KEY = "..."` instead of `
 | Endpoint | Key | What it returns |
 |---|---|---|
 | `GET /health` | none | Whether the bundle loads and predicts, and which outputs are being served |
-| `GET /catalogue` | chatbot | Every Almadar package with its collection date |
+| `GET /catalogue` | chatbot | Every operator package with its collection date |
 | `GET /subscribers/{id}/retention` | chatbot | The approved offer and its reason, or 404; never a churn probability |
 | `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test metrics |
 | `GET /subscribers/{id}/risk` | copilot | One subscriber's risk, the model's reasons and their value tier; never reachable with the chatbot key |
@@ -224,7 +224,7 @@ uv run streamlit run app/Home.py
 |---|---|
 | Home | The base, expected churners and revenue at risk, and what is not built yet |
 | Overview | Customers and LYD at risk by risk band and value tier, with the model's test results |
-| Subscriber | One customer: risk, the model's reasons (high and medium risk only), value tier, the Almadar bundle held and the proposed offer |
+| Subscriber | One customer: risk, the model's reasons (high and medium risk only), value tier, the operator's bundle held and the proposed offer |
 | Campaign builder | What the guardrails removed, the holdout, cost and value, the equal-spend comparison, and approve or reject under your name |
 | Message preview | The Arabic message an approved customer would receive, and how many SMS parts it actually costs |
 | Released | What was approved, where the files are, and the endpoint the chatbot reads it from |
@@ -254,7 +254,7 @@ The current approved message is 102 characters, so it sends, and bills, as two p
 
 ## Emergency credit advice
 
-Almadar sells two emergency credit products: an airtime advance of 1, 3 or 5 LYD, and a
+The operator sells two emergency credit products: an airtime advance of 1, 3 or 5 LYD, and a
 flat 5 LYD data advance for 2 GB over 72 hours.
 Both are offered when the balance is nearly empty, so the eligible population is selected
 on being broke.

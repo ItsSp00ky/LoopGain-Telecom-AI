@@ -1,24 +1,24 @@
-# Almadar Aljadid catalogue and market facts
+# The operator catalogue and market facts
 
-Almadar Aljadid (MCC-MNC 606-01) is the operator this module targets (decision 16).
-This page explains the files in `data/almadar/` (ticket T16).
+The module targets a real Libyan mobile operator, not named in this project (decisions 16 and 45).
+This page explains the files in `data/operator/` (ticket T16).
 They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_branch_merge.md)).
 
 | File | What it is | Who uses it |
 |---|---|---|
 | `source/` | The operator material as Ali collected it on 2026-09-18, unchanged: the package list (`internet_offers_data_v4.csv`), pay-as-you-go tariffs and the two emergency credit services, translated from Arabic. | Only as evidence for the two files below. |
-| `offers.csv` | One row per package the operator still sells: 37 packages in 12 families. | Retention offers (T11), the Almadar view of customers (T18), and the team's customer chatbot. |
+| `offers.csv` | One row per package the operator still sells: 37 packages in 12 families. | Retention offers (T11), the operator view of customers (T18), and the team's customer chatbot. |
 | `excluded.csv` | Packages that are in the operator file but are no longer sold, each with a reason, a name and a date. | `check_against_source`, so a package cannot leave the catalogue silently. |
 | `market.toml` | Every other fact a calculation needs, each with a status and a source. | T11, T18 and T19. |
 
-`src/prepaid_churn/almadar.py` loads both files and checks their rules; `tests/test_almadar.py` runs those checks.
+`src/prepaid_churn/operator_market.py` loads both files and checks their rules; `tests/test_operator_market.py` runs those checks.
 
 ## `offers.csv`
 
 | Column | Meaning |
 |---|---|
 | `offer_id` | Stable ID, taken from `Ali_Branch` where it had one (for example `MO_20`). |
-| `operator` | `Almadar Aljadid`. |
+| `operator` | `Libyan mobile operator`. |
 | `family_ar`, `family_en` | Package family, in Arabic as the operator names it and in English. |
 | `name_ar`, `name_en` | Package name. |
 | `price_lyd` | Price in LYD, as the operator states it. |
@@ -74,34 +74,34 @@ Every table has a `status` and a `source`:
 
 | Table | Status | Content |
 |---|---|---|
-| `operator` | confirmed | Almadar Aljadid, MCC 606, MNC 01; the competitor is Libyana. |
+| `operator` | confirmed | A real Libyan mobile operator (MCC 606 is Libya); its name is kept out of this project (decision 45). |
 | `recharge_cards` | reported | 5, 10, 20, 40 and 100 LYD. |
-| `payg` | confirmed | On-net voice 0.090 LYD for the first 3 minutes, then 0.050 per minute; 0.090 per minute to Libyana; 0.040 to landlines; SMS 0.050 (0.250 abroad); data 0.025 LYD per MB. |
+| `payg` | confirmed | On-net voice 0.090 LYD for the first 3 minutes, then 0.050 per minute; 0.090 per minute to the other Libyan operator; 0.040 to landlines; SMS 0.050 (0.250 abroad); data 0.025 LYD per MB. |
 | `airtime_advance` | confirmed | "رصيد في وقته": 1, 3 or 5 LYD when the balance is 0.5 LYD or less, recovered at the next recharge. |
 | `data_advance` | confirmed | "نت في وقته": 2 GB for 3 days at 5 LYD, when the balance is 1 LYD or less and less than 250 MB is left. |
-| `arpu` | assumption | 70 LYD per month, chosen by Ali on 2026-09-26 (decision 42): 12 GB a month at Almadar's Net 10 and Net 20 prices, divided by the 44.9% data share of Libyan mobile revenue in 2025 (Mordor Intelligence). It replaced Taha's 40 LYD of 2026-09-19. |
+| `arpu` | assumption | 70 LYD per month, chosen by Ali on 2026-09-26 (decision 42): 12 GB a month at the operator's Net 10 and Net 20 prices, divided by the 44.9% data share of Libyan mobile revenue in 2025 (Mordor Intelligence). It replaced Taha's 40 LYD of 2026-09-19. |
 | `reference_spend` | measured | 537.17: the mean monthly recharge (airtime plus data) of the 64,509 customers active in month 8 of `data/raw/train.csv`, in the source currency. |
 | `delivery_cost` | estimate | 25% of the price for metered data, 35% for unlimited. No margin built on it may be presented as audited. |
 
-## The Almadar view of real customers (T18)
+## The operator view of real customers (T18)
 
-`almadar_view` shows every real customer in Almadar terms, for the value, offer and credit tickets (T10, T11, T19) and the demo app.
+`operator_view` shows every real customer in the operator's terms, for the value, offer and credit tickets (T10, T11, T19) and the demo app.
 The churn model never sees it (decision 16).
-`uv run churn almadar-view` writes it for the scoring base (`artifacts/scores/almadar_view.csv`) and summarises it in `reports/almadar_view.md`.
+`uv run churn operator-view` writes it for the scoring base (`artifacts/scores/operator_view.csv`) and summarises it in `reports/operator_view.md`.
 
 | Column | Meaning |
 |---|---|
 | `id` | The subscriber ID from the export. |
 | `monthly_spend_lyd` | Average airtime plus data recharge of the two window months, in LYD. |
-| `usual_card_lyd` | The Almadar recharge card nearest to the customer's average airtime recharge; empty without any recharge in the window. |
-| `bundle_held` | The Almadar data bundle matching the customer's packs this month, or `PAYG`. |
+| `usual_card_lyd` | The operator's recharge card nearest to the customer's average airtime recharge; empty without any recharge in the window. |
+| `bundle_held` | The operator's data bundle matching the customer's packs this month, or `PAYG`. |
 | `bundle_price_lyd` | Its price; empty for `PAYG`. |
 
 Rules:
 - One fixed rate turns the source currency into LYD: `arpu.monthly_lyd / reference_spend.mean_monthly_recharge` (0.130313 LYD per unit).
   The average active customer of the training data therefore spends exactly the ARPU, and the shape of real spending is kept.
   The rate never depends on the batch being viewed, so one customer alone gets the same view as inside a large batch.
-- A buyer of monthly data packs holds the dearest Almadar monthly bundle (Net 6 to Net 80) their data spend pays for, or Net 6 when it pays for none.
+- A buyer of monthly data packs holds the dearest operator monthly bundle (Net 6 to Net 80) their data spend pays for, or Net 6 when it pays for none.
 - A buyer of short packs only holds the daily pack their average data recharge pays for.
 - Everybody else is on pay-as-you-go.
 - Only the two feature months of a window are read.
@@ -117,7 +117,7 @@ Rules:
 ## Refreshing the files
 
 Prices change, so every row keeps its collection date.
-To refresh: save the operator's new material in `source/` (keep the old file if rows still cite it), edit `offers.csv` and `market.toml` by hand, update `collected`, and run `uv run pytest tests/test_almadar.py`.
+To refresh: save the operator's new material in `source/` (keep the old file if rows still cite it), edit `offers.csv` and `market.toml` by hand, update `collected`, and run `uv run pytest tests/test_operator_market.py`.
 The tests fail on any row that no longer matches its source.
 
-Libyana can be added later as rows with `operator` set to `Libyana`, after adding it to `OPERATORS` in `almadar.py`.
+the other Libyan operator can be added later as rows with `operator` set to `the other Libyan operator`, after adding it to `OPERATORS` in `operator_market.py`.

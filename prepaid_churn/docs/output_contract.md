@@ -36,7 +36,7 @@ The tier artifact has its own version and never changes churn predictions.
 |---|---|---|
 | `recency` | nonnegative number | Days since airtime or data recharge; censored at the two-month window length when none is observed. |
 | `frequency` | nonnegative number | Mean monthly airtime plus data recharge count. |
-| `monthly_spend_lyd` | nonnegative number | Mean monthly recharge at the frozen T18 assumed LYD rate; not observed Almadar revenue. |
+| `monthly_spend_lyd` | nonnegative number | Mean monthly recharge at the frozen T18 assumed LYD rate; not observed operator revenue. |
 | `tenure` | nonnegative number | Age-on-network snapshot in days. |
 | `engagement` | integer 0 to 4 | Count of voice, data, packs and roaming used in either feature month. |
 | `recency_score` | integer 1 to 5 | Training-frozen recency quintile score; larger is better, constant training dimensions stay at 3. |
@@ -83,5 +83,5 @@ Every subscriber appears once, including holdouts and customers receiving no off
 Only approved rows enter `released.csv`, with subscriber ID, offer ID, bilingual reasons, status, reviewer, review time, note and campaign ID; no risk or monetary fields are released.
 Rejected and unreviewed proposals cannot enter that file.
 `--tiers-only` supports a readiness run without a churn bundle and proposes no offers.
-Effects and costs are assumptions in `data/almadar/retention.toml`; [../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.
+Effects and costs are assumptions in `data/operator/retention.toml`; [../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.
 Local reviewer names are an audit record, not authentication; access control belongs to T15.

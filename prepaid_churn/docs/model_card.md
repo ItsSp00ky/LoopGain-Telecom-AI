@@ -36,7 +36,7 @@ This section matters more than the metrics.
 
 - **Not for pricing, credit or any limit.** No output of this model may set a price, a discount, a credit line or an advance limit. T11 grants existing catalogue packages as bonuses and never computes a personalised price.
 - **Not for a decision taken without a person.** Decision 14 requires a named reviewer on every proposal, and `released.csv` contains only approved rows.
-- **Not evidence about Almadar subscribers.** The model is trained on the upGrad prepaid dataset from another market (decision 5). No figure in this card is a measurement of Libyan behaviour.
+- **Not evidence about operator subscribers.** The model is trained on the upGrad prepaid dataset from another market (decision 5). No figure in this card is a measurement of Libyan behaviour.
 - **Not a commercial model.** The training data is for education only, so a model trained on it cannot be sold (decision 11). What can be sold is the pipeline, retrained on an operator's own export.
 - **Not a cancellation predictor.** Churn here means observed inactivity, not a closed account. A subscriber who keeps a second SIM and stops using this one counts as churned, and one who keeps the line dormant but recharges does not.
 - **Not for the already silent.** Subscribers with no calls and no data in the current month are not scored at all (decision 12); they receive the band `already_silent` and no probability.
@@ -229,14 +229,14 @@ No offer reaches a customer without a named person approving it (decision 14).
 
 Reviewer names are an audit trail, not authentication. Access control between services is the API key boundary in T15 (decision 21).
 
-## The Almadar view and its assumptions
+## The operator view and its assumptions
 
-The behaviour in this data is real but from another market; the money and the packages shown to a user are Almadar's (decision 16).
-Every assumption below is labelled, from `reports/almadar_view.md`:
+The behaviour in this data is real but from another market; the money and the packages shown to a user are the operator's (decision 16).
+Every assumption below is labelled, from `reports/operator_view.md`:
 
 | What | Value | Status |
 |---|---|---|
-| Almadar ARPU | 70 LYD per month | **assumption**, chosen by Ali on 2026-09-26 from Almadar's bundle prices and Mordor Intelligence's Libya market figures (decision 42) |
+| Operator ARPU | 70 LYD per month | **assumption**, chosen by Ali on 2026-09-26 from the operator's bundle prices and Mordor Intelligence's Libya market figures (decision 42) |
 | Reference monthly recharge | 537.17 source-currency units | measured on `train.csv` month 8 |
 | Conversion rate | 1 source unit = 0.130313 LYD | derived from the two rows above |
 | Recharge cards | 5, 10, 20, 40, 100 LYD | reported by Ali Marghem, 2026-09-18 |
@@ -244,11 +244,11 @@ Every assumption below is labelled, from `reports/almadar_view.md`:
 
 Consequences worth stating next to any dinar figure:
 
-- Every LYD amount inherits the 70 LYD ARPU assumption. Replace that one number in `data/almadar/market.toml` and every amount moves with it.
-- The anchor was 40 LYD until 2026-09-26; neither figure is a measured Almadar average, and decision 42 records the derivation and its limits.
+- Every LYD amount inherits the 70 LYD ARPU assumption. Replace that one number in `data/operator/market.toml` and every amount moves with it.
+- The anchor was 40 LYD until 2026-09-26; neither figure is a measured operator average, and decision 42 records the derivation and its limits.
 - The viewed base has a mean monthly spend of 68.94 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
 - For 66.77% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
-- The bundle a customer "holds" is inferred from purchase behaviour, never from an Almadar subscription record, because we have none.
+- The bundle a customer "holds" is inferred from purchase behaviour, never from an operator subscription record, because we have none.
 
 The 12-month value used by T11 is a scenario, not a measured lifetime value (decision 19).
 It assumes a constant monthly hazard and is reported in three variants, with the hazard multiplied by 1.5, 1.0 and 0.5.
@@ -262,7 +262,7 @@ Under constant risk, risk times value peaks near 20% risk, so the value of high-
 
 Stated plainly, because this is the section an evaluator should read hardest.
 
-- **The data is not Libyan, and not Almadar's.** It looks like an Indian operator's export: the columns carry "circle" regions and rupee amounts. Nothing here measures Libyan behaviour.
+- **The data is not Libyan, and not the operator's.** It looks like an Indian operator's export: the columns carry "circle" regions and rupee amounts. Nothing here measures Libyan behaviour.
 - **Provenance is undocumented.** The upGrad file gives no collection method, no sampling frame and no date range beyond four consecutive months.
 - **One short history per customer.** Four months total, and only two of them feed features, so nothing seasonal or long-range can be learned.
 - **Educational licence.** The Kaggle competition terms allow education only, so a model fitted on this data cannot be sold or deployed commercially (decision 11).
@@ -336,7 +336,7 @@ They are dated where they appear, and no command regenerates them.
 | `reports/training_all.md` | Validation metrics and feature gain shares | `churn train` |
 | `reports/evaluation_all.md` | Frozen choices, test metrics, success thresholds | `churn evaluate` |
 | `reports/uncertainty.md` | 95% intervals on the frozen test metrics; changes nothing | `churn uncertainty` |
-| `reports/almadar_view.md` | Money and packages in Almadar terms, with statuses | `churn almadar-view` |
+| `reports/operator_view.md` | Money and packages in the operator's terms, with statuses | `churn operator-view` |
 | `reports/tiers.md` | Value tiers, cutoffs and the clustering comparison | `churn fit-tiers` |
 | `reports/decisions.md` | Retention proposals with every cost and effect assumption | `churn decide` |
 | `reports/emergency_credit.md` | Advised emergency credit limits; uses no model | `churn advance` |

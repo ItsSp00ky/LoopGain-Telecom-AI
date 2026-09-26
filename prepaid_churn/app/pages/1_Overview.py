@@ -67,7 +67,7 @@ st.caption(
     "`lyd_at_risk` is the 12-month value weighted by each customer's churn probability, "
     "so it is an expected loss under the T10 assumptions. It is blank, not zero, when "
     "this export carries no risk estimate. `monthly_spend_lyd` is the assumed recharge "
-    "at the frozen T18 rate, not observed Almadar revenue."
+    "at the frozen T18 rate, not observed operator revenue."
 )
 
 st.divider()

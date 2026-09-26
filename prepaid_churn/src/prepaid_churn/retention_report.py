@@ -71,7 +71,7 @@ def decisions_report(
         "",
         "## Assumptions beside the results",
         "",
-        "All T11 assumptions are in `data/almadar/retention.toml`.",
+        "All T11 assumptions are in `data/operator/retention.toml`.",
         "Delivery shares start from T16's estimates, 25% for metered and 35% for unlimited "
         "products; they are not audited operator costs.",
         "The preferred morning bonus assumes a different share saved; no campaign data "
@@ -92,7 +92,7 @@ def decisions_report(
         "",
         "Already-silent, unscored, low-risk and held-out customers get no proposal.",
         "The cap is per customer in this campaign, not a cumulative annual retention budget.",
-        "Current bundles are T18's behavioural mapping, not observed Almadar subscriptions.",
+        "Current bundles are T18's behavioural mapping, not observed operator subscriptions.",
         "A customer mapped to a monthly bundle above the configured base cannot receive "
         "a cheaper unlimited product, regardless of churn risk.",
         "5G and shared-family products are excluded because device, coverage and membership "

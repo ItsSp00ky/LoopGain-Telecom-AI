@@ -25,12 +25,12 @@ Add a dated entry to the step log for every step, and keep the port table curren
 
 | # | What | Source in `Ali_Branch` | Destination here | Ticket | Status |
 |---|---|---|---|---|---|
-| 1 | Almadar source files (packages, tariffs, service rules) | `Almadar/*` | `data/almadar/source/` | T16 | Done (byte-for-byte copies) |
-| 2 | Almadar catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/almadar/offers.csv`, `data/almadar/market.toml`, `src/prepaid_churn/almadar.py` | T16 | Done |
-| 3 | Money onto Almadar's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/almadar.py` | T18 | Done (the idea; a linear rate replaces the quantile map) |
+| 1 | Operator source files (packages, tariffs, service rules) | `the operator/*` | `data/operator/source/` | T16 | Done (byte-for-byte copies) |
+| 2 | Operator catalogue, recharge cards, tariffs, emergency credit rules | `conf/catalogue.yaml`, `conf/market.yaml`, `conf/advance.yaml` | `data/operator/offers.csv`, `data/operator/market.toml`, `src/prepaid_churn/operator_market.py` | T16 | Done |
+| 3 | Money onto the operator's scale | `src/cvm/synthesis/quantile_map.py` | `src/prepaid_churn/operator_market.py` | T18 | Done (the idea; a linear rate replaces the quantile map) |
 | 4 | Serving lessons | `HANDOFF.md` section 7, `src/cvm/models/registry.py` | `src/prepaid_churn/bundle.py`, `src/prepaid_churn/scoring.py` | T8 | Done |
 | 5 | Prepaid value segmentation | `src/cvm/features/rfm_le.py`, `src/cvm/models/m2_value/segmentation.py` | `src/prepaid_churn/value.py`, `src/prepaid_churn/segmentation.py` | T10 | Done (adapted design, training-frozen cutoffs) |
-| 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/almadar/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
+| 6 | Offer engine design and guardrails | `src/cvm/decision/*`, `conf/pricing.yaml` | `src/prepaid_churn/retention.py`, `src/prepaid_churn/campaign.py`, `data/operator/retention.toml` | T11 | Done (adapted design, bonus proposals and named review) |
 | 7 | API design, pseudonymous IDs, phone-number check | `src/cvm/api/*`, `src/cvm/ingest/hashing.py` | `src/prepaid_churn/api.py`, `src/prepaid_churn/service.py`, `src/prepaid_churn/privacy.py` | T15 | Done (adapted design, four read-only endpoints and per-consumer keys) |
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Done (adapted to this service's endpoints; his six grounding rules kept) |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
@@ -48,30 +48,30 @@ Useful for the team but outside this module: `docs/integration/copilot_starter/`
 ### Step 1 - Review (2026-09-19, Taha + Claude)
 
 - Fetched `Ali_Branch` only and confirmed it contains no `main` commits and shares no history with `tahaDev`.
-- Read Ali's `HANDOFF.md`, `docs/ROADMAP.md`, `docs/INTEGRATION.md`, the synthesis layer, the configs and the Almadar files.
+- Read Ali's `HANDOFF.md`, `docs/ROADMAP.md`, `docs/INTEGRATION.md`, the synthesis layer, the configs and the operator's files.
 - Main finding: the churn label is drawn from a hand-written logistic formula over six fields, on a population generated from Cell2Cell.
   Ali's own roadmap says logistic regression wins because the generator is linear, and that the results are not evidence of production performance.
-- Real and valuable: the Almadar data, the offer engine design, the integration contract with its LLM grounding rules, and the serving lessons.
+- Real and valuable: the operator's data, the offer engine design, the integration contract with its LLM grounding rules, and the serving lessons.
 - Ali's tests (368, as his handoff reports) were not run here: they need Python 3.11 through conda, about 3 GB of packages, Cell2Cell files from his machine and his hashing salt.
 
 ### Step 2 - Re-plan (2026-09-19, Taha + Claude)
 
-- Taha asked to take the best of both efforts into one module on `tahaDev`, built around Almadar, and to keep the team platform's integration as the real goal.
+- Taha asked to take the best of both efforts into one module on `tahaDev`, built around the operator, and to keep the team platform's integration as the real goal.
 - Re-read the reviewed SIC action plan: the instructor asks for a narrow customer MVP, de-identification, access control, human approval, and a retrieval-only copilot.
-- Wrote decisions 15, 16 and 17, rewrote the tickets from T8 onward, and added T18 (Almadar view), T19 (emergency credit) and T20 (integration check).
-- Defaults taken where Taha did not choose, all open to change: Almadar only, the folder keeps its name `prepaid_churn/` until Ali agrees on a new one, and emergency credit stays as a small rule-based ticket.
+- Wrote decisions 15, 16 and 17, rewrote the tickets from T8 onward, and added T18 (operator view), T19 (emergency credit) and T20 (integration check).
+- Defaults taken where Taha did not choose, all open to change: the operator only, the folder keeps its name `prepaid_churn/` until Ali agrees on a new one, and emergency credit stays as a small rule-based ticket.
 
-### Step 3 - T16 Almadar catalogue and market facts (2026-09-19, Claude)
+### Step 3 - T16 operator catalogue and market facts (2026-09-19, Claude)
 
-- Copied the four files of `Almadar/` into `data/almadar/source/`; their SHA-256 hashes match the `06890f6` blobs.
-- Built `data/almadar/offers.csv` from the operator file: prices, stated volumes, minutes, speeds and member counts are parsed from it, and the IDs follow `conf/catalogue.yaml`.
+- Copied the four files of `the operator/` into `data/operator/source/`; their SHA-256 hashes match the `06890f6` blobs.
+- Built `data/operator/offers.csv` from the operator file: prices, stated volumes, minutes, speeds and member counts are parsed from it, and the IDs follow `conf/catalogue.yaml`.
   All 57 packages are in, including the five Mix families that Ali's catalogue dropped (his commit `62040af` of 2026-09-18 records the removal and its consequences, but not why they should go; open question in TICKETS.md).
 - Each volume records where it comes from (`stated`, `name`, `reported` or `none`); Ali's catalogue flagged inferred volumes once for the whole file, not per package.
-- Moved the facts from `conf/market.yaml`, `conf/catalogue.yaml` and `conf/advance.yaml` that later tickets need into `data/almadar/market.toml`, each with a status and a source.
+- Moved the facts from `conf/market.yaml`, `conf/catalogue.yaml` and `conf/advance.yaml` that later tickets need into `data/operator/market.toml`, each with a status and a source.
   The recharge cards became `reported` instead of `confirmed`, because no operator document for them is in the repo.
 - Not carried over from `conf/market.yaml`: the recharge popularity split, channel shares, dual-SIM share, calendar and language shares, which only fed the generated population.
-- `src/prepaid_churn/almadar.py` validates both files and checks the catalogue row by row against the operator file; `tests/test_almadar.py` covers each rule and each kind of mismatch.
-- `docs/almadar.md` explains the files for the chatbot owners and for future refreshes.
+- `src/prepaid_churn/operator_market.py` validates both files and checks the catalogue row by row against the operator file; `tests/test_operator_market.py` covers each rule and each kind of mismatch.
+- `docs/operator.md` explains the files for the chatbot owners and for future refreshes.
 
 ### Step 4 - T8 model bundle and scoring (2026-09-19, Claude)
 
@@ -83,7 +83,7 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
   It found a real bug on the first run: pandas 3 typed an all-empty reason column differently in a one-row batch.
 - The zero SHAP background: avoided by design, because LightGBM's own `pred_contrib` needs no background sample.
 
-### Step 5 - T18 Almadar view of the real customers (2026-09-19, Taha + Claude)
+### Step 5 - T18 operator view of the real customers (2026-09-19, Taha + Claude)
 
 - Taha chose Ali's 40 LYD ARPU as the anchor.
 - Ali's `quantile_map.py` maps amounts onto the recharge cards through assumed card shares (54% on 5 LYD, and so on).
@@ -94,7 +94,7 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 ### Step 6 - Handover to Ali (2026-09-19, Taha + Claude)
 
 - Taha asked to push the combined work so Ali can continue it.
-- Checked the handover path first: a fresh clone of `tahaDev`, `uv sync` and the six pipeline commands rebuilt everything in about a minute, with a byte-identical champion, the same bundle version (`lightgbm-2026-09-19-ef9430fb`), identical scores and Almadar view, no changed report, and all tests green.
+- Checked the handover path first: a fresh clone of `tahaDev`, `uv sync` and the six pipeline commands rebuilt everything in about a minute, with a byte-identical champion, the same bundle version (`lightgbm-2026-09-19-ef9430fb`), identical scores and operator view, no changed report, and all tests green.
 - Wrote "For Ali: how to continue from here" at the top of the Handoff in `TICKETS.md`, with a first message for his Claude session, and brought `README.md` up to date.
 - Suggested split, for Taha and Ali to confirm: Ali on T10 and T11, Taha on T15 and T20.
 
@@ -167,7 +167,7 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Read `conf/advance.yaml` and `src/cvm/decision/advance_limit.py` at `06890f6`.
 - Ported the affordability ceiling, its 0.6 fraction and his reason for keeping it below 1, and the refusal to accept a fraction at or above 1.
 - Ported the rule that only denominations the operator actually sells may be advised, so a ceiling of 2.9 LYD advises 1 LYD rather than inventing a 2 LYD advance.
-- Ported the zero-residual finding, his honesty note that an equality is weaker evidence than an impossibility, and his correction that Libyana's Credit Loan does not describe Almadar.
+- Ported the zero-residual finding, his honesty note that an equality is weaker evidence than an impossibility, and his correction that the other Libyan operator's Credit Loan does not describe the operator.
 - Computed the finding from `market.toml` instead of hardcoding it, and added a test showing it would retire itself if the smallest card ever changed.
 - Adapted the basis: he asks for the modal top-up, and this data has only monthly totals and counts, so the quieter month's average per recharge is used and the report carries a sensitivity table for that choice.
 - Did not port the PD model, the tier ceiling, the CLV cap, the cooling-off period, the chronic-distress screen, the lockout-risk step-down, reject inference or the fee structure.
@@ -183,7 +183,7 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Confirmed the branches can be joined honestly: `22aefc8`, Ali's baseline, has exactly the tree of `bfb28ab`, and `bfb28ab` is an ancestor of `ae38840`.
 - Verified his delivery here before taking it: 379 tests, lint and format green, and a full rebuild that reproduced bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef` with no committed report changed.
 - Fast-forwarded `tahaDev` to `ae38840`; decision 24 records why this replaces hand-porting for his later work.
-- Checked what his review changed in our files: identifiers read as text, stricter export and bundle checks, one calibration prediction reused instead of three, and the Almadar market values validated.
+- Checked what his review changed in our files: identifiers read as text, stricter export and bundle checks, one calibration prediction reused instead of three, and the operator's market values validated.
   None of it moves a model, a feature or a threshold, which the byte-identical rebuild confirms.
 - Noted for Taha: the fast-forward also brings Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`.
 

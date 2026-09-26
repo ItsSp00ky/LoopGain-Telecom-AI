@@ -13,7 +13,9 @@ import streamlit as st
 
 from prepaid_churn.demo import DemoPaths, campaign_directories, load_demo
 
-CAPTION = "Team Loop Gain - Samsung Innovation Campus - Almadar Aljadid prepaid customers"
+CAPTION = (
+    "Team Loop Gain - Samsung Innovation Campus - prepaid customers in a Libyan operator's packages"
+)
 CAMPAIGN_KEY = "campaign_dir"
 
 

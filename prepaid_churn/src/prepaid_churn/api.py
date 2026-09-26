@@ -135,7 +135,7 @@ class HealthResponse(BaseModel):
 
 
 class CatalogueOffer(BaseModel):
-    """One Almadar package, exactly as `data/almadar/offers.csv` records it (T16)."""
+    """One operator package, exactly as `data/operator/offers.csv` records it (T16)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -369,7 +369,7 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
         dependencies=[Depends(_consumer(CHATBOT))],
     )
     def read_catalogue() -> dict:
-        """Every Almadar package the chatbot may talk about, with its collection date."""
+        """Every operator package the chatbot may talk about, with its collection date."""
         offers = catalogue(app.state.service)
         return {"count": len(offers), "offers": offers}
 
