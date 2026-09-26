@@ -20,6 +20,11 @@ is selected on being broke.
 That is the inverse of a risk filter, which is why the ceiling is the whole of the logic
 here rather than one guard among many.
 
+The typical top-up is read from the source data and then translated into the recharge card
+the customer would buy at the operator (decision 49).
+The converted amounts are the source market's habit, and for most customers they are below
+the smallest card, which nobody can top up at the operator.
+
 There is no repayment model, and there will not be one without repayment data (decision
 15).
 Nothing in this module estimates a probability of repayment.
@@ -29,7 +34,12 @@ import numpy as np
 import pandas as pd
 
 from prepaid_churn.data import PROJECT_ROOT
-from prepaid_churn.operator_market import InvalidCatalogueError, lyd_rate, validate_market
+from prepaid_churn.operator_market import (
+    InvalidCatalogueError,
+    lyd_rate,
+    nearest_card,
+    validate_market,
+)
 from prepaid_churn.schema import ID
 from prepaid_churn.windows import Window, window_features
 
@@ -51,6 +61,7 @@ ADVICE_COLUMNS = (
     "topup_prev_lyd",
     "topup_cur_lyd",
     "typical_topup_lyd",
+    "typical_card_lyd",
     "affordability_ceiling_lyd",
     "airtime_limit_lyd",
     "airtime_residual_lyd",
@@ -65,20 +76,25 @@ REASONS = {
         "No advice: no recharge in the window, so there is no evidence of capacity to repay.",
         "لا نصيحة: لا توجد تعبئة خلال الفترة، فلا يوجد دليل على القدرة على السداد.",
     ),
+    "no_paid_topup": (
+        "Decline: the recharges of the quieter month were worth nothing, so they show no "
+        "capacity to repay.",
+        "رفض: تعبئات الشهر الأهدأ كانت بلا قيمة، فلا تُظهر قدرة على السداد.",
+    ),
     "below_smallest": (
-        "Decline: even the smallest advance is more than a typical top-up clears "
+        "Decline: even the smallest advance is more than their usual card clears "
         "while leaving usable balance.",
-        "رفض: حتى أصغر سلفة تتجاوز ما تسدده التعبئة المعتادة مع بقاء رصيد قابل للاستخدام.",
+        "رفض: حتى أصغر سلفة تتجاوز ما يسدده كرت التعبئة المعتاد مع بقاء رصيد قابل للاستخدام.",
     ),
     "airtime_only": (
-        "Advise the airtime advance only: a typical top-up clears it and leaves balance, "
-        "but the 5 LYD data advance would consume the whole top-up.",
-        "ننصح بسلفة الرصيد فقط: التعبئة المعتادة تسددها ويبقى رصيد، "
-        "أما سلفة النت بـ 5 د.ل فتستهلك التعبئة بالكامل.",
+        "Advise the airtime advance only: their usual card clears it and leaves balance, "
+        "but the 5 LYD data advance would take the whole card.",
+        "ننصح بسلفة الرصيد فقط: كرت التعبئة المعتاد يسددها ويبقى رصيد، "
+        "أما سلفة النت بـ 5 د.ل فتستهلك الكرت بالكامل.",
     ),
     "both": (
-        "Advise both products: a typical top-up clears either debt and still leaves balance.",
-        "ننصح بالمنتجين: التعبئة المعتادة تسدد أي من السلفتين ويبقى رصيد.",
+        "Advise both products: their usual card clears either debt and still leaves balance.",
+        "ننصح بالمنتجين: كرت التعبئة المعتاد يسدد أي من السلفتين ويبقى رصيد.",
     ),
 }
 
@@ -172,12 +188,26 @@ def typical_topup(frame: pd.DataFrame, rate: float) -> pd.Series:
     return topup_by_month(frame, rate).min(axis=1, skipna=True)
 
 
-def affordability_ceiling(
-    typical_topup_lyd: pd.Series, fraction: float = MAX_DEBT_FRACTION
-) -> pd.Series:
-    """The largest debt a typical top-up can settle while still buying the customer service.
+def usual_card(typical_topup_lyd: pd.Series, market: dict) -> pd.Series:
+    """The recharge card a customer with this typical top-up would buy at the operator.
 
-    The fraction must stay below 1.0.
+    The converted top-up is the source market's habit, and for most customers it is below
+    the smallest card, which nobody can top up at the operator (T16).
+    The nearest card is what such a customer would buy there, the same translation as the
+    usual card of T18, so the advice rests on a top-up the operator allows (decision 49).
+    Without a top-up there is no card, and so no basis.
+    A quieter month whose recharges were worth nothing stays at zero: that customer paid
+    nothing, and turning it into the smallest card would invent a payment.
+    """
+    validate_market(market)
+    cards = nearest_card(typical_topup_lyd, market["recharge_cards"]["values_lyd"])
+    return cards.mask(typical_topup_lyd.eq(0), 0.0)
+
+
+def affordability_ceiling(basis_lyd: pd.Series, fraction: float = MAX_DEBT_FRACTION) -> pd.Series:
+    """The largest debt the customer's typical top-up can settle while still buying service.
+
+    The basis is the card from `usual_card`. The fraction must stay below 1.0.
     At 1.0 a debt equal to the typical top-up is permitted, which is the zero-residual case
     this ceiling exists to prevent.
     """
@@ -187,7 +217,7 @@ def affordability_ceiling(
             "At 1.0 a debt equal to the typical top-up is allowed, and clearing it would "
             "return the customer to a zero balance."
         )
-    return (typical_topup_lyd * fraction).fillna(0.0).clip(lower=0.0)
+    return (basis_lyd * fraction).fillna(0.0).clip(lower=0.0)
 
 
 def airtime_limit(ceiling_lyd: pd.Series, denominations: list[float]) -> pd.Series:
@@ -214,11 +244,13 @@ def advise(cleaned: pd.DataFrame, window: Window, market: dict) -> pd.DataFrame:
     frame = window_features(cleaned, window)
     by_month = topup_by_month(frame, lyd_rate(market))
     topup = by_month.min(axis=1, skipna=True)
-    ceiling = affordability_ceiling(topup)
+    card = usual_card(topup, market)
+    ceiling = affordability_ceiling(card)
     limit = airtime_limit(ceiling, products[AIRTIME])
     data_advised = data_advance_advised(ceiling, products[DATA])
 
     code = pd.Series("below_smallest", index=frame.index, dtype="str")
+    code = code.mask(topup.eq(0), "no_paid_topup")
     code = code.mask(topup.isna(), "no_recharge")
     code = code.mask(limit.gt(0) & ~data_advised, "airtime_only")
     code = code.mask(limit.gt(0) & data_advised, "both")
@@ -230,12 +262,15 @@ def advise(cleaned: pd.DataFrame, window: Window, market: dict) -> pd.DataFrame:
             # should see the behaviour it was read from, not only the conclusion.
             "topup_prev_lyd": by_month["topup_prev_lyd"].to_numpy(),
             "topup_cur_lyd": by_month["topup_cur_lyd"].to_numpy(),
+            # The converted amount is the source market's habit; the card is what the
+            # customer would buy at the operator, and the advice is read from the card.
             "typical_topup_lyd": topup.to_numpy(),
+            "typical_card_lyd": card.to_numpy(),
             "affordability_ceiling_lyd": ceiling.to_numpy(),
             "airtime_limit_lyd": limit.to_numpy(),
-            # What the customer keeps after one typical top-up settles the advised advance.
+            # What the customer keeps after their usual card settles the advised advance.
             "airtime_residual_lyd": np.where(
-                limit.to_numpy() > 0, topup.to_numpy() - limit.to_numpy(), np.nan
+                limit.to_numpy() > 0, card.to_numpy() - limit.to_numpy(), np.nan
             ),
             "data_advance_advised": data_advised.to_numpy(),
             "advice_code": code.to_numpy(),
@@ -248,10 +283,12 @@ def advise(cleaned: pd.DataFrame, window: Window, market: dict) -> pd.DataFrame:
 def basis_sensitivity(advice: pd.DataFrame, market: dict) -> pd.DataFrame:
     """How much the advice depends on which statistic stands in for the modal top-up.
 
-    The choice is an assumption, and on this base it moves the headline by twenty points,
-    so it is reported beside the result rather than buried in a docstring.
+    The choice is an assumption, and on this base it moves the result by up to about twenty
+    points, so it is reported beside the result rather than buried in a docstring.
+    Every basis goes through the same card translation as the advice.
     """
     products = advance_products(market)
+    smallest = smallest_card(market)
     months = advice[["topup_prev_lyd", "topup_cur_lyd"]]
     rows = []
     for label, basis in (
@@ -259,11 +296,13 @@ def basis_sensitivity(advice: pd.DataFrame, market: dict) -> pd.DataFrame:
         ("mean of both months", months.mean(axis=1, skipna=True)),
         ("busier month", months.max(axis=1, skipna=True)),
     ):
-        ceiling = affordability_ceiling(basis)
+        card = usual_card(basis, market)
+        ceiling = affordability_ceiling(card)
         rows.append(
             {
                 "basis": label,
                 "median_topup_lyd": round(float(basis.median()), 2),
+                "smallest_card": round(float(card.eq(smallest).mean()), 4),
                 "declined": round(float(airtime_limit(ceiling, products[AIRTIME]).eq(0).mean()), 4),
                 "data_advance_advised": round(
                     float(data_advance_advised(ceiling, products[DATA]).mean()), 4
@@ -278,7 +317,7 @@ def _share_table(advice: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "advised airtime limit": [
-                "declined" if value == DECLINED else f"{value:g} LYD" for value in counts.index
+                "no advice" if value == DECLINED else f"{value:g} LYD" for value in counts.index
             ],
             "customers": counts.to_numpy(),
             "share": (counts / len(advice)).round(4).to_numpy(),
@@ -312,14 +351,27 @@ def advice_report(advice: pd.DataFrame, market: dict, source: str) -> str:
     data_count = int(advice["data_advance_advised"].sum())
     data_share = advice["data_advance_advised"].mean()
     data_needs = products[DATA] / MAX_DEBT_FRACTION
+    data_cards = [value for value in cards if value >= data_needs]
+    data_card = f"the {min(data_cards):g} LYD card or a larger one" if data_cards else "no card"
     median_residual = advice.loc[advised, "airtime_residual_lyd"].median()
     sensitivity = "\n".join(
-        f"| {row.basis} | {row.median_topup_lyd:.2f} LYD | {row.declined:.4f} "
-        f"| {row.data_advance_advised:.4f} |"
+        f"| {row.basis} | {row.median_topup_lyd:.2f} LYD | {row.smallest_card:.4f} "
+        f"| {row.declined:.4f} | {row.data_advance_advised:.4f} |"
         for row in basis_sensitivity(advice, market).itertuples(index=False)
     )
-    median_topup = advice["typical_topup_lyd"].median()
-    smallest_needs = min(products[AIRTIME]) / MAX_DEBT_FRACTION
+    paid = advice["typical_topup_lyd"].gt(0)
+    median_topup = advice.loc[paid, "typical_topup_lyd"].median()
+    below_share = advice.loc[paid, "typical_topup_lyd"].lt(smallest).mean()
+    zero_share = advice.loc[with_basis, "typical_topup_lyd"].eq(0).mean()
+    smallest_share = advice.loc[with_basis, "typical_card_lyd"].eq(smallest).mean()
+    lower_rungs = [value for value in products[AIRTIME] if value < floor_rung]
+    below_the_edge = (
+        f"only the {max(lower_rungs):g} LYD rung" if lower_rungs else "no advance at all"
+    )
+    cards_facts = market["recharge_cards"]
+    basis_text = (
+        "the recharge card nearest to the average airtime recharge of the quieter window month"
+    )
     product_rows = "\n".join(
         [
             f"| `رصيد في وقته` airtime advance | {rungs} LYD "
@@ -409,9 +461,9 @@ exists to protect.
 | Assumption | Value | Status |
 |---|---|---|
 | Debt share of a typical top-up | {MAX_DEBT_FRACTION:g} | assumption, `Ali_Branch` 2026-09-18 |
-| Typical top-up | average airtime recharge in the quieter window month | assumption, see below |
+| Typical top-up | {basis_text} | assumption, see below (decision 49) |
 | LYD conversion | {lyd_rate(market):.10f} LYD per source unit | derived from the T18 ARPU |
-| Recharge cards | {card_values} LYD | reported, Ali Marghem 2026-09-18 |
+| Recharge cards | {card_values} LYD | {cards_facts["status"]}: {cards_facts["source"]} |
 | Denominations advised | only {rungs} LYD | confirmed from the operator file |
 
 `Ali_Branch` asks for the **modal** top-up, because a mean is dragged up by one
@@ -421,32 +473,46 @@ be computed.
 The quieter month's average is used instead: it is closer to the habitual amount than an
 average across both months and never larger, so it cannot widen the advice.
 
+That average is then translated into the card the customer would buy (decision 49).
+The converted amounts are the source market's habit rather than the operator's: among the
+customers who paid for their top-ups the median is {median_topup:.2f} LYD, and
+{below_share:.1%} of them average less than the smallest card, which nobody can top up at the
+operator.
+So the typical top-up is the card nearest to that average, the same translation as the
+usual card of T18, and never less than {smallest:g} LYD.
+A quieter month whose recharges were worth nothing is not translated: that customer paid
+nothing, and the smallest card would invent a payment.
+
 ### How much the basis choice matters
 
-The statistic standing in for the mode is an assumption, and on this base it moves the
-result by more than twenty points, so it is reported rather than buried.
+The statistic standing in for the mode is an assumption, and it moves the result, so it is
+reported rather than buried.
 
-| Basis | Median top-up | Declined | Data advance advised |
-|---|---|---|---|
+| Basis | Median converted top-up | On the smallest card | No advice | Data advance advised |
+|---|---|---|---|---|
 {sensitivity}
 
 The conservative choice is the one used. A reader who prefers the mean should read the
 middle row, and should also accept that it advises credit to customers whose quieter month
 would not support it.
 
-## What the base actually does
+## What the rule advises
 
-The decline rate below is high, and the reason is in the recharge behaviour rather than in
-the rule. This base tops up **often, in very small amounts**: the median customer's typical
-top-up is {median_topup:.2f} LYD.
-The smallest advance needs a top-up of at least {smallest_needs:.2f} LYD at this ceiling, so a
-customer who habitually adds a dinar or two at a time cannot carry even that one and still
-have something left.
+For {smallest_share:.1%} of the customers who recharged, the usual card is the smallest one,
+{smallest:g} LYD.
+At {MAX_DEBT_FRACTION:g} the rule allows them the {floor_rung:g} LYD rung, which leaves
+{smallest - floor_rung:g} LYD once their card settles it, and keeps them off the debts that
+would take the whole card: {", ".join(trapped) if trapped else "none"}.
+The {floor_rung:g} LYD rung needs a fraction of at least {floor_rung / smallest:g} for them;
+below it their card would allow {below_the_edge}.
 
-That is a finding about the product, not a failure of the rule.
-The operator offers these advances to anyone whose balance is low enough, and on this
-behaviour most of that population cannot clear the smallest one without being returned to
-nothing.
+For {zero_share:.1%} of the customers who recharged, the recharges of the quieter month were
+worth nothing.
+They are declined, because they show no capacity to repay.
+
+The data advance needs a card of at least {data_needs:.2f} LYD, so {data_card}.
+The operator offers it to anyone whose balance is low enough, and the rule advises it for
+{data_share:.1%} of the base.
 
 ## What is advised
 
@@ -459,11 +525,11 @@ nothing.
 {code_rows}
 
 The data advance is advised for {data_count} customers, {data_share:.4f} of the base.
-At a flat {products[DATA]:g} LYD it needs a top-up of at least {data_needs:.2f} LYD to clear and
+At a flat {products[DATA]:g} LYD it needs a card of at least {data_needs:.2f} LYD to clear and
 leave balance.
 
 Among the {int(advised.sum())} customers advised an airtime limit, the median balance left after
-one typical top-up settles it is {median_residual:.2f} LYD.
+their usual card settles it is {median_residual:.2f} LYD.
 
 ## What this advice does not do
 

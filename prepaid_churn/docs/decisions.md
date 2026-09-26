@@ -613,6 +613,7 @@ This base tops up often and in very small amounts: the median typical top-up is 
 The smallest advance needs a top-up of at least 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing at all.
 The flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, although the operator offers it to anyone whose balance is low enough.
 Those shares are computed on real upGrad behaviour from another market and are not a claim about Libyan customers.
+Decision 49 replaced them on 2026-09-27: the typical top-up is now translated into the card the customer would buy.
 
 ## 24. One branch again: `tahaDev` carries both efforts
 
@@ -1176,3 +1177,39 @@ Ali chose in the T18 recap to let them hold a weekly pack:
 
 Not changed: a monthly-pack buyer who spends more than 80 LYD on data still holds Net 80, the dearest of the monthly family.
 The Elite bundles (100 to 200 LYD) and the 5G ones (120 to 400 LYD) stay out of the mapping; adding them would not change an offer either, because Net 80 is already a monthly bundle above 35 LYD.
+
+## 49. The credit advice reads the card a customer would buy
+
+Date: 2026-09-27.
+
+T19 took each customer's typical top-up, the average airtime recharge of the quieter window month, straight from the source data at the T18 rate.
+In the T16 recap Ali confirmed that nothing below 5 LYD can be topped up at the operator, yet among the customers who paid for their top-ups, 57.0% average less than that (median 4.26 LYD).
+So the headline, that this base tops up in very small amounts and 29.7% are declined for it, described the source market's habit rather than the operator's customers.
+T19's own scope had asked for the customer's usual recharge card, and T18 already translates top-ups that way.
+
+Ali chose in the T19 recap to read the advice from the card:
+
+- The typical top-up is now the recharge card nearest to the quieter month's average, so never less than 5 LYD; the 0.6 rule and the denominations are unchanged.
+- A quieter month whose recharges were worth nothing stays at zero and is declined with its own reason: those customers paid nothing, and the smallest card would invent a payment.
+  The source data records such recharges for about 3,000 customers a month.
+- The advice CSV keeps the converted amount and adds the card beside it.
+
+On the 30,000 unlabeled customers:
+
+| Advice | Before | Now |
+|---|---|---|
+| Declined | 29.7% | 17.2%, all of them customers whose quieter month's recharges were worth nothing |
+| 1 LYD airtime | 34.2% | none |
+| 3 LYD airtime only | 16.9% | 60.4% |
+| 5 LYD airtime and the data advance | 18.3% | 21.5% |
+| No recharge, so no advice | 0.9% | 0.9% |
+
+What the report now says:
+
+- The zero-residual finding comes first: the smallest card, the data advance and the top airtime rung are all 5 LYD.
+- The rule keeps the customers whose card is 5 LYD on the 3 LYD rung, which leaves them 2 LYD, and away from both 5 LYD debts.
+  0.6 is exactly the edge for them: any smaller fraction would advise them 1 LYD.
+- The operator offers the data advance to anyone with a low balance, and the rule advises it for the 21.5% whose card is 10 LYD or more.
+- Reading the mean or the busier month instead of the quieter one advises the data advance to 31.9% or 40.7%, so the basis is still reported.
+
+What this does not settle: the card is a translation of the source market's habit, not an observation of the operator's customers, and 0.6 is still `Ali_Branch`'s assumption.

@@ -249,7 +249,7 @@ Consequences worth stating next to any dinar figure:
 - The viewed base has a mean monthly spend of 68.94 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
 - For 66.77% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
 - That card hides a limit of the one rate: it keeps monthly spend on the operator's scale, not the size of each top-up.
-  For 49.9% of the active customers who recharged, the average top-up converts to under 5 LYD, which no customer of the operator can do, so a figure built on single top-ups, such as the emergency credit advice (T19), is not yet a Libyan one.
+  For 49.9% of the active customers who recharged, the average top-up converts to under 5 LYD, which no customer of the operator can do, so the emergency credit advice (T19) reads the card such a customer would buy instead of the amount (decision 49).
 - The bundle a customer "holds" is inferred from purchase behaviour, never from an operator subscription record, because we have none.
 - Only the money is converted, and the report measures what is not: 73.7% of active customers used no mobile data this month and the others a median 0.50 GB, while the 70 LYD anchor was built on 12 GB a month (decision 42).
 - 422 customers (1.5%) spend more a month than the operator's dearest package, 400 LYD, with 16.3% of all spend and up to 5,709 LYD, so every LYD total leans on spenders the operator's catalogue does not reach.

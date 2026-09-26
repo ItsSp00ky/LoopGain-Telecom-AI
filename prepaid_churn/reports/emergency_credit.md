@@ -69,9 +69,9 @@ exists to protect.
 | Assumption | Value | Status |
 |---|---|---|
 | Debt share of a typical top-up | 0.6 | assumption, `Ali_Branch` 2026-09-18 |
-| Typical top-up | average airtime recharge in the quieter window month | assumption, see below |
+| Typical top-up | the recharge card nearest to the average airtime recharge of the quieter window month | assumption, see below (decision 49) |
 | LYD conversion | 0.1303125640 LYD per source unit | derived from the T18 ARPU |
-| Recharge cards | 5, 10, 20, 40, 100 LYD | reported, Ali Marghem 2026-09-18 |
+| Recharge cards | 5, 10, 20, 40, 100 LYD | reported: Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1); on 2026-09-26 he confirmed that nothing below 5 LYD can be topped up |
 | Denominations advised | only 1, 3, 5 LYD | confirmed from the operator file |
 
 `Ali_Branch` asks for the **modal** top-up, because a mean is dragged up by one
@@ -81,57 +81,70 @@ be computed.
 The quieter month's average is used instead: it is closer to the habitual amount than an
 average across both months and never larger, so it cannot widen the advice.
 
+That average is then translated into the card the customer would buy (decision 49).
+The converted amounts are the source market's habit rather than the operator's: among the
+customers who paid for their top-ups the median is 4.26 LYD, and
+57.0% of them average less than the smallest card, which nobody can top up at the
+operator.
+So the typical top-up is the card nearest to that average, the same translation as the
+usual card of T18, and never less than 5 LYD.
+A quieter month whose recharges were worth nothing is not translated: that customer paid
+nothing, and the smallest card would invent a payment.
+
 ### How much the basis choice matters
 
-The statistic standing in for the mode is an assumption, and on this base it moves the
-result by more than twenty points, so it is reported rather than buried.
+The statistic standing in for the mode is an assumption, and it moves the result, so it is
+reported rather than buried.
 
-| Basis | Median top-up | Declined | Data advance advised |
-|---|---|---|---|
-| quieter month (used) | 3.30 LYD | 0.3060 | 0.1827 |
-| mean of both months | 4.69 LYD | 0.1518 | 0.2794 |
-| busier month | 6.07 LYD | 0.1016 | 0.3720 |
+| Basis | Median converted top-up | On the smallest card | No advice | Data advance advised |
+|---|---|---|---|---|
+| quieter month (used) | 3.30 LYD | 0.6038 | 0.1812 | 0.2150 |
+| mean of both months | 4.69 LYD | 0.6330 | 0.0483 | 0.3187 |
+| busier month | 6.07 LYD | 0.5450 | 0.0483 | 0.4067 |
 
 The conservative choice is the one used. A reader who prefers the mean should read the
 middle row, and should also accept that it advises credit to customers whose quieter month
 would not support it.
 
-## What the base actually does
+## What the rule advises
 
-The decline rate below is high, and the reason is in the recharge behaviour rather than in
-the rule. This base tops up **often, in very small amounts**: the median customer's typical
-top-up is 3.30 LYD.
-The smallest advance needs a top-up of at least 1.67 LYD at this ceiling, so a
-customer who habitually adds a dinar or two at a time cannot carry even that one and still
-have something left.
+For 60.9% of the customers who recharged, the usual card is the smallest one,
+5 LYD.
+At 0.6 the rule allows them the 3 LYD rung, which leaves
+2 LYD once their card settles it, and keeps them off the debts that
+would take the whole card: airtime advance of 5 LYD, data advance of 5 LYD.
+The 3 LYD rung needs a fraction of at least 0.6 for them;
+below it their card would allow only the 1 LYD rung.
 
-That is a finding about the product, not a failure of the rule.
-The operator offers these advances to anyone whose balance is low enough, and on this
-behaviour most of that population cannot clear the smallest one without being returned to
-nothing.
+For 17.4% of the customers who recharged, the recharges of the quieter month were
+worth nothing.
+They are declined, because they show no capacity to repay.
+
+The data advance needs a card of at least 8.33 LYD, so the 10 LYD card or a larger one.
+The operator offers it to anyone whose balance is low enough, and the rule advises it for
+21.5% of the base.
 
 ## What is advised
 
 | Advised airtime limit | Customers | Share |
 |---|---|---|
-| declined | 9180 | 0.3060 |
-| 1 LYD | 10256 | 0.3419 |
-| 3 LYD | 5083 | 0.1694 |
-| 5 LYD | 5481 | 0.1827 |
+| no advice | 5436 | 0.1812 |
+| 3 LYD | 18115 | 0.6038 |
+| 5 LYD | 6449 | 0.2150 |
 
 | Outcome | Customers | Share | Meaning |
 |---|---|---|---|
-| `airtime_only` | 15339 | 0.5113 | Advise the airtime advance only: a typical top-up clears it and leaves balance, but the 5 LYD data advance would consume the whole top-up. |
-| `below_smallest` | 8910 | 0.2970 | Decline: even the smallest advance is more than a typical top-up clears while leaving usable balance. |
-| `both` | 5481 | 0.1827 | Advise both products: a typical top-up clears either debt and still leaves balance. |
+| `airtime_only` | 18115 | 0.6038 | Advise the airtime advance only: their usual card clears it and leaves balance, but the 5 LYD data advance would take the whole card. |
+| `both` | 6449 | 0.2150 | Advise both products: their usual card clears either debt and still leaves balance. |
+| `no_paid_topup` | 5166 | 0.1722 | Decline: the recharges of the quieter month were worth nothing, so they show no capacity to repay. |
 | `no_recharge` | 270 | 0.0090 | No advice: no recharge in the window, so there is no evidence of capacity to repay. |
 
-The data advance is advised for 5481 customers, 0.1827 of the base.
-At a flat 5 LYD it needs a top-up of at least 8.33 LYD to clear and
+The data advance is advised for 6449 customers, 0.2150 of the base.
+At a flat 5 LYD it needs a card of at least 8.33 LYD to clear and
 leave balance.
 
-Among the 20820 customers advised an airtime limit, the median balance left after
-one typical top-up settles it is 3.19 LYD.
+Among the 24564 customers advised an airtime limit, the median balance left after
+their usual card settles it is 2.00 LYD.
 
 ## What this advice does not do
 

@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T19; prior notes retained).
+**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T20; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -39,7 +39,7 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 436 tests pass, none skipped; lint and formatting green.
+- Validation: 439 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
@@ -54,7 +54,10 @@ Update this section at the end of every working session.
 - Step 18 (T18): customers who buy only short packs can now hold a weekly pack, not just a daily one (decision 48); 2,935 moved off the 3 LYD cap, and no offer changed.
   The operator view report now measures what the rate does not convert: 73.7% use no mobile data, the median customer tops up 6 times a month, half average under the 5 LYD card, and 422 spend more than the dearest package.
   Three T18 lines that had become wrong are corrected.
-- Next: step 19, T19 emergency credit advice, starting from the top-ups below 5 LYD that its advice rests on.
+- Step 19 (T19): the credit advice now reads the card a customer would buy, never below 5 LYD, instead of converted top-ups the operator does not allow (decision 49).
+  A quieter month whose recharges were worth nothing is declined with its own reason.
+  The advice is now 3 LYD only for 60.4%, 5 LYD with the data advance for 21.5% and declined for 17.2%; nobody who paid for a top-up is declined.
+- Next: step 20, T20 the integration check with the team platform.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -882,7 +885,7 @@ Recap (Ali, 2026-09-26):
 - Ali confirmed that nothing below 5 LYD can be topped up, so the smallest card is also the smallest top-up; the cards stay `reported`, because no operator document backs them.
 - That exposes a limit of the one-rate conversion (T18): it keeps each customer's monthly spend on the operator's scale, but not the size of each top-up.
   The source customers recharge about six times a month, so the average top-up converts to under 5 LYD for 49.9% of the active customers who recharged, which no customer of the operator can do.
-  The operator view shows them the 5 LYD card, but T19's advice uses the amounts themselves; T19's step will settle it.
+  The operator view shows them the 5 LYD card; T19's advice used the amounts themselves until decision 49 made it read the card too.
 - Open: 23 of the 37 data volumes are not stated by the operator (17 read from the name, 6 reported as unlimited), and `/catalogue` serves them without saying so; Ali has not yet said whether they are right.
 
 ## T18 - Operator view of the real customers
@@ -953,15 +956,26 @@ Findings (2026-09-21):
 - A test shows the finding would retire itself if the operator ever sold a larger smallest card.
 - The basis is an adaptation. Ali asks for the modal top-up; this data has only monthly totals and counts, so the quieter month's average per recharge is used, which is never larger and so cannot widen the advice.
 - That choice moves the result by more than twenty points, so the report carries a sensitivity table across the quieter month, the mean and the busier month, and both months travel beside each verdict.
-- **The result is a finding about the product.** This base tops up often in very small amounts, with a median typical top-up of 1.89 LYD against five to six recharges a month.
+- **The first result, superseded by decision 49.** This base tops up often in very small amounts, with a median typical top-up of 1.89 LYD against five to six recharges a month.
 - The smallest advance needs 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing; the flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, though the operator offers it to anyone with a low balance.
 - Advised airtime limits: 1 LYD for 37.51%, 3 LYD for 11.70%, 5 LYD for 4.65%, declined for 46.14%; 0.90% had no recharge at all.
 - Updated on 2026-09-26 at the 70 LYD anchor (decision 42): the median typical top-up is 3.30 LYD, and the advice is 1 LYD for 34.19%, 3 LYD for 16.94%, 5 LYD for 18.27% and declined for 30.60%.
-  The finding still holds, less strongly: almost a third of the base cannot carry even the smallest advance.
+  The finding still held then, less strongly: almost a third of the base could not carry even the smallest advance.
 - Found in the T16 recap (2026-09-26): nothing below 5 LYD can be topped up, yet the typical top-up is under 5 LYD for 64.5% of the 29,730 scored customers who recharged (median 3.30 LYD).
   Those amounts come from converting the source currency with one rate, not from Libyan top-ups, so "this base tops up in very small amounts" describes the source data, not the operator's customers; T19's step will settle it.
 - Not ported, each for a stated reason: the repayment model, tier ceiling, CLV cap, cooling-off, chronic distress, lockout step-down, reject inference and fee structure.
 - 38 new tests; 379 prepaid tests, lint and formatting pass. No new dependency.
+
+Recap (Ali, 2026-09-27):
+- The advice now reads the card the customer would buy: the recharge card nearest to the quieter month's average top-up, so never below 5 LYD (decision 49).
+  The 0.6 rule and the denominations are unchanged, and the scope above had asked for the usual card from the start.
+- A quieter month whose recharges were worth nothing is declined with its own reason, `no_paid_topup`, because turning nothing into the smallest card would invent a payment: 5,166 customers (17.2%).
+- Advice on the 30,000 unlabeled customers: the 3 LYD airtime advance only for 60.4%, 5 LYD with the data advance for 21.5%, declined for 17.2% and no recharge for 0.9%.
+  Nobody who paid for a top-up is declined any more; before, 29.7% were declined and 34.2% advised 1 LYD.
+- The report now leads with the zero-residual finding: the rule keeps the customers whose card is 5 LYD on the 3 LYD rung, away from both 5 LYD debts.
+  0.6 is exactly the edge for them: any smaller fraction would advise them 1 LYD.
+- The basis still matters: reading the mean or the busier month advises the data advance to 31.9% or 40.7% instead of 21.5%.
+- The advice CSV keeps the converted amount and adds the card beside it (`typical_card_lyd`); 3 new tests.
 
 ## T20 - Integration check with the team platform
 

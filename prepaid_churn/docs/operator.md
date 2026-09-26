@@ -119,7 +119,7 @@ The report ends with what the rate does not convert: how many customers use mobi
 - The recharge cards are `reported` until an operator document backs them.
 - One rate keeps each customer's monthly spend on the operator's scale, but not the size of each top-up.
   The source customers recharge about six times a month, so the average top-up converts to under 5 LYD for 49.9% of the active customers who recharged, which no customer of the operator can do.
-  The operator view shows them the 5 LYD card, but the emergency credit advice (T19) uses the amounts themselves.
+  The operator view shows them the 5 LYD card, and since decision 49 the emergency credit advice (T19) reads that card too.
 - ARPU and delivery costs are not operator data.
 
 ## Refreshing the files
