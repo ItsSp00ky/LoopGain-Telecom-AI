@@ -1085,3 +1085,44 @@ What this does not hide:
 - The catalogue keeps the operator's own package names, short codes and service names, which someone who knows the Libyan market could recognise.
 
 Nothing about the model, the numbers or the offers changes; only names do.
+
+## 46. Every offer is assumed to keep the same 5% of leavers
+
+Date: 2026-09-26.
+
+T11 assumed that an offer keeps 5% of the customers who would otherwise leave, and that the 1 LYD morning pass keeps 10% (decision 20).
+Nothing measured the 10%: it expressed the plan's preference for off-peak bonuses, yet it decided 95% of the offers (2,803 of 2,954 in a 1,000 LYD campaign) and doubled the value the plan claimed.
+Ali asked for one share for every offer, with the reason written down.
+
+Why 5%, and the same for every offer:
+
+- No measurement supports a larger effect, or a different one per product; the holdout is what will measure it (decision 43).
+- The best-known field experiment with a mobile carrier (Ascarza, 2018, Journal of Marketing Research) found that the customers most at risk are not necessarily the ones an offer changes, so an offer cannot be assumed to keep many of them.
+- Vendor case studies report 5% to 12% fewer leavers, but none of them is a controlled experiment.
+- A larger share barely changes the plan and mostly inflates the claim.
+  On the 30,000 unlabelled customers, with one share for every offer:
+
+| Share for every offer | Offers | Assumed value | Leavers expected to be kept |
+|---|---|---|---|
+| 5% | 3,643 | 6,186 LYD | 36 |
+| 10% | 3,746 | 13,367 LYD | 74 |
+| 15% | 3,746 | 20,550 LYD | 111 |
+| 20% | 3,746 | 27,733 LYD | 148 |
+
+The offers and their mix hardly move, because the budget decides who is reached, while the claimed value grows with the share.
+So the share should be the one we can defend, and 5% is the cautious one.
+
+What changed:
+
+- With one share for every offer, cost is the only thing that separates two offers for the same customer, so each customer gets the cheapest offer that fits them.
+- A 1,000 LYD campaign now proposes 3,643 offers, 2,254 of them the morning pass and the rest the 0.5 LYD day pack, for 962.53 LYD: every customer with a positive value is funded, so the budget no longer runs out.
+- Its assumed value is 6,186 LYD instead of 11,733; at the same spend, targeting by risk alone is valued at 5,277 LYD and random at 1,012.
+- The demo campaign of 1,000 customers and 35 LYD now has 130 offers, 3 of them cut by the budget.
+- The mechanism tests keep a larger share for the morning pass, so they still exercise a preference, and a new test checks the shipped policy.
+
+The delivery costs were checked in the same recap and not changed:
+
+- Published averages put operators' operating costs at about 66% of revenue (MTN Consulting, 3Q20), and the cost of delivering 1 GB at about $1 (Dave Burstein, 2021) against a world average price of $2.59 per GB (We Are Social, January 2024), about 40%.
+- So the 25% (metered) and 35% (unlimited) shares of price sit inside published averages; a bonus that uses spare off-peak capacity probably costs less, and none of this is the operator's own cost.
+
+If the morning pass should keep an advantage, it belongs in a lower delivery cost for off-peak products, which has a reason behind it, rather than in a larger share kept, which has none.

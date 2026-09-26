@@ -280,8 +280,8 @@ Stated plainly, because this is the section an evaluator should read hardest.
   Without them, the same training recipe scores a validation PR-AUC of 0.401 instead of 0.458.
   Every customer here has the same home circle (`circle_id` 109), so roaming mostly means being away from that region, and roamers who went silent came back more often (35% against 17%).
   In Libya roaming would mostly mean being abroad, so this signal is likely to behave differently there, which is one more reason the model must be retrained on the operator's own data (decisions 11 and 16).
-- **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5%, or 10% for the morning product, and it is not measured.
-  That assumption also decides the offer mix: 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass.
+- **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5% for every offer (decision 46), and it is not measured.
+  With the same share for every offer, each customer gets the cheapest offer that fits them: in a 1,000 LYD campaign, 2,254 of the 3,643 offers are the 1 LYD morning pass and the rest the 0.5 LYD day pack.
   The campaign report's equal-spend comparison scores the targeted plan with the same assumed value it maximises, so it wins by construction and shows nothing about whether targeting works.
   The holdout, the same customers in every campaign (decision 43), is what can measure it.
 - **No network-quality features.** Dropped calls and outages are not in this data. T20 defines the field contract for the network ML team to supply them later.

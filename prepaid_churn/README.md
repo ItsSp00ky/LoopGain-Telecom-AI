@@ -232,7 +232,7 @@ uv run streamlit run app/Home.py
 The sidebar picks which campaign every screen reads.
 The Campaign builder can propose a new one (how many customers, what budget), and the Subscriber screen can propose an offer for one customer; both run the same engine as `churn decide`, and neither approves anything (decision 34).
 Keep a proposed campaign small while demonstrating: 500 customers is a 1.7 MB snapshot that loads instantly, where the whole 30,000-customer base is 80 MB.
-The demo prepared on 2026-09-26 is 1,000 customers with a 35 LYD budget, proportional to 1,000 LYD for the whole base: 102 offers, 48 cut by the budget and 98 held out.
+The demo prepared on 2026-09-26 is 1,000 customers with a 35 LYD budget, proportional to 1,000 LYD for the whole base: 130 offers under the 5% policy of decision 46, 3 cut by the budget and 98 held out.
 On a fresh clone, propose the same from the Campaign builder (1,000 customers, 35 LYD) and pick it in the sidebar.
 
 By default it reads the first campaign in `artifacts/campaigns/retention`.

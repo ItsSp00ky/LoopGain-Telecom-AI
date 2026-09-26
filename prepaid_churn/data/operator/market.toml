@@ -78,6 +78,6 @@ mean_monthly_recharge = 537.17
 
 [delivery_cost]
 status = "estimate"
-source = "Ali_Branch conf/catalogue.yaml; not operator data, so no margin built on it may be presented as audited"
+source = "Ali_Branch conf/catalogue.yaml, checked against published averages in decision 46; not operator data, so no margin built on it may be presented as audited"
 share_of_price_metered = 0.25
 share_of_price_unlimited = 0.35

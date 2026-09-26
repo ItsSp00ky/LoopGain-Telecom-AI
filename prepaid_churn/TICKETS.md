@@ -39,10 +39,12 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 431 tests pass, none skipped; lint and formatting green.
+- Validation: 432 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
+- Every offer is now assumed to keep the same 5% of leavers (decision 46); the 10% for the morning pass had nothing behind it and doubled the claimed value.
+  The delivery costs were checked against published averages and kept.
 - Next: step 15, the T15 integration service.
 
 **Ali's branch sync, 2026-09-22**
@@ -721,6 +723,8 @@ Findings (2026-09-20):
   At the 70 LYD anchor, 2,803 of 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% instead of 5%, and the budget cut 300 high-band customers whose value the constant-risk scenario understates (decision 41).
   The campaign report, the model card and the brief now say so.
 - The holdout is the same customers in every campaign, because the lottery uses only the subscriber ID and a fixed seed; decision 43 makes that a deliberate permanent control group.
+- Changed on 2026-09-26 (decision 46): every offer is assumed to keep the same 5% of leavers, the morning pass included, so each customer gets the cheapest offer that fits them.
+  A 1,000 LYD campaign now proposes 3,643 offers (2,254 morning passes, the rest 0.5 LYD day packs) for 962.53 LYD, with 6,186 LYD of assumed value.
 
 ## T14 - Demo app
 
@@ -756,7 +760,7 @@ Findings (2026-09-22, after Taha used it):
 Findings (2026-09-26, Ali's recap):
 - Taha's last word on the app, on 2026-09-23 in his session log on `tahaDev`, is that it is "still somehow heavy and somehow random"; what felt random is still to be asked.
 - The Campaign builder now says its equal-spend table is won by construction and that the holdout is the same customers in every campaign (decision 43); the home page lists all five screens.
-- Prepared for the presentation and checked in the browser: the default campaign is now a 1,000-customer demo at 70 LYD with a 35 LYD budget (102 offers, 48 cut by the budget, 98 held out), a 2.6 MB snapshot.
+- Prepared for the presentation and checked in the browser: the default campaign is now a 1,000-customer demo at 70 LYD with a 35 LYD budget, a 2.6 MB snapshot; under decision 46 it has 130 offers, 3 cut by the budget and 98 held out.
   The full-base and empty campaigns moved to the git-ignored `artifacts/campaigns-archive/`; every screen was opened, and the Subscriber caption no longer calls the reasons sentences.
 
 Findings (2026-09-21):

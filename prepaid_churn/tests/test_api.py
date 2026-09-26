@@ -42,7 +42,9 @@ def offers():
 
 @pytest.fixture
 def policy():
-    return replace(load_policy(), holdout_fraction=0.0)
+    # The mechanism tests keep a preferred morning offer with a larger assumed share, so they
+    # exercise the preference; the shipped policy assumes the same 5% for every offer (decision 46).
+    return replace(load_policy(), holdout_fraction=0.0, offpeak_share_saved=0.10)
 
 
 @pytest.fixture

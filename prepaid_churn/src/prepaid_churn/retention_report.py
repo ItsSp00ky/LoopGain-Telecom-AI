@@ -41,16 +41,22 @@ def decisions_report(
     preferred = int(
         decisions.loc[proposed, "recommended_offer_id"].eq(policy.preferred_offer_id).sum()
     )
-    offer_mix = (
-        [
+    same_share = policy.offpeak_share_saved == policy.share_saved
+    if not proposed.any():
+        offer_mix = []
+    elif same_share:
+        offer_mix = [
+            f"{preferred:,} of {int(proposed.sum()):,} proposals are "
+            f"`{policy.preferred_offer_id}`; with the same assumed share for every offer, "
+            "each customer gets the cheapest offer that fits them.",
+        ]
+    else:
+        offer_mix = [
             f"{preferred:,} of {int(proposed.sum()):,} proposals are "
             f"`{policy.preferred_offer_id}`, the offer assumed to save "
             f"{policy.offpeak_share_saved:.0%} of churners instead of {policy.share_saved:.0%}; "
             "the offer mix follows from that assumption, not from measured response.",
         ]
-        if proposed.any()
-        else []
-    )
     lines = [
         "# T11 retention decisions",
         "",
@@ -74,8 +80,16 @@ def decisions_report(
         "All T11 assumptions are in `data/operator/retention.toml`.",
         "Delivery shares start from T16's estimates, 25% for metered and 35% for unlimited "
         "products; they are not audited operator costs.",
-        "The preferred morning bonus assumes a different share saved; no campaign data "
-        "establishes this advantage, and changing it can change the winning offer.",
+        (
+            f"Every offer, the preferred morning bonus included, is assumed to save the same "
+            f"share of churners, {policy.share_saved:.0%} (decision 46); no campaign data "
+            "measures it yet."
+        )
+        if same_share
+        else (
+            "The preferred morning bonus assumes a different share saved; no campaign data "
+            "establishes this advantage, and changing it can change the winning offer."
+        ),
         *offer_mix,
         "",
         markdown_table(assumptions, "Setting"),
