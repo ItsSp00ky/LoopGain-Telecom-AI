@@ -40,7 +40,8 @@ Update this section at the end of every working session.
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
 - Validation: 431 tests pass, none skipped; lint and formatting green.
-- Next: step 14, the T14 demo app, whose options are still open.
+- Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
+- Next: step 15, the T15 integration service.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -749,6 +750,10 @@ Findings (2026-09-22, after Taha used it):
 - Taha's own 15 approvals from that session are intact in `artifacts/campaigns/full-base-30000`, which is still in the picker.
 - The Subscriber screen also gained a "Pick a high-risk one" button, because a random customer on this base is almost always a "no offer" and finding one to look at took several tries.
 - 5 new tests; 401 prepaid tests, lint and formatting pass.
+
+Findings (2026-09-26, Ali's recap):
+- Taha's last word on the app, on 2026-09-23 in his session log on `tahaDev`, is that it is "still somehow heavy and somehow random"; what felt random is still to be asked.
+- The Campaign builder now says its equal-spend table is won by construction and that the holdout is the same customers in every campaign (decision 43); the home page lists all five screens.
 
 Findings (2026-09-21):
 - Four screens in `app/`, over the pure `src/prepaid_churn/demo.py`; loading goes through `service.load_state`, so the app and the T15 endpoints answer from one state.

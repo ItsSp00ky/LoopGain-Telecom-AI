@@ -100,13 +100,18 @@ a, b, c, d = st.columns(4)
 a.metric("Customers decided", f"{totals['rows']:,}")
 b.metric("Offers proposed", f"{totals['offers']:,}")
 c.metric("Assumed cost", lyd(totals.get("expected_cost_lyd"), digits=2))
-d.metric("Held out", f"{totals['holdout']:,}", help="A random control arm that gets no offer.")
+d.metric(
+    "Held out",
+    f"{totals['holdout']:,}",
+    help="The same customers in every campaign, kept out on purpose (decision 43).",
+)
 
 held = totals["holdout"]
 st.info(
     f"**{held:,} customer{'' if held == 1 else 's'} held out, receiving nothing.** "
     "Without a control arm there is no way to measure whether a campaign worked, and "
-    "every effectiveness claim becomes an assertion.",
+    "every effectiveness claim becomes an assertion. They are the same customers in every "
+    "campaign, so that comparison builds up over time (decision 43).",
     icon=":material/science:",
 )
 
@@ -150,6 +155,12 @@ else:
         "Every approach is compared at the **same expected spend**. Comparing a budgeted "
         "campaign against an unconstrained blanket one measures the size of the budget, "
         "not the quality of the targeting."
+    )
+    st.warning(
+        "**Our plan wins this table by construction.** It is chosen to get the most of "
+        "this same assumed value, so the table shows the picking works under our own "
+        "assumptions, not that targeting works. Only the held-out customers can show that.",
+        icon=":material/warning:",
     )
 
 st.divider()
