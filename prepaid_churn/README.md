@@ -85,6 +85,7 @@ What was checked, and when:
 - 2026-09-21, fresh clone of `Ali_Branch`: the pipeline reports, the same bundle and the same tier artifact `tiers-v1-cd15525cb3ef`.
 - 2026-09-22, the [end-to-end check](reports/end_to_end.md): the same again plus `emergency_credit.md`, the live API and all five dashboard pages, with how to open the checked campaign.
 - 2026-09-26, fresh clone of `Ali_Branch`: this whole block in 3.6 minutes, with `git status` empty afterwards.
+- 2026-09-26 again, after the ARPU anchor moved to 70 LYD (decision 42): the same, with tier artifact `tiers-v1-efc9739afad4`.
 
 `fit-tiers` and `tiers` build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
 To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
