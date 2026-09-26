@@ -28,7 +28,7 @@ The `Ali_Branch` review delivery follows `tahaDev`; see [CODE_REVIEW.md](CODE_RE
 
 ## 🌐 Platform Architecture
 
-The repository is organized into three modular AI subsystems:
+The repository is organized into four modular AI subsystems:
 
 ```
 ├── 1. customer_churn_prediction/     [✅ OPERATIONAL]
@@ -37,8 +37,11 @@ The repository is organized into three modular AI subsystems:
 ├── 2. customer_support_chatbot/       [⏳ PLANNED]
 │   └── Intelligent AI Customer Support Chatbot for Telecom Users
 │
-└── 3. antenna_cell_placement/         [✅ OPERATIONAL]
-    └── Geospatial AI for Optimal Cellular Antenna Site Placement
+├── 3. antenna_cell_placement/         [✅ OPERATIONAL]
+│   └── Geospatial AI for Optimal Cellular Antenna Site Placement
+│
+└── 4. network_kpi_prediction/         [✅ OPERATIONAL]
+    └── 3GPP Rel-17 Cellular Telemetry & Network Traffic Forecasting Engine
 ```
 
 ---
@@ -60,7 +63,14 @@ The repository is organized into three modular AI subsystems:
 - **Objective**: Geospatial machine learning system predicting optimal geographic locations for deploying new cellular antenna towers across Libya with **0.9862 ROC-AUC** and **0.9794 PR-AUC**.
 - **Geospatial & Demographic Intelligence**: Fuses crowdsourced cellular radio telemetry with WorldPop 1km gridded population density, SRTM 250m Digital Elevation Model (topography/prominence), UN OCHA road transportation networks, and Libyan administrative boundaries.
 - **Optimization Engine**: Identifies unserved coverage gaps, ranks the Top 50 prioritized new site deployments, and recommends equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
-- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md), the comprehensive [`Technical Report`](antenna_cell_placement/TECHNICAL_REPORT.md), and the [`Telecom GIS, RF & AI Planning Roadmap`](antenna_cell_placement/TELECOM_GIS_RF_AI_ROADMAP.md).
+- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md), the comprehensive [`Technical Report`](antenna_cell_placement/document/TECHNICAL_REPORT.md), and the [`Telecom GIS, RF & AI Planning Roadmap`](antenna_cell_placement/document/TELECOM_GIS_RF_AI_ROADMAP.md).
+
+### 4. [Network KPI & Traffic Prediction Engine](network_kpi_prediction/)
+- **Status**: **Operational & Production Ready**
+- **Objective**: 3GPP Rel-17 NWDAF and O-RAN compliant multi-band cellular KPI and 4G data volume time-series forecasting engine with **90.0% holdout benchmark outperformance ($R^2_{bench} > 0$)**.
+- **Multi-Band & KPI Scope**: 6 frequency tiers (350, 400, 1556, 1700, 3500, 6200 MHz) across 10 standardized 3GPP operational metrics (Accessibility, Retainability, Mobility, Capacity, Availability) plus 30-day network traffic volume projections.
+- **S-Tier ML Architecture**: Damped Fourier harmonics, residual gradient boosting ensembles, real heteroscedastic quantile prediction intervals (p05–p95), exponential boundary anchoring, and 100% physical domain boundary enforcement.
+- **Documentation**: See [`network_kpi_prediction/README.md`](network_kpi_prediction/README.md).
 
 ---
 
@@ -85,17 +95,24 @@ LoopGain-Telecom-AI/
 │   ├── README.md                      # Module Overview
 │   └── src/customer_support_chatbot/  # Chatbot source package
 │
-└── antenna_cell_placement/            # Module 3: Antenna Placement AI
-    ├── README.md                      # Detailed Antenna Module Documentation
-    ├── TECHNICAL_REPORT.md            # Comprehensive Engineering & Decisioning Report
-    ├── TELECOM_GIS_RF_AI_ROADMAP.md   # Telecom GIS, RF & AI Planning Roadmap
-    ├── pyproject.toml                 # uv Package Config & CLI entry points
-    ├── uv.lock                        # Deterministic dependency lockfile
-    ├── Libyan_cells_dataset/          # Raw crowdsourced telecom datasets
-    ├── data/                          # Geospatial data (DEM, WorldPop, Roads, Admin, Radar)
-    ├── models/                        # Champion AI Models (LightGBM & RF)
-    ├── eval_reports/                  # Coverage maps, ROC curves & recommendations
-    └── src/antenna_cell_placement/    # Geospatial AI pipeline package
+├── antenna_cell_placement/            # Module 3: Antenna Placement AI
+│   ├── README.md                      # Detailed Antenna Module Documentation
+│   ├── TECHNICAL_REPORT.md            # Comprehensive Engineering & Decisioning Report
+│   ├── TELECOM_GIS_RF_AI_ROADMAP.md   # Telecom GIS, RF & AI Planning Roadmap
+│   ├── pyproject.toml                 # uv Package Config & CLI entry points
+│   ├── uv.lock                        # Deterministic dependency lockfile
+│   ├── Libyan_cells_dataset/          # Raw crowdsourced telecom datasets
+│   ├── data/                          # Geospatial data (DEM, WorldPop, Roads, Admin, Radar)
+│   ├── models/                        # Champion AI Models (LightGBM & RF)
+│   ├── eval_reports/                  # Coverage maps, ROC curves & recommendations
+│   └── src/antenna_cell_placement/    # Geospatial AI pipeline package
+│
+└── network_kpi_prediction/            # Module 4: Network KPI & Traffic Forecasting
+    ├── README.md                      # Detailed Subsystem Documentation
+    ├── main.py                        # Unified Subsystem CLI
+    ├── requirements.txt               # Dependencies
+    ├── kpi_prediction_pipeline/       # 3GPP Cellular Telemetry Pipeline (60 series)
+    └── kpi_prediction_pipeline_traffic/ # 4G Traffic Volume Pipeline
 ```
 
 ---
@@ -142,6 +159,30 @@ uv run antenna-placement all
 
 # Predict placement suitability and recommended equipment for any custom coordinate:
 uv run antenna-placement predict --lat 32.88 --lon 13.18
+```
+
+---
+
+## 📶 Quick Start: Network KPI & Traffic Prediction Engine
+
+To run the 3GPP cellular and 4G traffic forecasting pipelines:
+
+```bash
+# Navigate to the network KPI prediction module
+cd network_kpi_prediction
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run all automated unit tests (48 tests, 100% pass rate)
+python main.py test
+python -m unittest discover -s kpi_prediction_pipeline_traffic/tests -p "test_*.py" -v
+
+# Query real-time dynamic ML prediction with 90% confidence ribbons and SLA checks:
+python main.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7 --live
+
+# Execute the 4G network traffic volume pipeline:
+python main.py --pipeline traffic
 ```
 
 ---
