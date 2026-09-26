@@ -24,6 +24,7 @@ Update this section at the end of every working session.
 **New session? Read [docs/session_log.md](docs/session_log.md) after this Handoff.** It is the log of the 2026-09-19 to 2026-09-25 session: what was done in what order, the mistakes caught, how to run things on Taha's machine, and what is on disk but not in git.
 
 **Open right now, in order:**
+0. **T22, the customer chatbot, is built in `assistants/` (decision 38)** and waits for Taha: set `GROQ_API_KEY`, then run the evaluation and the browser check listed in T22; the service-point list comes later. T23, the copilot, starts after Taha has seen the chatbot.
 1. The demo app. Taha tried it after the rework and said it is "still somehow heavy and somehow random, I didn't understand it". Ask him what felt random before changing anything; the details and the likely causes are in the session log.
 2. The final report draft (`SIC_AI_Capstone Project_Final Report - Loop Gain.docx` at the repository root, not in git) needs three checks before it is sent; they are listed in the session log.
 3. The one open question below that names Ali: the source links for the Almadar files. He answered the other three on 2026-09-22.
@@ -1043,6 +1044,44 @@ Findings:
 - No new infrastructure, dependencies or business logic were introduced.
 - The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](reports/end_to_end.md).
   Validation now passes 420 tests with none skipped; the frozen model and prior research results are unchanged.
+
+## T22 - Customer chatbot
+
+**Owner:** Taha + Claude; Ali reviews the Arabic answers
+**Status:** In progress: built and tested; waiting for Taha's Groq key to run the evaluation and the browser check, and for his service-point list
+**Depends on:** T15, T16, T20
+
+Scope, in `assistants/` (decision 38):
+- A Streamlit chat for prepaid customers: which Almadar packages fit them, and whether Almadar approved an offer for them.
+- Three tools: `find_packages` over `/catalogue`, `my_offer` over `/subscribers/{id}/retention`, `find_service_point` over a service-point list Taha will provide.
+- The model phrases; code guards: filtering in Python, the subscriber bound to the sign-in and never sent to Groq, a number check and a phone-number check on every reply, "not available" instead of a guess, and every tool call shown under the answer.
+- The team's GIS palette, shared with the copilot (T23).
+
+Acceptance:
+- `uv run ruff check`, `uv run ruff format --check` and `uv run pytest` pass in `assistants/`, with no test calling Groq or the network.
+- `reports/chatbot_eval.md` from `uv run python -m assistants.evaluate chatbot` passes every automatic check on the 20 questions in `eval/chatbot_questions.toml`, including the attacks (a discount demand, another customer's offer, "how likely am I to leave", "ignore your rules", a phone number).
+- In the browser, in Arabic and English: a package question, the approved offer for `70016`, nothing for `70017`, and the refusals; desktop and phone width.
+- Ali has read the Arabic answers.
+
+Findings so far (2026-09-26):
+- Groq shut down the chosen Llama 3.3 70B on 2026-08-16; Taha chose `openai/gpt-oss-120b` instead (decision 38).
+- 38 tests pass, lint and formatting are green.
+- The browser check found Arabic mis-ordered in mixed text ("5G" jumped to the other end of a button) and an oversized title at phone width; both fixed in `ui.py`.
+- **For Ali (T11):** the approved reason text ends with "positive value under the stated retention assumptions" ("قيمة موجبة وفق افتراضات الاحتفاظ"), which is written for a reviewer.
+  `integration.md` tells the chatbot to say that reason to the customer, so a customer would hear it; a customer-facing reason, or the package alone, would read better.
+
+## T23 - Employee copilot
+
+**Owner:** Taha + Claude
+**Status:** Not started; starts after Taha has seen T22 in the browser
+**Depends on:** T22, decision 37
+
+Scope, in `assistants/copilot_app.py`, same loop, checks and look as T22:
+- Customers: `/portfolio/summary` and `/subscribers/{id}/risk` with the copilot key.
+- GIS: the Tripoli shortlist and candidates in `antenna_cell_placement/integrated_release/`.
+- Network: Maher's KPI and traffic forecasts and both network models' metrics, with the caveats in decision 37.
+- Documents: BM25 over the Markdown the modules publish, with citations built from the trace, not written by the model.
+- Refuses what no module provides: per-cell congestion, anomalies, anywhere outside Tripoli, "new site or more capacity", bulk customer lists and approvals.
 
 ## Future work (needs real operator data)
 

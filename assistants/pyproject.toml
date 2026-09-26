@@ -1,0 +1,34 @@
+[project]
+name = "assistants"
+version = "0.1.0"
+description = "Loop Gain customer chatbot and employee copilot, grounded on the team's services and outputs"
+readme = "README.md"
+authors = [
+    { name = "Taha Elkhazmi", email = "Elkhazmittt@gmail.com" },
+    { name = "Ali Marghem", email = "al.marghem@uot.edu.ly" },
+]
+requires-python = ">=3.12"
+dependencies = [
+    "groq",
+    "streamlit",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

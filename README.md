@@ -34,8 +34,8 @@ The repository is organized into four modular AI subsystems:
 ├── 1. customer_churn_prediction/     [✅ OPERATIONAL]
 │   └── Customer Churn Prediction & Retention Discount Engine
 │
-├── 2. customer_support_chatbot/       [⏳ PLANNED]
-│   └── Intelligent AI Customer Support Chatbot for Telecom Users
+├── 2. assistants/                     [🚧 IN PROGRESS]
+│   └── Customer Chatbot & Employee Copilot, grounded on the team's outputs
 │
 ├── 3. antenna_cell_placement/         [✅ OPERATIONAL]
 │   └── Geospatial AI for Optimal Cellular Antenna Site Placement
@@ -54,9 +54,11 @@ The repository is organized into four modular AI subsystems:
 - **Business Retention Engine**: Translates churn risk and account telemetry into margin-preserving marketing offers (`Offer A` through `Offer E`), contract lock-in agreements, and overage fee waivers, projecting **+$917,265.70** in net saved revenue.
 - **Documentation**: See [`customer_churn_prediction/README.md`](customer_churn_prediction/README.md) and the comprehensive [`Technical Report`](customer_churn_prediction/TECHNICAL_REPORT.md).
 
-### 2. [Telecom Customer Support AI Chatbot](customer_support_chatbot/)
-- **Status**: **Planned / In Development**
-- **Objective**: A conversational AI assistant designed for telecommunications subscribers to query package details, troubleshoot connectivity, resolve billing questions, and receive personalized promotional offers.
+### 2. [Customer Chatbot & Employee Copilot](assistants/)
+- **Status**: **Customer chatbot built; employee copilot next**
+- **Objective**: Two assistants in one look. The customer chatbot answers which Almadar packages fit a prepaid customer and whether Almadar approved an offer for them; the employee copilot will answer questions about customers at risk, the GIS shortlist and the network forecasts, with sources.
+- **Grounding**: The language model only picks a tool and phrases what came back; code checks every reply, so no price, offer or figure appears that a tool did not return.
+- **Documentation**: See [`assistants/README.md`](assistants/README.md).
 
 ### 3. [AI Antenna Cell Site Placement Optimization](antenna_cell_placement/)
 - **Status**: **Operational & Production Ready**
@@ -91,9 +93,10 @@ LoopGain-Telecom-AI/
 │   ├── eval_reports/                  # ROC, PR, and feature importance charts
 │   └── src/customer_churn_prediction/ # Feature engineering, trainers & discount engine
 │
-├── customer_support_chatbot/          # Module 2: Telecom Customer Chatbot (Planned)
-│   ├── README.md                      # Module Overview
-│   └── src/customer_support_chatbot/  # Chatbot source package
+├── assistants/                        # Module 2: Customer Chatbot & Employee Copilot
+│   ├── README.md                      # How to run them and what they may say
+│   ├── chatbot_app.py                 # Customer chatbot (Streamlit)
+│   └── src/assistants/                # Tool loop, reply checks, tools and shared look
 │
 ├── antenna_cell_placement/            # Module 3: Antenna Placement AI
 │   ├── README.md                      # Detailed Antenna Module Documentation

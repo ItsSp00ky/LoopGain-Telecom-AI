@@ -1,0 +1,176 @@
+import json
+
+import pytest
+
+from assistants import chatbot_tools
+from assistants.chatbot_tools import build_tools, fallback, find_packages, is_arabic, my_offer
+from assistants.llm import ToolCall
+from assistants.service_client import ServiceError
+
+
+def row(offer_id, price, hours, name_en, **fields):
+    base = {
+        "offer_id": offer_id,
+        "operator": "Almadar Aljadid",
+        "name_ar": f"ar {name_en}",
+        "name_en": name_en,
+        "family_en": "Family",
+        "price_lyd": price,
+        "validity_ar": "شهر",
+        "validity_hours": hours,
+        "data_gb": None,
+        "data_unlimited": False,
+        "voice_minutes": None,
+        "voice_unlimited": False,
+        "network": None,
+        "valid_from_hour": None,
+        "valid_to_hour": None,
+        "collected": "2026-09-18",
+    }
+    return base | fields
+
+
+CATALOGUE = [
+    row("HR5G_1", 5.0, 1, "Net 1 hour 5G", data_unlimited=True, network="5G"),
+    row("M5G_100", 120.0, 720, "Net 100 5G", data_gb=100.0, network="5G"),
+    row("MO_20", 35.0, 720, "Net 20", data_gb=20.0),
+    row("FAM_70", 90.0, 720, "Family 70", data_gb=70.0, voice_minutes=300.0),
+    row(
+        "SABAH_1",
+        1.0,
+        24,
+        "Morning",
+        data_unlimited=True,
+        voice_unlimited=True,
+        valid_from_hour=6.0,
+        valid_to_hour=11.0,
+    ),
+    row("SOC_M", 20.0, 720, "Social monthly"),
+]
+
+OFFER = {
+    "subscriber_id": "70016",
+    "recommended_offer_id": "SABAH_1",
+    "offer_reason_en": "Catalogue bonus: Morning (06:00-11:00).",
+    "offer_reason_ar": "مكافأة من الكتالوج: الصبح (06:00-11:00).",
+    "reviewed_at": "2026-09-22T10:00:00+00:00",
+    "campaign_id": "abc123",
+    "offer": CATALOGUE[4],
+}
+
+
+class FakeClient:
+    def __init__(self, offer=None, error=None):
+        self.offer, self.error, self.asked = offer, error, []
+
+    def catalogue(self, base_url, key):
+        if self.error:
+            raise self.error
+        return CATALOGUE
+
+    def offer_for(self, base_url, key, subscriber_id):
+        self.asked.append((base_url, key, subscriber_id))
+        if self.error:
+            raise self.error
+        return self.offer
+
+
+def ids(result):
+    return [package["offer_id"] for package in result["packages"]]
+
+
+def test_packages_are_cheapest_first_by_default():
+    assert ids(find_packages(CATALOGUE)) == ["SABAH_1", "HR5G_1", "SOC_M", "MO_20", "FAM_70"]
+    assert find_packages(CATALOGUE)["matched"] == 6
+
+
+def test_filters_are_applied_in_code():
+    assert ids(find_packages(CATALOGUE, needs="voice")) == ["SABAH_1", "FAM_70"]
+    assert ids(find_packages(CATALOGUE, needs="data_and_voice", period="month")) == ["FAM_70"]
+    assert ids(find_packages(CATALOGUE, network="5G", max_price_lyd="10")) == ["HR5G_1"]
+    assert ids(find_packages(CATALOGUE, period="hours")) == ["HR5G_1"]
+    assert find_packages(CATALOGUE, needs="any", network="any", period="any")["matched"] == 6
+
+
+def test_sorting_by_data_puts_unlimited_first():
+    assert ids(find_packages(CATALOGUE, needs="data", sort="most_data"))[:3] == [
+        "HR5G_1",
+        "SABAH_1",
+        "M5G_100",
+    ]
+
+
+def test_a_package_is_described_in_plain_values():
+    morning = find_packages(CATALOGUE, needs="voice")["packages"][0]
+    assert morning["data"] == "unlimited" and morning["voice"] == "unlimited"
+    assert morning["daily_window"] == "06:00-11:00"
+    assert (
+        find_packages(CATALOGUE, max_price_lyd=35, sort="most_data")["packages"][2]["data"]
+        == "20 GB"
+    )
+
+
+def test_a_bad_price_is_an_error_the_model_sees():
+    with pytest.raises(ValueError):
+        find_packages(CATALOGUE, max_price_lyd="cheap")
+
+
+def test_my_offer_hides_the_ids_and_the_price():
+    client = FakeClient(offer=OFFER)
+    result = my_offer("http://service", "chatbot-key", "70016", client)
+    assert client.asked == [("http://service", "chatbot-key", "70016")]
+    text = json.dumps(result, ensure_ascii=False)
+    assert "70016" not in text and "abc123" not in text
+    assert "price_lyd" not in result["offer"]["package"]
+    assert result["offer"]["reason_ar"] == OFFER["offer_reason_ar"]
+
+
+def test_no_offer_and_no_sign_in_say_so():
+    assert my_offer("u", "k", "70017", FakeClient(offer=None))["offer"] is None
+    client = FakeClient(offer=OFFER)
+    assert "not signed in" in my_offer("u", "k", None, client)["say"]
+    assert client.asked == []
+
+
+def test_my_offer_takes_no_arguments_and_is_bound_to_the_session():
+    client = FakeClient(offer=OFFER)
+    tools = {tool.name: tool for tool in build_tools("u", "k", "70016", client)}
+    assert tools["my_offer"].parameters["properties"] == {}
+    tools["my_offer"].run()
+    tools["my_offer"].run()
+    # Read fresh every time: an offer is never cached (integration.md rule 6).
+    assert client.asked == [("u", "k", "70016")] * 2
+
+
+def test_the_chatbot_has_exactly_its_three_tools():
+    names = [tool.name for tool in build_tools("u", "k", "70016", FakeClient())]
+    assert names == ["find_packages", "my_offer", "find_service_point"]
+
+
+def test_service_points_wait_for_their_data():
+    assert chatbot_tools.find_service_point("Tripoli")["available"] is False
+
+
+def test_fallback_uses_only_tool_data_in_the_customers_language():
+    offer = ToolCall("my_offer", {}, my_offer("u", "k", "70016", FakeClient(offer=OFFER)))
+    arabic = fallback([offer], "في عرض ليا؟")
+    assert arabic == "مكافأة من الكتالوج: الصبح (06:00-11:00). - ar Morning"
+    assert fallback([offer], "any offer?") == "Catalogue bonus: Morning (06:00-11:00). - Morning"
+    none = ToolCall("my_offer", {}, {"offer": None, "say": "..."})
+    assert fallback([none], "any offer?") == "There is no offer for you today."
+    packages = ToolCall("find_packages", {}, find_packages(CATALOGUE, network="5G"))
+    assert fallback([packages], "5G?") == "- Net 1 hour 5G: 5 LYD\n- Net 100 5G: 120 LYD"
+    error = ToolCall("find_packages", {}, {"error": "The service is not available right now."})
+    assert "not available" in fallback([error], "5G?")
+    assert "customer service" in fallback([], "what is my balance?")
+    assert "خدمة عملاء" in fallback([], "كم رصيدي؟")
+
+
+def test_service_errors_surface_from_the_bound_tools():
+    tools = build_tools("u", "k", "70016", FakeClient(error=ServiceError("down", 503)))
+    with pytest.raises(ServiceError):
+        tools[0].run()
+
+
+def test_arabic_detection():
+    assert is_arabic("شن أرخص باقة؟") and not is_arabic("cheapest package?")

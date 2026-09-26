@@ -96,6 +96,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `docs/session_log.md` | The 2026-09-19 to 2026-09-25 session: timeline, mistakes caught, machine notes, open feedback |
 | `docs/presentation/` | Talking points for mentoring and the final presentation, and the results chart (`make_chart.py` redraws it) |
 | `docs/ali_branch_merge.md` | Step log and port table for combining `Ali_Branch` into this module |
+| `../assistants/` | T22 customer chatbot and T23 employee copilot (decision 38), a separate uv project at the repository root that calls the service; it has its own README and its own lint, format and tests |
 | `src/prepaid_churn/cli.py` | `churn` command |
 | `reports/` | Generated reports with aggregate numbers (committed) |
 | `data/raw/` | `train.csv`, `test.csv`, `data_dictionary.csv` from Kaggle (committed) |

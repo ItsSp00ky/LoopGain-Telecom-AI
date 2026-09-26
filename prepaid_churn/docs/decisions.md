@@ -1004,3 +1004,48 @@ Found while merging, for the owners (listed in the Handoff of [../TICKETS.md](..
 - The GIS branch commits someone's local Claude settings (`antenna_cell_placement/.claude/`).
 - The legacy GIS optimizer keeps a weaker `top_k` check and does not clear stale exports, which Ali's removed fix did; it only serves historical reproduction.
 - The GIS research extra cannot install on Windows without the Microsoft C++ build tools, because `pyrosm` needs `cykhash` built from source.
+
+## 38. The assistants: one project, a hosted model that only phrases, and guards in code
+
+Date: 2026-09-26.
+
+The action plan gives the customer chatbot to Taha and Ali, and the employee copilot to Taha.
+Neither existed: `customer_support_chatbot/` held two empty files.
+Both are now built in one project, `assistants/` at the repository root, which replaces that placeholder.
+
+**One project, two apps.**
+The two assistants share the tool loop, the checks on every reply, the example client and the look, so one project keeps them from drifting apart.
+They stay two separate Streamlit apps, and each reads only its own service key, so the chatbot cannot reach a churn probability even when misconfigured: the service refuses the chatbot key on the copilot's endpoints.
+`src/assistants/service_client.py` is a verbatim copy of `prepaid_churn/src/prepaid_churn/client.py`, as decision 25 asks of every consumer, and a test fails if the copy drifts.
+
+**The model is `openai/gpt-oss-120b` on Groq.**
+Taha chose Groq's free Llama 3.3 70B, which Ali's copilot starter had named, but Groq shut that model down for free accounts on 2026-08-16 and names GPT-OSS 120B as its replacement.
+Taha chose it over Qwen3.8 27B, a preview model Groq may withdraw at short notice, and over a local Ollama model.
+It runs with low reasoning effort and temperature 0.
+The free plan allows 8K tokens a minute and 200K a day, about two or three chat turns a minute and sixty a day: enough for a demo, not for real customers.
+
+**The model only phrases.**
+It chooses a tool and words what came back; it never sets an offer or a price (decision 17).
+The guards are code, because a prompt is advisory:
+
+- `find_packages` filters and sorts the catalogue in Python, so the model never compares prices.
+- `my_offer` takes no arguments.
+  The subscriber comes from the sign-in on the screen, is never sent to Groq, and cannot be replaced by another customer's ID, however the question is worded.
+- The offer the model sees carries no price, because it is a bonus the operator grants (`integration.md` section 4).
+- Every number in a reply must appear in a tool result, the user's message or an earlier checked reply.
+  If not, the reply is replaced by a safe answer built only from the tool results, and the screen says why.
+- A reply holding a Libyan phone number is replaced the same way, using the prepaid service's own pattern, even when the customer typed the number (`integration.md` rule 5).
+- A tool error, an unreachable service, or the model failing or being rate-limited gives "not available right now" instead of a guess.
+- Every answer shows "What I looked up": each tool call and exactly what it returned.
+
+**What leaves the machine.**
+The customer's words and the tool results (catalogue rows and the approved offer's reason) go to Groq; the subscriber ID and the campaign ID do not.
+That is acceptable for a demo on public data.
+An operator deployment would need a model it controls or a contract that covers customer messages, and that is a decision for the operator, not a setting here.
+
+**One look.**
+Both apps read one `.streamlit/config.toml`, the palette of the team's GIS demo page (`antenna_cell_placement/integrated_release/index.html`): navy text, blue primary, pale-blue cards and an orange limits note.
+`ui.py` adds what a theme cannot: the eyebrow line of that page, Arabic laid out right to left inside mixed text, and the heading size.
+
+**Not built yet.**
+Service points wait for a list from Taha; the columns are fixed in `assistants/README.md`, and until the file exists the chatbot says the locations are not available.
