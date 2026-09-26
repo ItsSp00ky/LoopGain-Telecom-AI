@@ -8,49 +8,49 @@ The behaviour is real (upGrad prepaid data from another market); the money and t
 
 | What | Value | Status | Source |
 |---|---|---|---|
-| Almadar ARPU | 40 LYD per month | assumption | Team estimate in Ali_Branch conf/market.yaml (2026-09-18): just above the base monthly bundle, Net 20 at 35 LYD; chosen by Taha for T18 on 2026-09-19 |
+| Almadar ARPU | 70 LYD per month | assumption | Ali, 2026-09-26 (decision 42): Almadar's Net 10 and Net 20 prices for 12 GB a month, divided by the 44.9% data share of Libyan MNO revenue in 2025 (Mordor Intelligence, Libya Telecom MNO Market) |
 | Reference monthly recharge | 537.17 in the source currency | measured | data/raw/train.csv, month 8: mean airtime plus data recharge of the 64,509 customers active that month |
-| Rate | 1 unit of the source currency = 0.074464 LYD | derived | ARPU divided by the reference recharge |
+| Rate | 1 unit of the source currency = 0.130313 LYD | derived | ARPU divided by the reference recharge |
 | Recharge cards | 5, 10, 20, 40, 100 LYD | reported | Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1) |
 | Bundle held | monthly pack buyers get the dearest Almadar monthly bundle their data spend pays for; short-pack buyers get the daily pack their average data recharge pays for; everybody else is pay-as-you-go | assumption | T18 rule |
 
 Monthly spend is the average airtime plus data recharge of the two window months.
 The usual card is the Almadar card nearest to the customer's average airtime recharge.
-This base's mean spend is 39.39 LYD; it differs from the ARPU because the rate is fixed on the training customers, not on the viewed batch.
+This base's mean spend is 68.94 LYD; it differs from the ARPU because the rate is fixed on the training customers, not on the viewed batch.
 
 ## Monthly spend
 
 | statistic | monthly spend (LYD) |
 |---|---|
-| mean | 39.3900 |
-| 10th percentile | 5.2100 |
-| 25th percentile | 10.4300 |
-| median | 22.0800 |
-| 75th percentile | 44.8600 |
-| 90th percentile | 82.1300 |
+| mean | 68.9400 |
+| 10th percentile | 9.1200 |
+| 25th percentile | 18.2400 |
+| median | 38.6400 |
+| 75th percentile | 78.5100 |
+| 90th percentile | 143.7300 |
 
 ## Usual recharge card
 
 | card | share |
 |---|---|
-| 5 LYD | 0.8887 |
-| 10 LYD | 0.0912 |
-| 20 LYD | 0.0163 |
-| 40 LYD | 0.0024 |
+| 5 LYD | 0.6677 |
+| 10 LYD | 0.2545 |
+| 20 LYD | 0.0632 |
+| 40 LYD | 0.0123 |
+| 100 LYD | 0.0012 |
 | no recharge in the window | 0.0010 |
-| 100 LYD | 0.0004 |
 
 ## Bundle held in the current month
 
 | bundle | customers | price_lyd | share |
 |---|---|---|---|
 | PAYG | 19669 | - | 0.7131 |
-| DAY_HALF | 2917 | 3.0000 | 0.1058 |
-| MO_6 | 2665 | 20.0000 | 0.0966 |
-| DAY_100MB | 816 | 1.0000 | 0.0296 |
-| MO_80 | 467 | 80.0000 | 0.0169 |
-| MO_40 | 412 | 50.0000 | 0.0149 |
-| MO_20 | 335 | 35.0000 | 0.0121 |
-| DAY_QTR | 170 | 2.0000 | 0.0062 |
-| MO_10 | 88 | 30.0000 | 0.0032 |
-| DAY_50MB | 43 | 0.5000 | 0.0016 |
+| DAY_HALF | 3388 | 3.0000 | 0.1228 |
+| MO_6 | 1927 | 20.0000 | 0.0699 |
+| MO_80 | 1046 | 80.0000 | 0.0379 |
+| MO_10 | 575 | 30.0000 | 0.0208 |
+| DAY_QTR | 468 | 2.0000 | 0.0170 |
+| MO_40 | 273 | 50.0000 | 0.0099 |
+| MO_20 | 146 | 35.0000 | 0.0053 |
+| DAY_100MB | 75 | 1.0000 | 0.0027 |
+| DAY_50MB | 15 | 0.5000 | 0.0005 |

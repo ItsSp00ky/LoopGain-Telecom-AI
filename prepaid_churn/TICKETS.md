@@ -33,6 +33,8 @@ Update this section at the end of every working session.
   The model card, T9 and the brief say exactly what was reproduced, and a test checks the uncertainty ranges the card quotes.
 - Step 10 (T10) found, on the validation customers, that the 12-month value's constant-risk and no-comeback assumptions do not hold, which undervalues high-risk customers in T11 (decision 41).
   That is written into the tiers report, the model card and T10, and T23 is open for the fix; no number changed.
+- Ali moved the ARPU anchor from 40 to 70 LYD, citing Almadar's bundle prices and Mordor Intelligence's Libya market figures (decision 42).
+  Every LYD amount is 1.75 times larger, the tier artifact is `tiers-v1-efc9739afad4`, T19 advises more, and a 1,000 LYD campaign proposes 2,954 offers instead of 2,911; the churn model is untouched.
 - Validation: 436 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
 - Next: step 11, T11 retention decisions.
 
@@ -231,7 +233,8 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - **Mix packages: answered on 2026-09-22.**
   Ali confirmed the operator no longer sells the five Mix families, so the 20 packages are out of the catalogue and recorded in `data/almadar/excluded.csv` with the reason (decision 31).
   The catalogue is now 37 packages in 12 families, matching his.
-- **Almadar ARPU:** Taha chose 40 LYD per month for T18 on 2026-09-19; it is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
+- **Almadar ARPU:** 70 LYD per month since 2026-09-26 (decision 42), from Almadar's bundle prices and Mordor Intelligence's Libya market figures; it replaced the 40 LYD Taha chose on 2026-09-19.
+  It is still an assumption, so replace it if an operator figure appears (one number in `data/almadar/market.toml`).
 - **`churn decide` overwrites a committed report: fixed on 2026-09-22.**
   `--report` now defaults to `decisions.md` inside `--output-dir`, so the documented command leaves the committed report alone (decision 32).
 - **Action plan dataset:** the team's SIC action plan lists `telco_customer_churn` (the IBM data) for churn.
@@ -667,6 +670,7 @@ Findings (2026-09-20):
   High-band customers who stayed active in month 8 churned at 11.0% in month 9, not the 43.2% predicted, and low-band ones at 3.6% instead of 0.9%.
   28.1% of those silent in month 8 were active again in month 9.
   So the 12-month value of high-risk customers is understated, and T11's ranking inherits it; T23 is the fix.
+- Updated on 2026-09-26 (decision 42): at the 70 LYD anchor the monetary cutoffs in LYD scale by 1.75 and the artifact is `tiers-v1-efc9739afad4`; every customer keeps the same tier.
 
 ## T11 - Retention decision layer
 
@@ -911,6 +915,7 @@ Findings (details in `docs/almadar.md`):
 - Data volumes: 31 packages state them, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
 - Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.
 - The recharge cards are `reported` (no operator document yet); ARPU (40 LYD) is an assumption and delivery costs are estimates.
+  Since 2026-09-26 the ARPU is 70 LYD (decision 42).
 
 ## T17 - Uplift experiment on real data
 
@@ -970,6 +975,8 @@ Findings (`reports/almadar_view.md`, rules in `docs/almadar.md`):
   The rate is 40 LYD over 537.17, the mean monthly recharge of the 64,509 customers active in month 8 of `train.csv` (stored in `market.toml` as a measured fact), so 1 unit of the source currency is 0.074464 LYD.
 - On the scoring base (Kaggle's `test.csv`, 27,582 active customers): mean spend 39.39 LYD a month, median 22.08, 10th percentile 5.21, 90th percentile 82.13.
 - For 88.9% of active customers the nearest card to their usual airtime recharge is the smallest, 5 LYD, and for 9.1% it is 10 LYD; small top-ups dominate, as `Ali_Branch` argued.
+- Updated on 2026-09-26 (decision 42): the ARPU anchor is now 70 LYD, so the rate is 0.130313 LYD per source unit.
+  The scoring base now spends 68.94 LYD a month on average (median 38.64), and 66.8% are nearest the 5 LYD card, 25.5% the 10 LYD card.
 - Bundles held: 71.3% pay-as-you-go, 14.4% a monthly bundle (mostly Net 6, the floor for small data spend) and 14.3% a daily pack.
 - A test changes month 8 and checks that a window A view does not move; breaking the code to read month 8 makes it fail.
 
@@ -1002,6 +1009,8 @@ Findings (2026-09-21):
 - **The result is a finding about the product.** This base tops up often in very small amounts, with a median typical top-up of 1.89 LYD against five to six recharges a month.
 - The smallest advance needs 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing; the flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, though the operator offers it to anyone with a low balance.
 - Advised airtime limits: 1 LYD for 37.51%, 3 LYD for 11.70%, 5 LYD for 4.65%, declined for 46.14%; 0.90% had no recharge at all.
+- Updated on 2026-09-26 at the 70 LYD anchor (decision 42): the median typical top-up is 3.30 LYD, and the advice is 1 LYD for 34.19%, 3 LYD for 16.94%, 5 LYD for 18.27% and declined for 30.60%.
+  The finding still holds, less strongly: almost a third of the base cannot carry even the smallest advance.
 - Not ported, each for a stated reason: the repayment model, tier ceiling, CLV cap, cooling-off, chronic distress, lockout step-down, reject inference and fee structure.
 - 38 new tests; 379 prepaid tests, lint and formatting pass. No new dependency.
 

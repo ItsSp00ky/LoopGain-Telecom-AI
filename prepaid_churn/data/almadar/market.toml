@@ -60,10 +60,15 @@ max_remaining_quota_mb = 250
 recovered_at = "first recharge or incoming balance transfer"
 note = "Not available while the balance is negative, so it cannot be combined with an unpaid airtime advance."
 
+# Chosen by Ali on 2026-09-26 (decision 42), replacing the 40 LYD team estimate of 2026-09-19.
+# Mordor Intelligence, Libya Telecom MNO Market: data and internet were 44.9% of operator
+# revenue in 2025, and use is projected to pass 12 GB per subscriber a month by 2030.
+# 12 GB costs 31 to 35 LYD with Almadar's Net 10 (30 LYD) and Net 20 (35 LYD) bundles;
+# divided by the 44.9% data share that gives 69 to 78 LYD a month, and 70 is taken.
 [arpu]
 status = "assumption"
-source = "Team estimate in Ali_Branch conf/market.yaml (2026-09-18): just above the base monthly bundle, Net 20 at 35 LYD; chosen by Taha for T18 on 2026-09-19"
-monthly_lyd = 40.0
+source = "Ali, 2026-09-26 (decision 42): Almadar's Net 10 and Net 20 prices for 12 GB a month, divided by the 44.9% data share of Libyan MNO revenue in 2025 (Mordor Intelligence, Libya Telecom MNO Market)"
+monthly_lyd = 70.0
 
 # T18 turns the source currency into LYD with one fixed rate: arpu.monthly_lyd divided by
 # this mean, so the average active customer spends exactly the Almadar ARPU.

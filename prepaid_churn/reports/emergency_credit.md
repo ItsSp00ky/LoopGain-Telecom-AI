@@ -70,7 +70,7 @@ exists to protect.
 |---|---|---|
 | Debt share of a typical top-up | 0.6 | assumption, `Ali_Branch` 2026-09-18 |
 | Typical top-up | average airtime recharge in the quieter window month | assumption, see below |
-| LYD conversion | 0.0744643223 LYD per source unit | derived from the T18 ARPU |
+| LYD conversion | 0.1303125640 LYD per source unit | derived from the T18 ARPU |
 | Recharge cards | 5, 10, 20, 40, 100 LYD | reported, Ali Marghem 2026-09-18 |
 | Denominations advised | only 1, 3, 5 LYD | confirmed from the operator file |
 
@@ -88,9 +88,9 @@ result by more than twenty points, so it is reported rather than buried.
 
 | Basis | Median top-up | Declined | Data advance advised |
 |---|---|---|---|
-| quieter month (used) | 1.89 LYD | 0.4614 | 0.0465 |
-| mean of both months | 2.68 LYD | 0.3220 | 0.0841 |
-| busier month | 3.47 LYD | 0.2367 | 0.1549 |
+| quieter month (used) | 3.30 LYD | 0.3060 | 0.1827 |
+| mean of both months | 4.69 LYD | 0.1518 | 0.2794 |
+| busier month | 6.07 LYD | 0.1016 | 0.3720 |
 
 The conservative choice is the one used. A reader who prefers the mean should read the
 middle row, and should also accept that it advises credit to customers whose quieter month
@@ -100,7 +100,7 @@ would not support it.
 
 The decline rate below is high, and the reason is in the recharge behaviour rather than in
 the rule. This base tops up **often, in very small amounts**: the median customer's typical
-top-up is 1.89 LYD.
+top-up is 3.30 LYD.
 The smallest advance needs a top-up of at least 1.67 LYD at this ceiling, so a
 customer who habitually adds a dinar or two at a time cannot carry even that one and still
 have something left.
@@ -114,24 +114,24 @@ nothing.
 
 | Advised airtime limit | Customers | Share |
 |---|---|---|
-| declined | 13841 | 0.4614 |
-| 1 LYD | 11253 | 0.3751 |
-| 3 LYD | 3511 | 0.1170 |
-| 5 LYD | 1395 | 0.0465 |
+| declined | 9180 | 0.3060 |
+| 1 LYD | 10256 | 0.3419 |
+| 3 LYD | 5083 | 0.1694 |
+| 5 LYD | 5481 | 0.1827 |
 
 | Outcome | Customers | Share | Meaning |
 |---|---|---|---|
-| `airtime_only` | 14764 | 0.4921 | Advise the airtime advance only: a typical top-up clears it and leaves balance, but the 5 LYD data advance would consume the whole top-up. |
-| `below_smallest` | 13571 | 0.4524 | Decline: even the smallest advance is more than a typical top-up clears while leaving usable balance. |
-| `both` | 1395 | 0.0465 | Advise both products: a typical top-up clears either debt and still leaves balance. |
+| `airtime_only` | 15339 | 0.5113 | Advise the airtime advance only: a typical top-up clears it and leaves balance, but the 5 LYD data advance would consume the whole top-up. |
+| `below_smallest` | 8910 | 0.2970 | Decline: even the smallest advance is more than a typical top-up clears while leaving usable balance. |
+| `both` | 5481 | 0.1827 | Advise both products: a typical top-up clears either debt and still leaves balance. |
 | `no_recharge` | 270 | 0.0090 | No advice: no recharge in the window, so there is no evidence of capacity to repay. |
 
-The data advance is advised for 1395 customers, 0.0465 of the base.
+The data advance is advised for 5481 customers, 0.1827 of the base.
 At a flat 5 LYD it needs a top-up of at least 8.33 LYD to clear and
 leave balance.
 
-Among the 16159 customers advised an airtime limit, the median balance left after
-one typical top-up settles it is 2.45 LYD.
+Among the 20820 customers advised an airtime limit, the median balance left after
+one typical top-up settles it is 3.19 LYD.
 
 ## What this advice does not do
 

@@ -13,6 +13,7 @@ Run: uv run streamlit run app/Home.py
 import streamlit as st
 from _shared import CAPTION, configure, degraded_notice, expected, lyd, state
 
+from prepaid_churn.almadar import load_market
 from prepaid_churn.demo import expected_churners, revenue_at_risk
 
 configure("Home", icon="home")
@@ -82,6 +83,7 @@ if demo.missing:
 st.divider()
 st.caption(
     "The upGrad prepaid dataset is educational and from another market, so no figure "
-    "here is evidence of performance for Almadar. Money is shown at the assumed 40 LYD "
-    "monthly ARPU of T18, which is an assumption and not an operator figure."
+    "here is evidence of performance for Almadar. Money is shown at the assumed "
+    f"{load_market()['arpu']['monthly_lyd']:.0f} LYD monthly ARPU of T18 (decision 42), "
+    "which is an assumption and not an operator figure."
 )

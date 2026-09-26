@@ -1088,3 +1088,39 @@ What that does:
 Nothing changes before the presentation.
 The tiers report, the model card and T10 now say that the assumptions fail, and ticket T23 replaces the scenario with one built on measured risk after the first month and on comebacks.
 The rates T23 needs come from validation customers only; the churn model, its thresholds and the spent test window stay as they are.
+
+## 42. The ARPU anchor moves from 40 to 70 LYD
+
+Date: 2026-09-26.
+
+Every LYD amount in the module is a source-currency amount times one rate: the ARPU anchor divided by the mean monthly recharge of the customers active in month 8 of `train.csv`, 537.17 (T18, decision 16).
+The anchor was 40 LYD, a team estimate set just above the Net 20 bundle price of 35 LYD and chosen by Taha on 2026-09-19.
+Ali replaced it with 70 LYD on 2026-09-26, from a market report.
+
+Source: Mordor Intelligence, Libya Telecom MNO Market, public summary read on 2026-09-26.
+
+- Data and internet services were 44.9% of Libyan mobile operator revenue in 2025.
+- Data use is projected to pass 12 GB per subscriber a month by 2030.
+
+Derivation, with Almadar's own monthly bundle prices from `offers.csv` (Net 10 at 30 LYD, Net 20 at 35 LYD):
+
+- 12 GB a month costs about 31 LYD by linear interpolation between those two bundles, or 35 LYD when the 20 GB bundle is bought.
+- Divided by the 44.9% data share, that is 69 to 78 LYD a month in total; 70 LYD is taken, near the low end.
+
+What the estimate is not, as the review in this session pointed out:
+
+- The 12 GB is a projection for 2030 and the 44.9% is for 2025, not measurements of today's average subscriber.
+- Dividing one customer's data spend by a market-wide revenue share assumes every customer spends like the whole market, and most prepaid SIMs do not buy a 10 to 20 GB bundle every month.
+- So 70 LYD may be high for the average prepaid SIM; 40 LYD was no better founded, because it was also a bundle price rather than an average.
+
+It stays an `assumption` in `data/almadar/market.toml` until an operator or regulator figure replaces it: mobile service revenue divided by mobile subscriptions, from one source and one year.
+
+What changed, all from that one number:
+
+- The rate moves from 0.074464 to 0.130313 LYD per source unit, so every LYD amount is 1.75 times larger.
+  The viewed base now spends 68.94 LYD a month on average instead of 39.39, and 66.8% of active customers are nearest the 5 LYD card instead of 88.9%.
+- The tier cutoffs in LYD scale with it but every customer keeps the same tier, because the tiers rank customers; the artifact version moves from `tiers-v1-cd15525cb3ef` to `tiers-v1-efc9739afad4`.
+- T19 advises more: the median typical top-up is 3.30 LYD instead of 1.89, 30.6% are declined instead of 46.1%, and the data advance suits 18.3% instead of 4.65%.
+- A 1,000 LYD campaign over the 30,000 unlabelled customers proposes 2,954 offers instead of 2,911, with 11,733 LYD of assumed net value instead of 6,387, because values grow while Almadar's catalogue prices do not.
+  At the same spend, targeting by risk alone is valued at 9,074 LYD and random at 2,298; 2,803 of the offers are still the morning pass.
+- The churn model, its thresholds, its reports and the spent test window are untouched, because the model never sees LYD.

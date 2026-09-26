@@ -79,7 +79,7 @@ Every table has a `status` and a `source`:
 | `payg` | confirmed | On-net voice 0.090 LYD for the first 3 minutes, then 0.050 per minute; 0.090 per minute to Libyana; 0.040 to landlines; SMS 0.050 (0.250 abroad); data 0.025 LYD per MB. |
 | `airtime_advance` | confirmed | "رصيد في وقته": 1, 3 or 5 LYD when the balance is 0.5 LYD or less, recovered at the next recharge. |
 | `data_advance` | confirmed | "نت في وقته": 2 GB for 3 days at 5 LYD, when the balance is 1 LYD or less and less than 250 MB is left. |
-| `arpu` | assumption | 40 LYD per month, set just above the base monthly bundle (Net 20 at 35 LYD); chosen by Taha for T18. |
+| `arpu` | assumption | 70 LYD per month, chosen by Ali on 2026-09-26 (decision 42): 12 GB a month at Almadar's Net 10 and Net 20 prices, divided by the 44.9% data share of Libyan mobile revenue in 2025 (Mordor Intelligence). It replaced Taha's 40 LYD of 2026-09-19. |
 | `reference_spend` | measured | 537.17: the mean monthly recharge (airtime plus data) of the 64,509 customers active in month 8 of `data/raw/train.csv`, in the source currency. |
 | `delivery_cost` | estimate | 25% of the price for metered data, 35% for unlimited. No margin built on it may be presented as audited. |
 
@@ -98,7 +98,7 @@ The churn model never sees it (decision 16).
 | `bundle_price_lyd` | Its price; empty for `PAYG`. |
 
 Rules:
-- One fixed rate turns the source currency into LYD: `arpu.monthly_lyd / reference_spend.mean_monthly_recharge` (0.074464 LYD per unit).
+- One fixed rate turns the source currency into LYD: `arpu.monthly_lyd / reference_spend.mean_monthly_recharge` (0.130313 LYD per unit).
   The average active customer of the training data therefore spends exactly the ARPU, and the shape of real spending is kept.
   The rate never depends on the batch being viewed, so one customer alone gets the same view as inside a large batch.
 - A buyer of monthly data packs holds the dearest Almadar monthly bundle (Net 6 to Net 80) their data spend pays for, or Net 6 when it pays for none.

@@ -129,7 +129,8 @@ def tiers_report(train: pd.DataFrame, model: TierModel, comparison: ClusterCompa
         "  Separate source counters can overlap; these are not deduplicated transactions.",
         "- Monetary: average monthly airtime plus data recharge amount, using T18's LYD rate.",
         f"  The frozen rate is {model.rate:.10f} LYD per source recharge unit.",
-        "  It retains the assumed 40 LYD ARPU anchor; this is not observed operator revenue.",
+        "  It inherits the assumed ARPU anchor in `data/almadar/market.toml` (decision 42); "
+        "this is not observed operator revenue.",
         "- Tenure: the existing age-on-network snapshot in days, with T4's timing limitation.",
         "- Engagement: how many of voice, data, packs and roaming were used in either month.",
         "",
@@ -188,7 +189,7 @@ def tiers_report(train: pd.DataFrame, model: TierModel, comparison: ClusterCompa
         ]
     scenarios = pd.DataFrame({"monthly hazard": [0.0, 0.05, 0.1, 0.2, 0.5, 1.0]})
     scenarios["expected months"] = expected_months(scenarios["monthly hazard"].to_numpy())
-    scenarios["value at 40 LYD/month"] = 40 * scenarios["expected months"]
+    scenarios["value per 10 LYD/month"] = 10 * scenarios["expected months"]
     lines += [
         "",
         "## 12-month value scenario, not validated CLV",

@@ -151,7 +151,8 @@ Say that there is nothing today, and offer nothing else.
 
 "How much revenue is at risk this month, and is the model still fit for use?"
 
-`GET /portfolio/summary` answers both in one call:
+`GET /portfolio/summary` answers both in one call.
+The figures below were recorded on 2026-09-21 at the 40 LYD anchor; at the 70 LYD anchor of decision 42 every LYD figure is 1.75 times larger.
 
 ```json
 {
@@ -189,7 +190,8 @@ Cite these field names when the copilot quotes a number, and say the assumption 
 
 "Employee has customer 70008 on the line: what do we know?"
 
-`GET /subscribers/70008/risk`, with the copilot key:
+`GET /subscribers/70008/risk`, with the copilot key.
+Recorded on 2026-09-21 at the 40 LYD anchor; at 70 LYD (decision 42) the LYD figures are 1.75 times larger and the tier artifact is `tiers-v1-efc9739afad4`.
 
 ```json
 {
@@ -304,7 +306,7 @@ Our outputs are per subscriber and per portfolio only.
 uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a subscriber>
 ```
 
-Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign:
+Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign, at the 40 LYD anchor (the LYD at risk is 1.75 times larger at the 70 LYD of decision 42):
 
 ```
 # Integration check of http://127.0.0.1:8123

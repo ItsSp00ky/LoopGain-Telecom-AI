@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state, use_campaign
 
-from prepaid_churn.almadar import InvalidCatalogueError
+from prepaid_churn.almadar import InvalidCatalogueError, load_market
 from prepaid_churn.bundle import BundleError
 from prepaid_churn.demo import (
     CAMPAIGNS_DIR,
@@ -110,7 +110,8 @@ with profile_column:
         f"**Value score** {subscriber.get('value_score', '-')}"
     )
     st.caption(
-        "Spend is converted at the assumed 40 LYD monthly ARPU of T18. "
+        f"Spend is converted at the assumed {load_market()['arpu']['monthly_lyd']:.0f} LYD "
+        "monthly ARPU of T18 (decision 42). "
         "The bundle held is inferred from the real monthly and short pack purchases in "
         "the source data, not from an Almadar subscription record."
     )

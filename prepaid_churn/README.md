@@ -308,8 +308,9 @@ clearing either debt with one card returns the customer to a zero balance and bu
 nothing.
 
 On the 30,000 unlabeled customers the result says more about the product than about the
-rule. This base tops up often in very small amounts, so 46.1% cannot carry even the 1 LYD
-advance and still have something left, and the flat 5 LYD data advance suits 4.65%.
+rule. This base tops up often in small amounts, so at the 70 LYD ARPU anchor (decision 42)
+30.6% cannot carry even the 1 LYD advance and still have something left, and the flat
+5 LYD data advance suits 18.3%.
 The report states every assumption, including how much the answer moves if a different
 statistic stands in for the customer's typical top-up.
 

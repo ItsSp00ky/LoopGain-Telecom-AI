@@ -229,17 +229,18 @@ Every assumption below is labelled, from `reports/almadar_view.md`:
 
 | What | Value | Status |
 |---|---|---|
-| Almadar ARPU | 40 LYD per month | **assumption**, chosen by Taha on 2026-09-19 |
+| Almadar ARPU | 70 LYD per month | **assumption**, chosen by Ali on 2026-09-26 from Almadar's bundle prices and Mordor Intelligence's Libya market figures (decision 42) |
 | Reference monthly recharge | 537.17 source-currency units | measured on `train.csv` month 8 |
-| Conversion rate | 1 source unit = 0.074464 LYD | derived from the two rows above |
+| Conversion rate | 1 source unit = 0.130313 LYD | derived from the two rows above |
 | Recharge cards | 5, 10, 20, 40, 100 LYD | reported by Ali Marghem, 2026-09-18 |
 | Bundle held | inferred from monthly and short pack purchases | **assumption**, the T18 rule |
 
 Consequences worth stating next to any dinar figure:
 
-- Every LYD amount inherits the 40 LYD ARPU assumption. Replace that one number in `data/almadar/market.toml` and every amount moves with it.
-- The viewed base has a mean monthly spend of 39.39 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
-- For 88.87% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
+- Every LYD amount inherits the 70 LYD ARPU assumption. Replace that one number in `data/almadar/market.toml` and every amount moves with it.
+- The anchor was 40 LYD until 2026-09-26; neither figure is a measured Almadar average, and decision 42 records the derivation and its limits.
+- The viewed base has a mean monthly spend of 68.94 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
+- For 66.77% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
 - The bundle a customer "holds" is inferred from purchase behaviour, never from an Almadar subscription record, because we have none.
 
 The 12-month value used by T11 is a scenario, not a measured lifetime value (decision 19).
