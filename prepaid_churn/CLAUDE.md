@@ -20,7 +20,10 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 
 - Work on `tahaDev`, the branch both of us share (decision 24).
   Pull before you start, claim a ticket by writing your name in its Owner field, and push when it is done.
-  Do not pull or merge `main`, and push only what this module owns.
+  Do not pull or merge `main`.
+- `tahaDev` also carries the teammates' merged GIS and network ML work, because Taha owns the platform integration (decision 37).
+  Their folders stay theirs: do not edit `antenna_cell_placement/`, `network_kpi_prediction/` or `KPI_forecasting/` except to resolve a merge, and report problems to the owner.
+  When a teammate updates their branch, merge it again; in a conflict inside their folder, the owner's version wins.
 - The raw Kaggle files in `data/raw/` are committed on purpose (decision 9); do not remove them.
   Never commit `data/processed/` or `artifacts/`, and never add another dataset without a decision entry.
 - No leakage: features may only use months up to and including the window's "current month"; month 9 never enters features.

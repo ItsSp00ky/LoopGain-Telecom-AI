@@ -961,3 +961,46 @@ T4, the settled choices in TICKETS.md, the README and the model card now say tha
 It must not be carried through `churn evaluate` on this data: the test customers were scored once on 2026-09-19, so a model trained on the high-value dataset could only be tested by scoring them a second time.
 The T7 slice, PR-AUC 0.383 at 2.9% churn, is the answer to how the model does on these customers.
 `reports/dataset_high_value.md` stays as the record of the population's size: 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.
+
+## 37. `tahaDev` is where the team's platform comes together
+
+Date: 2026-09-26.
+
+The action plan gives Taha the chatbot, the employee copilot and "integration with GIS and Network ML outputs".
+The copilot has to read the GIS shortlist and the network forecasts, and those lived only on the teammates' own branches, none of which had reached `main`.
+Taha asked for their final work to be merged into `tahaDev`, so the copilot reads real outputs from one checkout.
+
+Merged with git, one merge commit per branch, because these histories are related to ours (unlike Ali's original tree, decisions 15 and 24):
+
+- `integration/antenna-planning-v2` through `2eca2dd` (Mahmoud): the team's final GIS, which already contains `mahalm_antenna_cell_placement` and ports Ahmed's audited commit `15dc13a` by hand.
+- `maher_kpi_prediction` through `732e88c` (Maher): KPI forecasts per frequency band and the 4G traffic forecast.
+- `MNK_forecasting` through `2425707` (Mohamed): XGBoost next-day KPI predictions and their metrics.
+
+`ahmed_cell_placement` was not merged.
+The GIS integration branch already carries his audited work, and merging his raw branch would conflict in six files and bring back what that integration replaced.
+Every teammate branch contains `main`'s documentation commit `a4368a0`, so it arrived too; nothing else from `main` did.
+
+This replaces two hard rules in [../CLAUDE.md](../CLAUDE.md):
+
+- "Push only what this module owns" becomes: `tahaDev` carries the teammates' merged work, but their folders stay theirs.
+  We do not edit `antenna_cell_placement/`, `network_kpi_prediction/` or `KPI_forecasting/` except to resolve a merge, and anything wrong in them is reported to the owner rather than fixed here.
+- When a teammate updates their branch, it is merged again, not ported by hand.
+  In a conflict inside their folder, the owner's version wins.
+
+"Do not pull or merge `main`" still stands.
+
+The one conflict of substance was Ali's GIS fix `2c84a2c` meeting Mahmoud's rewrite of the same two files.
+Both sides had fixed the same self-exclusion bug, so Mahmoud's version was kept.
+Ali's `tests/test_site_optimizer.py` was removed because it tested an optimizer API that moved to `legacy_site_optimizer.py`; its guarantees are tested on the public planner.
+Each merge commit records its resolution and the test runs: 105 GIS tests, 48 of Maher's, and Mohamed's files loaded, since he has no tests.
+
+Found while merging, for the owners (listed in the Handoff of [../TICKETS.md](../TICKETS.md)):
+
+- Maher's README says every series beats the naive baseline (MASE at most 1), but his own `model_metrics.csv` shows 17 of 60 do.
+- Mohamed's model uses the test set for early stopping (`eval_set=[(X_test, y_test)]`), so his test metrics are optimistic.
+  His predictions are also one day ahead from yesterday's actual value, not forecasts.
+- Maher's traffic tests need `xgboost`, which his `requirements.txt` does not list.
+- Mohamed's `predictions_4G_Cell_Av._pct.csv` and `predictions_4G_Cell_Av_pct.csv` are byte-identical.
+- The GIS branch commits someone's local Claude settings (`antenna_cell_placement/.claude/`).
+- The legacy GIS optimizer keeps a weaker `top_k` check and does not clear stale exports, which Ali's removed fix did; it only serves historical reproduction.
+- The GIS research extra cannot install on Windows without the Microsoft C++ build tools, because `pyrosm` needs `cykhash` built from source.

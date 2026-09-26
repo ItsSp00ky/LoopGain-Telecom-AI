@@ -9,7 +9,17 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-25 by Taha + Claude (`Ali_Branch` merged into `tahaDev` through `f0156e2`; Ali's notes follow the list below).
+**Last updated:** 2026-09-26 by Taha + Claude (the teammates' GIS and network ML branches merged into `tahaDev`; the chatbot and the copilot are next as T22 and T23).
+
+**Team branches merged, 2026-09-26 (decision 37), not pushed yet:**
+- `tahaDev` now carries Mahmoud's final GIS (`integration/antenna-planning-v2`), Maher's `maher_kpi_prediction` and Mohamed's `MNK_forecasting`, so the employee copilot can read their outputs.
+  `ahmed_cell_placement` is not merged, because the GIS integration already carries his audited work.
+- Their folders stay theirs: we only resolve merges there and report problems (the new hard rule in [CLAUDE.md](CLAUDE.md)).
+- Checked after each merge: 105 GIS tests, Maher's 48, Mohamed's files load, and the prepaid suite is unchanged.
+- **Tell the owners** (details in decision 37):
+  - Maher: his README's MASE claim does not match his `model_metrics.csv` (17 of 60), and `xgboost` is missing from his `requirements.txt`.
+  - Mohamed: his model early-stops on the test set, and two of his prediction files are identical.
+  - Mahmoud and Ahmed: local Claude settings are committed under `antenna_cell_placement/.claude/`, and the legacy optimizer lacks Ali's stricter checks.
 
 **New session? Read [docs/session_log.md](docs/session_log.md) after this Handoff.** It is the log of the 2026-09-19 to 2026-09-25 session: what was done in what order, the mistakes caught, how to run things on Taha's machine, and what is on disk but not in git.
 
