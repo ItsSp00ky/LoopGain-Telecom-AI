@@ -1157,3 +1157,22 @@ How it was checked:
 
 - A test approves an offer after the app has started and then gets it from the chatbot endpoint; with the reread switched off, the same test fails.
 - The real service, started with `churn serve` on a copy of the demo campaign, answered 404 for a pending offer, then 200 after `churn approve`, in the same process.
+
+## 48. Short-pack buyers can hold a weekly pack
+
+Date: 2026-09-27.
+
+T18 matched a customer who buys only short data packs to the dearest daily pack their average data top-up pays for.
+The source data defines a short pack as any scheme valid for less than a month, and 2,935 of the 3,946 active short-pack buyers average 5 LYD or more per data top-up (median 11.86 LYD), which buys one of the operator's weekly packs.
+All of them were capped at the 3 LYD daily pack, so "14.3% hold a daily pack" mostly described the cap.
+
+Ali chose in the T18 recap to let them hold a weekly pack:
+
+- A short-pack buyer now holds the dearest daily or weekly pack their average data top-up pays for; the monthly rule and pay-as-you-go are unchanged.
+- Of the active customers, 2,342 now hold `WK_2` (8 LYD) and 593 `WK_1` (5 LYD); 1,011 stay on daily packs.
+- No offer changes. T11 reads the bundle only to keep cheap unlimited bonuses from customers holding a monthly bundle above 35 LYD, and a weekly pack is not monthly.
+  A run with the frozen bundle at the shipped 1,000 LYD budget made the same 3,643 proposals under both rules.
+- The report, the Subscriber screen and the exported view change.
+
+Not changed: a monthly-pack buyer who spends more than 80 LYD on data still holds Net 80, the dearest of the monthly family.
+The Elite bundles (100 to 200 LYD) and the 5G ones (120 to 400 LYD) stay out of the mapping; adding them would not change an offer either, because Net 80 is already a monthly bundle above 35 LYD.

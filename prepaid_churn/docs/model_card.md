@@ -251,6 +251,8 @@ Consequences worth stating next to any dinar figure:
 - That card hides a limit of the one rate: it keeps monthly spend on the operator's scale, not the size of each top-up.
   For 49.9% of the active customers who recharged, the average top-up converts to under 5 LYD, which no customer of the operator can do, so a figure built on single top-ups, such as the emergency credit advice (T19), is not yet a Libyan one.
 - The bundle a customer "holds" is inferred from purchase behaviour, never from an operator subscription record, because we have none.
+- Only the money is converted, and the report measures what is not: 73.7% of active customers used no mobile data this month and the others a median 0.50 GB, while the 70 LYD anchor was built on 12 GB a month (decision 42).
+- 422 customers (1.5%) spend more a month than the operator's dearest package, 400 LYD, with 16.3% of all spend and up to 5,709 LYD, so every LYD total leans on spenders the operator's catalogue does not reach.
 
 The 12-month value used by T11 is a scenario, not a measured lifetime value (decision 19).
 It assumes a constant monthly hazard and is reported in three variants, with the hazard multiplied by 1.5, 1.0 and 0.5.

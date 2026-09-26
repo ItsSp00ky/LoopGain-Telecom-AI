@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T18; prior notes retained).
+**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T19; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -39,7 +39,7 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 434 tests pass, none skipped; lint and formatting green.
+- Validation: 436 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
@@ -51,7 +51,10 @@ Update this section at the end of every working session.
   The source files come from the operator's website, and Ali confirmed that nothing below 5 LYD can be topped up.
   That exposes a limit of the one-rate conversion: half of the active customers' average top-up converts to under 5 LYD, which T19's advice rests on; T19's step will settle it.
   Open: whether the 23 data volumes the operator does not state are right.
-- Next: step 18, T18 the operator view (T17 was removed with the experiments).
+- Step 18 (T18): customers who buy only short packs can now hold a weekly pack, not just a daily one (decision 48); 2,935 moved off the 3 LYD cap, and no offer changed.
+  The operator view report now measures what the rate does not convert: 73.7% use no mobile data, the median customer tops up 6 times a month, half average under the 5 LYD card, and 422 spend more than the dearest package.
+  Three T18 lines that had become wrong are corrected.
+- Next: step 19, T19 emergency credit advice, starting from the top-ups below 5 LYD that its advice rests on.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -892,9 +895,9 @@ Why: decision 16; value, offers, emergency credit and the app speak the operator
 
 Scope, in `src/prepaid_churn/operator_market.py`:
 - One scale factor from the source currency to LYD, anchored on the operator's ARPU assumption in `data/operator/market.toml`, so the shape of real spending is kept.
-- Monthly value in LYD from the current month's recharges.
+- Monthly spend in LYD: the average airtime plus data recharge of the two window months, the amount T10 values (this line first said the current month only).
 - Usual recharge card: each customer's typical recharge mapped to the nearest operator card (5, 10, 20, 40 or 100 LYD).
-- Bundle held in the current month: customers with a monthly data pack (upGrad `monthly_2g`, `monthly_3g`) get the operator's monthly bundle their data spend in LYD would buy; customers with only short packs (`sachet_2g`, `sachet_3g`) get a daily pack; the rest are pay-as-you-go.
+- Bundle held in the current month: customers with a monthly data pack (upGrad `monthly_2g`, `monthly_3g`) get the operator's monthly bundle their data spend in LYD would buy; customers with only short packs (`sachet_2g`, `sachet_3g`) get the dearest daily or weekly pack their average data recharge pays for (decision 48; a daily pack only until then); the rest are pay-as-you-go.
 - Uses only the feature months of a window, never the label month.
 - `churn operator-view` writes the view for a dataset and `reports/operator_view.md` with the distributions, the share on each bundle and every assumption.
 
@@ -907,11 +910,22 @@ Findings (`reports/operator_view.md`, rules in `docs/operator.md`):
 - Taha chose the 40 LYD ARPU on 2026-09-19.
   The rate is 40 LYD over 537.17, the mean monthly recharge of the 64,509 customers active in month 8 of `train.csv` (stored in `market.toml` as a measured fact), so 1 unit of the source currency is 0.074464 LYD.
 - On the scoring base (Kaggle's `test.csv`, 27,582 active customers): mean spend 39.39 LYD a month, median 22.08, 10th percentile 5.21, 90th percentile 82.13.
-- For 88.9% of active customers the nearest card to their usual airtime recharge is the smallest, 5 LYD, and for 9.1% it is 10 LYD; small top-ups dominate, as `Ali_Branch` argued.
+- For 88.9% of active customers the nearest card to their usual airtime recharge is the smallest, 5 LYD, and for 9.1% it is 10 LYD (at the 40 LYD anchor).
+  `Ali_Branch` read this as small top-ups dominating, but those top-ups are the source market's: nothing below 5 LYD can be topped up at the operator (T16 recap, 2026-09-26).
 - Updated on 2026-09-26 (decision 42): the ARPU anchor is now 70 LYD, so the rate is 0.130313 LYD per source unit.
   The scoring base now spends 68.94 LYD a month on average (median 38.64), and 66.8% are nearest the 5 LYD card, 25.5% the 10 LYD card.
-- Bundles held: 71.3% pay-as-you-go, 14.4% a monthly bundle (mostly Net 6, the floor for small data spend) and 14.3% a daily pack.
+- Bundles held: 71.3% pay-as-you-go, 14.4% a monthly bundle and 14.3% a short pack.
+  Net 6 is the commonest monthly bundle because most of its 1,927 holders spend about 20 LYD on data, its price; only 307 spend less and are placed on it as the cheapest.
 - A test changes month 8 and checks that a window A view does not move; breaking the code to read month 8 makes it fail.
+
+Recap (Ali, 2026-09-27):
+- Short-pack buyers now hold the dearest daily or weekly pack their average data top-up pays for (decision 48).
+  2,935 of the 3,946 active short-pack buyers moved off the 3 LYD daily pack: 2,342 to `WK_2` (8 LYD) and 593 to `WK_1` (5 LYD).
+- No offer changes: T11 reads the bundle only to protect monthly bundles above 35 LYD, and a run with the frozen bundle at the shipped 1,000 LYD budget made the same 3,643 proposals under both rules.
+- The report now says what the rate does not convert, measured on the 27,582 active customers:
+  73.7% used no mobile data this month, and the others a median 0.50 GB, against the 12 GB a month behind the 70 LYD anchor (decision 42).
+  The median customer tops up 6 times a month, and 49.9% of those who recharged average under the 5 LYD card.
+  422 customers (1.5%) spend more a month than the dearest package (400 LYD), with 16.3% of all spend and up to 5,709 LYD.
 
 ## T19 - Emergency credit advice
 

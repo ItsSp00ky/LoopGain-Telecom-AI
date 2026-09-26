@@ -105,9 +105,11 @@ Rules:
   The average active customer of the training data therefore spends exactly the ARPU, and the shape of real spending is kept.
   The rate never depends on the batch being viewed, so one customer alone gets the same view as inside a large batch.
 - A buyer of monthly data packs holds the dearest operator monthly bundle (Net 6 to Net 80) their data spend pays for, or Net 6 when it pays for none.
-- A buyer of short packs only holds the daily pack their average data recharge pays for.
+- A buyer of short packs only holds the dearest daily or weekly pack their average data recharge pays for (decision 48); the source data's short packs are anything valid for less than a month.
 - Everybody else is on pay-as-you-go.
 - Only the two feature months of a window are read.
+
+The report ends with what the rate does not convert: how many customers use mobile data and how much, how often they top up, top-ups below the smallest card, and spending beyond the dearest package.
 
 `Ali_Branch` mapped amounts onto the recharge cards by quantiles with assumed card shares; one linear rate keeps real spending differences and needs a single assumption, the ARPU.
 

@@ -176,18 +176,28 @@ def run_score(args: argparse.Namespace) -> None:
 
 def run_operator_view(args: argparse.Namespace) -> None:
     from prepaid_churn.clean import clean
-    from prepaid_churn.operator_market import load_market, load_offers, operator_view, view_report
+    from prepaid_churn.operator_market import (
+        load_market,
+        load_offers,
+        operator_view,
+        unconverted_behaviour,
+        view_report,
+    )
     from prepaid_churn.schema import validate
     from prepaid_churn.scoring import SCORING_WINDOW
-    from prepaid_churn.windows import active_in_current_month
+    from prepaid_churn.windows import active_in_current_month, window_features
 
     market = load_market()
+    offers = load_offers()
     cleaned = clean(validate(load_raw(args.input), labeled=False))
-    view = operator_view(cleaned, SCORING_WINDOW, market, load_offers())
+    view = operator_view(cleaned, SCORING_WINDOW, market, offers)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     view.to_csv(args.output, index=False, encoding="utf-8")
     active = active_in_current_month(cleaned, SCORING_WINDOW)
-    report = view_report(view, active, market, args.input.name)
+    behaviour = unconverted_behaviour(
+        window_features(cleaned, SCORING_WINDOW)[active.to_numpy()], market, offers
+    )
+    report = view_report(view, active, market, args.input.name, behaviour)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(report, encoding="utf-8")
     print(f"operator view of {len(view)} customers in {args.output}, summary in {args.report}")

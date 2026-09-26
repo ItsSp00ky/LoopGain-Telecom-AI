@@ -12,7 +12,7 @@ The behaviour is real (upGrad prepaid data from another market); the money and t
 | Reference monthly recharge | 537.17 in the source currency | measured | data/raw/train.csv, month 8: mean airtime plus data recharge of the 64,509 customers active that month |
 | Rate | 1 unit of the source currency = 0.130313 LYD | derived | ARPU divided by the reference recharge |
 | Recharge cards | 5, 10, 20, 40, 100 LYD | reported | Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1); on 2026-09-26 he confirmed that nothing below 5 LYD can be topped up |
-| Bundle held | monthly pack buyers get the dearest operator monthly bundle their data spend pays for; short-pack buyers get the daily pack their average data recharge pays for; everybody else is pay-as-you-go | assumption | T18 rule |
+| Bundle held | monthly pack buyers get the dearest operator monthly bundle their data spend pays for; short-pack buyers get the dearest daily or weekly pack their average data recharge pays for (decision 48); everybody else is pay-as-you-go | assumption | T18 rule |
 
 Monthly spend is the average airtime plus data recharge of the two window months.
 The usual card is the operator's card nearest to the customer's average airtime recharge.
@@ -45,12 +45,28 @@ This base's mean spend is 68.94 LYD; it differs from the ARPU because the rate i
 | bundle | customers | price_lyd | share |
 |---|---|---|---|
 | PAYG | 19669 | - | 0.7131 |
-| DAY_HALF | 3388 | 3.0000 | 0.1228 |
+| WK_2 | 2342 | 8.0000 | 0.0849 |
 | MO_6 | 1927 | 20.0000 | 0.0699 |
 | MO_80 | 1046 | 80.0000 | 0.0379 |
+| WK_1 | 593 | 5.0000 | 0.0215 |
 | MO_10 | 575 | 30.0000 | 0.0208 |
 | DAY_QTR | 468 | 2.0000 | 0.0170 |
+| DAY_HALF | 453 | 3.0000 | 0.0164 |
 | MO_40 | 273 | 50.0000 | 0.0099 |
 | MO_20 | 146 | 35.0000 | 0.0053 |
 | DAY_100MB | 75 | 1.0000 | 0.0027 |
 | DAY_50MB | 15 | 0.5000 | 0.0005 |
+
+## What the rate does not convert
+
+The rate turns the source currency into LYD, but the habits below stay the source market's, so no figure built on them is one of the operator's.
+
+| Habit in this base | Value |
+|---|---|
+| Customers who used no mobile data this month | 73.7% |
+| Median data used by the others | 0.50 GB a month |
+| Median airtime top-ups | 6 a month |
+| Customers whose average top-up converts to less than the smallest card (5 LYD) | 49.9% of those who recharged |
+| Customers spending more a month than the dearest package (400 LYD) | 422 (1.5%), with 16.3% of all spend; the highest spends 5,709 LYD |
+
+Nothing below the smallest card can be topped up at the operator (recharge cards above), so the usual card is the card such a customer would buy there, not one this data shows.
