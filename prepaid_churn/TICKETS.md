@@ -754,6 +754,8 @@ Findings (2026-09-22, after Taha used it):
 Findings (2026-09-26, Ali's recap):
 - Taha's last word on the app, on 2026-09-23 in his session log on `tahaDev`, is that it is "still somehow heavy and somehow random"; what felt random is still to be asked.
 - The Campaign builder now says its equal-spend table is won by construction and that the holdout is the same customers in every campaign (decision 43); the home page lists all five screens.
+- Prepared for the presentation and checked in the browser: the default campaign is now a 1,000-customer demo at 70 LYD with a 35 LYD budget (102 offers, 48 cut by the budget, 98 held out), a 2.6 MB snapshot.
+  The full-base and empty campaigns moved to the git-ignored `artifacts/campaigns-archive/`; every screen was opened, and the Subscriber caption no longer calls the reasons sentences.
 
 Findings (2026-09-21):
 - Four screens in `app/`, over the pure `src/prepaid_churn/demo.py`; loading goes through `service.load_state`, so the app and the T15 endpoints answer from one state.

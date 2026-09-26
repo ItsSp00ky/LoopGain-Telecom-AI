@@ -224,7 +224,7 @@ def contributions(model, x: pd.DataFrame) -> np.ndarray:
 
 
 def top_reasons(x: pd.DataFrame, contribution: np.ndarray) -> list[list[str | None]]:
-    """Up to REASON_COUNT factors that raise each customer's risk the most, as sentences."""
+    """Up to REASON_COUNT factors that raise each customer's risk the most, as short labels."""
     order = np.argsort(-contribution, axis=1, kind="stable")[:, :REASON_COUNT]
     features = x.columns.to_numpy()
     labels = {feature: feature_label(feature) for feature in features}

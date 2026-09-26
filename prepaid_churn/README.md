@@ -214,7 +214,7 @@ Checked on 2026-09-22 against the rebuilt 30,000-subscriber base and an isolated
 
 ## Demo app
 
-Four screens over what the pipeline wrote, for showing the module to someone.
+Five screens over what the pipeline wrote, for showing the module to someone.
 
 ```bash
 uv run streamlit run app/Home.py
@@ -224,7 +224,7 @@ uv run streamlit run app/Home.py
 |---|---|
 | Home | The base, expected churners and revenue at risk, and what is not built yet |
 | Overview | Customers and LYD at risk by risk band and value tier, with the model's test results |
-| Subscriber | One customer: risk, plain-language reasons, value tier, the Almadar bundle held and the proposed offer |
+| Subscriber | One customer: risk, the model's reasons (high and medium risk only), value tier, the Almadar bundle held and the proposed offer |
 | Campaign builder | What the guardrails removed, the holdout, cost and value, the equal-spend comparison, and approve or reject under your name |
 | Message preview | The Arabic message an approved customer would receive, and how many SMS parts it actually costs |
 | Released | What was approved, where the files are, and the endpoint the chatbot reads it from |
@@ -232,6 +232,8 @@ uv run streamlit run app/Home.py
 The sidebar picks which campaign every screen reads.
 The Campaign builder can propose a new one (how many customers, what budget), and the Subscriber screen can propose an offer for one customer; both run the same engine as `churn decide`, and neither approves anything (decision 34).
 Keep a proposed campaign small while demonstrating: 500 customers is a 1.7 MB snapshot that loads instantly, where the whole 30,000-customer base is 80 MB.
+The demo prepared on 2026-09-26 is 1,000 customers with a 35 LYD budget, proportional to 1,000 LYD for the whole base: 102 offers, 48 cut by the budget and 98 held out.
+On a fresh clone, propose the same from the Campaign builder (1,000 customers, 35 LYD) and pick it in the sidebar.
 
 By default it reads the first campaign in `artifacts/campaigns/retention`.
 To show another one, name it before starting:

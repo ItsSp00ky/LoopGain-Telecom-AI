@@ -127,8 +127,10 @@ with reason_column:
         )
     else:
         st.caption(
-            "Exact SHAP contributions from the model that scored this customer, written "
-            "as sentences. Only factors that raise the risk are listed."
+            "Exact SHAP contributions from the model that scored this customer, each a short "
+            "label with the customer's value. Only factors that raise the risk are listed, and "
+            "only for high and medium risk; a low-risk customer gets one line instead "
+            "(decision 40)."
         )
         for position, reason in enumerate(reasons, start=1):
             st.markdown(f"{position}. {reason}")
