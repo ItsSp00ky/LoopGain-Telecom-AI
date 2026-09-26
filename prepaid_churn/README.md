@@ -56,26 +56,37 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |
 | `uv run streamlit run app/Home.py` | T14 | Opens the four demo screens over the released outputs; the only screen that writes is the named approval |
 
-Full pipeline from a fresh clone, about a minute (the processed data, models and scores are git-ignored and rebuilt):
+Full pipeline from a fresh clone, about four minutes (the processed data, models and scores are git-ignored and rebuilt):
 
 ```bash
 uv sync
+uv run churn profile
 uv run churn build-dataset
+uv run churn build-dataset --high-value
 uv run churn train
 uv run churn evaluate --chosen-at 2026-09-19
+uv run churn uncertainty
 uv run churn bundle
 uv run churn score
 uv run churn almadar-view
 uv run churn fit-tiers
 uv run churn tiers
+uv run churn advance
+uv run churn decide --tiers-only --output-dir artifacts/campaigns/readiness --report reports/decisions.md
 ```
 
 `--chosen-at 2026-09-19` keeps the date the champion was frozen.
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
-Checked again on 2026-09-21 from a fresh clone of `Ali_Branch`: same bundle version, same tier artifact `tiers-v1-cd15525cb3ef`, and no committed report changed.
-The [2026-09-22 end-to-end check](reports/end_to_end.md) reproduced them again, exercised the live API and all five dashboard pages, and records how to open the checked campaign.
+The last command is the readiness run behind `reports/decisions.md`: it proposes nothing, and it needs a campaign directory that does not exist yet.
+This block regenerates every committed report except the three research ones (`sequence_benchmark.md`, `synthetic.md` and `uplift.md`), which need their own environments and long runs and have never been rerun.
 
-The last two commands build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
+What was checked, and when:
+
+- 2026-09-21, fresh clone of `Ali_Branch`: the pipeline reports, the same bundle and the same tier artifact `tiers-v1-cd15525cb3ef`.
+- 2026-09-22, the [end-to-end check](reports/end_to_end.md): the same again plus `emergency_credit.md`, the live API and all five dashboard pages, with how to open the checked campaign.
+- 2026-09-26, fresh clone of `Ali_Branch`: this whole block in 3.6 minutes, with `git status` empty afterwards.
+
+`fit-tiers` and `tiers` build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
 To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
 The Almadar packages and market facts are in `data/almadar/` ([docs/almadar.md](docs/almadar.md)).
 

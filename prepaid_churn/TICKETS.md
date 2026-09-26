@@ -29,8 +29,10 @@ Update this section at the end of every working session.
   Low-band customers no longer get "reasons for churn" that read as warning signs: only high and medium ones do, and a low one gets one plain line (decision 40).
 - Step 9 (T9): CLAUDE.md still told every session to work on `tahaDev`; it now says Ali works on `Ali_Branch` only and Taha's work arrives by merge (decision 39).
   Taha's `f2cc724` on `tahaDev` (a session log and presentation material) is not merged yet.
-- Validation: 434 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: finish steps 8 and 9, then step 10, T10 value tiers.
+  The README rebuild now writes every committed report except the three research ones, and a fresh clone ran it on 2026-09-26 with `git status` empty.
+  The model card, T9 and the brief say exactly what was reproduced, and a test checks the uncertainty ranges the card quotes.
+- Validation: 436 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
+- Next: step 10, T10 value tiers.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -615,6 +617,9 @@ Findings (2026-09-21):
 - Ethics, selection bias and maintenance are covered; `circle_id` is the only region field and it is dropped before training, checked on 2026-09-21.
 - No naive-versus-honest table is invented. Instead the card shows validation PR-AUC 0.4582 against test 0.3477 and names the four traps the design avoids.
 - **Acceptance met.** A fresh clone of `Ali_Branch` on 2026-09-21 ran the README pipeline and reproduced every committed report byte for byte, with `git status` clean.
+  Corrected on 2026-09-26: that pipeline did not write every report, so `git status` could not show the others changing.
+  The T1 profile, the high-value dataset report, the readiness decisions report and the uncertainty report are now in the README rebuild, and on 2026-09-26 a fresh clone ran it with `git status` clean.
+  The three research reports (T12, T13, T17) need their own environments and long runs and have never been rerun.
 - The same run rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, which confirms the T21, T15, T14 and dependency changes did not move the frozen champion.
 - The README already listed every command; the full-pipeline block now also runs `fit-tiers` and `tiers`, which the service and the app need, and links the model card.
 - `tests/test_model_card.py` compares the card's figures against the reports, so a stale number fails the suite instead of reaching the copilot.
