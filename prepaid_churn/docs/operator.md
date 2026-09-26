@@ -35,8 +35,8 @@ They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_
 | `notes` | Anything a reader must know about the row. |
 
 `volume_source` values:
-- `stated`: the operator file states the volume (or that it is unlimited); 31 packages.
-- `name`: read from the package name, for example "نت 20" is 20 GB and "نت 1/4" is 0.25 GB.
+- `stated`: the operator file states the volume (or that it is unlimited); 11 of the 37 packages.
+- `name`: read from the package name, for example "نت 20" is 20 GB and "نت 1/4" is 0.25 GB; 17 packages.
   17 packages; the operator file does not state these volumes, so confirm them before quoting a price per GB.
 - `reported`: the file does not say, and `Ali_Branch` reports the package as unlimited; 6 packages (the Silver family, which the file only caps at 8 Mbps, and the two hourly 5G packages).
 - `none`: nothing is known (the three Social packages).
