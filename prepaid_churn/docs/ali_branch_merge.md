@@ -35,9 +35,9 @@ Add a dated entry to the step log for every step, and keep the port table curren
 | 8 | Integration contract and grounding rules for LLM consumers | `docs/INTEGRATION.md`, `docs/adr/0004-llm-has-no-write-path.md` | `docs/integration.md` | T20 | Done (adapted to this service's endpoints; his six grounding rules kept) |
 | 9 | Screens (overview, subscriber view, campaign builder, SMS preview) | `apps/*` | `app/`, `src/prepaid_churn/demo.py` | T14 | Done (adapted design, four screens with named approval) |
 | 10 | Model card template | `docs/model_cards/TEMPLATE.md` | `docs/model_card.md` | T9 | Done (adapted structure, filled from the committed reports) |
-| 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*`, `src/cvm/ingest/criteo_uplift.py` | `experiments/uplift.py` | T17 | Done (Qini and the two-model difference ported by hand; his HuggingFace source and his post-treatment rules kept) |
+| 11 | Two-model uplift, Qini, Criteo validation | `src/cvm/models/m3_uplift/*` | - | T17 | Removed on 2026-09-26 (decision 44) |
 | 12 | Emergency credit rules and affordability ceiling | `conf/advance.yaml`, `src/cvm/decision/advance_limit.py` | `src/prepaid_churn/advance.py` | T19 | Done (ceiling and denominations only; no repayment model) |
-| 13 | Synthesis engine and quality gate | `src/cvm/synthesis/ctgan_engine.py`, `quality_gate.py` | `experiments/synthetic.py` | T13 | Done (the design; SDV's own CTGAN and quality report, fitted on our real customers) |
+| 13 | Synthesis engine and quality gate | `src/cvm/synthesis/*` | - | T13 | Removed on 2026-09-26 (decision 44) |
 
 Not ported, with the reason in decision 15: the generated population and `hazard.py` labels, the repayment model, survival models, DuckDB, MLflow, Docker, conda, the eight-model benchmark, and the Cell2Cell, IBM, UCI, Hillstrom and Online Retail loaders.
 
@@ -145,7 +145,7 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
 - Took his Campaign Builder rule that a guardrail breakdown must state who was excluded and why, and his warning that the blanket comparison has to be made before the guardrails run.
 - Took his Subscriber 360 lesson about keeping a one-row frame rather than a Series, and his rule that the lookup field refuses a raw number in the UI and not only in the backend.
 - Did not port the RFM radar, the SHAP waterfall, the survival curve, the uplift quadrant, the leakage panel, the advance limit screen, the targeting CSV export, plotly or the `channel_sim` app.
-  Those belong to models this module does not have, or to T17 and T19.
+  Those belong to models this module does not have, or to T19.
 - Added what `Ali_Branch` did not have: the named approve and reject step from decision 14, writing through `campaign.review_file`, and a budget control that is an explicit preview which cannot be approved.
 - Ali's app carried a synthetic-data caveat on every screen; the equivalent here is the no-bundle banner, because this module's numbers are real but its risk figures are unavailable without a gated bundle.
 - Decision 22 records the Streamlit dependency, the preview boundary, the reporting rules and the five defects the browser check found.
@@ -205,23 +205,7 @@ Ali's serving lessons (his `HANDOFF.md` section 7) were applied as design rules,
   `GET /subscribers/{id}/risk` closes it (decision 26); `Ali_Branch`'s API had the equivalent in its `/v1/subscriber/{id}` view, so this is closer to his design than the four endpoints were.
 - The other gaps are recorded in the guide with the reason each one is not served, rather than left for a consumer to discover: the package a customer holds, the emergency credit advice, a bulk list of risky customers, and the review queue.
 
-### Step 16 - T12 and T13, the two graded experiments (2026-09-22, Taha + Claude)
+### Steps 16 and 17 - the experiments (2026-09-22, removed 2026-09-26)
 
-- Taha asked for the remaining tickets to be finished by us rather than left for someone else, so both graded syllabus experiments were done here.
-- T12 is not from `Ali_Branch`, but it lands on the same conclusion his branch reached: his API once returned an `lstm_churn_probability` beside the main score, and his integration document records that it was removed because M1 is a single gradient-boosting family now.
-  Our LSTM loses to LightGBM by a third of its PR-AUC on the frozen test window.
-- T13 ports the design of his `ctgan_engine.py` and `quality_gate.py`, not their code: SDV ships both the synthesiser and the quality report, and his wrapper existed to generate a population this module does not use.
-  The important change is what it is fitted on. His engine generated customers from Cell2Cell and a hazard formula; this one fits real upGrad training customers and asks what a model trained on the copy is worth.
-- The result is the measured version of decision 15's argument for cutting his generated population, and it is recorded in decision 29.
-- Not ported: his quality gate's pass or fail thresholds. They gated a pipeline that shipped generated data into a model, and nothing here does that.
+- T12 (LSTM), T13 (synthetic customers) and T17 (uplift) were built here and removed on 2026-09-26; decision 44 keeps their results in one note.
 
-### Step 17 - T17 uplift on two randomised trials (2026-09-22, Taha + Claude)
-
-- Ported his Qini by hand from `src/cvm/models/m3_uplift/evaluate.py` at `06890f6`, keeping both things his comments insist on: the control arm rescaled to the treated arm's size at every depth, and the Radcliffe normalisation by the perfect ranking.
-  His reason for writing it out rather than importing it is kept too, and the cross-check against `sklift.metrics.qini_auc_score` now runs inside the experiment and prints its agreement in the report.
-- Ported the two-model difference and his guard that both arms must be populated, with his explanation: with one arm empty the "uplift" is a response model minus a constant, which ranks plausibly and means nothing.
-- Kept his Criteo sourcing work, which saved real time: scikit-uplift's fetcher and Criteo's own link are both dead, the dataset is on HuggingFace, `visit` is the outcome to use rather than `conversion`, and `conversion` and `exposure` are post-treatment and may never be features.
-- Our Criteo Qini of 0.0698 on a 10% sample is close to the 0.0771 his branch reports, which is the first number from his work this module has been able to reproduce independently.
-- Added what his branch did not have: the Orange Belgium dataset the action plan names, a noise band from twenty random rankings, and the comparison against the risk ranking, which is the one that matters for T11.
-- Did not port his four-quadrant labelling (persuadable, sure thing, lost cause, sleeping dog) or the sleeping-dogs guard.
-  Both belong to a decision engine that acts on uplift scores, and this module has no uplift model of its own to act on; T11 decides on risk and value, and decision 30 says why that stays an assumption until a real campaign runs.

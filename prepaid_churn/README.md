@@ -45,7 +45,6 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
 | `uv run churn check-integration --subscriber-id <id>` | T20 | Calls a running service the way the chatbot and the copilot do, and reports what came back |
-| `uv run churn sequence-benchmark` | T12 | Trains a Keras LSTM and compares it with the champion on the frozen test window (needs the experiments group) |
 | `uv run churn almadar-view [--input <file>]` | T18 | Shows every customer in Almadar money and packages; writes `reports/almadar_view.md` |
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
@@ -78,7 +77,7 @@ uv run churn decide --tiers-only --output-dir artifacts/campaigns/readiness --re
 `--chosen-at 2026-09-19` keeps the date the champion was frozen.
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
 The last command is the readiness run behind `reports/decisions.md`: it proposes nothing, and it needs a campaign directory that does not exist yet.
-This block regenerates every committed report except the three research ones (`sequence_benchmark.md`, `synthetic.md` and `uplift.md`), which need their own environments and long runs and have never been rerun.
+This block regenerates every committed report.
 
 What was checked, and when:
 
@@ -212,41 +211,6 @@ uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a su
 It prints what each consumer sees and exits 1 if a refusal did not happen, health is degraded, risk is unavailable or the model release gate has not passed.
 Redirected output is UTF-8 so Arabic package names work on Windows too.
 Checked on 2026-09-22 against the rebuilt 30,000-subscriber base and an isolated QA campaign: status ok, 37 packages, the approved offer for one subscriber and all five refusals correct.
-
-## Syllabus experiments
-
-The two graded experiments live behind a separate dependency group, so a fresh clone stays small:
-
-```bash
-uv sync --group experiments
-uv run churn sequence-benchmark
-```
-
-T12 trains a Keras LSTM over the two monthly steps of each window and scores it once on the same frozen test window as T7.
-It loses, as two monthly steps predict: PR-AUC 0.2326 against LightGBM's 0.3477, and it fails two of the four release checks.
-The comparison, the thresholds and the caveats are in [reports/sequence_benchmark.md](reports/sequence_benchmark.md), and decisions 27 and 28 record why the answer is kept as it came out.
-Keras runs on the torch backend; SDV (T13) is deliberately not in this group, because it caps pandas below 3 and would downgrade the environment the champion was frozen in.
-
-T13 fits CTGAN and a Gaussian copula on real training customers and asks whether an operator could share a generated copy instead of its data.
-It runs in its own environment, so it needs no group at all:
-
-```bash
-uv run --script experiments/synthetic.py
-```
-
-The answer is no at this budget: a model trained on the best copy keeps 45% of the PR-AUC it reaches on real customers, both copies are told from real rows with a detection ROC-AUC of 1.000, and in Almadar terms the copies put customers on the wrong packages.
-The numbers, the limits and what a copy is actually good for are in [reports/synthetic.md](reports/synthetic.md) and decision 29.
-
-T17 asks whether the customers a model ranks riskiest are the ones an offer actually saves, which is the assumption behind T11:
-
-```bash
-uv run --script experiments/uplift.py
-```
-
-They are not the same customers. On Criteo's 1.4 million randomised rows, targeting by uplift reaches a Qini of 0.0698 while targeting by predicted response, the ranking T11 uses, reaches -0.1138, which is worse than random.
-The telecom dataset the action plan names, Orange Belgium, is too small to answer at all and the report says so.
-See [reports/uplift.md](reports/uplift.md) and decision 30.
-Both datasets are downloaded on demand into the git-ignored `data/external/`, because they are other people's data under non-commercial licences.
 
 ## Demo app
 

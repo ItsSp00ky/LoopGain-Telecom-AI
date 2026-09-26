@@ -6,7 +6,5 @@ data/processed/*
 # Trained model bundles
 artifacts/
 
-# T17 downloads the Orange Belgium and Criteo uplift datasets here.
-# They are other people's data under non-commercial licences (decision 30), so they are
-# fetched on demand and never committed.
+# Third-party downloads, if any, stay out of git.
 data/external/

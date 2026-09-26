@@ -37,8 +37,10 @@ Update this section at the end of every working session.
   Every LYD amount is 1.75 times larger, the tier artifact is `tiers-v1-efc9739afad4`, T19 advises more, and a 1,000 LYD campaign proposes 2,954 offers instead of 2,911; the churn model is untouched.
 - Step 11 (T11): the campaign report, the model card and the brief now say that the equal-spend comparison wins by construction and that one assumption picks 95% of the offers.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
-- Validation: 436 tests pass with 1 skipped (T12's LSTM, which needs the `experiments` group); lint and formatting green.
-- Next: step 12, the T12 sequence benchmark.
+- Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
+  One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
+- Validation: 431 tests pass, none skipped; lint and formatting green.
+- Next: step 14, the T14 demo app, whose options are still open.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -98,12 +100,7 @@ Update this section at the end of every working session.
   Four questions are deliberately not served, each written in the guide with its reason.
 - **Validation of T20 here**: 390 prepaid tests, lint and formatting pass; 11 of them are T20's, and no dependency was added.
   The check ran clean against a real service holding the 30,000-subscriber base and a campaign with two approved offers and one rejected.
-- **T12 and T13 are done**, so every graded syllabus chapter is now covered on real data (decision 8).
-  T12: the LSTM loses to LightGBM by a third of its PR-AUC and fails two of the four release checks, which is the expected answer for a two-step window and is kept as it came out (decision 28).
-  T13: a synthetic copy of the customers is a demo and a pipeline test, not a way to share data; the best copy keeps 45% of the real model's PR-AUC and both copies are told from real rows at a detection ROC-AUC of 1.000 (decision 29).
-- **T17 is done, so every ticket in this file is closed.**
-  It measured the assumption behind T11 on two public randomised trials: targeting by uplift and targeting by risk are not the same ranking, and on Criteo the risk ranking is worse than random (decision 30).
-  The telecom dataset the action plan names, Orange Belgium, is too small to answer, and the report says so rather than picking a winner.
+- **The experiments of T12, T13 and T17 were removed on 2026-09-26** (decision 44); the model card keeps their result in one note.
 - **The demo app was reworked after Taha used it (decision 34):** a campaign picker in the sidebar, proposing a campaign or a single offer from the screens, a Released screen that shows what was approved and where it lives, and a fix for the approval box, where an empty selection used to approve every pending proposal.
   Keep demo campaigns small: 500 customers is a 1.7 MB snapshot that loads instantly, the whole base is 80 MB and is what made the app feel heavy.
 - **What is left:** nothing in this file.
@@ -125,14 +122,10 @@ Update this section at the end of every working session.
      Worth a `--report` flag or a campaign-local path.
    - `test_api.py` and `test_demo.py` each build their own copy of the same four subscribers, and `tests/test_client.py` now makes three.
      If you touch those fixtures, moving them into `conftest.py` would be a good small cleanup; we left them alone rather than editing your tests.
-4. T12, T13 and T17 are done too, so every ticket in TICKETS.md is closed.
-   The results are negative and stay that way: the LSTM loses to LightGBM, a synthetic copy is a demo rather than a way to share data, and targeting by risk is not targeting by uplift (decisions 28, 29 and 30).
-   T17 ports your Qini and your two-model difference by hand, and our Criteo Qini of 0.0698 on a 10% sample is close to the 0.0771 your branch reports, which is the first of your numbers this module has reproduced independently.
-   Your Criteo sourcing notes saved real time: scikit-uplift's fetcher and Criteo's own link are both dead, and the HuggingFace copy you found is what the script uses.
-5. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
-6. Your Claude can start from this, in the repo:
+4. Please still answer the open questions below that name you; the Mix packages and the source links for the Almadar files are the two that block nothing but weaken the report.
+5. Your Claude can start from this, in the repo:
 
-   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and then finished T20, T12, T13 and T17, so every ticket is closed. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 to 30 in `prepaid_churn/docs/decisions.md`, and steps 13 to 17 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
+   > I am Ali. Taha took my `Ali_Branch` work into `tahaDev` and then finished T20, so every MVP ticket is closed. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, decisions 24 to 26 in `prepaid_churn/docs/decisions.md`, and steps 13 to 15 of `prepaid_churn/docs/ali_branch_merge.md`. Then rebuild the artifacts with the commands in the README, confirm the bundle is `lightgbm-2026-09-19-ef9430fb`, and tell me which ticket is next and what Taha still needs from me, before writing any code.
 
 **Ali's delivery log (2026-09-20 and 2026-09-21)**
 
@@ -184,7 +177,6 @@ Update this section at the end of every working session.
 - The "typical top-up" basis is an assumption that moves the headline by twenty points, so `reports/emergency_credit.md` carries a sensitivity table instead of hiding it.
 - T9, T10, T11, T14, T15 and T19 are complete.
 - T20 is the last MVP item and needs Taha and the chatbot and copilot owners rather than code alone.
-- **T12 and T13 are graded:** decision 8 says SIC grades syllabus coverage, and Ch 8, Ch 9 RNN (T12) and Ch 9 GAN (T13) are the two chapters still uncovered. T17 covers no chapter.
 
 The rebuild commands and the fresh-clone check that used to sit here are in [README.md](README.md); the branch instructions above replace the 2026-09-19 ones.
 
@@ -205,9 +197,6 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - T18 is done: `churn almadar-view` shows every customer in LYD and Almadar packages, at the 40 LYD ARPU Taha chose (`reports/almadar_view.md`).
 - A fresh clone rebuilds everything and reproduces the champion byte for byte, checked on 2026-09-19, again on 2026-09-21 by Ali, and again on 2026-09-21 here after his branch was taken in.
 - T20 is done: the guide, the example client, `churn check-integration` and the copilot's subscriber lookup that the walkthrough found missing.
-- T12, T13 and T17 are done: `reports/sequence_benchmark.md`, `reports/synthetic.md` and `reports/uplift.md`, with decisions 27 to 30.
-  No experiment changed a model, a feature or a threshold, and the frozen champion is untouched.
-- T17's external datasets are downloaded on demand into the git-ignored `data/external/`; they are under non-commercial licences and are never committed.
 - `tahaDev` now also carries Ali's fixes to Ahmed's `antenna_cell_placement/` and the root `CODE_REVIEW.md`; they are Ali's work, and the team has to see them before anything reaches `main`.
 
 **Blocked on**
@@ -222,9 +211,8 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 5. T15 integration service (done, Ali), then T20 integration check (done, Taha + Claude).
    The suggested split had Taha taking T15 and T20; Ali took T15 on 2026-09-21 because T11 was finished and the endpoints were the next thing blocking the platform.
 6. T14 demo app (done, Ali) and T9 documentation with the model card (done, Ali).
-7. The MVP now works end to end: T19 (done, Ali), T12, T13 and T17 (done, Taha + Claude).
+7. The MVP now works end to end: T19 (done, Ali).
    Every ticket in this file is closed.
-   The test window is spent: T12 compares against the frozen T7 numbers and must not change any T7 choice.
 
 **Open questions**
 - **Ali's agreement: answered on 2026-09-22.**
@@ -286,7 +274,6 @@ Reasons are in [docs/decisions.md](docs/decisions.md).
 - **MVP first** (decision 17): one customer use case, integrated with the chatbot and copilot, before any extra experiment.
   No LLM in any path that sets an offer, price or credit limit; pseudonymous IDs; separate API keys for the chatbot and the copilot.
 - **Ali's work** (decision 15): ported by hand from `Ali_Branch`, never merged with git, and every port logged in `docs/ali_branch_merge.md`.
-- **Syllabus experiments** (T12, T13) use a separate `experiments` dependency group, so the core package stays small.
 - **Data in git:** the raw Kaggle files in `data/raw/` are committed (decision 9).
   `data/processed/` and `artifacts/` are git-ignored and rebuilt by the pipeline.
   Reports with aggregate numbers (`reports/`) are committed.
@@ -531,6 +518,7 @@ Result on the test window (months 7 and 8, Kaggle's month 9 label, unseen custom
   By band, the high band had 173 leavers against 199 predicted (-13%), the medium band 148 against 135 (+10%) and the low band 100 against 75 (+34%), so the largest miss is where T11 spends nothing (model card, Calibration).
   Decision 38 adds a check on the high and medium bands for the next model.
 - High-value slice: ROC-AUC 0.906, PR-AUC 0.383 at 2.9% churn.
+- Other models tested, then removed on 2026-09-26 because both were worse than LightGBM (decision 44): an LSTM scored a test PR-AUC of 0.2326 and failed two release checks, and a LightGBM trained on synthetic customers kept at most 45% of the real validation PR-AUC.
 - Test is lower than validation (ROC-AUC 0.928, PR-AUC 0.458): it is a later month, Kaggle's label instead of ours, and unseen customers.
   This gap is the honest estimate of production performance.
 - After the first run, the report was regenerated once only to print customer counts as whole numbers; the choices are frozen and deterministic, so no number changed.
@@ -626,7 +614,7 @@ Findings (2026-09-21):
 - **Acceptance met.** A fresh clone of `Ali_Branch` on 2026-09-21 ran the README pipeline and reproduced every committed report byte for byte, with `git status` clean.
   Corrected on 2026-09-26: that pipeline did not write every report, so `git status` could not show the others changing.
   The T1 profile, the high-value dataset report, the readiness decisions report and the uncertainty report are now in the README rebuild, and on 2026-09-26 a fresh clone ran it with `git status` clean.
-  The three research reports (T12, T13, T17) need their own environments and long runs and have never been rerun.
+  The three research reports were removed on 2026-09-26 with their experiments (decision 44).
 - The same run rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, which confirms the T21, T15, T14 and dependency changes did not move the frozen champion.
 - The README already listed every command; the full-pipeline block now also runs `fit-tiers` and `tiers`, which the service and the app need, and links the model card.
 - `tests/test_model_card.py` compares the card's figures against the reports, so a stale number fails the suite instead of reaching the copilot.
@@ -730,69 +718,6 @@ Findings (2026-09-20):
   At the 70 LYD anchor, 2,803 of 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% instead of 5%, and the budget cut 300 high-band customers whose value the constant-risk scenario understates (decision 41).
   The campaign report, the model card and the brief now say so.
 - The holdout is the same customers in every campaign, because the lottery uses only the subscriber ID and a fixed seed; decision 43 makes that a deliberate permanent control group.
-
-## T12 - Sequence benchmark (syllabus Ch 8, Ch 9 RNN)
-
-**Owner:** Taha + Claude
-**Status:** Done
-**Depends on:** T7
-
-Scope:
-- A Keras LSTM over the monthly steps of each window, with dropout and early stopping on validation customers.
-- Calibrate it the same way as T7 and compare it with LightGBM on the same frozen test.
-- Explain the result honestly: with only two monthly steps per window, LightGBM is expected to win.
-- TensorFlow goes in the `experiments` dependency group.
-
-Acceptance:
-- `reports/sequence_benchmark.md` with the comparison table and a written verdict.
-
-Findings (2026-09-22, `reports/sequence_benchmark.md`):
-- `uv run churn sequence-benchmark` trains the LSTM, calibrates it on validation customers and scores the frozen test window once; it takes about 20 seconds on a laptop CPU.
-- The LSTM reads the two monthly steps as a sequence of 53 measures plus tenure, and the T5 features are deliberately withheld from it: they are the movement between the months, which is what the sequence model is supposed to derive.
-- Result: PR-AUC 0.2326 against LightGBM's 0.3477 and logistic regression's 0.2770; capture at 10% 0.4941 against the champion's 0.6152; calibration is fine (0.0016 off).
-  It fails two of the four release checks and would not be released (decision 28).
-- Keras runs on the torch backend rather than TensorFlow, because T13's CTGAN needs torch anyway; `uv sync --group experiments` installs both (decision 27).
-- SDV is deliberately not in that group: it caps pandas below 3 and downgraded the whole project, which broke the frozen bundle's version check.
-- The run reproduces: seeded through `keras.utils.set_random_seed`, and two runs wrote a byte-identical report on this machine.
-- 6 new tests, one of which is skipped when the experiments group is not installed; 396 prepaid tests pass.
-  The Keras and torch deprecation warnings in the test output come from those libraries, not from this module.
-
-## T13 - Synthetic data experiment (syllabus Ch 9 GAN)
-
-**Owner:** Taha + Claude
-**Status:** Done
-**Depends on:** T4, T18
-
-Question: can an operator share a synthetic copy of its customer data (real data cannot leave the operator) and still get a useful model?
-
-Scope:
-- Reuse `Ali_Branch`'s synthesis engine (`src/cvm/synthesis/ctgan_engine.py`) and quality gate (`quality_gate.py`), refit on window A train customers only instead of Cell2Cell.
-  So the synthetic customers' churn is learnt from real behaviour, not drawn from a formula.
-- CTGAN, with a Gaussian copula as a simple baseline.
-- Train on synthetic, test on real validation customers; compare with train on real.
-- Detection test: a classifier that tries to tell real from synthetic rows (lower ROC-AUC means more realistic).
-- SDMetrics quality report.
-- The synthetic copy can be shown in Almadar terms through T18, which makes it a shareable "synthetic Almadar customer base" for demos.
-- SDV goes in the `experiments` dependency group; its Business Source License allows non-production use.
-
-Acceptance:
-- `reports/synthetic.md` with the train-on-synthetic vs train-on-real table and the detection ROC-AUC.
-- The synthetic data is never used to train the production model.
-
-Findings (2026-09-22, `reports/synthetic.md`):
-- `uv run --script experiments/synthetic.py` runs the whole experiment in about 90 seconds and writes the report.
-  It is a standalone script with its own environment because SDV caps pandas below 3, which would downgrade the module and break the frozen bundle (decision 27); it imports this package for the Almadar rules and the LightGBM settings, so nothing is duplicated.
-- Setup: 6,000 real training customers, 28 features (the 18 strongest by gain plus the columns T18 needs), CTGAN at 60 epochs on a CPU, and a Gaussian copula as the baseline.
-- Utility, scored on the same 9,812 real validation customers: real training 0.3238 PR-AUC, copula copy 0.1456 (45%), CTGAN copy 0.0491 (15%).
-- Detection ROC-AUC is 1.000 for both copies, so neither is realistic enough to pass for real data.
-- CTGAN lost the churn rate: 16.8% churners against 4.7% real. The copula kept it (5.1%).
-- In Almadar terms (T18) the copies are visibly wrong: real customers are 72% pay-as-you-go, 14% monthly, 14% daily; the copula copy is 86% daily and 0% pay-as-you-go, CTGAN is 44% monthly.
-  Every column is inside its real range, and the customers are still on the wrong packages.
-- Verdict: a synthetic copy here is a demo, a schema and a pipeline test, not a way to share customer data (decision 29).
-  That is the measured version of decisions 7 and 15, which cut generated populations and formula labels on the same argument.
-- Honest note: the first fidelity check counted negative amounts and reported 54% for both copies; it was wrong, because `diff_*` columns are negative for half the real customers too, so the same check called the real data 58% impossible. The corrected check is 0% for both.
-- Not measured: privacy. A copy can pass every fidelity test and still memorise a rare customer; membership inference is the test for that, and it is not in this experiment.
-- The script is linted by `ruff check` with the rest of the module, and it has no unit tests: it lives in its own environment, so the module's suite cannot import it, and its evidence is the committed report.
 
 ## T14 - Demo app
 
@@ -922,38 +847,6 @@ Findings (details in `docs/almadar.md`):
 - Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.
 - The recharge cards are `reported` (no operator document yet); ARPU (40 LYD) is an assumption and delivery costs are estimates.
   Since 2026-09-26 the ARPU is 70 LYD (decision 42).
-
-## T17 - Uplift experiment on real data
-
-**Owner:** Taha + Claude
-**Status:** Done
-**Depends on:** nothing
-
-Why: the SIC action plan lists the Orange Belgium Churn-Uplift dataset, and a retention offer only pays when it changes behaviour (decision 4).
-
-Scope:
-- Reuse `Ali_Branch`'s two-model uplift and Qini code (`src/cvm/models/m3_uplift/`), whose Qini was checked against scikit-uplift.
-- Orange Belgium, from OpenML (dataset 45580): 11,896 customers, 178 anonymized features, a phone retention campaign with a random control group (about 76% treated, 24% control), churn about 3.5%.
-- Criteo Uplift, as in `Ali_Branch` (a 10% sample; held-out Qini 0.0771 there): a large randomized trial, but advertising, not telecom.
-- Compare targeting by churn risk with targeting by uplift, using Qini curves on held-out customers.
-- Write the lesson for T11's "share saved" assumption in `reports/uplift.md`.
-- Limits to state: Orange is postpaid with anonymized features that cannot be combined with our model; Criteo is advertising; both licenses are non-commercial.
-
-Acceptance:
-- `reports/uplift.md` with the Qini comparison for both datasets and a written verdict.
-
-Findings (2026-09-22, `reports/uplift.md`):
-- `uv run --script experiments/uplift.py` fetches both datasets into the git-ignored `data/external/` and writes the report; the Criteo archive is 311 MB and is downloaded once.
-- Criteo (1,397,959 rows, a real randomised advertising test): ranking by uplift reaches a Qini of 0.0698, ranking by predicted response reaches -0.1138, and twenty random rankings span plus or minus 0.0110.
-  Realised uplift in the top 30%: +2.89% against +0.02%.
-  The response ranking, which is the one T11 uses, is worse than random here.
-- Orange Belgium (11,896 customers, a real telecom retention call): every ranking sits inside the noise band, because the held-out 30% holds 3,569 customers and 120 churners.
-  The dataset is the right industry and too small to settle anything, and the report says so instead of picking a winner.
-- Ali's Qini is ported by hand, including the control-arm rescaling and the perfect-ranking normalisation, and checked at runtime against `sklift.metrics.qini_auc_score`: agreement 8.14e-06 on Criteo, 1.46e-03 on the small Orange holdout.
-- Orange's outcome is flipped to retention on purpose; fitting on churn would rank the customers a call *loses* (decision 30).
-- The lesson for T11: the riskiest decile is not the persuadable decile, so "share saved" stays an assumption and every LYD figure downstream of it stays a scenario.
-  T11's random holdout is the only instrument in this module that can turn it into a measurement, and this is the reason to keep it.
-- Neither dataset is committed: both are non-commercial licences, and `data/external/` is git-ignored.
 
 ## T18 - Almadar view of the real customers
 

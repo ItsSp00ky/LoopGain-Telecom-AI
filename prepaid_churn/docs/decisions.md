@@ -105,7 +105,7 @@ The trade-off we accepted, stated plainly because it is the largest limitation i
   That leaves one month-to-month change per customer and no seasonality, no trend and no long history.
   Cell2Cell has longer histories, so this was a real choice rather than the only option.
   We took prepaid behaviour over history length, because a model of postpaid contract customers cannot be repointed at a prepaid market (decision 1), while a short history still supports the question we actually ask.
-  Almost every later limitation traces back to this line, including the T12 result that a sequence model has nothing to work with over two steps (decision 28).
+  Almost every later limitation traces back to this line.
 
 Known limits, stated in the model card:
 - Provenance is undocumented (it looks like an Indian operator: "circle" regions and rupee amounts).
@@ -160,12 +160,9 @@ SIC grades syllabus coverage, so our module covers the chapters that fit churn, 
 |---|---|
 | Ch 5 supervised learning | T6 and T7: logistic regression, LightGBM, calibration |
 | Ch 6 unsupervised learning | T10: K-Means, PCA plot, dendrogram on value features |
-| Ch 8 deep learning, Ch 9 RNN | T12: Keras LSTM vs LightGBM on the monthly panel |
-| Ch 9 GAN | T13: CTGAN "privacy-safe synthetic copy", train on synthetic and test on real |
 
 Chapters 7 and 10 (NLP and LLMs) belong to the chatbot module.
-Experiments use a separate `experiments` dependency group, so the core package stays small.
-SDV and CTGAN use the Business Source License, which allows non-production use such as this experiment.
+Chapters 8 and 9 (deep learning, RNN and GAN) are covered by the teammates' parts of the project; this module's experiments for them were removed on 2026-09-26 (decision 44).
 
 ## 9. The raw data is committed to the private repo
 
@@ -211,7 +208,7 @@ Findings:
 - Al-Madar publishes its data packages on its website; Libyana's site blocks automated requests but works in a normal browser.
   T16 builds a real package catalogue from these official sources, with a collection date on every row.
 - The Orange Belgium Churn-Uplift dataset in the action plan is real: 11,896 customers of a real phone retention campaign with a random control group.
-  It is postpaid, its features are anonymized, and its license is non-commercial (CC BY-NC-ND 4.0), so it serves the T17 experiment only.
+  It is postpaid, its features are anonymized, and its license is non-commercial (CC BY-NC-ND 4.0), so this module does not use it.
 
 Consequence for selling:
 - Both training datasets are for education or non-commercial use only, so models trained on them cannot be sold.
@@ -293,7 +290,7 @@ Taken (the ticket that uses each piece is in brackets):
 - Offer engine design: the real catalogue as the action space, "no offer" as a real option, the guardrails including the cannibalisation guard keyed on the bundle a customer holds, the equal-spend comparison, the holdout and the decision log (T11).
 - Serving lessons: everything a scoring run needs travels inside the bundle, pinned library versions, a smoke prediction at load time, and one-row batches as a test case (T8).
 - The API and screen designs, and the grounding rules for LLM consumers (T14, T15, T20).
-- Prepaid value segmentation (T10), two-model uplift with Qini and the Criteo validation (T17), the emergency credit rules (T19), the synthesis engine and its quality gate (T13), and the model card template (T9).
+- Prepaid value segmentation (T10), the emergency credit rules (T19) and the model card template (T9).
 
 Not taken, and why:
 - The generated population and its formula labels, and every result measured on them: decision 7, the metrics would measure the formula.
@@ -303,7 +300,7 @@ Not taken, and why:
 - Cell2Cell, IBM Telco, UCI Iranian, Hillstrom and Online Retail as data sources: decisions 5 and 7.
 
 Conflicts between the two efforts, and how they are settled:
-- Syllabus coverage: `Ali_Branch` removed chapter tracking; it stays here, because SIC grades it (decision 8).
+- Syllabus coverage: `Ali_Branch` removed chapter tracking; it stayed here, because SIC grades it (decision 8), until the teammates' parts took chapters 8 and 9 (decision 44).
 - Data in git: `Ali_Branch` never commits data; the raw Kaggle files stay committed here (decision 9).
 - Churn definition: `Ali_Branch` uses "30 days without a top-up"; we keep the usage-based rule, because the only real label (Kaggle's month 9) uses it.
 
@@ -336,7 +333,7 @@ In the action plan, Taha owns the chatbot, the copilot and the integration, and 
 
 Our MVP use case: "Which active prepaid customers are likely to stop using their line next month, and which approved Almadar offer should each one get?"
 The MVP path is T16, T8, T18, T10, T11, T15, T20, T14 and T9.
-T12, T13, T17 and T19 come after the MVP works end to end.
+T19 comes after the MVP works end to end.
 
 How the module links to each part of the platform (extends decision 10):
 - **Customer chatbot:** reads the Almadar catalogue (T16) and, for the one subscriber it is talking to, the approved offer and its reason (T15).
@@ -698,121 +695,21 @@ What was not added, although the walkthrough asked for it:
 
 Each one is written in [integration.md](integration.md) with its reason, so a consumer asks instead of building a workaround.
 
-## 27. Keras on the torch backend, and why SDV stays out of this environment
+## 27. Removed
 
-Date: 2026-09-22.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
-T12 asks for a Keras LSTM and decision 8 puts the syllabus experiments in a separate `experiments` dependency group, so the module a teammate clones stays small.
-Both still hold, with one change and one exception.
+## 28. Removed
 
-The change: Keras runs on the torch backend instead of TensorFlow.
-T13 needs SDV, SDV needs CTGAN and CTGAN needs torch, so installing TensorFlow as well would put two deep learning runtimes in one repository to run two small experiments.
-Keras 3 is the same Keras either way; the LSTM code does not know which backend is under it.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
-The exception: SDV is not in the group.
-It caps pandas below 3, and adding it to the lock downgraded pandas from 3.0.5 to 2.3.3 for the whole project, including the default environment.
-That is not a small thing here: the frozen bundle records the library versions it was built with and refuses to load under different ones (T8), so the downgrade broke `churn score`, `churn decide` and the service in one command.
-The module stays on pandas 3, and T13 runs in its own environment (decision 28).
+## 29. Removed
 
-So `uv sync` installs what it always did, `uv sync --group experiments` adds Keras and torch for T12, and neither touches the versions the champion was frozen with.
-A run of the full pipeline after the group was added reproduced bundle `lightgbm-2026-09-19-ef9430fb` and every committed report unchanged.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
-## 28. The LSTM loses, and that is the T12 result
+## 30. Removed
 
-Date: 2026-09-22.
-
-The benchmark ran once on the frozen test window, calibrated the same way as T7 and scored with the same metrics: PR-AUC 0.2326 against LightGBM's 0.3477 and the logistic regression baseline's 0.2770, capture at 10% of 0.4941 against 0.6152.
-It fails two of the four success thresholds of decision 13 and would not be released.
-
-This is the expected answer and it is worth stating plainly rather than tuning until it looks better.
-A window here is two monthly steps.
-The movement between two points is a subtraction, the T5 features hand that subtraction to LightGBM directly, and the LSTM has to learn it from two steps and about 400 churners in the training split.
-A recurrent layer earns its place when there is a history to remember, and two steps is not a history.
-
-What was deliberately not done: no architecture search, no threshold moved, no second look at the test window.
-The architecture, the epochs and the calibrator were chosen on validation customers, and the frozen champion was not retrained or reconsidered (decision 6).
-Tuning an experiment against the test set until it beats the champion is exactly the mistake the split design exists to prevent, and the grade for this chapter does not depend on the LSTM winning.
-
-`Ali_Branch` reached the same conclusion from the other side: its API once returned an `lstm_churn_probability` beside the main score, and its own integration document records that the field and the benchmark arm were removed because "M1 is a single gradient-boosting model family now".
-Two independent efforts on this data dropped the recurrent model for the same reason.
-
-The honest caveat travels with the result in [../reports/sequence_benchmark.md](../reports/sequence_benchmark.md): with six or twelve months per customer, or with call-detail records instead of monthly totals, the comparison is worth running again.
-
-## 29. A synthetic copy is a demo, not a way to share customer data
-
-Date: 2026-09-22.
-
-T13 asked the operator's question rather than the model's: real prepaid data cannot leave a telecom operator, so can the operator fit a generator on its customers, hand out the copy, and still let someone build a model worth having?
-The experiment fits CTGAN and a Gaussian copula on 6,000 real training customers and 28 features, then trains the same LightGBM on each copy and scores all of them on the same real validation customers.
-
-The answer on this data, at this budget, is no.
-A model trained on the copula copy keeps 45% of the PR-AUC that the same model reaches on real customers, and the CTGAN copy keeps 15%.
-Both copies are told apart from real rows with a detection ROC-AUC of 1.000, so neither is realistic enough to be mistaken for the real thing either.
-CTGAN also lost the churn rate itself: 16.8% of its rows are churners against 4.7% in the real sample, and a model trained on the wrong base rate is wrong before it has learnt anything.
-
-Two results are worth keeping beyond the grade.
-
-The Gaussian copula, which is the simple baseline the GAN has to beat, beat it on every measure that matters here.
-That is a normal outcome for 60 epochs on a laptop CPU and it is reported as it came out.
-A longer fit would probably close the gap, and the report says so rather than presenting a budget as a ceiling.
-
-The business view is where the copies visibly came apart.
-Shown in Almadar terms through T18, 72% of the real customers are on pay-as-you-go, 14% hold a monthly bundle and 14% buy daily packs.
-The copula copy puts 86% on daily packs and nobody on pay-as-you-go; CTGAN puts 44% on monthly bundles.
-Every column in those copies is individually inside its real range, and the customers are still on the wrong packages, which is the failure a column-by-column quality score does not show.
-
-This is also the measured version of an argument this module already made twice.
-Decision 7 cut the generated population from the CVM proposal and decision 15 declined to carry `Ali_Branch`'s hazard-formula labels, both on the grounds that a model fitted to generated data is evidence about the generator and not about customers.
-T13 puts a number on it on our own data.
-So the rule stands and now has a citation: no synthetic row trains, calibrates or evaluates anything in this module, and no report or presentation may describe this module as producing a shareable synthetic customer base.
-
-What the copies are good for, and how this module uses them: a demo with no real customers in it, a schema to build a pipeline against, and a load test.
-That is real value and it is what the report claims.
-
-What was not measured, and would have to be before any copy left an operator: privacy.
-A copy can pass every fidelity test and still memorise a rare customer, and membership inference is the test for that, not column shapes.
-
-One honest note on method.
-The first version of the fidelity check counted rows with a negative amount and reported about 54% for both copies.
-That check was wrong: `diff_*` columns are differences and are negative for half the real customers too, so the same check called the real data 58% impossible.
-It was replaced with a comparison against the columns that are never negative in the real sample, where both copies score 0%, because SDV keeps each column inside the range it learnt.
-The wrong version is recorded here because it is the kind of check that looks like a finding and is really a bug.
-
-## 30. Risk targeting and uplift targeting are not the same ranking
-
-Date: 2026-09-22.
-
-T11 gives a bonus to the customers this module ranks riskiest and assumes a share of them are saved by it.
-That assumption is the weakest number in the module, and the upGrad data cannot test it: it has no treatment arm, so no uplift model can be fitted on it at all.
-T17 therefore measures the method on two public randomised trials and carries back the lesson, not the numbers.
-
-On Criteo's 1.4 million randomised rows, ranking by uplift reaches a Qini of 0.0698 while ranking by predicted response, which is the ranking T11 uses, reaches -0.1138.
-Twenty uninformative rankings on the same rows span plus or minus 0.0110, so the uplift ranking clears the noise and the response ranking is not merely worse, it is worse than random.
-The realised uplift in the top 30% is +2.89% against +0.02%.
-The people most likely to respond were not the people the advertisement moved, and there is no reason to expect churn to behave differently.
-
-Orange Belgium, the telecom dataset, answers nothing, and that is reported rather than dressed up.
-Its held-out 30% holds 3,569 customers and 120 churners, and every ranking, including the random one, sits inside the same noise band.
-A dataset of that size cannot estimate an uplift ranking, and the honest output of the run is that sentence.
-This is worth keeping because the SIC action plan lists Orange Belgium as a churn-uplift source: it is the right industry and the right action, and it is still too small to settle anything.
-
-What this changes in the module: nothing in the code, and one sentence in how T11 must be read.
-The riskiest decile is not the persuadable decile, so "share saved" stays an assumption with a stated value rather than a measured rate, and every LYD figure downstream of it stays a scenario.
-T11's random holdout of proposed customers is the only instrument this module has for turning that assumption into a measurement, and it only pays once a real campaign runs against it.
-That holdout was already in T11 before this experiment; T17 is the reason to keep it when someone asks why part of the budget is not spent.
-
-Two smaller decisions recorded here.
-
-The Qini implementation is ported by hand from `Ali_Branch` rather than imported from scikit-uplift, keeping both things his comments say are easy to get wrong: the control arm is rescaled to the treated arm's size at every depth, and the coefficient is normalised by the perfect ranking.
-It is then checked against `sklift.metrics.qini_auc_score` at runtime, and the agreement is printed in the report: 8.14e-06 on Criteo and 1.46e-03 on the small Orange holdout.
-An implementation that is only a call to the thing it is checked against cannot disagree with it, which is his argument and it is right.
-
-Orange's outcome is flipped on purpose.
-Its label is churn, so a call that works makes the label smaller, and an uplift model fitted on churn ranks the customers a call would lose.
-Retention is the response the campaign is trying to produce, and getting that sign wrong is the classic way an uplift study reports its best customers as its worst.
-
-The two datasets are downloaded on demand into `data/external/`, which is git-ignored.
-Both are under non-commercial licences and neither is ours to redistribute, so unlike the Kaggle data in `data/raw/` (decision 9) they are never committed.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
 ## 31. The Mix families leave the catalogue, and a removal is recorded rather than silent
 
@@ -980,8 +877,6 @@ The cost is small: the tree count is chosen with 90% of the train customers inst
 The other LightGBM settings were set by hand and never searched: a learning rate of 0.03, 31 leaves, at least 50 customers per leaf, 80% row and column sampling and an L2 penalty of 1.0.
 They are more cautious than LightGBM's defaults, and only the tree count is fitted.
 
-T12's LSTM is an experiment, and its ticket early-stops it on validation customers.
-It lost to LightGBM, so that choice could only have flattered the loser.
 
 ## 38. A fifth release check for the next model: calibration where offers are made
 
@@ -1145,3 +1040,26 @@ Review it after the first measured campaign: the fraction can shrink once the ef
 The same recap made the campaign report say what its equal-spend comparison can show.
 The targeted plan maximises the assumed net value and is then scored with it, so it wins by construction; the comparison checks the allocation against its own assumptions, not whether targeting works.
 The offer mix follows the same way from the assumed share saved: at the 70 LYD anchor, 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% of churners instead of 5%.
+
+## 44. The experiments are removed, and one note keeps their result
+
+Date: 2026-09-26.
+
+The module carried three experiments beside the product: an LSTM over the monthly steps (T12), synthetic customers from CTGAN and a Gaussian copula (T13), and uplift targeting on two public randomised trials (T17).
+Ali removed all three.
+This module is one of five parts of the project, the final report has no room for experiments the product does not use, and the teammates' parts cover the syllabus chapters they were for (decision 8).
+
+Removed: `src/prepaid_churn/sequence.py` and the `churn sequence-benchmark` command, `experiments/synthetic.py`, `experiments/uplift.py`, their tests and reports, the `experiments` dependency group with Keras and torch, and tickets T12, T13 and T17.
+Decisions 27 to 30 stay as one-line stubs so that their numbers still resolve, and dated records of past checks still say what was true on their day.
+
+What stays is one note in the model selection part of the model card and the brief:
+
+- The LSTM scored a test PR-AUC of 0.2326 against LightGBM's 0.3477, below the logistic regression too, and failed two of the four release checks.
+  With two monthly steps the change between months is one subtraction that the engineered features already give LightGBM, so a sequence model has nothing to learn.
+- A LightGBM trained on synthetic customers kept at most 45% of the real model's validation PR-AUC with the copula, and 15% with CTGAN.
+  The generated customers did not keep the real patterns: a detector told them from real rows at ROC-AUC 1.000.
+- The uplift experiment was not a churn model and did not lose to one, so the note leaves it out.
+  On a public advertising trial, ranking by uplift beat ranking by risk (Qini 0.0698 against -0.1138), but it needs a randomised campaign with a control group, which this data does not have.
+  The permanent holdout of decision 43 is what will provide that data.
+
+Nothing in the product changes: the champion, its reports, the bundle and every other command are as they were.

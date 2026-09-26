@@ -89,6 +89,13 @@ Test results, window B, 9,677 unseen customers, from `reports/evaluation_all.md`
 | Brier score | 0.0338 | 0.0357 | calibration |
 | Mean predicted probability | 0.0422 | 0.0447 | against an observed 0.0435 |
 
+Two other models were tested and removed, because both were worse than LightGBM (decision 44):
+
+- A Keras LSTM over the two monthly steps scored a test PR-AUC of 0.2326 against LightGBM's 0.3477, below the logistic regression too, and failed two of the four release checks.
+  With two steps the change between months is one subtraction, which the engineered features already give LightGBM, so a sequence model has nothing to learn.
+- A LightGBM trained on synthetic customers kept at most 45% of the real model's validation PR-AUC (Gaussian copula), and 15% with CTGAN.
+  The generated customers did not keep the real patterns: a detector told them from real rows at ROC-AUC 1.000, and CTGAN's copy had 16.8% churners against 4.7%.
+
 Contacting the riskiest customers, LightGBM, same source:
 
 | Contact | Customers | Precision | Recall |
@@ -257,7 +264,7 @@ Stated plainly, because this is the section an evaluator should read hardest.
 
 - **The data is not Libyan, and not Almadar's.** It looks like an Indian operator's export: the columns carry "circle" regions and rupee amounts. Nothing here measures Libyan behaviour.
 - **Provenance is undocumented.** The upGrad file gives no collection method, no sampling frame and no date range beyond four consecutive months.
-- **One short history per customer.** Four months total, and only two of them feed features, so nothing seasonal or long-range can be learned. This is also why the T12 sequence benchmark is expected to lose.
+- **One short history per customer.** Four months total, and only two of them feed features, so nothing seasonal or long-range can be learned.
 - **Educational licence.** The Kaggle competition terms allow education only, so a model fitted on this data cannot be sold or deployed commercially (decision 11).
 - **Only June to August exports can be scored.**
   The data contract names months by number and requires every date to fall in the month its column names, and the scorer always reads months 7 and 8.
@@ -273,7 +280,7 @@ Stated plainly, because this is the section an evaluator should read hardest.
   Without them, the same training recipe scores a validation PR-AUC of 0.401 instead of 0.458.
   Every customer here has the same home circle (`circle_id` 109), so roaming mostly means being away from that region, and roamers who went silent came back more often (35% against 17%).
   In Libya roaming would mostly mean being abroad, so this signal is likely to behave differently there, which is one more reason the model must be retrained on the operator's own data (decisions 11 and 16).
-- **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5%, or 10% for the morning product, and it is not measured. T17 is the ticket that would start to measure it.
+- **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5%, or 10% for the morning product, and it is not measured.
   That assumption also decides the offer mix: 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass.
   The campaign report's equal-spend comparison scores the targeted plan with the same assumed value it maximises, so it wins by construction and shows nothing about whether targeting works.
   The holdout, the same customers in every campaign (decision 43), is what can measure it.
