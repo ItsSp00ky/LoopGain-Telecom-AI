@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T16; prior notes retained).
+**Last updated:** 2026-09-26 by Ali (step-by-step recap of the module, now at T18; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -47,7 +47,11 @@ Update this section at the end of every working session.
   The delivery costs were checked against published averages and kept.
 - Step 15 (T15): the service now reads the campaign again when a review changes it, so an approval reaches the chatbot without a restart (decision 47).
   No chatbot or copilot has called the service yet; Ali is asking their owners for one real call each.
-- Next: step 16, the T16 operator catalogue and market facts.
+- Step 16 (T16): text that had drifted is fixed, including the claim that the operator's source files were never edited (decision 45 replaced two names in them).
+  The source files come from the operator's website, and Ali confirmed that nothing below 5 LYD can be topped up.
+  That exposes a limit of the one-rate conversion: half of the active customers' average top-up converts to under 5 LYD, which T19's advice rests on; T19's step will settle it.
+  Open: whether the 23 data volumes the operator does not state are right.
+- Next: step 18, T18 the operator view (T17 was removed with the experiments).
 
 **Ali's branch sync, 2026-09-22**
 
@@ -863,11 +867,20 @@ Acceptance:
 Findings (details in `docs/operator.md`):
 - 37 packages in 12 families, all from the operator's own file; `check_against_source` proves every family, name, price and stated value still matches it, row by row.
 - The operator file lists 57; the 20 Mix packages Ali confirmed retired on 2026-09-22 are in `excluded.csv` with a reason, a name and a date, and the check requires every source row to be in one place or the other (decision 31).
-- The 20 extra packages against `Ali_Branch` are the five Mix families (data and voice), which Ali removed in commit `62040af` without saying why; they stay until he says the operator no longer sells them (a test pins the difference).
-- Data volumes: 31 packages state them, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
+- `Ali_Branch` held 37 packages in 12 families; the difference was the five Mix families (data and voice), which Ali removed in commit `62040af` and confirmed retired on 2026-09-22, so the catalogue now matches his (a test pins both counts).
+- Data volumes, of the 37 packages: the operator file states 11, 17 are read from the name ("نت 20" is 20 GB), 6 are reported as unlimited by `Ali_Branch` (Silver and hourly 5G), and 3 are unknown (Social).
 - Only one package has a time window: the 1 LYD morning pass, unlimited data and voice from 06:00 to 11:00.
 - The recharge cards are `reported` (no operator document yet); ARPU (40 LYD) is an assumption and delivery costs are estimates.
   Since 2026-09-26 the ARPU is 70 LYD (decision 42).
+
+Recap (Ali, 2026-09-26):
+- The source files were collected from the operator's website on 2026-09-18; its pages are not linked, so that the operator stays unnamed (decision 45).
+- Decision 45 replaced the operator's and its competitor's names in two source files, the pay-as-you-go tariffs and the data advance description; no number changed, and the package list that `check_against_source` reads is as collected.
+- Ali confirmed that nothing below 5 LYD can be topped up, so the smallest card is also the smallest top-up; the cards stay `reported`, because no operator document backs them.
+- That exposes a limit of the one-rate conversion (T18): it keeps each customer's monthly spend on the operator's scale, but not the size of each top-up.
+  The source customers recharge about six times a month, so the average top-up converts to under 5 LYD for 49.9% of the active customers who recharged, which no customer of the operator can do.
+  The operator view shows them the 5 LYD card, but T19's advice uses the amounts themselves; T19's step will settle it.
+- Open: 23 of the 37 data volumes are not stated by the operator (17 read from the name, 6 reported as unlimited), and `/catalogue` serves them without saying so; Ali has not yet said whether they are right.
 
 ## T18 - Operator view of the real customers
 
@@ -931,6 +944,8 @@ Findings (2026-09-21):
 - Advised airtime limits: 1 LYD for 37.51%, 3 LYD for 11.70%, 5 LYD for 4.65%, declined for 46.14%; 0.90% had no recharge at all.
 - Updated on 2026-09-26 at the 70 LYD anchor (decision 42): the median typical top-up is 3.30 LYD, and the advice is 1 LYD for 34.19%, 3 LYD for 16.94%, 5 LYD for 18.27% and declined for 30.60%.
   The finding still holds, less strongly: almost a third of the base cannot carry even the smallest advance.
+- Found in the T16 recap (2026-09-26): nothing below 5 LYD can be topped up, yet the typical top-up is under 5 LYD for 64.5% of the 29,730 scored customers who recharged (median 3.30 LYD).
+  Those amounts come from converting the source currency with one rate, not from Libyan top-ups, so "this base tops up in very small amounts" describes the source data, not the operator's customers; T19's step will settle it.
 - Not ported, each for a stated reason: the repayment model, tier ceiling, CLV cap, cooling-off, chronic distress, lockout step-down, reject inference and fee structure.
 - 38 new tests; 379 prepaid tests, lint and formatting pass. No new dependency.
 

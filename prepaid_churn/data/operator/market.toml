@@ -1,5 +1,7 @@
 # The operator market facts used by the module (ticket T16, decision 16).
 # The packages themselves are in offers.csv; docs/operator.md explains both files.
+# The operator material in source/ was collected by Ali Marghem from the operator's
+# website on 2026-09-18.
 #
 # Every table has a status and a source:
 #   confirmed  - stated in an operator document in data/operator/source/, or a public fact
@@ -18,7 +20,7 @@ mcc = 606
 
 [recharge_cards]
 status = "reported"
-source = "Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1)"
+source = "Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1); on 2026-09-26 he confirmed that nothing below 5 LYD can be topped up"
 values_lyd = [5, 10, 20, 40, 100]
 
 [payg]

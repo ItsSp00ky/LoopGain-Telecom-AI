@@ -11,7 +11,7 @@ The behaviour is real (upGrad prepaid data from another market); the money and t
 | Operator ARPU | 70 LYD per month | assumption | Ali, 2026-09-26 (decision 42): the operator's Net 10 and Net 20 prices for 12 GB a month, divided by the 44.9% data share of Libyan MNO revenue in 2025 (Mordor Intelligence, Libya Telecom MNO Market) |
 | Reference monthly recharge | 537.17 in the source currency | measured | data/raw/train.csv, month 8: mean airtime plus data recharge of the 64,509 customers active that month |
 | Rate | 1 unit of the source currency = 0.130313 LYD | derived | ARPU divided by the reference recharge |
-| Recharge cards | 5, 10, 20, 40, 100 LYD | reported | Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1) |
+| Recharge cards | 5, 10, 20, 40, 100 LYD | reported | Ali Marghem, 2026-09-18 (Ali_Branch conf/market.yaml and docs/MARKET_QUESTIONS.md Q1); on 2026-09-26 he confirmed that nothing below 5 LYD can be topped up |
 | Bundle held | monthly pack buyers get the dearest operator monthly bundle their data spend pays for; short-pack buyers get the daily pack their average data recharge pays for; everybody else is pay-as-you-go | assumption | T18 rule |
 
 Monthly spend is the average airtime plus data recharge of the two window months.

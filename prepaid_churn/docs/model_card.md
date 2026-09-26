@@ -239,7 +239,7 @@ Every assumption below is labelled, from `reports/operator_view.md`:
 | Operator ARPU | 70 LYD per month | **assumption**, chosen by Ali on 2026-09-26 from the operator's bundle prices and Mordor Intelligence's Libya market figures (decision 42) |
 | Reference monthly recharge | 537.17 source-currency units | measured on `train.csv` month 8 |
 | Conversion rate | 1 source unit = 0.130313 LYD | derived from the two rows above |
-| Recharge cards | 5, 10, 20, 40, 100 LYD | reported by Ali Marghem, 2026-09-18 |
+| Recharge cards | 5, 10, 20, 40, 100 LYD | reported by Ali Marghem, 2026-09-18; on 2026-09-26 he confirmed that nothing below 5 LYD can be topped up |
 | Bundle held | inferred from monthly and short pack purchases | **assumption**, the T18 rule |
 
 Consequences worth stating next to any dinar figure:
@@ -248,6 +248,8 @@ Consequences worth stating next to any dinar figure:
 - The anchor was 40 LYD until 2026-09-26; neither figure is a measured operator average, and decision 42 records the derivation and its limits.
 - The viewed base has a mean monthly spend of 68.94 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
 - For 66.77% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
+- That card hides a limit of the one rate: it keeps monthly spend on the operator's scale, not the size of each top-up.
+  For 49.9% of the active customers who recharged, the average top-up converts to under 5 LYD, which no customer of the operator can do, so a figure built on single top-ups, such as the emergency credit advice (T19), is not yet a Libyan one.
 - The bundle a customer "holds" is inferred from purchase behaviour, never from an operator subscription record, because we have none.
 
 The 12-month value used by T11 is a scenario, not a measured lifetime value (decision 19).

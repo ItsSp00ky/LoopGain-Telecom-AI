@@ -1,12 +1,13 @@
 # The operator catalogue and market facts
 
 The module targets a real Libyan mobile operator, not named in this project (decisions 16 and 45).
+Ali Marghem collected its packages, tariffs and emergency credit services from the operator's website on 2026-09-18.
 This page explains the files in `data/operator/` (ticket T16).
 They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_branch_merge.md)).
 
 | File | What it is | Who uses it |
 |---|---|---|
-| `source/` | The operator material as Ali collected it on 2026-09-18, unchanged: the package list (`internet_offers_data_v4.csv`), pay-as-you-go tariffs and the two emergency credit services, translated from Arabic. | Only as evidence for the two files below. |
+| `source/` | The operator material as Ali collected it from the operator's website on 2026-09-18: the package list (`internet_offers_data_v4.csv`), pay-as-you-go tariffs and the two emergency credit services, translated from Arabic. Only the operator's and its competitor's names were replaced (decision 45). | Only as evidence for the two files below. |
 | `offers.csv` | One row per package the operator still sells: 37 packages in 12 families. | Retention offers (T11), the operator view of customers (T18), and the team's customer chatbot. |
 | `excluded.csv` | Packages that are in the operator file but are no longer sold, each with a reason, a name and a date. | `check_against_source`, so a package cannot leave the catalogue silently. |
 | `market.toml` | Every other fact a calculation needs, each with a status and a source. | T11, T18 and T19. |
@@ -37,7 +38,7 @@ They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_
 `volume_source` values:
 - `stated`: the operator file states the volume (or that it is unlimited); 11 of the 37 packages.
 - `name`: read from the package name, for example "نت 20" is 20 GB and "نت 1/4" is 0.25 GB; 17 packages.
-  17 packages; the operator file does not state these volumes, so confirm them before quoting a price per GB.
+  The operator file does not state these volumes, so confirm them before quoting a price per GB.
 - `reported`: the file does not say, and `Ali_Branch` reports the package as unlimited; 6 packages (the Silver family, which the file only caps at 8 Mbps, and the two hourly 5G packages).
 - `none`: nothing is known (the three Social packages).
 
@@ -52,7 +53,9 @@ Those 20 are the five Mix families: Diamond, Platinum, Bronze, Silver and Gold.
 Ali removed them from his own catalogue on 2026-09-18 in commit `62040af`, which showed the removal was deliberate but never said why.
 He confirmed on 2026-09-22 that the operator no longer sells them, so they are out here too and the catalogue now matches his.
 
-The source files are byte-for-byte copies of the operator's own export and are never edited, so a package that stops being sold is moved into `excluded.csv` rather than deleted.
+The source files are kept as collected, so a package that stops being sold is moved into `excluded.csv` rather than deleted from them.
+The one change was decision 45's: the operator's and its competitor's names were replaced in the pay-as-you-go tariffs and the data advance description, and no number changed.
+The package list itself is byte-for-byte as collected.
 `check_against_source` requires every row of the operator file to be either in the catalogue exactly once or recorded as excluded with a reason, a name and a date.
 That is what stops a package going missing quietly, which is how this question arose in the first place.
 
@@ -75,7 +78,7 @@ Every table has a `status` and a `source`:
 | Table | Status | Content |
 |---|---|---|
 | `operator` | confirmed | A real Libyan mobile operator (MCC 606 is Libya); its name is kept out of this project (decision 45). |
-| `recharge_cards` | reported | 5, 10, 20, 40 and 100 LYD. |
+| `recharge_cards` | reported | 5, 10, 20, 40 and 100 LYD; nothing below 5 LYD can be topped up (Ali, 2026-09-26). |
 | `payg` | confirmed | On-net voice 0.090 LYD for the first 3 minutes, then 0.050 per minute; 0.090 per minute to the other Libyan operator; 0.040 to landlines; SMS 0.050 (0.250 abroad); data 0.025 LYD per MB. |
 | `airtime_advance` | confirmed | "رصيد في وقته": 1, 3 or 5 LYD when the balance is 0.5 LYD or less, recovered at the next recharge. |
 | `data_advance` | confirmed | "نت في وقته": 2 GB for 3 days at 5 LYD, when the balance is 1 LYD or less and less than 250 MB is left. |
@@ -110,8 +113,11 @@ Rules:
 
 ## Known gaps
 
-- The source files have no links; ask Ali where each came from (website page, app screenshot or shop), then add it to `source` values.
+- The source files come from the operator's website, but its pages are not linked, so that the operator stays unnamed (decision 45).
 - The recharge cards are `reported` until an operator document backs them.
+- One rate keeps each customer's monthly spend on the operator's scale, but not the size of each top-up.
+  The source customers recharge about six times a month, so the average top-up converts to under 5 LYD for 49.9% of the active customers who recharged, which no customer of the operator can do.
+  The operator view shows them the 5 LYD card, but the emergency credit advice (T19) uses the amounts themselves.
 - ARPU and delivery costs are not operator data.
 
 ## Refreshing the files
@@ -120,4 +126,4 @@ Prices change, so every row keeps its collection date.
 To refresh: save the operator's new material in `source/` (keep the old file if rows still cite it), edit `offers.csv` and `market.toml` by hand, update `collected`, and run `uv run pytest tests/test_operator_market.py`.
 The tests fail on any row that no longer matches its source.
 
-the other Libyan operator can be added later as rows with `operator` set to `the other Libyan operator`, after adding it to `OPERATORS` in `operator_market.py`.
+The other Libyan operator can be added later as rows with `operator` set to `the other Libyan operator`, after adding it to `OPERATORS` in `operator_market.py`.

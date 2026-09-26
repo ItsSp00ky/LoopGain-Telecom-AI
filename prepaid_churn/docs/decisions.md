@@ -1077,6 +1077,7 @@ So the module no longer names it:
 
 - In every document, report, test and screen it is "the operator", or "a Libyan mobile operator" where it is introduced, and its catalogue rows carry the label `Libyan mobile operator`.
 - Its Arabic name, its competitor's name and its network code (the MNC) are gone; MCC 606 stays, because it only says Libya.
+- The names were replaced in two of the operator's source files too, the pay-as-you-go tariffs and the data advance description; no number changed, and the package list the catalogue is checked against was not touched.
 - Files and commands follow: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
 - The customer message starts "Your gift:" instead of the operator's name.
 
