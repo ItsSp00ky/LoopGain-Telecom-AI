@@ -1,0 +1,128 @@
+{
+  "E-RAB Drop Rate": [
+    [
+      "E-RAB Drop Rate_rolling_mean_14",
+      0.5057
+    ],
+    [
+      "E-RAB Drop Rate_lag_1",
+      0.1145
+    ],
+    [
+      "Year",
+      0.0913
+    ],
+    [
+      "E-RAB Drop Rate_rolling_mean_7",
+      0.0733
+    ],
+    [
+      "RRC Setup Success Rate",
+      0.0672
+    ],
+    [
+      "E-RAB Drop Rate_lag_7",
+      0.0568
+    ],
+    [
+      "E-RAB Drop Rate_diff_7",
+      0.0273
+    ],
+    [
+      "pmCellDowntimeMan_log",
+      0.0169
+    ],
+    [
+      "earfcndl",
+      0.0087
+    ],
+    [
+      "pmCellDowntimeMan",
+      0.008
+    ]
+  ],
+  "4G Cell Av. (%)": [
+    [
+      "Handover Success Rate ( 4G Intra System)",
+      0.6789
+    ],
+    [
+      "4G Cell Av. (%)_lag_1",
+      0.1476
+    ],
+    [
+      "Handover Success Rate",
+      0.1007
+    ],
+    [
+      "pmCellDowntimeMan_log",
+      0.0204
+    ],
+    [
+      "4G Cell Av. (%)_diff_1",
+      0.0156
+    ],
+    [
+      "pmCellDowntimeMan",
+      0.0137
+    ],
+    [
+      "4G Cell Av. (%)_diff_7",
+      0.0093
+    ],
+    [
+      "4G Cell Av. (%)_lag_7",
+      0.0065
+    ],
+    [
+      "4G Cell Av. (%)_rolling_mean_7",
+      0.0025
+    ],
+    [
+      "4G Cell Av. (%)_rolling_mean_14",
+      0.0024
+    ]
+  ],
+  "Avg RRC Connected users": [
+    [
+      "Avg RRC Connected users_lag_3",
+      0.5251
+    ],
+    [
+      "Avg RRC Connected users_lag_1",
+      0.3587
+    ],
+    [
+      "Avg RRC Connected users_rolling_mean_7",
+      0.0518
+    ],
+    [
+      "pmCellDowntimeMan",
+      0.0171
+    ],
+    [
+      "earfcndl",
+      0.0116
+    ],
+    [
+      "Avg RRC Connected users_lag_14",
+      0.0112
+    ],
+    [
+      "Avg RRC Connected users_lag_7",
+      0.0068
+    ],
+    [
+      "Avg RRC Connected users_rolling_mean_14",
+      0.0054
+    ],
+    [
+      "Avg RRC Connected users_rolling_std_14",
+      0.004
+    ],
+    [
+      "E-UTRAN IP Throughput UE UL",
+      0.0028
+    ]
+  ]
+}
