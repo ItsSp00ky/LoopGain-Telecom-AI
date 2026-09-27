@@ -270,3 +270,13 @@ def test_not_signed_in_asks_to_sign_in_instead_of_saying_no_offer():
 
 def test_the_prompt_names_the_operator_in_each_language():
     assert "Almadar in English and المدار in Arabic" in chatbot_tools.SYSTEM_PROMPT
+
+
+def test_another_account_number_is_noticed_in_code():
+    assert chatbot_tools.mentions_other_account("What offer does subscriber 70016 have?", "70017")
+    assert chatbot_tools.mentions_other_account("شوف رقم ٠٩١ ٢٣٤ ٥٦٧٨", "70017")
+    assert not chatbot_tools.mentions_other_account("Is 70016 my offer?", "70016")
+    assert not chatbot_tools.mentions_other_account("10 packages under 50 LYD", "70016")
+    prompt = chatbot_tools.system_prompt(False, other_account=True)
+    assert "only check the customer's own account" in prompt
+    assert "not the signed-in" not in chatbot_tools.system_prompt(False)

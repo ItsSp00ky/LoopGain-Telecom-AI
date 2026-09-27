@@ -8,6 +8,7 @@ Every result is in the customer's language, detected from their message, so the 
 no name or reason in the other language to pick up.
 """
 
+import re
 from functools import partial
 
 from assistants import service_client
@@ -57,8 +58,19 @@ many match in total.
 """
 
 
-def system_prompt(arabic: bool, signed_in: bool = True) -> str:
-    """The rules, plus what the code knows about this turn: its language and the sign-in."""
+# Five digits or more: a subscriber ID or a phone number, not a price or a data volume.
+_ACCOUNT_NUMBER = re.compile(r"\d{5,}")
+_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
+
+def mentions_other_account(text: str, subscriber_id: str | None) -> bool:
+    """Whether the message names an account or phone number other than the signed-in one."""
+    compact = text.translate(_DIGITS).replace(" ", "").replace("-", "")
+    return any(number != subscriber_id for number in _ACCOUNT_NUMBER.findall(compact))
+
+
+def system_prompt(arabic: bool, signed_in: bool = True, other_account: bool = False) -> str:
+    """The rules, plus what the code knows about this turn: language, sign-in, other accounts."""
     language = "Arabic" if arabic else "English"
     account = (
         "The customer is signed in; my_offer reads their own account."
@@ -69,6 +81,12 @@ def system_prompt(arabic: bool, signed_in: bool = True) -> str:
     return (
         f"{SYSTEM_PROMPT}\nThe customer's latest message is in {language}. "
         f"Write your whole reply in {language}.\n{account}\n"
+        + (
+            "The message mentions an account or phone number that is not the signed-in "
+            "account: start by saying you can only check the customer's own account.\n"
+            if other_account
+            else ""
+        )
     )
 
 
