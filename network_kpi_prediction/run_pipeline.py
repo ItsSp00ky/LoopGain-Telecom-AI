@@ -56,6 +56,7 @@ Common Commands:
   catalog              Inspect, profile, and synthesize all datasets across 'data/'
   erbs-audit / audit   Full node health profiling, sleeping cell detection, & clustering
   inspect --erbs <ID>  Query instant health scorecard & operational persona for an ERBS node
+  gnn / erbs-gnn       Train & benchmark Spatio-Temporal Graph Neural Network (ST-GNN)
   traffic-multi        Train & benchmark multivariate traffic models using macro radio KPIs
   split                Stage 1: Chronological train/val/test data splitting
   train                Stage 2: Feature engineering, model benchmarking & forecasts
@@ -64,9 +65,10 @@ Common Commands:
   test                 Execute automated unit test suite across pipelines
 
 Examples:
-  # ERBS node intelligence workflows:
+  # ERBS node intelligence & Spatial GNN workflows:
   python run_pipeline.py erbs-audit
   python run_pipeline.py inspect --erbs BTWRM1
+  python run_pipeline.py gnn
 
   # Multivariate traffic volume benchmarking:
   python run_pipeline.py traffic-multi
@@ -137,6 +139,11 @@ def main() -> int:
     if args and args[0] in ["erbs-inspect", "inspect"]:
         erbs_script = os.path.join(_ERBS_PKG, "run_erbs_analytics.py")
         res = subprocess.run([sys.executable, erbs_script, "inspect"] + args[1:], cwd=_ROOT)
+        return res.returncode
+
+    if args and args[0] in ["gnn", "erbs-gnn", "spatial-gnn"]:
+        erbs_script = os.path.join(_ERBS_PKG, "run_erbs_analytics.py")
+        res = subprocess.run([sys.executable, erbs_script, "gnn"] + args[1:], cwd=_ROOT)
         return res.returncode
 
     # Multivariate Traffic Volume Benchmark command

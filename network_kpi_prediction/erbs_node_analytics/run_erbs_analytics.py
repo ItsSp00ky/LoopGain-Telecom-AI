@@ -31,6 +31,9 @@ from src.visualizer import (
     plot_erbs_clusters, plot_health_distribution,
     plot_sleeping_cells_top20, plot_summer_stress
 )
+from src.topology_graph import ERBSTopologyGraph
+from src.spectral_gnn import SpatioTemporalGraphForecaster
+from src.gnn_visualizer import generate_all_gnn_plots
 
 _DATA_DIR = _REPO_ROOT / "data"
 DEFAULT_FULL_YEAR_CSV = _DATA_DIR / "erbs_cell_kpi_full_year.csv"
@@ -117,12 +120,71 @@ def run_full_erbs_audit(
     return audit_summary
 
 
+def run_spatial_gnn_pipeline(
+    full_csv: Path | str = DEFAULT_FULL_YEAR_CSV,
+    output_dir: Path | str = DEFAULT_OUT_DIR,
+    plot_dir: Path | str = DEFAULT_PLOT_DIR,
+    dpi: int = 300
+) -> dict:
+    """Executes the Spatio-Temporal Graph Neural Network pipeline across all 1,067 base stations."""
+    out_dir = Path(output_dir)
+    p_dir = Path(plot_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    p_dir.mkdir(parents=True, exist_ok=True)
+
+    print("=" * 95)
+    print("NETWORK-ML // SPATIAL-TEMPORAL GRAPH NEURAL NETWORK (ST-GNN) ENGINE")
+    print("Multi-Hop Chebyshev Spectral Convolutions (K=2) & Dynamic Spatial Attention")
+    print("=" * 95)
+
+    print(f"\n[1/4] Ingesting base station telemetry: {Path(full_csv).name}...")
+    full_df = pd.read_csv(full_csv)
+    print(f"      Ingested {len(full_df):,} records across {full_df['ERBS Id'].nunique():,} unique towers.")
+
+    print("\n[2/4] Constructing Physical Base Station Topology Graph (Zero-GPS)...")
+    topo = ERBSTopologyGraph(top_k_neighbors=8, sigma=1.0)
+    topo.fit(full_df)
+    topo_summary = topo.get_graph_summary()
+    topo.export_topology_summary(str(out_dir / "erbs_topology_graph.csv"))
+    print(f"      Nodes: {int(topo_summary['node_count'])}, Edges: {int(topo_summary['edge_count'])}, Mean Degree: {topo_summary['mean_degree']:.1f}")
+
+    print("\n[3/4] Training Spatio-Temporal GNN & Benchmarking Against Non-Spatial Baseline...")
+    gnn = SpatioTemporalGraphForecaster(topology=topo, lookback_window=7, K_cheb=2, alpha_reg=10.0)
+    res = gnn.train_and_benchmark(full_df)
+    gnn.export_artifacts(str(out_dir))
+
+    m_b = res["baseline_metrics"]
+    m_g = res["gnn_metrics"]
+    print(f"\n      --- ST-GNN EVALUATION BENCHMARK ---")
+    print(f"      Non-Spatial Baseline: Test MAE = {m_b['test_mae']:.3f}, Test RMSE = {m_b['test_rmse']:.3f}, Test WAPE = {m_b['test_wape_pct']:.2f}%")
+    print(f"      Spatio-Temporal GNN:  Test MAE = {m_g['test_mae']:.3f}, Test RMSE = {m_g['test_rmse']:.3f}, Test WAPE = {m_g['test_wape_pct']:.2f}%")
+    print(f"      Holdout Error Reduction: {res['error_reduction_pct']:.2f}%")
+
+    print("\n[4/4] Generating Publication-Grade 300-DPI Spatial GNN Visualizations...")
+    top_sample = ['BTWRM1', 'CTWRM1', 'DAS09M1', 'DAS10M1', 'DOT19M1', 'TTWRM1']
+    sample_nbrs = {n: topo.get_top_spatial_neighbors(n, k=3) for n in top_sample}
+    generate_all_gnn_plots(
+        adj_matrix=topo.adj_matrix,
+        spillover_scores=res["spillover_risk"],
+        top_nodes=top_sample,
+        neighbor_data=sample_nbrs,
+        output_dir=str(p_dir),
+        dpi=dpi
+    )
+    print("=" * 95)
+    print(f"ST-GNN Pipeline Execution Complete. Artifacts saved to: {out_dir.resolve()}")
+    print("=" * 95)
+    return res
+
+
 def inspect_single_erbs(erbs_id: str, output_dir: Path | str = DEFAULT_OUT_DIR) -> int:
     """Displays instant diagnostic health card for a requested ERBS ID."""
     out_dir = Path(output_dir)
     scorecard_path = out_dir / "erbs_node_health_scorecard.csv"
     cluster_path = out_dir / "erbs_behavioral_clusters.csv"
     stress_path = out_dir / "erbs_summer_stress_benchmark.csv"
+    topo_path = out_dir / "erbs_topology_graph.csv"
+    spillover_path = out_dir / "erbs_spatial_spillover_risk.csv"
 
     if not scorecard_path.exists():
         print("[!] Audit database not found. Running audit first...")
@@ -157,6 +219,23 @@ def inspect_single_erbs(erbs_id: str, output_dir: Path | str = DEFAULT_OUT_DIR) 
             elif s_match.iloc[0]["is_summer_surge_hub"]:
                 summer_throttle = "HIGH SUMMER VACATION SURGE"
 
+    # Topology & Spatial Spillover
+    spatial_info = "Not Evaluated (run 'gnn' command to compute)"
+    spillover_info = "Normal"
+    if topo_path.exists():
+        df_topo = pd.read_csv(topo_path)
+        t_match = df_topo[df_topo["ERBS_Id"] == erbs_clean]
+        if not t_match.empty:
+            spatial_info = str(t_match.iloc[0]["Top_Spatial_Neighbors"])
+
+    if spillover_path.exists():
+        df_spill = pd.read_csv(spillover_path)
+        sp_match = df_spill[df_spill["ERBS_Id"] == erbs_clean]
+        if not sp_match.empty:
+            r = float(sp_match.iloc[0]["Spatial_Spillover_Risk"])
+            stat = str(sp_match.iloc[0]["Spillover_Status"])
+            spillover_info = f"{r:.2f} ({stat})"
+
     h = row["health_index"]
     status_label = "EXCELLENT / COMPLIANT" if h >= 80 else ("DEGRADED / RISK" if h >= 60 else "CRITICAL / SLEEPING CELL")
 
@@ -169,6 +248,8 @@ def inspect_single_erbs(erbs_id: str, output_dir: Path | str = DEFAULT_OUT_DIR) 
     print(f" Sleeping Cell Status:   {'[ALERT] YES (Anomaly Detected)' if row['is_sleeping_cell'] else '[OK] Normal'}")
     print(f" Total SLA Breaches:     {int(row['total_sla_violations'])}")
     print(f" Summer Season Status:   {summer_throttle}")
+    print(f" Spatial Spillover Risk: {spillover_info}")
+    print(f" Top Coupled Neighbors:  {spatial_info}")
     print("-" * 70)
     print(" Key Telemetry Metrics:")
     print(f"   * RRC Setup Success Rate:    {row['rrc_setup_sr_mean']:.2f}% (Min: {row['rrc_setup_sr_min']:.2f}%)")
@@ -194,7 +275,7 @@ def inspect_single_erbs(erbs_id: str, output_dir: Path | str = DEFAULT_OUT_DIR) 
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ERBS Physical Node Analytics & Sleeping Cell Auditor")
+    parser = argparse.ArgumentParser(description="ERBS Physical Node Analytics, Sleeping Cell Auditor & ST-GNN Engine")
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to execute")
 
     # audit subcommand
@@ -204,6 +285,12 @@ def main():
     audit_parser.add_argument("--output-dir", default=str(DEFAULT_OUT_DIR), help="Output directory")
     audit_parser.add_argument("--plot-dir", default=str(DEFAULT_PLOT_DIR), help="Plot directory")
 
+    # gnn subcommand
+    gnn_parser = subparsers.add_parser("gnn", help="Train and benchmark Spatio-Temporal Graph Neural Network (ST-GNN)")
+    gnn_parser.add_argument("--full-csv", default=str(DEFAULT_FULL_YEAR_CSV), help="Path to full-year ERBS CSV")
+    gnn_parser.add_argument("--output-dir", default=str(DEFAULT_OUT_DIR), help="Output directory")
+    gnn_parser.add_argument("--plot-dir", default=str(DEFAULT_PLOT_DIR), help="Plot directory")
+
     # inspect subcommand
     inspect_parser = subparsers.add_parser("inspect", help="Inspect single ERBS node")
     inspect_parser.add_argument("--erbs", required=True, help="ERBS Node ID (e.g. BTWRM1)")
@@ -212,6 +299,12 @@ def main():
     args = parser.parse_args()
     if args.command == "inspect":
         sys.exit(inspect_single_erbs(args.erbs, output_dir=args.output_dir))
+    elif args.command == "gnn":
+        run_spatial_gnn_pipeline(
+            full_csv=args.full_csv if hasattr(args, "full_csv") else DEFAULT_FULL_YEAR_CSV,
+            output_dir=args.output_dir if hasattr(args, "output_dir") else DEFAULT_OUT_DIR,
+            plot_dir=args.plot_dir if hasattr(args, "plot_dir") else DEFAULT_PLOT_DIR,
+        )
     else:
         run_full_erbs_audit(
             full_csv=args.full_csv if hasattr(args, "full_csv") else DEFAULT_FULL_YEAR_CSV,

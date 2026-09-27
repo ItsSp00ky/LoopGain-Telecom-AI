@@ -23,6 +23,10 @@ from src.summer_stress import (
 from src.export_synergy import (
     export_cross_subsystem_targets
 )
+from src.topology_graph import ERBSTopologyGraph
+from src.spectral_gnn import (
+    SpectralChebNetLayer, SpatialAttentionLayer, SpatioTemporalGraphForecaster
+)
 
 
 class TestERBSNodeAnalytics(unittest.TestCase):
@@ -124,6 +128,82 @@ class TestERBSNodeAnalytics(unittest.TestCase):
             res = export_cross_subsystem_targets(profile_df, cluster_df, tmpdir)
             self.assertTrue(Path(res["antenna_targets_path"]).exists())
             self.assertTrue(Path(res["churn_targets_path"]).exists())
+
+    def test_topology_graph_construction(self):
+        # Build topology from synthetic dataset
+        raw_df = pd.DataFrame({
+            "Date": self.df_synthetic["date"].astype(str),
+            "ERBS Id": self.df_synthetic["erbs_id"],
+            "Avg RRC Connected users": self.df_synthetic["connected_users"],
+            "E-UTRAN IP Throughput UE DL": self.df_synthetic["dl_throughput_mbps"],
+            "Handover Success Rate ( 4G Intra System)": self.df_synthetic["handover_intra_sr"] * 100.0,
+            "RRC Setup Success Rate": self.df_synthetic["rrc_setup_sr"],
+            "E-RAB Drop Rate": self.df_synthetic["erab_drop_rate"]
+        })
+        topo = ERBSTopologyGraph(top_k_neighbors=2)
+        topo.fit(raw_df)
+        self.assertEqual(len(topo.nodes), 4)
+        self.assertEqual(topo.adj_matrix.shape, (4, 4))
+        # Zero self-loops
+        self.assertTrue((np.diag(topo.adj_matrix) == 0.0).all())
+        # Symmetrized
+        self.assertTrue(np.allclose(topo.adj_matrix, topo.adj_matrix.T))
+        # Normalized Laplacian diagonal should be close to 1.0 for connected nodes
+        self.assertEqual(topo.laplacian_norm.shape, (4, 4))
+
+    def test_chebnet_spectral_filtering(self):
+        N, F = 4, 3
+        X = np.random.randn(N, F).astype(np.float32)
+        scaled_L = np.random.randn(N, N).astype(np.float32)
+        layer = SpectralChebNetLayer(K=2)
+        Z = layer.transform(X, scaled_L)
+        # Output channels: (K+1)*F = 3*3 = 9
+        self.assertEqual(Z.shape, (N, 9))
+        self.assertTrue(np.isfinite(Z).all())
+
+    def test_spatial_attention_layer(self):
+        N, F = 4, 6
+        H = np.random.randn(N, F).astype(np.float32)
+        adj = np.array([
+            [0, 1, 1, 0],
+            [1, 0, 0, 1],
+            [1, 0, 0, 1],
+            [0, 1, 1, 0]
+        ], dtype=np.float32)
+        attn = SpatialAttentionLayer(in_features=F)
+        alpha, H_nbr = attn.compute_attention(H, adj)
+        self.assertEqual(alpha.shape, (N, N))
+        self.assertEqual(H_nbr.shape, (N, F))
+        # Each row with edges must sum to 1.0
+        row_sums = np.sum(alpha, axis=1)
+        self.assertTrue(np.allclose(row_sums, [1.0, 1.0, 1.0, 1.0]))
+
+    def test_end_to_end_gnn_forecasting(self):
+        raw_df = pd.DataFrame({
+            "Date": self.df_synthetic["date"].astype(str),
+            "ERBS Id": self.df_synthetic["erbs_id"],
+            "Avg RRC Connected users": self.df_synthetic["connected_users"],
+            "E-UTRAN IP Throughput UE DL": self.df_synthetic["dl_throughput_mbps"],
+            "Handover Success Rate ( 4G Intra System)": self.df_synthetic["handover_intra_sr"] * 100.0,
+            "RRC Setup Success Rate": self.df_synthetic["rrc_setup_sr"],
+            "E-RAB Drop Rate": self.df_synthetic["erab_drop_rate"]
+        })
+        topo = ERBSTopologyGraph(top_k_neighbors=2)
+        topo.fit(raw_df)
+        gnn = SpatioTemporalGraphForecaster(topology=topo, lookback_window=7, K_cheb=2)
+        res = gnn.train_and_benchmark(raw_df)
+
+        self.assertIn("baseline_metrics", res)
+        self.assertIn("gnn_metrics", res)
+        self.assertIn("spillover_risk", res)
+        # Spillover scores must be bounded in [0, 1]
+        self.assertTrue((res["spillover_risk"] >= 0.0).all())
+        self.assertTrue((res["spillover_risk"] <= 1.0).all())
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            gnn.export_artifacts(tmpdir)
+            self.assertTrue(Path(tmpdir, "erbs_spatial_spillover_risk.csv").exists())
+            self.assertTrue(Path(tmpdir, "erbs_gnn_vs_baseline_benchmark.csv").exists())
 
 
 if __name__ == "__main__":

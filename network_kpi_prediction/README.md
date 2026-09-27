@@ -33,6 +33,19 @@ network_kpi_prediction/
 │   ├── erbs_cell_kpi_summer_120d.csv      # Summer 120-day high-density ERBS telemetry (125,779 rows)
 │   └── erbs_cell_kpi_full_year.csv        # Full-year cell-level telemetry (1,067 ERBS, 378,631 rows)
 │
+├── erbs_node_analytics/                  # Physical ERBS Base Station Intelligence & ST-GNN
+│   ├── run_erbs_analytics.py              # Subsystem CLI orchestrator (audit, gnn, inspect)
+│   ├── src/
+│   │   ├── node_profiler.py               # 3GPP SLA compliance & IsolationForest sleeping cells
+│   │   ├── node_clustering.py             # Behavioral PCA clustering & operational personas
+│   │   ├── summer_stress.py               # 120-day summer thermal & capacity degradation
+│   │   ├── topology_graph.py              # Zero-GPS 1,067-node graph & Laplacian construction
+│   │   ├── spectral_gnn.py                # Spatio-Temporal GNN (ChebNet + Dynamic Attention)
+│   │   ├── gnn_visualizer.py              # Adjacency heatmap, spillover CDF, attention graphs
+│   │   ├── visualizer.py                  # 300-DPI publication figures
+│   │   └── export_synergy.py              # Cross-subsystem bridge dataset exports
+│   └── tests/                             # Unit tests for ERBS intelligence & GNN
+│
 ├── cellular_kpi_forecast/                 # 3GPP Rel-17 Multi-Band Cellular Pipeline (60 Series)
 │   ├── run_cellular.py                    # Pipeline CLI orchestrator
 │   ├── train_models.py                    # Stage 2: Model training & champion selection
@@ -63,18 +76,17 @@ network_kpi_prediction/
 │   ├── tests/                             # Traffic pipeline tests
 │   ├── data/                              # Runtime data (generated)
 │   └── plots/                             # Plot images (generated)
-│
-└── _archive/                              # Archived redundant files & previous outputs
 ```
 
 ---
 
 ## Quick Start
 
-### Run Physical ERBS Node Intelligence (1,067 Base Stations)
+### Run Physical ERBS Node Intelligence & Spatial GNN (1,067 Base Stations)
 ```bash
 python run_pipeline.py erbs-audit               # Full SLA audit, sleeping cell detection, K-Means clustering & summer stress
-python run_pipeline.py inspect --erbs BTWRM1    # Instant engineering diagnostic scorecard & operational persona
+python run_pipeline.py gnn                      # Train & benchmark Spatio-Temporal GNN (ChebNet + Dynamic Attention)
+python run_pipeline.py inspect --erbs BTWRM1    # Instant engineering diagnostic scorecard, persona & spatial neighbors
 ```
 
 ### Run Multivariate 4G Traffic Volume Forecasting (Exogenous Radio KPIs)
@@ -96,7 +108,7 @@ python run_pipeline.py --pipeline traffic       # Full end-to-end execution
 
 ### Run Full Automated Test Suite
 ```bash
-python run_pipeline.py test                     # Runs all 53 automated tests across cellular, traffic, and ERBS engines
+python run_pipeline.py test                     # Runs all 57 automated tests across cellular, traffic, and ERBS/GNN engines
 ```
 
 ### Inspect & Profile All Datasets
