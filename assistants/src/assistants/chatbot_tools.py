@@ -8,10 +8,10 @@ Every result is in the customer's language, detected from their message, so the 
 no name or reason in the other language to pick up.
 """
 
-import re
 from functools import partial
 
 from assistants import service_client
+from assistants.language import is_arabic
 from assistants.llm import Tool, ToolCall
 
 SYSTEM_PROMPT = """\
@@ -43,8 +43,8 @@ you cannot help with that here and suggest Almadar customer service. Never inven
 number, a website or an address.
 8. If a tool returns an error, say the service is not available right now. Never guess.
 9. Reply in the customer's language, Arabic (Libyan dialect is fine) or English. Tool results \
-are already in that language: use the names as given. Keep replies short. Use bullet \
-points, never numbered lists.
+are already in that language: use the names as given, each package name in bold. Keep \
+replies short. Use bullet points, never numbered lists.
 10. Never show internal codes such as offer_id.
 11. "Best" is not an order the tools know. When the customer asks for the best packages, \
 ask whether they want the cheapest, the most data or the longest validity, or say \
@@ -73,12 +73,6 @@ _PERIODS = {
     "week": (168, 720),
     "month": (720, float("inf")),
 }
-
-_ARABIC = re.compile(r"[؀-ۿ]")
-
-
-def is_arabic(text: str) -> bool:
-    return bool(_ARABIC.search(text))
 
 
 def _number(value: float | None) -> str:
@@ -134,7 +128,11 @@ def package_view(row: dict, arabic: bool, with_price: bool = True) -> dict:
         or row.get("name_en")
         or row.get("name_ar")
         or row["offer_id"],
-        "price_lyd": row.get("price_lyd"),
+        # A price in words of the reply's language: a Latin "LYD" inside an Arabic line
+        # makes the browser reorder the numbers around it.
+        "price": None
+        if row.get("price_lyd") is None
+        else f"{_number(row['price_lyd'])} {'دينار' if arabic else 'LYD'}",
         "validity": _validity(row, arabic),
         "data": data,
         "voice": voice,
@@ -147,7 +145,7 @@ def package_view(row: dict, arabic: bool, with_price: bool = True) -> dict:
             f"{int(row['valid_from_hour']):02d}:00-{int(row['valid_to_hour']):02d}:00"
         )
     if not with_price:
-        del view["price_lyd"]
+        del view["price"]
     return view
 
 
@@ -322,7 +320,7 @@ def fallback(calls: list[ToolCall], user_text: str) -> str:
         if call.name == "find_packages" and result.get("packages"):
             lines = []
             for package in result["packages"]:
-                lines.append(f"- {package['name']}: {_number(package['price_lyd'])} LYD")
+                lines.append(f"- {package['name']}: {package['price']}")
             return "\n".join(lines)
     if arabic:
         return (

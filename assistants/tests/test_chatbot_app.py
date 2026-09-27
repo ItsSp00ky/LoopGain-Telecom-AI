@@ -73,3 +73,20 @@ def test_signing_in_as_someone_else_starts_a_new_conversation(monkeypatch, servi
     app.chat_input[0].set_value("Is there an offer for me?").run()
     app.text_input[0].set_value("70017").run()
     assert [m for m in app.chat_message] == []
+
+
+def test_an_arabic_reply_is_laid_out_right_to_left(monkeypatch, service):
+    monkeypatch.setenv("PREPAID_CHURN_CHATBOT_KEY", "chatbot-key-for-tests")
+    monkeypatch.setenv("GROQ_API_KEY", "not-used-by-the-fake")
+
+    def complete(messages, tools):
+        if messages[-1]["role"] == "user":
+            return ModelReply(None, [ToolRequest("1", "my_offer", "{}")])
+        return ModelReply("- عندك عرض الصبح من 06:00 إلى 11:00")
+
+    monkeypatch.setattr(llm, "groq_complete", lambda api_key=None: complete)
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value("70016").run()
+    app.chat_input[0].set_value("في عرض ليا؟").run()
+    user, reply = [m.markdown[0].value for m in app.chat_message]
+    assert user.startswith('<div dir="rtl">') and reply.startswith('<div dir="rtl">')

@@ -74,15 +74,13 @@ ui.note(
 turns = iter(st.session_state.turns)
 for message in st.session_state.messages:
     if message["role"] == "user":
-        with st.chat_message("user"):
-            st.markdown(message["content"])
+        ui.user_message(message["content"])
     else:
         ui.assistant_message(next(turns))
 
 prompt = st.chat_input("Ask about packages or offers") or st.session_state.pop("pending", None)
 if prompt:
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    ui.user_message(prompt)
     arabic = chatbot_tools.is_arabic(prompt)
     tools = chatbot_tools.build_tools(BASE_URL, CHATBOT_KEY, subscriber or None, arabic)
     with st.spinner("Looking it up..."):

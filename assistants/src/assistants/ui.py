@@ -11,6 +11,7 @@ import json
 import streamlit as st
 
 from assistants import service_client
+from assistants.language import mostly_arabic
 from assistants.llm import ToolCall, Turn
 
 _CSS = """
@@ -34,6 +35,11 @@ input {
 [data-testid="stChatMessage"] p,
 [data-testid="stChatMessage"] li {
   text-align: start;
+}
+/* A bold package name is its own run, so a name with Latin in it ("1_5G") cannot pull the
+   price next to it into its direction. */
+[data-testid="stChatMessage"] strong {
+  unicode-bidi: isolate;
 }
 /* The GIS page's 36px heading, one step smaller on a phone. */
 h1 {
@@ -104,10 +110,24 @@ def sources(calls: list[ToolCall]) -> None:
             st.json(call.result, expanded=False)
 
 
+def text(markdown: str) -> None:
+    """Markdown laid out right to left when it is mostly Arabic, bullets included."""
+    if mostly_arabic(markdown):
+        # The blank lines let the Markdown inside the block be parsed as Markdown.
+        st.markdown(f'<div dir="rtl">\n\n{markdown}\n\n</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(markdown)
+
+
+def user_message(markdown: str) -> None:
+    with st.chat_message("user"):
+        text(markdown)
+
+
 def assistant_message(turn: Turn) -> None:
     """One assistant reply with its sources, and a note when a safe answer replaced it."""
     with st.chat_message("assistant"):
-        st.markdown(turn.reply)
+        text(turn.reply)
         if turn.replaced_because:
             st.caption(f"Safe answer shown because {turn.replaced_because}.")
         sources(turn.calls)

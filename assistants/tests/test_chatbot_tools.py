@@ -121,7 +121,7 @@ def test_my_offer_hides_the_ids_and_the_price():
     assert client.asked == [("http://service", "chatbot-key", "70016")]
     text = json.dumps(result, ensure_ascii=False)
     assert "70016" not in text and "abc123" not in text
-    assert "price_lyd" not in result["offer"]["package"]
+    assert "price" not in result["offer"]["package"]
     assert result["offer"]["reason"] == OFFER["offer_reason_ar"]
 
 
@@ -238,3 +238,10 @@ def test_every_optional_argument_accepts_null():
                 assert None in spec["enum"], (name, field)
     nulls = dict.fromkeys(tools["find_packages"].parameters["properties"])
     assert tools["find_packages"].run(**nulls)["shown"] == 5
+
+
+def test_prices_are_written_in_the_reply_language():
+    by_id = {row["offer_id"]: row for row in CATALOGUE}
+    assert chatbot_tools.package_view(by_id["MO_20"], False)["price"] == "35 LYD"
+    assert chatbot_tools.package_view(by_id["MO_20"], True)["price"] == "35 دينار"
+    assert "LYD" not in str(find_packages(CATALOGUE, True, count=10))

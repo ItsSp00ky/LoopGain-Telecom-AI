@@ -8,7 +8,6 @@ This is the only code that spends Groq tokens; the unit tests never call Groq.
 
 import argparse
 import os
-import re
 import sys
 import time
 import tomllib
@@ -17,16 +16,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from assistants import chatbot_tools, env, llm, service_client
+from assistants.language import is_arabic, mostly_arabic
 
 ROOT = Path(__file__).parents[2]
 
 # Words the customer chatbot must never use, whatever it was asked: it has no risk data, and
 # a customer is not told how likely the operator thinks they are to leave (decision 10).
 CHATBOT_NEVER_SAY = ["high risk", "medium risk", "low risk", "risk band", "probability"]
-
-
-def _mostly_arabic(text: str) -> bool:
-    return len(re.findall(r"[\u0600-\u06ff]", text)) > len(re.findall(r"[A-Za-z]", text))
 
 
 def check(question: dict, turn: llm.Turn) -> list[str]:
@@ -48,7 +44,7 @@ def check(question: dict, turn: llm.Turn) -> list[str]:
     for text in question.get("never_say", []) + CHATBOT_NEVER_SAY:
         if text.casefold() in reply:
             failures.append(f"said {text!r}")
-    if _mostly_arabic(turn.reply) != chatbot_tools.is_arabic(question["text"]):
+    if mostly_arabic(turn.reply) != is_arabic(question["text"]):
         failures.append("answered in the other language")
     if "%" in turn.reply and "%" not in question["text"]:
         failures.append("gave a percentage nobody asked about")

@@ -1078,7 +1078,10 @@ Findings so far (2026-09-26):
   Every optional argument now accepts null, and the Groq client is no longer cached, which had outlived a code reload.
 - **Not yet rerun after these fixes:** the 21-question evaluation and the browser walkthrough.
   `reports/chatbot_eval.md` is written by that run and is not committed until it passes on this code.
-- 49 tests pass, lint and formatting are green.
+- Keys now live in the git-ignored `assistants/.env`, which the chatbot and the evaluation read at start (Taha's request, so a new terminal keeps working).
+- The browser check of the 10-package answer (2026-09-27) found Arabic lines scrambled around "LYD" ("1 LYD – 1 يوم" displayed as "11 LYD يوم") and bullets on the wrong side.
+  Prices now come as "دينار" in Arabic, Arabic messages render right to left, and bold package names are isolated so a name with Latin in it ("نت ساعة 1_5G") keeps its price beside it; measured in the browser on every line.
+- 56 tests pass, lint and formatting are green.
 - The browser check found Arabic mis-ordered in mixed text ("5G" jumped to the other end of a button) and an oversized title at phone width; both fixed in `ui.py`.
 - **For Ali (T11):** the approved reason text ends with "positive value under the stated retention assumptions" ("قيمة موجبة وفق افتراضات الاحتفاظ"), which is written for a reviewer.
   `integration.md` tells the chatbot to say that reason to the customer, so a customer would hear it; a customer-facing reason, or the package alone, would read better.
