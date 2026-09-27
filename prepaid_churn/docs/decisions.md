@@ -1228,3 +1228,22 @@ Ali chose in the T19 recap to read the average of the two months instead.
 - The advice on the 30,000 unlabeled customers is the 3 LYD airtime advance only for 63.3%, 5 LYD with the data advance for 31.9%, declined for 3.9%, and no advice for the 0.9% with no recharge.
 - The cost is caution: the average advises credit to some customers whose quieter month alone would not support it.
   The report keeps the quieter month's row as the cautious reference, where the data advance goes to 21.5% instead of 31.9%.
+
+## 51. Customers hear the package, not the policy's reason
+
+Date: 2026-09-27.
+
+T11 writes `offer_reason_en` and `offer_reason_ar` for every offer, and they explain the choice: "Catalogue bonus: Net 50MB; positive value under the stated retention assumptions."
+The integration guide told the chatbot to say that sentence to the customer, and the demo built its SMS from it, so a customer would have been told that the operator computed their value, with the package named twice.
+In Arabic every message in the demo campaign also needed 2 SMS parts, so each would be billed twice.
+
+Ali chose in the T20 recap to separate the two:
+
+- `service.gift_message` writes what the customer is told, from the catalogue row alone: the package, what it gives, the hours it works when it has a window, and for how long.
+  For example "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم." and "Your gift: Net 50MB, 50 MB of data for a day."
+- The units are the operator's own, from its source files: ميقا, قيقا, دقيقة and لا محدودة; a package whose content the operator does not state gets its name and validity only.
+- The chatbot's offer answer carries it as `customer_message_ar` and `customer_message_en`, and the demo's SMS preview uses the same function, so the two cannot drift apart.
+- Every one of the 37 packages fits one Arabic SMS part; the longest, the morning pass, is 68 of 70 characters, and a test checks the whole catalogue.
+- `offer_reason_*` stays in the answer for staff who ask why the offer was made, and the guide's rule 7 says never to say it to the customer.
+
+Adding the two fields does not break a consumer, and none exists yet.

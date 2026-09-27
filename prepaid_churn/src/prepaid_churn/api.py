@@ -186,8 +186,20 @@ class RetentionResponse(BaseModel):
 
     subscriber_id: str
     recommended_offer_id: str
-    offer_reason_en: str | None = None
-    offer_reason_ar: str | None = None
+    customer_message_ar: str = Field(
+        description=(
+            "What to say to the customer: the package, what it gives and for how long, "
+            "in one Arabic SMS part (decision 51)."
+        )
+    )
+    customer_message_en: str = Field(description="The same message in English.")
+    offer_reason_en: str | None = Field(
+        default=None,
+        description="Why the policy chose this offer, for staff; never say it to the customer.",
+    )
+    offer_reason_ar: str | None = Field(
+        default=None, description="The same reason in Arabic, for staff only."
+    )
     reviewed_at: str | None = Field(default=None, description="When a named reviewer approved it.")
     campaign_id: str | None = None
     offer: CatalogueOffer | None = Field(

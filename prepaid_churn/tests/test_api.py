@@ -16,12 +16,14 @@ from prepaid_churn.api import (
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import build_campaign, review_campaign, review_file, save_campaign
 from prepaid_churn.cli import build_parser
+from prepaid_churn.demo import sms_parts
 from prepaid_churn.operator_market import load_offers
 from prepaid_churn.privacy import pseudonymize
 from prepaid_churn.retention import load_policy, propose
 from prepaid_churn.service import (
     ServiceConfigurationError,
     ServicePaths,
+    gift_message,
     load_state,
     refresh_campaign,
 )
@@ -202,6 +204,20 @@ def test_an_approved_offer_reaches_the_chatbot_with_the_package(client):
     assert body["offer"]["name_en"]
     assert body["offer"]["name_ar"]
     assert body["offer"]["price_lyd"] == 1
+    assert body["customer_message_en"] == (
+        "Your gift: Morning, unlimited data and calls from 06:00 to 11:00 for a day."
+    )
+    assert body["customer_message_ar"] == (
+        "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم."
+    )
+
+
+def test_the_customer_message_never_carries_the_policy_s_reason(client):
+    """The reason says the operator computed the customer's value (decision 51)."""
+    body = chatbot(client, "/subscribers/0001/retention").json()
+    assert body["offer_reason_en"] not in body["customer_message_en"]
+    assert body["offer_reason_ar"] not in body["customer_message_ar"]
+    assert "value" not in body["customer_message_en"]
 
 
 @pytest.mark.parametrize(
@@ -272,6 +288,57 @@ def test_a_pseudonymous_id_is_looked_up_rather_than_refused(client):
     """A salted digest must not trip the phone-number check, or nothing works."""
     digest = pseudonymize("0912345678", "a-salt-long-enough-to-use")
     assert chatbot(client, f"/subscribers/{digest}/retention").status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# The customer message (decision 51)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("offer_id", "english", "arabic"),
+    [
+        (
+            "DAY_50MB",
+            "Your gift: Net 50MB, 50 MB of data for a day.",
+            "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم.",
+        ),
+        (
+            "WK_1",
+            "Your gift: Net 1, 1 GB of data for 7 days.",
+            "هديتك: نت 1، إنترنت 1 قيقا لمدة 7 أيام.",
+        ),
+        (
+            "FAM_70",
+            "Your gift: Family 70, 70 GB of data and 300 minutes for 30 days.",
+            "هديتك: فاميلي 70، إنترنت 70 قيقا و300 دقيقة لمدة 30 يوماً.",
+        ),
+        (
+            "HR5G_2",
+            "Your gift: Net 2 hours 5G, unlimited data for 2 hours.",
+            "هديتك: نت ساعتين 2_5G، إنترنت لا محدود لمدة ساعتين.",
+        ),
+        ("SOC_D", "Your gift: Social daily for a day.", "هديتك: سوشيال يومي لمدة يوم."),
+    ],
+)
+def test_the_message_says_what_the_package_gives_and_for_how_long(
+    offers, offer_id, english, arabic
+):
+    """Units are the operator's own (ميقا, قيقا, دقيقة); nothing is said that it does not state."""
+    offer = offers.set_index("offer_id").loc[offer_id].to_dict() | {"offer_id": offer_id}
+    assert gift_message(offer, "en") == english
+    assert gift_message(offer, "ar") == arabic
+
+
+def test_every_package_s_message_fits_one_arabic_sms(offers):
+    """One Arabic character makes the SMS 70 characters a part; two parts are billed twice."""
+    for offer in offers.to_dict(orient="records"):
+        assert sms_parts(gift_message(offer, "ar"))["parts"] == 1, offer["offer_id"]
+
+
+def test_the_message_is_arabic_or_english(offers):
+    with pytest.raises(ValueError, match="Arabic or English"):
+        gift_message(offers.iloc[0].to_dict(), "fr")
 
 
 # ---------------------------------------------------------------------------

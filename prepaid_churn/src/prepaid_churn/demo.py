@@ -22,7 +22,7 @@ from prepaid_churn.campaign import campaign_rows, load_campaign
 from prepaid_churn.data import PROJECT_ROOT
 from prepaid_churn.operator_market import OFFERS_PATH, load_offers
 from prepaid_churn.retention import REASONS
-from prepaid_churn.service import ServicePaths, ServiceState, load_state
+from prepaid_churn.service import ServicePaths, ServiceState, gift_message, load_state
 from prepaid_churn.value import TIERS
 
 # Every screen names what it is missing and the command that produces it.
@@ -384,22 +384,18 @@ def sms_parts(text: str) -> dict:
     }
 
 
-def customer_message(subscriber: dict, offer: dict | None, language: str = "ar") -> str:
-    """The text an approved customer would receive, in Arabic or English.
+def customer_message(offer: dict | None, language: str = "ar") -> str:
+    """The text an approved customer would receive, in Arabic or English (decision 51).
 
-    It states the package and the reason the reviewer approved, and nothing else.
-    No churn probability, no risk band and no value figure ever goes to the customer
-    (decision 10), so none of them is available to this function's output by construction.
+    It is the message the chatbot is given, `service.gift_message`: the package, what it
+    gives and for how long. The policy's reason stays with staff, and no churn
+    probability, risk band or value figure is available to it by construction
+    (decision 10). A package that has left the catalogue has nothing current to describe,
+    so it has no message.
     """
     if language not in ("ar", "en"):
         raise ValueError("The customer message is written in Arabic or English.")
-    reason = subscriber.get(f"offer_reason_{language}") or ""
-    if offer is None:
-        return str(reason).strip()
-    name = offer.get(f"name_{language}") or offer.get("name_en") or offer.get("offer_id")
-    if language == "ar":
-        return f"هديتك: {name}. {reason}".strip()
-    return f"Your gift: {name}. {reason}".strip()
+    return "" if offer is None else gift_message(offer, language)
 
 
 def utc_today() -> str:

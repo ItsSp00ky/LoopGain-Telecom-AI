@@ -45,6 +45,8 @@ class ServiceConfigurationError(ValueError):
 # What the chatbot may be told about an approved offer.
 # The reviewer's name is deliberately not here: the chatbot speaks to customers, and the
 # name of the employee who approved a campaign is not something a customer needs.
+# `offer_reason_*` stays because staff may ask why the offer was made, but it is the
+# policy's reason and is never said to the customer; `gift_message` is (decision 51).
 CHATBOT_RELEASE_COLUMNS = (
     "subscriber_id",
     "recommended_offer_id",
@@ -378,6 +380,103 @@ def catalogue(state: ServiceState) -> list[dict]:
     return _json_safe(state.offers[columns])
 
 
+GIFT_PREFIX = {"en": "Your gift: ", "ar": "هديتك: "}
+
+# Counted nouns: English singular and plural; Arabic one, two, three to ten, eleven to
+# ninety-nine, and hundreds, because Arabic changes the noun with the number.
+_HOURS = ("an hour", "hours", ("ساعة", "ساعتين", "ساعات", "ساعة", "ساعة"))
+_DAYS = ("a day", "days", ("يوم", "يومين", "أيام", "يوماً", "يوم"))
+_MINUTES = ("a minute", "minutes", ("دقيقة", "دقيقتين", "دقائق", "دقيقة", "دقيقة"))
+
+
+def _number(value) -> float | None:
+    """A catalogue cell as a number (a flag becomes 0 or 1), or None when it is empty."""
+    if value is None or pd.isna(value):
+        return None
+    return float(value)
+
+
+def _counted(count: float, noun: tuple, language: str) -> str:
+    one, many, arabic = noun
+    n = int(count)
+    if language == "en":
+        return one if n == 1 else f"{n} {many}"
+    single, dual, few, accusative, genitive = arabic
+    if n == 1:
+        return single
+    if n == 2:
+        return dual
+    if n <= 10:
+        return f"{n} {few}"
+    return f"{n} {accusative if n < 100 else genitive}"
+
+
+def _volume(gigabytes: float, language: str) -> str:
+    """A data volume the way the operator writes it: megabytes below 1 GB (قيقا, ميقا)."""
+    if gigabytes < 1:
+        megabytes = round(gigabytes * 1000)
+        return f"{megabytes} MB of data" if language == "en" else f"إنترنت {megabytes} ميقا"
+    return f"{gigabytes:g} GB of data" if language == "en" else f"إنترنت {gigabytes:g} قيقا"
+
+
+def _gives(offer: dict, language: str) -> str | None:
+    """What the package gives, from the catalogue; None when the operator states nothing."""
+    data_unlimited = bool(_number(offer.get("data_unlimited")))
+    voice_unlimited = bool(_number(offer.get("voice_unlimited")))
+    if data_unlimited and voice_unlimited:
+        return "unlimited data and calls" if language == "en" else "إنترنت ومكالمات لا محدودة"
+    parts = []
+    gigabytes = _number(offer.get("data_gb"))
+    if data_unlimited:
+        parts.append("unlimited data" if language == "en" else "إنترنت لا محدود")
+    elif gigabytes:
+        parts.append(_volume(gigabytes, language))
+    minutes = _number(offer.get("voice_minutes"))
+    if voice_unlimited:
+        parts.append("unlimited calls" if language == "en" else "مكالمات لا محدودة")
+    elif minutes:
+        parts.append(_counted(minutes, _MINUTES, language))
+    if not parts:
+        return None
+    return " and ".join(parts) if language == "en" else " و".join(parts)
+
+
+def gift_message(offer: dict, language: str = "ar") -> str:
+    """What the customer is told about an approved offer, in Arabic or English (decision 51).
+
+    The package, what it gives, the hours it works when it has a window, and for how
+    long, all from the catalogue row, for example "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم."
+    It is what the chatbot says and what the demo sends as the SMS, and every package in
+    the catalogue fits one Arabic SMS part.
+    The policy's reason (`offer_reason_*`) is not in it: read to a customer, it says the
+    operator computed their value. No churn probability, risk band or value figure is
+    available to it either, by construction (decision 10).
+    """
+    if language not in ("ar", "en"):
+        raise ValueError("The customer message is written in Arabic or English.")
+    name = offer.get(f"name_{language}") or offer.get("name_en") or offer.get("offer_id")
+    text = f"{GIFT_PREFIX[language]}{name}"
+    gives = _gives(offer, language)
+    if gives:
+        text += f", {gives}" if language == "en" else f"، {gives}"
+    opens, closes = _number(offer.get("valid_from_hour")), _number(offer.get("valid_to_hour"))
+    if opens is not None and closes is not None:
+        text += (
+            f" from {int(opens):02d}:00 to {int(closes):02d}:00"
+            if language == "en"
+            else f" من {int(opens):02d}:00 إلى {int(closes):02d}:00"
+        )
+    hours = _number(offer.get("validity_hours"))
+    if hours:
+        noun, count = (_DAYS, hours / 24) if hours % 24 == 0 else (_HOURS, hours)
+        text += (
+            f" for {_counted(count, noun, 'en')}"
+            if language == "en"
+            else (f" لمدة {_counted(count, noun, 'ar')}")
+        )
+    return f"{text}."
+
+
 def retention(state: ServiceState, subscriber_id: str) -> dict | None:
     """The approved offer for one subscriber, or None when there is not one.
 
@@ -400,7 +499,12 @@ def retention(state: ServiceState, subscriber_id: str) -> dict | None:
         if name in CHATBOT_RELEASE_COLUMNS
     }
     offer = _offer_details(state, row["recommended_offer_id"])
-    return None if offer is None else row | {"offer": offer}
+    if offer is None:
+        return None
+    messages = {
+        f"customer_message_{language}": gift_message(offer, language) for language in ("ar", "en")
+    }
+    return row | messages | {"offer": offer}
 
 
 def _offer_details(state: ServiceState, offer_id: object) -> dict | None:

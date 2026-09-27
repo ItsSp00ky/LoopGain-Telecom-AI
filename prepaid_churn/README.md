@@ -183,7 +183,7 @@ On Windows PowerShell, use `$env:PREPAID_CHURN_CHATBOT_KEY = "..."` instead of `
 |---|---|---|
 | `GET /health` | none | Whether the bundle loads and predicts, and which outputs are being served |
 | `GET /catalogue` | chatbot | Every operator package with its collection date |
-| `GET /subscribers/{id}/retention` | chatbot | The approved offer and its reason, or 404; never a churn probability |
+| `GET /subscribers/{id}/retention` | chatbot | The approved offer and the message to say to the customer, or 404; never a churn probability |
 | `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test metrics |
 | `GET /subscribers/{id}/risk` | copilot | One subscriber's risk, the model's reasons and their value tier; never reachable with the chatbot key |
 

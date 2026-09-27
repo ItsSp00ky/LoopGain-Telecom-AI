@@ -103,7 +103,8 @@ def test_the_example_client_reads_what_each_consumer_needs(service):
     offer = client.offer_for(service, CHATBOT_KEY, "0001")
     assert offer["subscriber_id"] == "0001" and offer["offer"]["offer_id"]
     assert "churn_probability" not in offer
-    assert offer["offer_reason_ar"] in client.offer_sentence(offer)
+    assert offer["customer_message_ar"] in client.offer_sentence(offer)
+    assert offer["offer_reason_ar"] not in client.offer_sentence(offer)  # staff only
 
     summary = client.portfolio_summary(service, COPILOT_KEY)
     assert summary["subscribers"] == 4 and summary["risk_available"]

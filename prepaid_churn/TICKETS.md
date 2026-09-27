@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T20; prior notes retained).
+**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T21; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -39,7 +39,7 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 439 tests pass, none skipped; lint and formatting green.
+- Validation: 447 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
@@ -57,7 +57,9 @@ Update this section at the end of every working session.
 - Step 19 (T19): the credit advice now reads the card a customer would buy, never below 5 LYD, instead of converted top-ups the operator does not allow (decision 49).
   It reads the average of the two months (decision 50), and a window whose recharges were worth nothing is declined with its own reason.
   The advice is now 3 LYD only for 63.3%, 5 LYD with the data advance for 31.9% and declined for 3.9%; nobody who paid for a top-up is declined.
-- Next: step 20, T20 the integration check with the team platform.
+- Step 20 (T20): customers now hear the package, not the policy's reason: the offer answer and the demo SMS share one message that fits one Arabic SMS part (decision 51).
+  Every example in `docs/integration.md` was captured again from the real service, and the guide says how to reach it from another laptop.
+- Next: step 21, T21 the code and logic review.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -1025,6 +1027,15 @@ Readiness follow-up (Ali, 2026-09-22):
 - The real consumer and CLI passed all five refusals over the rebuilt artifacts and an isolated reviewed campaign.
 - Degraded health, unavailable portfolio risk and a failed release gate now fail the check; unavailable LYD at risk stays unavailable.
 - Redirected Arabic output now uses UTF-8, with a subprocess regression for a Western Windows code page.
+
+Recap (Ali, 2026-09-27):
+- The guide told the chatbot to say `offer_reason_ar` to the customer, and the demo built its SMS from it: "positive value under the stated retention assumptions" would tell a customer that the operator computed their value, and in Arabic every message cost 2 SMS parts.
+- The offer answer now carries `customer_message_ar` and `customer_message_en`: the package, what it gives and for how long, and the hours for the morning pass, from the catalogue in the operator's own units (decision 51).
+  The demo SMS is the same text, and every one of the 37 packages fits one Arabic SMS part; the longest, the morning pass, is 68 of 70 characters.
+- `offer_reason_*` stays in the answer as the policy's reason for staff, and the guide's new rule 7 says never to say it to the customer.
+- Every example in `docs/integration.md` was captured again on 2026-09-27 from the real service, at 70 LYD and on a copy of the demo campaign with subscriber 70008 approved; the notes about the 40 LYD anchor are gone.
+- The guide now says how to reach the service from a teammate's laptop: `--host 0.0.0.0` on a trusted network, for as long as the call takes.
+- `churn check-integration` passed against that service, and now prints the customer message as what the chatbot may say.
 
 ## T21 - Code and logic review
 

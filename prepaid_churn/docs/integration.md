@@ -38,9 +38,16 @@ Use two different random keys of at least 24 printable ASCII characters, without
 | Where | Base URL |
 |---|---|
 | Both components on one laptop | `http://127.0.0.1:8000` |
+| A teammate's laptop on the same network | `http://<the serving laptop's IP>:8000`, with the service started as below |
 | A demo host | set at deploy time, and tell the other owners |
 
-Ask for readiness before your first call, and read the answer rather than retrying blindly:
+To be called from another laptop, start the service with `uv run churn serve --host 0.0.0.0`, so that it listens on the laptop's network address and not only on itself.
+`ipconfig` on Windows or `ip addr` on Linux shows that address.
+Do this only on a network you trust, for as long as the call takes: the keys still apply, but the service is not built to face the internet (T15).
+Windows may ask whether to let Python through its firewall.
+
+Ask for readiness before your first call, and read the answer rather than retrying blindly.
+Every example in this guide was captured on 2026-09-27 from the real service, holding the 30,000-subscriber base and a copy of the demo campaign in which subscriber 70008's offer was approved:
 
 ```json
 {
@@ -50,12 +57,12 @@ Ask for readiness before your first call, and read the answer rather than retryi
   "model_version": "lightgbm-2026-09-19-ef9430fb",
   "problems": [],
   "latest_outputs": {
-    "loaded_at": "2026-09-21T21:19:13+00:00",
-    "scored_at": "2026-09-21T20:59:52+00:00",
-    "campaign_id": "6cdc11bcae7697f22323e120562946ff518a3799afd54ab3ce6d1ce29d520f1c",
-    "campaign_created_at": "2026-09-21T21:02:21+00:00",
+    "loaded_at": "2026-09-27T03:23:10+00:00",
+    "scored_at": "2026-09-26T15:28:25+00:00",
+    "campaign_id": "9dba975e547218ac0b11b593dee169b95a45e3a345438de12f53ea99771286de",
+    "campaign_created_at": "2026-09-26T16:26:03+00:00",
     "subscribers_in_portfolio": 30000,
-    "approved_offers": 2
+    "approved_offers": 1
   }
 }
 ```
@@ -76,7 +83,7 @@ Generate your client from `/openapi.json` rather than hand-writing request model
 |---|---|---|
 | `GET /health` | none | Whether the bundle predicts, and which outputs are being served |
 | `GET /catalogue` | chatbot | Every operator package on sale, with its collection date |
-| `GET /subscribers/{id}/retention` | chatbot | The approved offer for one subscriber, or 404 |
+| `GET /subscribers/{id}/retention` | chatbot | The approved offer for one subscriber and the message to say, or 404 |
 | `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test results |
 | `GET /subscribers/{id}/risk` | copilot | One subscriber's risk, the model's reasons, and their value tier |
 
@@ -131,16 +138,21 @@ Two calls, and nothing invented between them.
 ```json
 {
   "subscriber_id": "70008",
-  "recommended_offer_id": "SABAH_1",
-  "offer_reason_en": "Catalogue bonus: Morning (06:00-11:00); positive value under the stated retention assumptions.",
-  "offer_reason_ar": "مكافأة من الكتالوج: الصبح (06:00-11:00)؛ قيمة موجبة وفق افتراضات الاحتفاظ.",
-  "reviewed_at": "2026-09-21T21:04:45+00:00",
-  "campaign_id": "6cdc11bcae...",
-  "offer": { "offer_id": "SABAH_1", "name_ar": "الصبح", "price_lyd": 1.0, "valid_from_hour": 6.0, "valid_to_hour": 11.0, "...": "..." }
+  "recommended_offer_id": "DAY_50MB",
+  "customer_message_ar": "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم.",
+  "customer_message_en": "Your gift: Net 50MB, 50 MB of data for a day.",
+  "offer_reason_en": "Catalogue bonus: Net 50MB; positive value under the stated retention assumptions.",
+  "offer_reason_ar": "مكافأة من الكتالوج: نت 50MB؛ قيمة موجبة وفق افتراضات الاحتفاظ.",
+  "reviewed_at": "2026-09-27T03:23:02+00:00",
+  "campaign_id": "9dba975e54...",
+  "offer": { "offer_id": "DAY_50MB", "name_ar": "نت 50MB", "price_lyd": 0.5, "validity_hours": 24.0, "data_gb": 0.05, "...": "..." }
 }
 ```
 
-Say `offer_reason_ar` to the customer and describe the package from `offer`.
+Say `customer_message_ar` to the customer, or `customer_message_en` in English: it names the package, what it gives and for how long, and fits one SMS.
+The morning pass's message also gives its hours, `من 06:00 إلى 11:00`.
+`offer_reason_*` is why the policy chose the offer, written for staff: never say it to the customer, because it tells them the operator computed their value (decision 51).
+Anything more about the package comes from `offer`, and only from it.
 There is no churn probability, risk band or value figure in this response, and there never will be: the customer is not told how likely the operator thinks they are to leave.
 The offer is a bonus the operator grants, not a discount on a price, so do not quote `price_lyd` as what the customer pays for it.
 
@@ -154,7 +166,7 @@ Say that there is nothing today, and offer nothing else.
 "How much revenue is at risk this month, and is the model still fit for use?"
 
 `GET /portfolio/summary` answers both in one call.
-The figures below were recorded on 2026-09-21 at the 40 LYD anchor; at the 70 LYD anchor of decision 42 every LYD figure is 1.75 times larger.
+Every LYD figure uses the 70 LYD anchor of decision 42.
 
 ```json
 {
@@ -162,10 +174,10 @@ The figures below were recorded on 2026-09-21 at the 40 LYD anchor; at the 70 LY
   "subscribers": 30000,
   "risk_available": true,
   "by_risk_band": [
-    { "name": "high", "customers": 1209, "monthly_spend_lyd": 39114.1, "lyd_at_risk": 21367.5 },
-    { "name": "medium", "customers": 3594, "monthly_spend_lyd": 118171.7, "lyd_at_risk": 71920.6 },
-    { "name": "low", "customers": 22779, "monthly_spend_lyd": 929263.0, "lyd_at_risk": 83205.6 },
-    { "name": "already_silent", "customers": 2418, "monthly_spend_lyd": 23046.1, "lyd_at_risk": 0.0 }
+    { "name": "high", "customers": 1209, "monthly_spend_lyd": 68449.7, "lyd_at_risk": 37393.2 },
+    { "name": "medium", "customers": 3594, "monthly_spend_lyd": 206800.4, "lyd_at_risk": 125861.0 },
+    { "name": "low", "customers": 22779, "monthly_spend_lyd": 1626210.3, "lyd_at_risk": 145609.8 },
+    { "name": "already_silent", "customers": 2418, "monthly_spend_lyd": 40330.6, "lyd_at_risk": 0.0 }
   ],
   "by_value_tier": [ { "name": "very_high", "customers": 4799, "...": "..." } ],
   "success_thresholds": {
@@ -193,7 +205,6 @@ Cite these field names when the copilot quotes a number, and say the assumption 
 "Employee has customer 70008 on the line: what do we know?"
 
 `GET /subscribers/70008/risk`, with the copilot key.
-Recorded on 2026-09-21 at the 40 LYD anchor; at 70 LYD (decision 42) the LYD figures are 1.75 times larger and the tier artifact is `tiers-v1-efc9739afad4`.
 
 ```json
 {
@@ -207,13 +218,13 @@ Recorded on 2026-09-21 at the 40 LYD anchor; at 70 LYD (decision 42) the LYD fig
   ],
   "value_tier": "low",
   "value_status": "scenario",
-  "value_12m_low_lyd": 5.86,
-  "value_12m_base_lyd": 19.56,
-  "value_12m_high_lyd": 59.11,
-  "monthly_spend_lyd": 21.56,
+  "value_12m_low_lyd": 10.25,
+  "value_12m_base_lyd": 34.24,
+  "value_12m_high_lyd": 103.44,
+  "monthly_spend_lyd": 37.73,
   "model_version": "lightgbm-2026-09-19-ef9430fb",
-  "tier_version": "tiers-v1-cd15525cb3ef",
-  "scored_at": "2026-09-21T22:00:45+00:00"
+  "tier_version": "tiers-v1-efc9739afad4",
+  "scored_at": "2026-09-26T15:28:25+00:00"
 }
 ```
 
@@ -255,6 +266,8 @@ These are project commitments (decision 17), and they are the answer to "why is 
 6. **Do not cache an offer.**
    An approval can be superseded by a new campaign, and a cached offer outlives the review that allowed it.
    Call `/subscribers/{id}/retention` per conversation.
+7. **Say the customer message, never the reason.**
+   `customer_message_*` is written for the customer; `offer_reason_*` is the policy's reason, for staff (decision 51).
 
 ## 7. What the copilot may index
 
@@ -308,25 +321,25 @@ Our outputs are per subscriber and per portfolio only.
 uv run churn check-integration --url http://127.0.0.1:8000 --subscriber-id <a subscriber>
 ```
 
-Run on 2026-09-21 against a service holding the 30,000-subscriber base and a reviewed campaign, at the 40 LYD anchor (the LYD at risk is 1.75 times larger at the 70 LYD of decision 42):
+Run on 2026-09-27 against the service above: the 30,000-subscriber base and the demo campaign's copy with subscriber 70008 approved.
 
 ```
-# Integration check of http://127.0.0.1:8123
+# Integration check of http://127.0.0.1:8000
 
 ## Health, without a key
 - status: ok
 - model: lightgbm-2026-09-19-ef9430fb, bundle loaded True, smoke prediction True
-- serving 30000 subscribers and 2 approved offers from campaign 0bdfa31a0531...
+- serving 30000 subscribers and 1 approved offers from campaign 9dba975e547218ac0b11b593dee169b95a45e3a345438de12f53ea99771286de
 
 ## Chatbot, with the chatbot key
 - /catalogue: 37 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
-- /subscribers/70008/retention: SABAH_1, approved 2026-09-21T22:46:21+00:00
-- the chatbot may say: مكافأة من الكتالوج: الصبح (06:00-11:00)؛ قيمة موجبة وفق افتراضات الاحتفاظ. [offer_reason_ar] - الصبح [offer.name_ar]
+- /subscribers/70008/retention: DAY_50MB, approved 2026-09-27T03:23:02+00:00
+- the chatbot may say: هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم. [customer_message_ar]
 
 ## Copilot, with the copilot key
-- /portfolio/summary: 30000 subscribers, risk available True, scored 2026-09-21T22:00:45+00:00
+- /portfolio/summary: 30000 subscribers, risk available True, scored 2026-09-26T15:28:25+00:00
 - by risk band: high 1209, medium 3594, low 22779, already_silent 2418
-- LYD at risk: 176,494 (12-month scenario weighted by churn probability)
+- LYD at risk: 308,864 (12-month scenario weighted by churn probability)
 - release gate: True, 4 of 4 success thresholds passed
 - /subscribers/70008/risk: high risk, probability 0.52419242304383, tier low, first reason "This month's share of the last two months' total minutes (50% = stable): 0%"
 

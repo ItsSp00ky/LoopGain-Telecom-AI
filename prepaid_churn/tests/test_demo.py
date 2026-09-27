@@ -404,15 +404,19 @@ def test_a_long_arabic_message_is_counted_in_concatenated_parts():
     assert parts["over_one_part"] is True
 
 
-def test_the_message_names_the_package_and_the_reason(demo):
+def test_the_message_names_the_package_and_not_the_policy_s_reason(demo):
+    """The customer hears the package, never why the policy chose it (decision 51)."""
     subscriber = subscriber_view(demo, "0001")
     offer = offer_row(demo, subscriber["recommended_offer_id"])
-    arabic = customer_message(subscriber, offer, "ar")
-    english = customer_message(subscriber, offer, "en")
+    arabic = customer_message(offer, "ar")
+    english = customer_message(offer, "en")
     assert offer["name_ar"] in arabic
-    assert "06:00-11:00" in arabic
+    assert "من 06:00 إلى 11:00" in arabic
     assert offer["name_en"] in english
-    assert "06:00-11:00" in english
+    assert "from 06:00 to 11:00" in english
+    assert subscriber["offer_reason_ar"] not in arabic
+    assert subscriber["offer_reason_en"] not in english
+    assert sms_parts(arabic)["parts"] == 1
 
 
 def test_no_risk_or_value_figure_can_reach_the_customer(demo):
@@ -420,7 +424,7 @@ def test_no_risk_or_value_figure_can_reach_the_customer(demo):
     subscriber = subscriber_view(demo, "0001")
     offer = offer_row(demo, subscriber["recommended_offer_id"])
     for language in ("ar", "en"):
-        message = customer_message(subscriber, offer, language)
+        message = customer_message(offer, language)
         assert "0.5" not in message
         assert str(subscriber["value_12m_base_lyd"]) not in message
         for word in ("churn", "probability", "risk", "tier"):
@@ -429,7 +433,7 @@ def test_no_risk_or_value_figure_can_reach_the_customer(demo):
 
 def test_an_unknown_language_is_refused(demo):
     with pytest.raises(ValueError, match="Arabic or English"):
-        customer_message({}, None, "fr")
+        customer_message(None, "fr")
 
 
 # --- What the screens need to find a campaign and its released rows (T14 follow-up) ---
