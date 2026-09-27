@@ -613,7 +613,7 @@ This base tops up often and in very small amounts: the median typical top-up is 
 The smallest advance needs a top-up of at least 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing at all.
 The flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, although the operator offers it to anyone whose balance is low enough.
 Those shares are computed on real upGrad behaviour from another market and are not a claim about Libyan customers.
-Decision 49 replaced them on 2026-09-27: the typical top-up is now translated into the card the customer would buy.
+Decision 49 replaced them on 2026-09-27: the typical top-up is now translated into the card the customer would buy, and decision 50 reads the average of the two months instead of the quieter one.
 
 ## 24. One branch again: `tahaDev` carries both efforts
 
@@ -1213,3 +1213,18 @@ What the report now says:
 - Reading the mean or the busier month instead of the quieter one advises the data advance to 31.9% or 40.7%, so the basis is still reported.
 
 What this does not settle: the card is a translation of the source market's habit, not an observation of the operator's customers, and 0.6 is still `Ali_Branch`'s assumption.
+
+The same day Ali moved the basis from the quieter month to the average of the two months (decision 50); the figures above are for the quieter month.
+
+## 50. The credit advice reads the average of the two months
+
+Date: 2026-09-27.
+
+Decision 23 stood in for the most common top-up with the average of the quieter window month, the most cautious of the three choices the report compares.
+Once decision 49 translated top-ups into cards, that choice declined 17.2% of the customers, most of them because one month's recharges were worth nothing while the other month paid.
+Ali chose in the T19 recap to read the average of the two months instead.
+
+- A customer is now declined for paying nothing only when the recharges of the whole window were worth nothing: 1,178 customers, 3.9%.
+- The advice on the 30,000 unlabeled customers is the 3 LYD airtime advance only for 63.3%, 5 LYD with the data advance for 31.9%, declined for 3.9%, and no advice for the 0.9% with no recharge.
+- The cost is caution: the average advises credit to some customers whose quieter month alone would not support it.
+  The report keeps the quieter month's row as the cautious reference, where the data advance goes to 21.5% instead of 31.9%.

@@ -77,9 +77,9 @@ REASONS = {
         "لا نصيحة: لا توجد تعبئة خلال الفترة، فلا يوجد دليل على القدرة على السداد.",
     ),
     "no_paid_topup": (
-        "Decline: the recharges of the quieter month were worth nothing, so they show no "
+        "Decline: the recharges in the window were worth nothing, so they show no "
         "capacity to repay.",
-        "رفض: تعبئات الشهر الأهدأ كانت بلا قيمة، فلا تُظهر قدرة على السداد.",
+        "رفض: تعبئات الفترة كانت بلا قيمة، فلا تُظهر قدرة على السداد.",
     ),
     "below_smallest": (
         "Decline: even the smallest advance is more than their usual card clears "
@@ -172,20 +172,24 @@ def topup_by_month(frame: pd.DataFrame, rate: float) -> pd.DataFrame:
     return pd.DataFrame(months)
 
 
+def _average_of_months(by_month: pd.DataFrame) -> pd.Series:
+    return by_month.mean(axis=1, skipna=True)
+
+
 def typical_topup(frame: pd.DataFrame, rate: float) -> pd.Series:
-    """Each customer's habitual airtime top-up, in LYD, from the quieter window month.
+    """Each customer's habitual airtime top-up, in LYD: the average of the two window months.
 
     `Ali_Branch` asks for the **modal** top-up, because a mean is dragged up by one
     salary-week recharge the subscriber will not repeat.
     This dataset has no individual transactions, only monthly totals and counts, so a true
     mode cannot be computed at all.
-    The nearest conservative statistic available is the average top-up in whichever of the
-    two window months was quieter: it is closer to the habitual amount than an average
-    across both, and it is never larger, so it cannot widen the advice.
+    Until decision 50 the average of the quieter month stood in for it, which is never
+    larger and so the most cautious choice; the average of both months reads both, so one
+    quiet month does not decide the advice alone, and the report shows what that costs.
     A month with no recharge contributes nothing, and a customer with no recharge in either
     month has no basis: unknown recharge behaviour is not evidence of capacity to repay.
     """
-    return topup_by_month(frame, rate).min(axis=1, skipna=True)
+    return _average_of_months(topup_by_month(frame, rate))
 
 
 def usual_card(typical_topup_lyd: pd.Series, market: dict) -> pd.Series:
@@ -196,7 +200,7 @@ def usual_card(typical_topup_lyd: pd.Series, market: dict) -> pd.Series:
     The nearest card is what such a customer would buy there, the same translation as the
     usual card of T18, so the advice rests on a top-up the operator allows (decision 49).
     Without a top-up there is no card, and so no basis.
-    A quieter month whose recharges were worth nothing stays at zero: that customer paid
+    A window whose recharges were worth nothing stays at zero: that customer paid
     nothing, and turning it into the smallest card would invent a payment.
     """
     validate_market(market)
@@ -243,7 +247,7 @@ def advise(cleaned: pd.DataFrame, window: Window, market: dict) -> pd.DataFrame:
     products = advance_products(market)
     frame = window_features(cleaned, window)
     by_month = topup_by_month(frame, lyd_rate(market))
-    topup = by_month.min(axis=1, skipna=True)
+    topup = _average_of_months(by_month)
     card = usual_card(topup, market)
     ceiling = affordability_ceiling(card)
     limit = airtime_limit(ceiling, products[AIRTIME])
@@ -292,8 +296,8 @@ def basis_sensitivity(advice: pd.DataFrame, market: dict) -> pd.DataFrame:
     months = advice[["topup_prev_lyd", "topup_cur_lyd"]]
     rows = []
     for label, basis in (
-        ("quieter month (used)", months.min(axis=1, skipna=True)),
-        ("mean of both months", months.mean(axis=1, skipna=True)),
+        ("quieter month", months.min(axis=1, skipna=True)),
+        ("mean of both months (used)", _average_of_months(months)),
         ("busier month", months.max(axis=1, skipna=True)),
     ):
         card = usual_card(basis, market)
@@ -370,7 +374,7 @@ def advice_report(advice: pd.DataFrame, market: dict, source: str) -> str:
     )
     cards_facts = market["recharge_cards"]
     basis_text = (
-        "the recharge card nearest to the average airtime recharge of the quieter window month"
+        "the recharge card nearest to the average airtime recharge of the two window months"
     )
     product_rows = "\n".join(
         [
@@ -461,7 +465,7 @@ exists to protect.
 | Assumption | Value | Status |
 |---|---|---|
 | Debt share of a typical top-up | {MAX_DEBT_FRACTION:g} | assumption, `Ali_Branch` 2026-09-18 |
-| Typical top-up | {basis_text} | assumption, see below (decision 49) |
+| Typical top-up | {basis_text} | assumption, see below (decisions 49 and 50) |
 | LYD conversion | {lyd_rate(market):.10f} LYD per source unit | derived from the T18 ARPU |
 | Recharge cards | {card_values} LYD | {cards_facts["status"]}: {cards_facts["source"]} |
 | Denominations advised | only {rungs} LYD | confirmed from the operator file |
@@ -470,8 +474,8 @@ exists to protect.
 salary-week recharge that will not repeat.
 This dataset holds monthly totals and counts, never individual transactions, so no mode can
 be computed.
-The quieter month's average is used instead: it is closer to the habitual amount than an
-average across both months and never larger, so it cannot widen the advice.
+The average of the two window months is used instead (decision 50): it reads both months,
+so one quiet month does not decide the advice alone.
 
 That average is then translated into the card the customer would buy (decision 49).
 The converted amounts are the source market's habit rather than the operator's: among the
@@ -480,8 +484,8 @@ customers who paid for their top-ups the median is {median_topup:.2f} LYD, and
 operator.
 So the typical top-up is the card nearest to that average, the same translation as the
 usual card of T18, and never less than {smallest:g} LYD.
-A quieter month whose recharges were worth nothing is not translated: that customer paid
-nothing, and the smallest card would invent a payment.
+A window whose recharges were worth nothing is not translated: that customer paid nothing,
+and the smallest card would invent a payment.
 
 ### How much the basis choice matters
 
@@ -492,9 +496,9 @@ reported rather than buried.
 |---|---|---|---|---|
 {sensitivity}
 
-The conservative choice is the one used. A reader who prefers the mean should read the
-middle row, and should also accept that it advises credit to customers whose quieter month
-would not support it.
+The mean is the one used, and it is not the most cautious choice: it advises credit to some
+customers whose quieter month alone would not support it.
+A reader who wants the cautious answer should read the quieter month's row.
 
 ## What the rule advises
 
@@ -506,7 +510,7 @@ would take the whole card: {", ".join(trapped) if trapped else "none"}.
 The {floor_rung:g} LYD rung needs a fraction of at least {floor_rung / smallest:g} for them;
 below it their card would allow {below_the_edge}.
 
-For {zero_share:.1%} of the customers who recharged, the recharges of the quieter month were
+For {zero_share:.1%} of the customers who recharged, the recharges of the whole window were
 worth nothing.
 They are declined, because they show no capacity to repay.
 

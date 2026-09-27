@@ -275,10 +275,10 @@ the smallest recharge card, the data advance and the top airtime rung are all 5 
 clearing either debt with one card returns the customer to a zero balance and buys them
 nothing.
 
-Each customer's typical top-up is translated into the recharge card they would buy at the operator, because nothing below 5 LYD can be topped up there (decision 49).
-On the 30,000 unlabeled customers, 60.4% have the 5 LYD card and are advised the 3 LYD airtime advance only, which leaves 2 LYD once the card settles it.
-21.5% have the 10 LYD card or a larger one and are advised both products.
-17.2% are declined because the recharges of their quieter month were worth nothing, and 0.9% had no recharge at all.
+Each customer's typical top-up, the average of the two window months (decision 50), is translated into the recharge card they would buy at the operator, because nothing below 5 LYD can be topped up there (decision 49).
+On the 30,000 unlabeled customers, 63.3% have the 5 LYD card and are advised the 3 LYD airtime advance only, which leaves 2 LYD once the card settles it.
+31.9% have the 10 LYD card or a larger one and are advised both products.
+3.9% are declined because the recharges of their whole window were worth nothing, and 0.9% had no recharge at all.
 The report states every assumption, including how much the answer moves if a different
 statistic stands in for the customer's typical top-up.
 

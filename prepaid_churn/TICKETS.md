@@ -55,8 +55,8 @@ Update this section at the end of every working session.
   The operator view report now measures what the rate does not convert: 73.7% use no mobile data, the median customer tops up 6 times a month, half average under the 5 LYD card, and 422 spend more than the dearest package.
   Three T18 lines that had become wrong are corrected.
 - Step 19 (T19): the credit advice now reads the card a customer would buy, never below 5 LYD, instead of converted top-ups the operator does not allow (decision 49).
-  A quieter month whose recharges were worth nothing is declined with its own reason.
-  The advice is now 3 LYD only for 60.4%, 5 LYD with the data advance for 21.5% and declined for 17.2%; nobody who paid for a top-up is declined.
+  It reads the average of the two months (decision 50), and a window whose recharges were worth nothing is declined with its own reason.
+  The advice is now 3 LYD only for 63.3%, 5 LYD with the data advance for 31.9% and declined for 3.9%; nobody who paid for a top-up is declined.
 - Next: step 20, T20 the integration check with the team platform.
 
 **Ali's branch sync, 2026-09-22**
@@ -967,14 +967,15 @@ Findings (2026-09-21):
 - 38 new tests; 379 prepaid tests, lint and formatting pass. No new dependency.
 
 Recap (Ali, 2026-09-27):
-- The advice now reads the card the customer would buy: the recharge card nearest to the quieter month's average top-up, so never below 5 LYD (decision 49).
+- The advice now reads the card the customer would buy: the recharge card nearest to the average top-up of the two window months, so never below 5 LYD (decisions 49 and 50).
   The 0.6 rule and the denominations are unchanged, and the scope above had asked for the usual card from the start.
-- A quieter month whose recharges were worth nothing is declined with its own reason, `no_paid_topup`, because turning nothing into the smallest card would invent a payment: 5,166 customers (17.2%).
-- Advice on the 30,000 unlabeled customers: the 3 LYD airtime advance only for 60.4%, 5 LYD with the data advance for 21.5%, declined for 17.2% and no recharge for 0.9%.
+- A window whose recharges were worth nothing is declined with its own reason, `no_paid_topup`, because turning nothing into the smallest card would invent a payment: 1,178 customers (3.9%).
+- Advice on the 30,000 unlabeled customers: the 3 LYD airtime advance only for 63.3%, 5 LYD with the data advance for 31.9%, declined for 3.9% and no recharge for 0.9%.
   Nobody who paid for a top-up is declined any more; before, 29.7% were declined and 34.2% advised 1 LYD.
 - The report now leads with the zero-residual finding: the rule keeps the customers whose card is 5 LYD on the 3 LYD rung, away from both 5 LYD debts.
   0.6 is exactly the edge for them: any smaller fraction would advise them 1 LYD.
-- The basis still matters: reading the mean or the busier month advises the data advance to 31.9% or 40.7% instead of 21.5%.
+- Ali chose the average of the two months over the quieter one (decision 50).
+  The quieter month would advise the data advance to 21.5% instead of 31.9% and decline 17.2% instead of 3.9%, so the report keeps its row as the cautious reference.
 - The advice CSV keeps the converted amount and adds the card beside it (`typical_card_lyd`); 3 new tests.
 
 ## T20 - Integration check with the team platform

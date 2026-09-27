@@ -185,10 +185,10 @@ def _window_frame(prev_amount, prev_count, cur_amount, cur_count) -> pd.DataFram
     )
 
 
-def test_the_quieter_month_sets_the_basis():
-    """A salary-week month must not widen the advice, so the smaller average wins."""
+def test_the_two_months_are_averaged():
+    """One quiet month does not decide the advice alone (decision 50)."""
     frame = _window_frame([100.0], [2], [30.0], [3])  # 50 per top-up, then 10
-    assert typical_topup(frame, rate=1.0).iloc[0] == pytest.approx(10.0)
+    assert typical_topup(frame, rate=1.0).iloc[0] == pytest.approx(30.0)
 
 
 def test_a_month_without_a_recharge_is_skipped_not_counted_as_zero():
@@ -258,25 +258,21 @@ def test_an_advised_limit_always_leaves_the_customer_something(advice):
     ).all()
 
 
-def test_the_advice_reads_the_card_and_declines_a_month_that_paid_nothing(raw, market):
+def test_the_advice_reads_the_card_and_declines_a_window_that_paid_nothing(raw, market):
     """Small paid top-ups get the rung of the smallest card (decision 49).
 
-    A quieter month whose recharges were worth nothing is declined even when the other
-    month paid, because the quieter month is the basis and it shows no payment.
+    A window whose recharges were worth nothing is declined, while a month worth nothing
+    beside a paid one is averaged with it (decision 50).
     """
     paid = raw.copy()
     paid["total_rech_amt_6"] = [80, 200, 0, 0]  # 20, 100, 0 and 0 per recharge
     paid["total_rech_amt_7"] = [100, 100, 0, 400]  # 20, 100, 0 and 400 per recharge
     advice = advise(clean(validate(paid)), WINDOW_A, market)
-    assert advice["typical_card_lyd"].tolist() == [5.0, 10.0, 0.0, 0.0]
-    assert advice["airtime_limit_lyd"].tolist() == [3.0, 5.0, 0.0, 0.0]
-    assert advice["advice_code"].tolist() == [
-        "airtime_only",
-        "both",
-        "no_paid_topup",
-        "no_paid_topup",
-    ]
-    assert advice["airtime_residual_lyd"].iloc[:2].tolist() == [2.0, 5.0]
+    assert advice["typical_card_lyd"].tolist() == [5.0, 10.0, 0.0, 20.0]
+    assert advice["airtime_limit_lyd"].tolist() == [3.0, 5.0, 0.0, 5.0]
+    assert advice["advice_code"].tolist() == ["airtime_only", "both", "no_paid_topup", "both"]
+    residual = advice["airtime_residual_lyd"]
+    assert [residual[0], residual[1], residual[3]] == [2.0, 5.0, 15.0]
 
 
 def test_the_advised_limit_never_exceeds_the_ceiling(advice):
@@ -298,9 +294,9 @@ def test_both_months_travel_with_the_advice(advice):
     """A reviewer should see the behaviour the advice was read from, not only the verdict."""
     assert {"topup_prev_lyd", "topup_cur_lyd"} <= set(advice.columns)
     months = advice[["topup_prev_lyd", "topup_cur_lyd"]]
-    quieter = months.min(axis=1, skipna=True)
-    pd.testing.assert_series_equal(advice["typical_topup_lyd"], quieter, check_names=False)
-    cards = usual_card(quieter, load_market())
+    average = months.mean(axis=1, skipna=True)
+    pd.testing.assert_series_equal(advice["typical_topup_lyd"], average, check_names=False)
+    cards = usual_card(average, load_market())
     pd.testing.assert_series_equal(advice["typical_card_lyd"], cards, check_names=False)
 
 
@@ -315,8 +311,8 @@ def test_the_sensitivity_table_shows_the_basis_choice_changing_the_answer(advice
     """The choice standing in for the mode is an assumption, so its effect is reported."""
     table = basis_sensitivity(advice, market)
     assert list(table["basis"]) == [
-        "quieter month (used)",
-        "mean of both months",
+        "quieter month",
+        "mean of both months (used)",
         "busier month",
     ]
     # The quieter month can never advise more than the busier one.
@@ -324,7 +320,7 @@ def test_the_sensitivity_table_shows_the_basis_choice_changing_the_answer(advice
     assert table["smallest_card"].between(0, 1).all()
     assert table["declined"].is_monotonic_decreasing
     assert table["data_advance_advised"].is_monotonic_increasing
-    # The row actually used is the conservative one.
+    # The mean is used (decision 50); the quieter month stays as the cautious reference.
     assert table.loc[0, "declined"] == table["declined"].max()
 
 
