@@ -21,10 +21,11 @@ from prepaid_churn.advance import (
     smallest_card,
     topup_by_month,
     typical_topup,
+    usual_card,
     zero_residual_products,
 )
-from prepaid_churn.almadar import InvalidCatalogueError, load_market
 from prepaid_churn.clean import clean
+from prepaid_churn.operator_market import InvalidCatalogueError, load_market
 from prepaid_churn.schema import validate
 from prepaid_churn.windows import WINDOW_A
 
@@ -184,10 +185,10 @@ def _window_frame(prev_amount, prev_count, cur_amount, cur_count) -> pd.DataFram
     )
 
 
-def test_the_quieter_month_sets_the_basis():
-    """A salary-week month must not widen the advice, so the smaller average wins."""
+def test_the_two_months_are_averaged():
+    """One quiet month does not decide the advice alone (decision 50)."""
     frame = _window_frame([100.0], [2], [30.0], [3])  # 50 per top-up, then 10
-    assert typical_topup(frame, rate=1.0).iloc[0] == pytest.approx(10.0)
+    assert typical_topup(frame, rate=1.0).iloc[0] == pytest.approx(30.0)
 
 
 def test_a_month_without_a_recharge_is_skipped_not_counted_as_zero():
@@ -205,6 +206,22 @@ def test_the_rate_converts_the_basis_into_lyd():
     assert typical_topup(frame, rate=0.074464).iloc[0] == pytest.approx(7.4464)
 
 
+def test_the_typical_topup_becomes_the_card_the_customer_would_buy(market):
+    """Nothing below the smallest card can be topped up at the operator (decision 49)."""
+    cards = usual_card(pd.Series([1.2, 6.0, 7.6, 14.0, 0.0, np.nan]), market)
+    assert cards.iloc[:4].tolist() == [5.0, 5.0, 10.0, 10.0]
+    assert cards.iloc[4] == 0.0  # recharges worth nothing: no card is invented
+    assert pd.isna(cards.iloc[5])  # no top-up, no card, no basis
+
+
+def test_a_topup_below_the_smallest_card_is_advised_the_rung_that_card_allows(market):
+    """A converted 1.2 LYD top-up was declined before; the 5 LYD card allows 3 LYD."""
+    products = advance_products(market)
+    ceiling = affordability_ceiling(usual_card(pd.Series([1.2]), market))
+    assert airtime_limit(ceiling, products[AIRTIME]).iloc[0] == 3.0
+    assert not data_advance_advised(ceiling, products[DATA]).any()
+
+
 # ---------------------------------------------------------------------------
 # End to end on the hand-made customers
 # ---------------------------------------------------------------------------
@@ -219,12 +236,14 @@ def test_every_customer_gets_one_row_and_one_reason(advice, raw):
     assert len(advice) == len(raw)
     assert advice["advice_reason_en"].str.len().gt(0).all()
     assert advice["advice_reason_ar"].str.len().gt(0).all()
-    assert set(advice["advice_code"]) <= {"no_recharge", "below_smallest", "airtime_only", "both"}
+    codes = {"no_recharge", "no_paid_topup", "below_smallest", "airtime_only", "both"}
+    assert set(advice["advice_code"]) <= codes
 
 
 def test_a_declined_customer_is_never_advised_a_limit(advice):
     declined = advice["airtime_limit_lyd"].eq(0)
-    assert advice.loc[declined, "advice_code"].isin(["no_recharge", "below_smallest"]).all()
+    declined_codes = ["no_recharge", "no_paid_topup", "below_smallest"]
+    assert advice.loc[declined, "advice_code"].isin(declined_codes).all()
     assert not advice.loc[declined, "data_advance_advised"].any()
     assert advice.loc[declined, "airtime_residual_lyd"].isna().all()
 
@@ -235,8 +254,25 @@ def test_an_advised_limit_always_leaves_the_customer_something(advice):
     residual = advice.loc[advised, "airtime_residual_lyd"]
     assert (residual > 0).all()
     assert (
-        advice.loc[advised, "airtime_limit_lyd"] <= advice.loc[advised, "typical_topup_lyd"]
+        advice.loc[advised, "airtime_limit_lyd"] <= advice.loc[advised, "typical_card_lyd"]
     ).all()
+
+
+def test_the_advice_reads_the_card_and_declines_a_window_that_paid_nothing(raw, market):
+    """Small paid top-ups get the rung of the smallest card (decision 49).
+
+    A window whose recharges were worth nothing is declined, while a month worth nothing
+    beside a paid one is averaged with it (decision 50).
+    """
+    paid = raw.copy()
+    paid["total_rech_amt_6"] = [80, 200, 0, 0]  # 20, 100, 0 and 0 per recharge
+    paid["total_rech_amt_7"] = [100, 100, 0, 400]  # 20, 100, 0 and 400 per recharge
+    advice = advise(clean(validate(paid)), WINDOW_A, market)
+    assert advice["typical_card_lyd"].tolist() == [5.0, 10.0, 0.0, 20.0]
+    assert advice["airtime_limit_lyd"].tolist() == [3.0, 5.0, 0.0, 5.0]
+    assert advice["advice_code"].tolist() == ["airtime_only", "both", "no_paid_topup", "both"]
+    residual = advice["airtime_residual_lyd"]
+    assert [residual[0], residual[1], residual[3]] == [2.0, 5.0, 15.0]
 
 
 def test_the_advised_limit_never_exceeds_the_ceiling(advice):
@@ -258,8 +294,10 @@ def test_both_months_travel_with_the_advice(advice):
     """A reviewer should see the behaviour the advice was read from, not only the verdict."""
     assert {"topup_prev_lyd", "topup_cur_lyd"} <= set(advice.columns)
     months = advice[["topup_prev_lyd", "topup_cur_lyd"]]
-    quieter = months.min(axis=1, skipna=True)
-    pd.testing.assert_series_equal(advice["typical_topup_lyd"], quieter, check_names=False)
+    average = months.mean(axis=1, skipna=True)
+    pd.testing.assert_series_equal(advice["typical_topup_lyd"], average, check_names=False)
+    cards = usual_card(average, load_market())
+    pd.testing.assert_series_equal(advice["typical_card_lyd"], cards, check_names=False)
 
 
 def test_a_month_with_no_recharge_is_empty_rather_than_zero():
@@ -273,15 +311,16 @@ def test_the_sensitivity_table_shows_the_basis_choice_changing_the_answer(advice
     """The choice standing in for the mode is an assumption, so its effect is reported."""
     table = basis_sensitivity(advice, market)
     assert list(table["basis"]) == [
-        "quieter month (used)",
-        "mean of both months",
+        "quieter month",
+        "mean of both months (used)",
         "busier month",
     ]
     # The quieter month can never advise more than the busier one.
     assert table["median_topup_lyd"].is_monotonic_increasing
+    assert table["smallest_card"].between(0, 1).all()
     assert table["declined"].is_monotonic_decreasing
     assert table["data_advance_advised"].is_monotonic_increasing
-    # The row actually used is the conservative one.
+    # The mean is used (decision 50); the quieter month stays as the cautious reference.
     assert table.loc[0, "declined"] == table["declined"].max()
 
 
@@ -295,8 +334,13 @@ def test_the_report_states_every_assumption_and_the_finding(advice, market):
         "modal",
         "disincentive to recharge, not a locked door",
         "How much the basis choice matters",
-        "finding about the product, not a failure of the rule",
+        "translated into the card the customer would buy",
+        "What the rule advises",
     ):
         assert phrase in report, f"the report no longer explains {phrase!r}"
     assert f"{MAX_DEBT_FRACTION:g}" in report
-    assert "Libyana" in report  # the correction that its Credit Loan does not transfer
+    # The hand-made customers paid nothing, so several figures cannot be measured.
+    assert "nan" not in report
+    assert (
+        "the other Libyan operator" in report
+    )  # the correction that its credit loan does not transfer

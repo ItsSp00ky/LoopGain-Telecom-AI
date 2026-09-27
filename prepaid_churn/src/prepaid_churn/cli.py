@@ -13,7 +13,7 @@ PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 BUNDLE_DIR = PROJECT_ROOT / "artifacts" / "bundle"
 SCORES_PATH = PROJECT_ROOT / "artifacts" / "scores" / "scores.csv"
-VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
+VIEW_PATH = PROJECT_ROOT / "artifacts" / "scores" / "operator_view.csv"
 TIER_MODEL_PATH = PROJECT_ROOT / "artifacts" / "tiers" / "tiers.json"
 TIERS_PATH = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
 CAMPAIGN_DIR = PROJECT_ROOT / "artifacts" / "campaigns" / "retention"
@@ -174,29 +174,39 @@ def run_score(args: argparse.Namespace) -> None:
     print(f"{len(scores)} subscribers scored with {bundle.version} into {args.output}: {counts}")
 
 
-def run_almadar_view(args: argparse.Namespace) -> None:
-    from prepaid_churn.almadar import almadar_view, load_market, load_offers, view_report
+def run_operator_view(args: argparse.Namespace) -> None:
     from prepaid_churn.clean import clean
+    from prepaid_churn.operator_market import (
+        load_market,
+        load_offers,
+        operator_view,
+        unconverted_behaviour,
+        view_report,
+    )
     from prepaid_churn.schema import validate
     from prepaid_churn.scoring import SCORING_WINDOW
-    from prepaid_churn.windows import active_in_current_month
+    from prepaid_churn.windows import active_in_current_month, window_features
 
     market = load_market()
+    offers = load_offers()
     cleaned = clean(validate(load_raw(args.input), labeled=False))
-    view = almadar_view(cleaned, SCORING_WINDOW, market, load_offers())
+    view = operator_view(cleaned, SCORING_WINDOW, market, offers)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     view.to_csv(args.output, index=False, encoding="utf-8")
     active = active_in_current_month(cleaned, SCORING_WINDOW)
-    report = view_report(view, active, market, args.input.name)
+    behaviour = unconverted_behaviour(
+        window_features(cleaned, SCORING_WINDOW)[active.to_numpy()], market, offers
+    )
+    report = view_report(view, active, market, args.input.name, behaviour)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(report, encoding="utf-8")
-    print(f"Almadar view of {len(view)} customers in {args.output}, summary in {args.report}")
+    print(f"operator view of {len(view)} customers in {args.output}, summary in {args.report}")
 
 
 def run_fit_tiers(args: argparse.Namespace) -> None:
     import pandas as pd
 
-    from prepaid_churn.almadar import load_market
+    from prepaid_churn.operator_market import load_market
     from prepaid_churn.segmentation import compare_clusters, tiers_report, write_cluster_plots
     from prepaid_churn.value import apply_tiers, fit_tiers, save_tiers
 
@@ -227,9 +237,9 @@ def run_tiers(args: argparse.Namespace) -> None:
 def run_decide(args: argparse.Namespace) -> None:
     from dataclasses import replace
 
-    from prepaid_churn.almadar import load_offers
     from prepaid_churn.bundle import load_bundle
     from prepaid_churn.campaign import build_campaign, save_campaign
+    from prepaid_churn.operator_market import load_offers
     from prepaid_churn.retention import decision_inputs, load_policy, propose
     from prepaid_churn.retention_report import decisions_report
     from prepaid_churn.value import load_tiers
@@ -276,8 +286,8 @@ def run_approve(args: argparse.Namespace) -> None:
 
 def run_advance(args: argparse.Namespace) -> None:
     from prepaid_churn.advance import advice_report, advise
-    from prepaid_churn.almadar import load_market
     from prepaid_churn.clean import clean
+    from prepaid_churn.operator_market import load_market
     from prepaid_churn.schema import validate
     from prepaid_churn.scoring import SCORING_WINDOW
 
@@ -306,37 +316,6 @@ def run_serve(args: argparse.Namespace) -> None:
     app = build_app(paths)
     print(f"Serving {args.host}:{args.port}; the OpenAPI page is at /docs.")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
-
-
-def run_sequence_benchmark(args: argparse.Namespace) -> None:
-    import joblib
-    import pandas as pd
-
-    from prepaid_churn.sequence import MODEL_NAME, benchmark, benchmark_report
-
-    datasets = {}
-    for name in ("train", "validation", "test"):
-        path = args.data_dir / f"{name}.parquet"
-        if not path.exists():
-            raise FileNotFoundError(f"{path} not found. Run `uv run churn build-dataset` first.")
-        datasets[name] = pd.read_parquet(path)
-    model_dir = MODELS_DIR / args.data_dir.name
-    gate_path = model_dir / GATE_FILE
-    if not gate_path.exists():
-        raise FileNotFoundError(f"{gate_path} not found. Run `uv run churn evaluate` first.")
-    gate = json.loads(gate_path.read_text("utf-8"))
-    baseline_path = model_dir / "logistic_regression.joblib"
-    result = benchmark(
-        datasets, gate, joblib.load(baseline_path) if baseline_path.exists() else None, args.seed
-    )
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(benchmark_report(result, gate, datasets), encoding="utf-8")
-    champion = gate.get("champion", "the champion")
-    champion_pr_auc = gate.get("test_metrics", {}).get(champion, {}).get("pr_auc")
-    print(
-        f"{MODEL_NAME} test PR-AUC {result['test_metrics']['pr_auc']:.4f} against {champion} "
-        f"{champion_pr_auc:.4f}; report in {args.report}"
-    )
 
 
 def run_check_integration(args: argparse.Namespace) -> None:
@@ -379,6 +358,14 @@ def run_output_contract(args: argparse.Namespace) -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(output_contract_markdown(), encoding="utf-8")
     print(f"Output contract written to {args.output}")
+
+
+def _positive_int(text: str) -> int:
+    """A count of at least 1, so `--repeats 0` is refused with a message, not a KeyError."""
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, not {value}")
+    return value
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -436,7 +423,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Put 95%% intervals on the frozen test metrics; changes no model (T7).",
     )
     uncertainty.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
-    uncertainty.add_argument("--repeats", type=int, default=2000)
+    uncertainty.add_argument("--repeats", type=_positive_int, default=2000)
     uncertainty.add_argument("--report", type=Path, default=REPORTS_DIR / "uncertainty.md")
     uncertainty.set_defaults(handler=run_uncertainty)
 
@@ -456,12 +443,13 @@ def build_parser() -> argparse.ArgumentParser:
     score.set_defaults(handler=run_score)
 
     view = commands.add_parser(
-        "almadar-view", help="Show every customer in Almadar money and packages (ticket T18)."
+        "operator-view",
+        help="Show every customer in the operator's money and packages (ticket T18).",
     )
     view.add_argument("--input", type=Path, default=RAW_SCORE_PATH)
     view.add_argument("--output", type=Path, default=VIEW_PATH)
-    view.add_argument("--report", type=Path, default=REPORTS_DIR / "almadar_view.md")
-    view.set_defaults(handler=run_almadar_view)
+    view.add_argument("--report", type=Path, default=REPORTS_DIR / "operator_view.md")
+    view.set_defaults(handler=run_operator_view)
 
     fit_tiers = commands.add_parser(
         "fit-tiers", help="Freeze value cutoffs on training window A and compare clusters (T10)."
@@ -563,20 +551,6 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=8000)
     serve.set_defaults(handler=run_serve)
 
-    sequence = commands.add_parser(
-        "sequence-benchmark",
-        help="Compare a Keras LSTM with the champion on the frozen test (ticket T12).",
-        description=(
-            "Trains an LSTM over the two monthly steps of each window, calibrates it on "
-            "validation customers and scores the frozen test window once. Needs the "
-            "experiments group: `uv sync --group experiments`."
-        ),
-    )
-    sequence.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
-    sequence.add_argument("--report", type=Path, default=REPORTS_DIR / "sequence_benchmark.md")
-    sequence.add_argument("--seed", type=int, default=42)
-    sequence.set_defaults(handler=run_sequence_benchmark)
-
     check_integration = commands.add_parser(
         "check-integration",
         help="Call a running service the way the chatbot and the copilot do (ticket T20).",
@@ -599,9 +573,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
-    from prepaid_churn.almadar import InvalidCatalogueError
     from prepaid_churn.bundle import BundleError
     from prepaid_churn.client import ServiceError
+    from prepaid_churn.operator_market import InvalidCatalogueError
     from prepaid_churn.retention import RetentionError
     from prepaid_churn.schema import InvalidExportError
     from prepaid_churn.service import ServiceConfigurationError

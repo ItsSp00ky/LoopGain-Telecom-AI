@@ -13,7 +13,10 @@ the same answer as inside a batch of ten thousand.
 Reasons are exact SHAP contributions: LightGBM computes them from its trees
 (`pred_contrib`), and for the logistic regression each feature's share of the
 log-odds is its coefficient times its standardised value. Only factors that raise
-the risk are reported.
+the risk are reported, and only for `high` and `medium` subscribers: SHAP measures
+the push away from the average customer, so even a very safe customer has a few
+small upward pushes, which would read as warning signs. A `low` subscriber gets one
+line saying so instead (decision 40).
 """
 
 import datetime
@@ -37,8 +40,10 @@ from prepaid_churn.windows import WINDOW_B, active_in_current_month, window_feat
 SCORING_WINDOW = WINDOW_B  # the two latest contract months; the model predicts the next one
 SILENT_BAND = "already_silent"
 BANDS = ("high", "medium", "low", SILENT_BAND)
+EXPLAINED_BANDS = ("high", "medium")  # the bands that get the model's reasons (decision 40)
 REASON_COUNT = 3
 SILENT_REASON = "No calls and no mobile data this month"
+LOW_RISK_REASON = "Low risk: nothing stands out"
 
 
 @dataclass(frozen=True)
@@ -72,8 +77,10 @@ OUTPUT_COLUMNS = (
         OutputColumn(
             f"reason_{n}",
             "text; may be empty",
-            f"The factor with the {rank} push towards churn for this subscriber, "
-            "with its value. Empty when fewer factors raise the risk.",
+            f"For a `high` or `medium` subscriber, the factor with the {rank} push towards "
+            "churn, with its value; empty when fewer factors raise the risk. "
+            f'A `low` subscriber gets "{LOW_RISK_REASON}" in `reason_1`, and an '
+            f'`already_silent` one gets "{SILENT_REASON}".',
         )
         for n, rank in zip((1, 2, 3), ("largest", "2nd largest", "3rd largest"), strict=True)
     ),
@@ -217,7 +224,7 @@ def contributions(model, x: pd.DataFrame) -> np.ndarray:
 
 
 def top_reasons(x: pd.DataFrame, contribution: np.ndarray) -> list[list[str | None]]:
-    """Up to REASON_COUNT factors that raise each customer's risk the most, as sentences."""
+    """Up to REASON_COUNT factors that raise each customer's risk the most, as short labels."""
     order = np.argsort(-contribution, axis=1, kind="stable")[:, :REASON_COUNT]
     features = x.columns.to_numpy()
     labels = {feature: feature_label(feature) for feature in features}
@@ -258,17 +265,21 @@ def score(export: pd.DataFrame, bundle: Bundle, scored_at: str | None = None) ->
     reasons = [[SILENT_REASON] + [None] * (REASON_COUNT - 1) for _ in range(len(x))]
     if active.any():
         champion = bundle.champion
-        active_features = x[active]
-        probability[active] = champion.predict(active_features)
+        probability[active] = champion.predict(x[active])
         band[active] = risk_band(
             probability[active], champion.high_threshold, champion.medium_threshold
         )
-        for position, texts in zip(
-            np.flatnonzero(active),
-            top_reasons(active_features, contributions(champion.model, active_features)),
-            strict=True,
-        ):
-            reasons[position] = texts
+        for position in np.flatnonzero(band == "low"):
+            reasons[position] = [LOW_RISK_REASON] + [None] * (REASON_COUNT - 1)
+        explained = np.isin(band, EXPLAINED_BANDS)
+        if explained.any():
+            features = x[explained]
+            for position, texts in zip(
+                np.flatnonzero(explained),
+                top_reasons(features, contributions(champion.model, features)),
+                strict=True,
+            ):
+                reasons[position] = texts
 
     # Text columns get an explicit dtype: pandas infers `object` for a column that is all
     # empty and `str` otherwise, so a one-row batch would change the output's types.
@@ -367,7 +378,7 @@ def output_contract_markdown() -> str:
         "no risk or monetary fields are released.",
         "Rejected and unreviewed proposals cannot enter that file.",
         "`--tiers-only` supports a readiness run without a churn bundle and proposes no offers.",
-        "Effects and costs are assumptions in `data/almadar/retention.toml`; "
+        "Effects and costs are assumptions in `data/operator/retention.toml`; "
         "[../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.",
         "Local reviewer names are an audit record, not authentication; "
         "access control belongs to T15.",

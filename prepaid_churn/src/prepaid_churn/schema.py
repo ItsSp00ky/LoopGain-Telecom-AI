@@ -2,7 +2,7 @@
 
 The column groups below are the single source of truth: the pandera schema, the
 cleaning rules (T3) and `docs/data_contract.md` are all built from them. An
-operator export (for example Libyana or Al-Madar) is usable when it passes
+operator export (for example from either Libyan mobile operator) is usable when it passes
 `validate`.
 """
 

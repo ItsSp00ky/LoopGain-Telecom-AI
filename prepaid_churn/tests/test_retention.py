@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from prepaid_churn.almadar import load_market, load_offers
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import (
     build_campaign,
@@ -19,6 +18,7 @@ from prepaid_churn.campaign import (
 )
 from prepaid_churn.cli import main
 from prepaid_churn.data import REPORTS_DIR
+from prepaid_churn.operator_market import load_market, load_offers
 from prepaid_churn.retention import (
     NO_OFFER,
     RetentionError,
@@ -42,7 +42,9 @@ def offers():
 
 @pytest.fixture
 def policy():
-    return replace(load_policy(), holdout_fraction=0.0)
+    # The mechanism tests keep a preferred morning offer with a larger assumed share, so they
+    # exercise the preference; the shipped policy assumes the same 5% for every offer (decision 46).
+    return replace(load_policy(), holdout_fraction=0.0, offpeak_share_saved=0.10)
 
 
 @pytest.fixture
@@ -56,7 +58,8 @@ def test_expected_value_and_cost_use_stated_assumptions(customers, offers, polic
     assert result["recommended_offer_id"].eq("SABAH_1").all()
     assert result["expected_cost_lyd"].eq(0.35).all()
     np.testing.assert_allclose(
-        result["expected_net_value_lyd"], customers["churn_probability"] * 0.1 * 100 - 0.35
+        result["expected_net_value_lyd"],
+        customers["churn_probability"] * policy.offpeak_share_saved * 100 - 0.35,
     )
     assert result["status"].eq("proposed").all()
     assert result["offer_reason_en"].str.contains("06:00-11:00").all()
@@ -334,6 +337,21 @@ def test_report_states_assumptions_and_equal_spend(customers, offers, policy):
     assert "fractional last inclusion" in report
     assert "not an experimentally measured benefit" in report
     assert "not a cumulative annual" in report
+    assert "favours it by construction" in report  # the comparison cannot prove targeting
+    assert "greedy" in report  # and the picking is not an optimum either
+    assert "permanent control group" in report  # the same seed holds out the same customers
+    proposed = result["status"].eq("proposed")
+    assert ("not from measured response" in report) == bool(proposed.any())
+
+
+def test_the_shipped_policy_assumes_the_same_share_for_every_offer(customers, offers):
+    """With one share for every offer, net value differs only by cost (decision 46)."""
+    shipped = replace(load_policy(), holdout_fraction=0.0)
+    assert shipped.share_saved == shipped.offpeak_share_saved == 0.05
+    result, comparison = propose(customers, offers, shipped)
+    report = decisions_report(result, comparison, offers, shipped)
+    assert "the same share of churners" in report
+    assert "not from measured response" not in report
 
 
 def test_live_input_path_uses_frozen_tier_rate_and_existing_bundle(raw, trained, bundle, offers):

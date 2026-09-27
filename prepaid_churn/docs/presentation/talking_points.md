@@ -17,7 +17,7 @@ There is no contract to cancel, so a customer churns when they go silent: no inc
 On this data that is about four percent of customers in a month, which means the interesting problem is not accuracy, it is finding that four percent.
 
 The data is from another market and it is educational, so we treat it as behaviour to learn from, not as evidence about Libya.
-To make it local we collected the real Almadar Aljadid catalogue ourselves: 57 packages across 17 families, with their real prices, plus the pay as you go tariffs and the emergency credit rules.
+To make it local we collected a real Libyan mobile operator's catalogue ourselves: 37 packages on sale across 12 families, with their real prices, plus the pay as you go tariffs and the emergency credit rules.
 Everything we show is in Libyan dinar and in packages a Libyan customer would recognise."
 
 **What we want to do**
@@ -43,7 +43,7 @@ Then our module plugs into the team platform, so the chatbot and the employee as
 It is not built yet, so here is what it will do and what we have already prepared for it.
 
 A customer asks it two kinds of question: what packages can I get, and is there anything for me today.
-Our module already serves exactly those two answers: the full Almadar catalogue, and the one retention offer that a named employee has approved for that customer.
+Our module already serves exactly those two answers: the operator's full catalogue, and the one retention offer that a named employee has approved for that customer.
 If nobody approved an offer, the chatbot gets nothing, and it says nothing.
 
 The chatbot never sets a price, never chooses an offer and never invents a number.
@@ -100,10 +100,10 @@ In the high band 38% went silent, in the medium band 12%, in the low band 1.3%, 
 ## Likely questions
 
 - **Why not let the AI decide the offer?** "Because an offer is money, and a language model cannot be held to a budget or a rule. Ours is chosen by a model with guardrails, checked against a budget, and approved by a named employee; the chatbot only repeats that decision, and every step is logged."
-- **What do you need help with?** The assumed ARPU of 40 LYD a month needs a real operator figure; proving an offer changes behaviour needs a campaign with a control group; and how best to present a model trained on foreign data but applied to a Libyan operator.
-- **Did the deep learning model win?** No, and that is a result: the LSTM reached PR-AUC 0.233 against LightGBM's 0.348, because two monthly steps are not a history (`reports/sequence_benchmark.md`, decision 28).
-- **Can the operator share synthetic data instead?** Not at this budget: the best synthetic copy keeps 45% of the real model's PR-AUC and is told apart from real rows perfectly (`reports/synthetic.md`, decision 29).
-- **Does targeting the riskiest customers save the most?** Not necessarily: on 1.4 million randomised Criteo rows, targeting by risk was worse than random while targeting by uplift worked (`reports/uplift.md`, decision 30).
+- **What do you need help with?** The ARPU anchor of 70 LYD a month rests on the operator's bundle prices and a published market study (decision 42), and a real operator figure should replace it; proving an offer changes behaviour needs a campaign with a control group; and how best to present a model trained on foreign data but applied to a Libyan operator.
+- **Did the deep learning model win?** No, and that is a result: the LSTM reached PR-AUC 0.233 against LightGBM's 0.348, because two monthly steps are not a history (the model card's model selection note, decision 44).
+- **Can the operator share synthetic data instead?** Not at this budget: the best synthetic copy keeps 45% of the real model's PR-AUC and is told apart from real rows perfectly (the model card's model selection note, decision 44).
+- **Does targeting the riskiest customers save the most?** Not necessarily: on 1.4 million randomised Criteo rows, targeting by risk was worse than random while targeting by uplift worked; it needs a randomised campaign, which the permanent holdout will provide (decisions 43 and 44).
 
 ## Simple explanation in Arabic (شرح مبسط)
 
@@ -114,7 +114,7 @@ In the high band 38% went silent, in the medium band 12%, in the low band 1.3%, 
 نسبة المغادرة حوالي 4% في الشهر، فالمشكلة إننا نلقوا هذه الـ 4%.
 البيانات تعليمية ومن سوق ثاني، فنتعاملوا معاها كسلوك نتعلموا منه مش كدليل على السوق الليبي.
 
-**الجزء الليبي:** جمعنا باقات المدار الجديد الحقيقية: 57 باقة في 17 عائلة بأسعارها، مع تعرفة الدفع المسبق وخدمتَي الرصيد والنت في وقته، فكل شيء بالدينار الليبي.
+**الجزء الليبي:** جمعنا باقات حقيقية لمشغل ليبي: 37 باقة معروضة في 12 عائلة بأسعارها، مع تعرفة الدفع المسبق وخدمتَي الرصيد والنت في وقته، فكل شيء بالدينار الليبي.
 
 **النتيجة:** لو نتواصلوا مع أخطر 10% من الزباين نلقوا فيهم حوالي 61% من اللي فعلاً حيغادروا، ولو عشوائي ما نلقوش غير 10%.
 مقاس على شهر النموذج ما شافوش، وحسبناه مرة وحدة بعد التجميد.

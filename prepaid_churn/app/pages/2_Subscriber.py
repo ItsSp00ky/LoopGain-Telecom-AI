@@ -1,10 +1,9 @@
-"""Screen 2 - one customer: risk, reasons, tier, the Almadar bundle held and the offer."""
+"""Screen 2 - one customer: risk, reasons, tier, the operator's bundle held and the offer."""
 
 import pandas as pd
 import streamlit as st
 from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state, use_campaign
 
-from prepaid_churn.almadar import InvalidCatalogueError
 from prepaid_churn.bundle import BundleError
 from prepaid_churn.demo import (
     CAMPAIGNS_DIR,
@@ -14,6 +13,7 @@ from prepaid_churn.demo import (
     subscriber_view,
     utc_today,
 )
+from prepaid_churn.operator_market import InvalidCatalogueError, load_market
 from prepaid_churn.privacy import looks_like_phone_number
 from prepaid_churn.retention import NO_OFFER, RetentionError
 
@@ -43,7 +43,11 @@ with risky_column:
     # Most of this base is not at risk, so a random customer is almost always a "no
     # offer". Someone opening this screen to see what an offer looks like was picking
     # one customer after another to find one, which is a bad first minute.
-    risky = portfolio.loc[portfolio.get("risk_band", pd.Series(dtype="str")).eq("high")]
+    # A tiers-only export has no risk band, so there is nobody to pick.
+    if "risk_band" in portfolio.columns:
+        risky = portfolio.loc[portfolio["risk_band"].eq("high")]
+    else:
+        risky = portfolio.iloc[:0]
     if st.button("Pick a high-risk one", width="stretch", disabled=risky.empty):
         st.session_state["subscriber_id"] = str(risky["subscriber_id"].sample(1).iloc[0])
         st.rerun()
@@ -102,7 +106,7 @@ st.divider()
 profile_column, reason_column = st.columns([1, 2])
 
 with profile_column:
-    st.subheader("In Almadar terms")
+    st.subheader("In operator terms")
     st.markdown(
         f"**Monthly spend** {lyd(subscriber.get('monthly_spend_lyd'), digits=2)}  \n"
         f"**Usual recharge card** {lyd(subscriber.get('usual_card_lyd'), digits=0)}  \n"
@@ -110,9 +114,10 @@ with profile_column:
         f"**Value score** {subscriber.get('value_score', '-')}"
     )
     st.caption(
-        "Spend is converted at the assumed 40 LYD monthly ARPU of T18. "
+        f"Spend is converted at the assumed {load_market()['arpu']['monthly_lyd']:.0f} LYD "
+        "monthly ARPU of T18 (decision 42). "
         "The bundle held is inferred from the real monthly and short pack purchases in "
-        "the source data, not from an Almadar subscription record."
+        "the source data, not from an operator subscription record."
     )
 
 with reason_column:
@@ -126,8 +131,10 @@ with reason_column:
         )
     else:
         st.caption(
-            "Exact SHAP contributions from the model that scored this customer, written "
-            "as sentences. Only factors that raise the risk are listed."
+            "Exact SHAP contributions from the model that scored this customer, each a short "
+            "label with the customer's value. Only factors that raise the risk are listed, and "
+            "only for high and medium risk; a low-risk customer gets one line instead "
+            "(decision 40)."
         )
         for position, reason in enumerate(reasons, start=1):
             st.markdown(f"{position}. {reason}")
@@ -201,7 +208,7 @@ else:
     one.metric("Assumed delivery cost", lyd(cost, digits=2))
     two.metric("Assumed net value", lyd(value, digits=2))
     st.caption(
-        "Both figures are assumptions from `data/almadar/retention.toml`, not measured "
+        "Both figures are assumptions from `data/operator/retention.toml`, not measured "
         "profit or causal uplift. An offer is sent only after a named reviewer approves "
         "it on the campaign screen."
     )

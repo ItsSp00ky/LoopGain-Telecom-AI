@@ -1,11 +1,12 @@
 """Demo app for the prepaid customer module (ticket T14).
 
-Four screens, in `app/pages/`; Streamlit orders them by filename.
+Five screens, in `app/pages/`; Streamlit orders them by filename.
 
     1  Overview           customers and LYD at risk by risk band and value tier
     2  Subscriber         one customer: risk, reasons, tier, bundle held, proposed offer
     3  Campaign builder   budget, holdout, cost and value, then named approval
     4  Message preview    the Arabic text an approved customer would receive
+    5  Released           the approved offers, who approved them and where they are served
 
 Run: uv run streamlit run app/Home.py
 """
@@ -14,6 +15,7 @@ import streamlit as st
 from _shared import CAPTION, configure, degraded_notice, expected, lyd, state
 
 from prepaid_churn.demo import expected_churners, revenue_at_risk
+from prepaid_churn.operator_market import load_market
 
 configure("Home", icon="home")
 demo = state()
@@ -24,7 +26,7 @@ st.caption(CAPTION)
 st.markdown(
     """
     Churn risk, value tiers and retention offers for prepaid subscribers, shown in
-    Almadar packages and Libyan dinar.
+    operator packages and Libyan dinar.
 
     Every figure on these screens comes from a file the pipeline wrote.
     Nothing here trains a model, scores a customer or chooses an offer, and no offer
@@ -82,6 +84,7 @@ if demo.missing:
 st.divider()
 st.caption(
     "The upGrad prepaid dataset is educational and from another market, so no figure "
-    "here is evidence of performance for Almadar. Money is shown at the assumed 40 LYD "
-    "monthly ARPU of T18, which is an assumption and not an operator figure."
+    "here is evidence of performance for the operator. Money is shown at the assumed "
+    f"{load_market()['arpu']['monthly_lyd']:.0f} LYD monthly ARPU of T18 (decision 42), "
+    "which is an assumption and not an operator figure."
 )

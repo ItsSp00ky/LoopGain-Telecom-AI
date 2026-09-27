@@ -1,7 +1,7 @@
 """Read-only integration state for the chatbot and the copilot (ticket T15, decision 21).
 
 Every answer the service gives comes from a file that another command already wrote:
-the gated bundle (T8), the Almadar catalogue (T16), the value and risk export (T10) and
+the gated bundle (T8), the operator's catalogue (T16), the value and risk export (T10) and
 the reviewed campaign (T11).
 Nothing here trains, scores, decides or approves, and there is no write path at all
 (decision 17).
@@ -13,22 +13,25 @@ through `released_campaign`, never from the derived `released.csv`.
 T11 made the JSON the authority so that editing a CSV cannot approve an offer, and a
 service that served the CSV would quietly hand that authority back.
 
-Everything is loaded once, into a frozen state, and the functions below only read it.
-An endpoint that opened a file per request would eventually read a campaign that was
-half-written, and `churn approve` rewrites those files in place.
-The cost is that a new release is served after a restart, which `/health` makes visible
-by reporting the campaign it is holding.
+Everything is loaded into a frozen state, and the functions below only read it.
+The campaign is the one output that changes while the service runs, because reviewers
+approve offers with `churn approve`, so `refresh_campaign` rereads it when its file
+changes (decision 47).
+That is safe because `churn approve` replaces `proposals.json` in one step (`os.replace`
+in `campaign.py`), so a read sees the old campaign or the new one, never half of each.
+A new model or a new scoring run is still read at startup, and `/health` reports what the
+service is holding.
 """
 
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pandas as pd
 
-from prepaid_churn.almadar import OFFERS_PATH, load_offers
 from prepaid_churn.bundle import Bundle, load_bundle, smoke_check
 from prepaid_churn.campaign import RELEASE_COLUMNS, load_campaign, released_campaign
+from prepaid_churn.operator_market import OFFERS_PATH, load_offers
 
 
 class ServiceUnavailable(RuntimeError):
@@ -42,6 +45,8 @@ class ServiceConfigurationError(ValueError):
 # What the chatbot may be told about an approved offer.
 # The reviewer's name is deliberately not here: the chatbot speaks to customers, and the
 # name of the employee who approved a campaign is not something a customer needs.
+# `offer_reason_*` stays because staff may ask why the offer was made, but it is the
+# policy's reason and is never said to the customer; `gift_message` is (decision 51).
 CHATBOT_RELEASE_COLUMNS = (
     "subscriber_id",
     "recommended_offer_id",
@@ -64,6 +69,13 @@ CATALOGUE_COLUMNS = (
     "validity_hours",
     "data_gb",
     "data_unlimited",
+    # Where the data volume comes from (T16), so a consumer can tell a volume the
+    # operator states from one read from the package name or reported elsewhere.
+    "volume_source",
+    # The limits that go with it: a speed cap, or lines that share a family package.
+    "max_download_mbps",
+    "max_upload_mbps",
+    "members",
     "voice_minutes",
     "voice_unlimited",
     "network",
@@ -108,7 +120,7 @@ class ServicePaths:
 
 @dataclass(frozen=True)
 class ServiceState:
-    """Everything the endpoints answer from, loaded once."""
+    """Everything the endpoints answer from; only the campaign is ever read again."""
 
     offers: pd.DataFrame
     approved: pd.DataFrame
@@ -121,6 +133,10 @@ class ServiceState:
     campaign_id: str | None = None
     campaign_created_at: str | None = None
     campaign_error: str | None = None
+    # Where the campaign was read from, and the file's modified time and size just before
+    # that read; `refresh_campaign` compares them to notice a new review.
+    campaign_path: Path | None = None
+    campaign_signature: tuple[int, int] | None = None
 
     @property
     def model_version(self) -> str | None:
@@ -221,7 +237,44 @@ def _load_campaign(
     )
 
 
-def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
+def _file_signature(path: Path) -> tuple[int, int] | None:
+    """When the file last changed and how big it is, or None when there is no file.
+
+    Every review adds events to `proposals.json`, so the size alone grows with each one;
+    the modified time covers a campaign replaced by another of the same size.
+    """
+    try:
+        stat = path.stat()
+    except FileNotFoundError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
+
+
+def _withhold_retired(
+    approved: pd.DataFrame, offers: pd.DataFrame, campaign_error: str | None
+) -> tuple[pd.DataFrame, str | None]:
+    """Drop approvals whose package has left the current catalogue, and say so (decision 33)."""
+    unavailable = ~approved["recommended_offer_id"].isin(offers["offer_id"])
+    if not unavailable.any():
+        return approved, campaign_error
+    return approved.loc[~unavailable].copy(), (
+        f"{int(unavailable.sum())} approved offers are no longer in the current catalogue; "
+        "they are withheld. Create and review a new campaign."
+    )
+
+
+def _load_portfolio(
+    path: Path, model_version: str | None = None
+) -> tuple[pd.DataFrame | None, str | None]:
+    """The scored export, or the reason it cannot be served.
+
+    Beyond the identifiers, every value the copilot quotes is checked against the output
+    contract, and an export scored by another model than the loaded bundle is refused:
+    the summary labels its numbers with the bundle's version, so serving another model's
+    numbers under it would be a false label. With no bundle loaded, an export that names
+    a model is refused too, since nothing can vouch for it. A tiers-only export, which
+    names no model, is served as before, with its risk unavailable.
+    """
     if not path.exists():
         return None, f"{path.name} not found. Run `uv run churn tiers` first."
     try:
@@ -235,31 +288,64 @@ def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
     ids = portfolio["subscriber_id"]
     if ids.isna().any() or ids.str.strip().eq("").any() or not ids.is_unique:
         return None, f"{path.name} needs nonempty, unique subscriber IDs."
+    problems = _portfolio_problems(portfolio, model_version)
+    if problems:
+        return None, f"{path.name} cannot be served: " + " ".join(problems)
     return portfolio, None
 
 
+def _portfolio_problems(portfolio: pd.DataFrame, model_version: str | None) -> list[str]:
+    problems = []
+    if "churn_probability" in portfolio.columns:
+        given = portfolio["churn_probability"].notna()
+        probability = pd.to_numeric(portfolio["churn_probability"], errors="coerce")
+        outside = given & ~probability.between(0, 1)
+        if outside.any():
+            problems.append(f"{int(outside.sum())} churn probabilities are not between 0 and 1.")
+    for column, allowed in (("risk_band", RISK_BANDS), ("value_tier", VALUE_TIERS)):
+        if column in portfolio.columns:
+            unknown = portfolio[column].notna() & ~portfolio[column].astype(str).isin(allowed)
+            if unknown.any():
+                problems.append(f"{int(unknown.sum())} rows have an unknown {column}.")
+    versions = (
+        sorted(set(portfolio["model_version"].dropna().astype(str)))
+        if "model_version" in portfolio.columns
+        else []
+    )
+    if versions and model_version is None:
+        problems.append(
+            f"It was scored by {', '.join(versions)}, but no bundle is loaded to vouch for it."
+        )
+    elif versions and versions != [model_version]:
+        problems.append(
+            f"It was scored by {', '.join(versions)}, but the service holds {model_version}; "
+            "score it again with `uv run churn tiers`."
+        )
+    return problems
+
+
 def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceState:
-    """Read every output the service serves, once.
+    """Read every output the service serves.
 
     A missing bundle, campaign or export is recorded rather than raised: the endpoints
     that need one answer 503 with the reason, and the ones that do not keep working.
 
     `campaign` lets a caller pass a snapshot it has already parsed; the service itself
-    never does.
+    never does. That state records no file signature, because nothing says the caller's
+    copy matches the file, so `refresh_campaign` would read the file rather than trust it.
     """
     bundle, bundle_error, smoke_passed = _load_bundle(paths.bundle_dir)
+    # The signature is taken before the read: a review saved during the read then shows up
+    # as a change on the next request, instead of being recorded as already read.
+    signature = None if campaign is not None else _file_signature(paths.campaign_path)
     approved, campaign_id, created_at, campaign_error = _load_campaign(
         paths.campaign_path, campaign
     )
-    portfolio, portfolio_error = _load_portfolio(paths.portfolio_path)
+    portfolio, portfolio_error = _load_portfolio(
+        paths.portfolio_path, None if bundle is None else bundle.version
+    )
     offers = load_offers(paths.offers_path)
-    unavailable = ~approved["recommended_offer_id"].isin(offers["offer_id"])
-    if unavailable.any():
-        campaign_error = (
-            f"{int(unavailable.sum())} approved offers are no longer in the current catalogue; "
-            "they are withheld. Create and review a new campaign."
-        )
-        approved = approved.loc[~unavailable].copy()
+    approved, campaign_error = _withhold_retired(approved, offers, campaign_error)
     return ServiceState(
         offers=offers,
         approved=approved,
@@ -272,6 +358,34 @@ def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceStat
         campaign_id=campaign_id,
         campaign_created_at=created_at,
         campaign_error=campaign_error,
+        campaign_path=paths.campaign_path,
+        campaign_signature=signature,
+    )
+
+
+def refresh_campaign(state: ServiceState) -> ServiceState:
+    """The same state, or a copy holding the campaign as its file is now (decision 47).
+
+    While nobody reviews, this costs one `stat` and returns the state it was given.
+    After `churn approve`, the next call reads the campaign again, so a new approval
+    reaches the chatbot without a restart. A campaign that fails to load serves no offers,
+    exactly as at startup, and is read again when its file next changes.
+    Only the campaign is read: the bundle, the catalogue and the portfolio stay as loaded.
+    """
+    if state.campaign_path is None:
+        return state
+    signature = _file_signature(state.campaign_path)
+    if signature == state.campaign_signature:
+        return state
+    approved, campaign_id, created_at, campaign_error = _load_campaign(state.campaign_path)
+    approved, campaign_error = _withhold_retired(approved, state.offers, campaign_error)
+    return replace(
+        state,
+        approved=approved,
+        campaign_id=campaign_id,
+        campaign_created_at=created_at,
+        campaign_error=campaign_error,
+        campaign_signature=signature,
     )
 
 
@@ -314,9 +428,121 @@ def _scored_at(state: ServiceState) -> str | None:
 
 
 def catalogue(state: ServiceState) -> list[dict]:
-    """Every Almadar package the chatbot may talk about, with its collection date."""
+    """Every operator package the chatbot may talk about, with its collection date."""
     columns = [name for name in CATALOGUE_COLUMNS if name in state.offers.columns]
     return _json_safe(state.offers[columns])
+
+
+GIFT_PREFIX = {"en": "Your gift: ", "ar": "هديتك: "}
+
+# Counted nouns: English singular and plural; Arabic one, two, three to ten, eleven to
+# ninety-nine, and hundreds, because Arabic changes the noun with the number.
+_HOURS = ("an hour", "hours", ("ساعة", "ساعتين", "ساعات", "ساعة", "ساعة"))
+_DAYS = ("a day", "days", ("يوم", "يومين", "أيام", "يوماً", "يوم"))
+_MINUTES = ("a minute", "minutes", ("دقيقة", "دقيقتين", "دقائق", "دقيقة", "دقيقة"))
+
+
+def _present(value) -> bool:
+    """A catalogue cell that holds text: not missing, not NaN and not blank."""
+    return value is not None and not pd.isna(value) and bool(str(value).strip())
+
+
+def _number(value) -> float | None:
+    """A catalogue cell as a number (a flag becomes 0 or 1), or None when it is empty."""
+    if value is None or pd.isna(value):
+        return None
+    return float(value)
+
+
+def _counted(count: float, noun: tuple, language: str) -> str:
+    one, many, arabic = noun
+    n = int(count)
+    if language == "en":
+        return one if n == 1 else f"{n} {many}"
+    single, dual, few, accusative, genitive = arabic
+    if n == 1:
+        return single
+    if n == 2:
+        return dual
+    if n <= 10:
+        return f"{n} {few}"
+    return f"{n} {accusative if n < 100 else genitive}"
+
+
+def _volume(gigabytes: float, language: str) -> str:
+    """A data volume the way the operator writes it: megabytes below 1 GB (قيقا, ميقا)."""
+    if gigabytes < 1:
+        megabytes = round(gigabytes * 1000)
+        return f"{megabytes} MB of data" if language == "en" else f"إنترنت {megabytes} ميقا"
+    return f"{gigabytes:g} GB of data" if language == "en" else f"إنترنت {gigabytes:g} قيقا"
+
+
+def _gives(offer: dict, language: str) -> str | None:
+    """What the package gives, as the operator states it; None when it states nothing.
+
+    Data is said only when the operator's own file states it (`volume_source` "stated"):
+    a volume read from the package name is already in the name, in the operator's words,
+    and one that `Ali_Branch` reported is not the operator's to promise (T16).
+    A row without `volume_source` is treated the same way, so nothing unstated slips in.
+    """
+    stated = offer.get("volume_source") == "stated"
+    data_unlimited = stated and bool(_number(offer.get("data_unlimited")))
+    voice_unlimited = bool(_number(offer.get("voice_unlimited")))
+    if data_unlimited and voice_unlimited:
+        return "unlimited data and calls" if language == "en" else "إنترنت ومكالمات لا محدودة"
+    parts = []
+    gigabytes = _number(offer.get("data_gb")) if stated else None
+    if data_unlimited:
+        parts.append("unlimited data" if language == "en" else "إنترنت لا محدود")
+    elif gigabytes:
+        parts.append(_volume(gigabytes, language))
+    minutes = _number(offer.get("voice_minutes"))
+    if voice_unlimited:
+        parts.append("unlimited calls" if language == "en" else "مكالمات لا محدودة")
+    elif minutes:
+        parts.append(_counted(minutes, _MINUTES, language))
+    if not parts:
+        return None
+    return " and ".join(parts) if language == "en" else " و".join(parts)
+
+
+def gift_message(offer: dict, language: str = "ar") -> str:
+    """What the customer is told about an approved offer, in Arabic or English (decision 51).
+
+    The package, what it gives when the operator states it, the hours it works when it
+    has a window, and for how long, all from the full catalogue row; for example
+    "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم." and, for a package
+    whose volume is only in its name, "هديتك: نت 50MB لمدة يوم."
+    It is what the chatbot says and what the demo sends as the SMS, and every package in
+    the catalogue fits one Arabic SMS part.
+    The policy's reason (`offer_reason_*`) is not in it: read to a customer, it says the
+    operator computed their value. No churn probability, risk band or value figure is
+    available to it either, by construction (decision 10).
+    """
+    if language not in ("ar", "en"):
+        raise ValueError("The customer message is written in Arabic or English.")
+    names = (offer.get(f"name_{language}"), offer.get("name_en"), offer.get("offer_id"))
+    name = next((str(value).strip() for value in names if _present(value)), "")
+    text = f"{GIFT_PREFIX[language]}{name}"
+    gives = _gives(offer, language)
+    if gives:
+        text += f", {gives}" if language == "en" else f"، {gives}"
+    opens, closes = _number(offer.get("valid_from_hour")), _number(offer.get("valid_to_hour"))
+    if opens is not None and closes is not None:
+        text += (
+            f" from {int(opens):02d}:00 to {int(closes):02d}:00"
+            if language == "en"
+            else f" من {int(opens):02d}:00 إلى {int(closes):02d}:00"
+        )
+    hours = _number(offer.get("validity_hours"))
+    if hours:
+        noun, count = (_DAYS, hours / 24) if hours % 24 == 0 else (_HOURS, hours)
+        text += (
+            f" for {_counted(count, noun, 'en')}"
+            if language == "en"
+            else (f" لمدة {_counted(count, noun, 'ar')}")
+        )
+    return f"{text}."
 
 
 def retention(state: ServiceState, subscriber_id: str) -> dict | None:
@@ -340,16 +566,21 @@ def retention(state: ServiceState, subscriber_id: str) -> dict | None:
         for name, value in _json_safe(rows.iloc[[0]])[0].items()
         if name in CHATBOT_RELEASE_COLUMNS
     }
-    offer = _offer_details(state, row["recommended_offer_id"])
-    return None if offer is None else row | {"offer": offer}
-
-
-def _offer_details(state: ServiceState, offer_id: object) -> dict | None:
-    offers = state.offers.loc[state.offers["offer_id"].astype(str) == str(offer_id)]
-    if offers.empty:
+    package = _catalogue_row(state, row["recommended_offer_id"])
+    if package is None:
         return None
-    columns = [name for name in CATALOGUE_COLUMNS if name in offers.columns]
-    return _json_safe(offers[columns].iloc[[0]])[0]
+    # The message is written from the whole row, which says where each volume comes from;
+    # the chatbot is shown only the catalogue columns.
+    messages = {
+        f"customer_message_{language}": gift_message(package, language) for language in ("ar", "en")
+    }
+    offer = {name: package[name] for name in CATALOGUE_COLUMNS if name in package}
+    return row | messages | {"offer": offer}
+
+
+def _catalogue_row(state: ServiceState, offer_id: object) -> dict | None:
+    offers = state.offers.loc[state.offers["offer_id"].astype(str) == str(offer_id)]
+    return None if offers.empty else _json_safe(offers.iloc[[0]])[0]
 
 
 def subscriber(state: ServiceState, subscriber_id: str) -> dict | None:

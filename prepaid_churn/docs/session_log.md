@@ -14,22 +14,22 @@ This file is the narrative that connects them: what happened, in what order, wha
 - Decisions run from 1 to 36; this session wrote 15 to 17, 24 to 30 and 34, and Ali wrote 18 to 23, 31 to 33, 35 and 36.
   Both sessions first numbered a decision 31; Ali's merge `5483f50` kept his Mix catalogue decision as 31 and renumbered the demo app decision to 34.
 - **Open, and the first thing to pick up:** Taha tried the reworked demo app and said it is "still somehow heavy and somehow random, I didn't understand it" (see "Feedback not yet acted on" below).
-- **Also open:** the one question for Ali left in the TICKETS open questions (the Almadar source links), and three checks on the final report draft (section "The final report draft").
+- **Also open:** the one question for Ali left in the TICKETS open questions (the source links for the operator's files, answered on 2026-09-26: the operator's own website), and three checks on the final report draft (section "The final report draft").
 
 ## Timeline
 
 ### 1. Review of Ali's branch and the re-plan (2026-09-19)
 
 - `Ali_Branch` at `06890f6` was an orphan branch: a separate "CVM suite" project whose churn labels came from Ali's own hazard formula on a generated population.
-- Taha's direction: take the best of both into one module, built around Almadar, and keep the team platform (chatbot, copilot, network ML, GIS) as the real goal.
-- Decisions 15 (one module from two efforts, ported by hand), 16 (Almadar Aljadid is the operator; real customers shown in Almadar terms) and 17 (customer MVP first, built to plug into the platform).
+- Taha's direction: take the best of both into one module, built around a real Libyan mobile operator, and keep the team platform (chatbot, copilot, network ML, GIS) as the real goal.
+- Decisions 15 (one module from two efforts, ported by hand), 16 (a real Libyan mobile operator's catalogue; real customers shown in its terms, and since decision 45 the operator is not named) and 17 (customer MVP first, built to plug into the platform).
 - Commit `3942926`; every step of combining the two efforts is logged in [ali_branch_merge.md](ali_branch_merge.md).
 
 ### 2. T16, T8, T18 and the first handover (2026-09-19)
 
-- T16 `729a896`: all 57 Almadar packages (Ali had dropped the five Mix families) and `market.toml` with a status on every figure.
+- T16 `729a896`: all 57 of the operator's packages (Ali had dropped the five Mix families) and `market.toml` with a status on every figure.
 - T8 `42926d0`: the model bundle with version checks and a smoke prediction, `churn score`, and the output contract.
-- T18 `6f3d606`: customers shown in LYD and Almadar packages. Taha chose the 40 LYD ARPU anchor; the rate is 40 over the measured mean recharge of 537.17.
+- T18 `6f3d606`: customers shown in LYD and the operator's packages. Taha chose the 40 LYD ARPU anchor; the rate is 40 over the measured mean recharge of 537.17.
 - Handover `bfb28ab`, pushed on Taha's request, with rebuild instructions for Ali.
 
 ### 3. Ali's delivery taken in (2026-09-21)

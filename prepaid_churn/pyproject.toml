@@ -27,14 +27,6 @@ dev = [
     "pytest",
     "ruff",
 ]
-# T12, the graded sequence experiment. Installed only with
-# `uv sync --group experiments`, so the module a teammate clones stays small.
-# SDV (T13) is deliberately not here: it caps pandas below 3 and would downgrade the
-# whole project, so it runs in its own environment (decision 27).
-experiments = [
-    "keras",
-    "torch",
-]
 
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13"]

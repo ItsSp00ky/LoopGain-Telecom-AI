@@ -9,11 +9,14 @@ an evaluator sees has to be the number the engine produced.
 from dataclasses import replace
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from prepaid_churn.demo import DemoPaths, campaign_directories, load_demo
 
-CAPTION = "Team Loop Gain - Samsung Innovation Campus - Almadar Aljadid prepaid customers"
+CAPTION = (
+    "Team Loop Gain - Samsung Innovation Campus - prepaid customers in a Libyan operator's packages"
+)
 CAMPAIGN_KEY = "campaign_dir"
 
 
@@ -130,7 +133,8 @@ def rtl(text: str) -> str:
 
 def lyd(value, digits: int = 0) -> str:
     """Money, or an explicit dash when the figure is unavailable."""
-    if value is None:
+    # A tiers-only export leaves the 12-month value empty, which pandas reads as NaN.
+    if value is None or pd.isna(value):
         return "-"
     return f"{float(value):,.{digits}f} LYD"
 

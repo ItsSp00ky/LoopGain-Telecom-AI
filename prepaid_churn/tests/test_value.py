@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from prepaid_churn.almadar import almadar_view, load_market, load_offers
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.clean import clean
 from prepaid_churn.cli import main
 from prepaid_churn.features import add_features
+from prepaid_churn.operator_market import load_market, load_offers, operator_view
 from prepaid_churn.schema import validate
 from prepaid_churn.scoring import OUTPUT_COLUMN_NAMES, score
 from prepaid_churn.segmentation import compare_clusters, tiers_report, write_cluster_plots
@@ -59,7 +59,7 @@ def test_measures_use_recharge_events_and_service_breadth(raw):
 
 def test_money_matches_t18(raw, tier_model):
     cleaned = clean(validate(raw))
-    view = almadar_view(cleaned, WINDOW_B, load_market(), load_offers())
+    view = operator_view(cleaned, WINDOW_B, load_market(), load_offers())
     tiers = tier_export(raw, tier_model)
     np.testing.assert_allclose(tiers["monthly_spend_lyd"], view["monthly_spend_lyd"])
 

@@ -36,9 +36,10 @@ This section matters more than the metrics.
 
 - **Not for pricing, credit or any limit.** No output of this model may set a price, a discount, a credit line or an advance limit. T11 grants existing catalogue packages as bonuses and never computes a personalised price.
 - **Not for a decision taken without a person.** Decision 14 requires a named reviewer on every proposal, and `released.csv` contains only approved rows.
-- **Not evidence about Almadar subscribers.** The model is trained on the upGrad prepaid dataset from another market (decision 5). No figure in this card is a measurement of Libyan behaviour.
+- **Not evidence about operator subscribers.** The model is trained on the upGrad prepaid dataset from another market (decision 5). No figure in this card is a measurement of Libyan behaviour.
 - **Not a commercial model.** The training data is for education only, so a model trained on it cannot be sold (decision 11). What can be sold is the pipeline, retrained on an operator's own export.
-- **Not a cancellation predictor.** Churn here means observed inactivity, not a closed account. A subscriber who keeps a second SIM and stops using this one counts as churned, and one who keeps the line dormant but recharges does not.
+- **Not a cancellation predictor.** Churn here means observed inactivity, not a closed account. The target is next-month usage inactivity: no calls and no mobile data for the whole month.
+  A subscriber who keeps a second SIM and stops using this one counts as churned, and so does one who keeps recharging a line they no longer use; one who comes back after a silent month was still counted as churned for that month.
 - **Not for the already silent.** Subscribers with no calls and no data in the current month are not scored at all (decision 12); they receive the band `already_silent` and no probability.
 - **No language model may sit in any path that sets an offer, a price or a limit** (decision 17). The chatbot and copilot read only.
 
@@ -89,6 +90,13 @@ Test results, window B, 9,677 unseen customers, from `reports/evaluation_all.md`
 | Brier score | 0.0338 | 0.0357 | calibration |
 | Mean predicted probability | 0.0422 | 0.0447 | against an observed 0.0435 |
 
+Two other models were tested and removed, because both were worse than LightGBM (decision 44):
+
+- A Keras LSTM over the two monthly steps scored a test PR-AUC of 0.2326 against LightGBM's 0.3477, below the logistic regression too, and failed two of the four release checks.
+  With two steps the change between months is one subtraction, which the engineered features already give LightGBM, so a sequence model has nothing to learn.
+- A LightGBM trained on synthetic customers kept at most 45% of the real model's validation PR-AUC (Gaussian copula), and 15% with CTGAN.
+  The generated customers did not keep the real patterns: a detector told them from real rows at ROC-AUC 1.000, and CTGAN's copy had 16.8% churners against 4.7%.
+
 Contacting the riskiest customers, LightGBM, same source:
 
 | Contact | Customers | Precision | Recall |
@@ -112,6 +120,7 @@ On the high-value slice (the top 30% by recharge amount) the model does better, 
 ### Success thresholds
 
 Four checks agreed with the instructor on 2026-09-19 (decision 13).
+They were written after the one test run, so the pass below is a check, not a pre-registered result.
 A model is fit for use only if it passes all four, and `churn bundle` refuses to package a champion that fails one.
 
 | Check | What it measures | Value | Required | Passed |
@@ -121,11 +130,14 @@ A model is fit for use only if it passes all four, and `churn bundle` refuses to
 | better_than_baseline | PR-AUC against logistic regression | 0.3477 | above 0.2770 | yes |
 | calibration | Gap between mean predicted and observed rate | 0.0013 | at most 0.01 | yes |
 
-Release gate: passed. Source: `reports/evaluation_all.md`.
+Release gate: passed, as a retrospective check, since the thresholds were written after the test run. Source: `reports/evaluation_all.md`.
 
 How sure these numbers are: resampling the frozen test predictions 2,000 times (decision 35, `reports/uncertainty.md`) gives PR-AUC 0.3477 with a 95% interval of 0.3006 to 0.4000, and top-10% capture 0.6152 with 0.5725 to 0.6582.
 LightGBM beat the baseline in all 2,000 paired resamples, and every check above still passes at the unfavourable end of its interval.
 The intervals cover which customers landed in the test group; they do not cover training randomness or a different month or operator.
+
+From the next model on, a fifth check applies: calibration inside the high and medium bands, where offers are made (decision 38).
+It is set before that model is tested, and it does not apply to the current champion.
 
 ### Honest setup, and what selection costs
 
@@ -155,8 +167,30 @@ Method: **sigmoid**, chosen by 5-fold cross-validated log loss on validation cus
 Calibration is mandatory here, because T11 multiplies the probability by money.
 A probability consumed as a monetary expectation has to mean what it says.
 
-The evidence that it does: on test, the mean predicted probability is 0.0422 against an observed 0.0435, a gap of 0.0013.
-The reliability table in `reports/evaluation_all.md` gives all ten bins; the riskiest bin predicts 0.2923 and observes 0.2676.
+On average it does: on test, the mean predicted probability is 0.0422 against an observed 0.0435, a gap of 0.0013.
+Inside the range it does less well, and the average hides it because two errors cancel.
+From the reliability table in `reports/evaluation_all.md`:
+
+| Test customers | Predicted leavers | Actual leavers |
+|---|---|---|
+| Tenths 7 to 9 by predicted risk (1.1% to 10.9%), 2,903 customers | 98 | 134 |
+| The riskiest tenth (10.9% and above), 968 customers | 283 | 259 |
+
+The gap in tenths 7 to 9 is about 3.7 standard deviations, far beyond chance.
+A smaller version already shows on the validation customers the calibrator was fitted on (121 leavers against 100 predicted), so part of it is the fixed shape of a sigmoid and part is the later month.
+
+What it costs depends on the band, because T11 proposes offers only in the high and medium bands (counted from the frozen test predictions, decision 38):
+
+| Band on test | Customers | Predicted leavers | Actual leavers | Actual against predicted |
+|---|---|---|---|---|
+| high | 450 | 199 | 173 | -13% |
+| medium | 1,238 | 135 | 148 | +10% |
+| low | 7,989 | 75 | 100 | +34% |
+
+The ranking is not affected, so the riskiest customers are still found first.
+Where money is spent, expected values are somewhat too high in the high band and too low in the medium band, which tilts a budget toward the high band; that error is small next to the assumed 5% share of churners saved.
+The largest miss is in the low band, where T11 spends nothing: it holds 100 of the 421 leavers (24%), and the model expected 75.
+None of this can be corrected with the test customers, which were scored once; decision 38 adds a check on the high and medium bands for the next model.
 
 Thresholds, both fixed on validation and stored in the bundle manifest:
 
@@ -165,7 +199,9 @@ Thresholds, both fixed on validation and stored in the bundle manifest:
 
 ## Explainability
 
-Every scored subscriber gets up to three reasons in plain language, written as sentences rather than as `feature = value, shap = +0.14`.
+Every `high` or `medium` subscriber gets up to three reasons, each a short label with the customer's value, such as "Days since the last recharge, at the end of this month: 26", rather than `feature = value, shap = +0.14`.
+A `low` subscriber gets one line instead, "Low risk: nothing stands out" (decision 40).
+SHAP measures the push away from the average customer, so even a very safe customer has a few small upward pushes, and listing them would read as warning signs.
 
 They are exact SHAP contributions, not an approximation: LightGBM computes them from its own trees through `pred_contrib`, so no background sample is needed and there is no sampling noise.
 For the logistic regression baseline, each feature's share of the log-odds is its coefficient times its standardised value.
@@ -195,40 +231,65 @@ No offer reaches a customer without a named person approving it (decision 14).
 
 Reviewer names are an audit trail, not authentication. Access control between services is the API key boundary in T15 (decision 21).
 
-## The Almadar view and its assumptions
+## The operator view and its assumptions
 
-The behaviour in this data is real but from another market; the money and the packages shown to a user are Almadar's (decision 16).
-Every assumption below is labelled, from `reports/almadar_view.md`:
+The behaviour in this data is real but from another market; the money and the packages shown to a user are the operator's (decision 16).
+Every assumption below is labelled, from `reports/operator_view.md`:
 
 | What | Value | Status |
 |---|---|---|
-| Almadar ARPU | 40 LYD per month | **assumption**, chosen by Taha on 2026-09-19 |
+| Operator ARPU | 70 LYD per month | **assumption**, chosen by Ali on 2026-09-26 from the operator's bundle prices and Mordor Intelligence's Libya market figures (decision 42) |
 | Reference monthly recharge | 537.17 source-currency units | measured on `train.csv` month 8 |
-| Conversion rate | 1 source unit = 0.074464 LYD | derived from the two rows above |
-| Recharge cards | 5, 10, 20, 40, 100 LYD | reported by Ali Marghem, 2026-09-18 |
+| Conversion rate | 1 source unit = 0.130313 LYD | derived from the two rows above |
+| Recharge cards | 5, 10, 20, 40, 100 LYD | reported by Ali Marghem, 2026-09-18; on 2026-09-26 he confirmed that nothing below 5 LYD can be topped up |
 | Bundle held | inferred from monthly and short pack purchases | **assumption**, the T18 rule |
 
 Consequences worth stating next to any dinar figure:
 
-- Every LYD amount inherits the 40 LYD ARPU assumption. Replace that one number in `data/almadar/market.toml` and every amount moves with it.
-- The viewed base has a mean monthly spend of 39.39 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
-- For 88.87% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
-- The bundle a customer "holds" is inferred from purchase behaviour, never from an Almadar subscription record, because we have none.
+- Every LYD amount inherits the 70 LYD ARPU assumption. Replace that one number in `data/operator/market.toml` and every amount moves with it.
+- The anchor was 40 LYD until 2026-09-26; neither figure is a measured operator average, and decision 42 records the derivation and its limits.
+- The viewed base has a mean monthly spend of 68.94 LYD, close to but not equal to the ARPU, because the rate is fixed on training customers rather than on the viewed batch.
+- For 66.77% of active customers the nearest card to their usual top-up is the smallest one, 5 LYD.
+- That card hides a limit of the one rate: it keeps monthly spend on the operator's scale, not the size of each top-up.
+  For 49.9% of the active customers who recharged, the average top-up converts to under 5 LYD, which no customer of the operator can do, so the emergency credit advice (T19) reads the card such a customer would buy instead of the amount (decision 49).
+- The bundle a customer "holds" is inferred from purchase behaviour, never from an operator subscription record, because we have none.
+- Only the money is converted, and the report measures what is not: 73.7% of active customers used no mobile data this month and the others a median 0.50 GB, while the 70 LYD anchor was built on 12 GB a month (decision 42).
+- 422 customers (1.5%) spend more a month than the operator's dearest package, 400 LYD, with 16.3% of all spend and up to 5,709 LYD, so every LYD total leans on spenders the operator's catalogue does not reach.
 
 The 12-month value used by T11 is a scenario, not a measured lifetime value (decision 19).
 It assumes a constant monthly hazard and is reported in three variants, with the hazard multiplied by 1.5, 1.0 and 0.5.
+
+Checked on 2026-09-26 on the validation customers, neither that assumption nor the assumption that nobody comes back holds (decision 41).
+Risk moves back toward the average after a month: high-band customers who stayed active churned at 11.0% the next month, not the 43.2% predicted.
+And 28.1% of customers silent in one month were active the next, while the scenario counts every silence as permanent.
+Under constant risk, risk times value peaks near 20% risk, so the value of high-risk customers, and T11's reason to spend on them, is understated; ticket T23 replaces the scenario.
 
 ## Limitations
 
 Stated plainly, because this is the section an evaluator should read hardest.
 
-- **The data is not Libyan, and not Almadar's.** It looks like an Indian operator's export: the columns carry "circle" regions and rupee amounts. Nothing here measures Libyan behaviour.
+- **The data is not Libyan, and not the operator's.** It looks like an Indian operator's export: the columns carry "circle" regions and rupee amounts. Nothing here measures Libyan behaviour.
 - **Provenance is undocumented.** The upGrad file gives no collection method, no sampling frame and no date range beyond four consecutive months.
-- **One short history per customer.** Four months total, and only two of them feed features, so nothing seasonal or long-range can be learned. This is also why the T12 sequence benchmark is expected to lose.
+- **One short history per customer.** Four months total, and only two of them feed features, so nothing seasonal or long-range can be learned.
 - **Educational licence.** The Kaggle competition terms allow education only, so a model fitted on this data cannot be sold or deployed commercially (decision 11).
+- **Only June to August exports can be scored.**
+  The data contract names months by number and requires every date to fall in the month its column names, and the scorer always reads months 7 and 8.
+  An operator's current base is refused unless its dates are rewritten into June to August, which is error-prone and shifts the recency features by the difference in month lengths.
+  Ticket T22 moves this edge to match the inside of the pipeline, which already uses relative months (T4).
 - **The test window is spent.** It was scored once, on 2026-09-19. No model, feature or threshold may change because of those numbers, and any future comparison must be against them rather than a re-scored test.
 - **Churn is inactivity, so a dual-SIM subscriber who still receives calls but places none elsewhere looks retained.** The receiving-SIM hypothesis from `Ali_Branch` is testable only on real Libyan data.
-- **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5%, or 10% for the morning product, and it is not measured. T17 is the ticket that would start to measure it.
+- **One month of silence is not always churn.**
+  Of 2,131 train customers who went silent in month 8, 561 (26%) were active again in month 9 by Kaggle's label (T6).
+  The label counts temporary absence as churn, and an offer to a customer who would have come back anyway is spent for nothing.
+- **The strongest signal is roaming, and it belongs to this market.**
+  Customers roaming in the current month are 14% of the train customers but 52% of the churners, and the four roaming columns carry 19% of LightGBM's gain (T6).
+  Without them, the same training recipe scores a validation PR-AUC of 0.401 instead of 0.458.
+  Every customer here has the same home circle (`circle_id` 109), so roaming mostly means being away from that region, and roamers who went silent came back more often (35% against 17%).
+  In Libya roaming would mostly mean being abroad, so this signal is likely to behave differently there, which is one more reason the model must be retrained on the operator's own data (decisions 11 and 16).
+- **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5% for every offer (decision 46), and it is not measured.
+  With the same share for every offer, each customer gets the cheapest offer that fits them: in a 1,000 LYD campaign, 2,254 of the 3,643 offers are the 1 LYD morning pass and the rest the 0.5 LYD day pack.
+  The campaign report's equal-spend comparison scores the targeted plan with the same assumed value it is picked by, so the table favours it by construction and shows nothing about whether targeting works; the picking is greedy, so it is not even guaranteed to be the best set under those assumptions.
+  The holdout, the same customers in every campaign (decision 43), is what can measure it, comparing eligible customers held out with eligible customers who were not.
 - **No network-quality features.** Dropped calls and outages are not in this data. T20 defines the field contract for the network ML team to supply them later.
 - **Age on network is a snapshot**, not a per-month value, so tenure carries the timing limitation recorded in T4.
 - **Monthly recharge counters can overlap**, so the frequency measure is a count proxy rather than deduplicated transactions (T10).
@@ -268,8 +329,11 @@ No other business rule filtered the training population, and no repayment or acc
 ## Sources
 
 Every report is committed and regenerated by the command named beside it.
-A fresh clone of `Ali_Branch` on 2026-09-21 reproduced all of them byte for byte and rebuilt the same bundle, `lightgbm-2026-09-19-ef9430fb`.
-`reports/uncertainty.md` came later, on 2026-09-25, and a second run reproduced it byte for byte.
+On 2026-09-26 a fresh clone of `Ali_Branch` ran the whole README rebuild, which regenerates every report in this table, and all of them came out byte for byte identical, with the same bundle, `lightgbm-2026-09-19-ef9430fb`.
+The two contracts are checked against the code by the tests.
+The earlier checks, on 2026-09-21 and 2026-09-22, regenerated only the pipeline reports; the T1 profile and the readiness decisions report were first regenerated on 2026-09-26.
+A few figures come from one-off checks instead of a report: the roaming and come-back numbers (T6, 2026-09-25) and the calibration counts by band (decision 38, 2026-09-26).
+They are dated where they appear, and no command regenerates them.
 
 | File | Contents | Produced by |
 |---|---|---|
@@ -278,7 +342,7 @@ A fresh clone of `Ali_Branch` on 2026-09-21 reproduced all of them byte for byte
 | `reports/training_all.md` | Validation metrics and feature gain shares | `churn train` |
 | `reports/evaluation_all.md` | Frozen choices, test metrics, success thresholds | `churn evaluate` |
 | `reports/uncertainty.md` | 95% intervals on the frozen test metrics; changes nothing | `churn uncertainty` |
-| `reports/almadar_view.md` | Money and packages in Almadar terms, with statuses | `churn almadar-view` |
+| `reports/operator_view.md` | Money and packages in the operator's terms, with statuses | `churn operator-view` |
 | `reports/tiers.md` | Value tiers, cutoffs and the clustering comparison | `churn fit-tiers` |
 | `reports/decisions.md` | Retention proposals with every cost and effect assumption | `churn decide` |
 | `reports/emergency_credit.md` | Advised emergency credit limits; uses no model | `churn advance` |

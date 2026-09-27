@@ -1,0 +1,26 @@
+# T11 planning assumptions, not measured retention effects or audited margins.
+# Every offer is assumed to keep the same 5% of would-be leavers (decision 46): nothing measured
+# supports a larger or product-specific effect, and the permanent holdout (decision 43) is
+# what will measure the real one.
+[policy]
+status = "assumption"
+source = "T11 planning defaults, decisions 20 and 46; no operator campaign outcomes available"
+budget_lyd = 1000.0
+max_value_fraction = 0.15
+holdout_fraction = 0.10
+seed = 42
+share_saved = 0.05
+offpeak_share_saved = 0.05
+base_monthly_offer_id = "MO_20"
+preferred_offer_id = "SABAH_1"
+
+# Checked against published averages on 2026-09-26 (decision 46): operators' operating costs
+# are about 66% of revenue (MTN Consulting, 3Q20), and delivering 1 GB costs about $1
+# (Dave Burstein, 2021) against a $2.59 world average price per GB (We Are Social, 2024),
+# about 40%. So 25% and 35% sit inside the averages; a bonus that uses spare off-peak
+# capacity probably costs less. None of this is the operator's own cost.
+[delivery_cost]
+status = "estimate"
+source = "T16 market.toml delivery_cost, originally Ali_Branch conf/catalogue.yaml"
+share_of_price_metered = 0.25
+share_of_price_unlimited = 0.35

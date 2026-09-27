@@ -6,11 +6,11 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 ## Context
 
 - Samsung Innovation Campus (SIC) capstone, Team Loop Gain, repo `ItsSp00ky/LoopGain-Telecom-AI`.
-- This folder is the customer module: churn risk, value, retention offers and their integration, for **prepaid** subscribers of Almadar Aljadid in Libya (decision 16).
+- This folder is the customer module: churn risk, value, retention offers and their integration, for **prepaid** subscribers of a Libyan mobile operator (decision 16).
 - The real goal is the team's one platform: GIS planning, network ML, this module, a customer chatbot and an employee copilot (decision 17).
   Every ticket is judged by whether it helps that integration, and the customer MVP comes before any extra experiment.
 - Taha and Ali Marghem work on it together, each with their own session.
-  Both branches met on 2026-09-21: `Ali_Branch` was built on this tree, so `tahaDev` was fast-forwarded to it and is now the only branch (decision 24).
+  Both branches met on 2026-09-21 (decision 24), and since 2026-09-22 there are two again: Ali works on `Ali_Branch`, Taha on `tahaDev`, and each side's work reaches the other by merge (decisions 39 and 53).
   The repo is the only shared memory: anything decided in a chat must be written into TICKETS.md or docs/decisions.md.
 - The module must stay ready to integrate with the team's customer chatbot and employee copilot through fixed input and output contracts (decision 10), and ready to retrain on a Libyan operator's own data (decision 11).
 - The older `customer_churn_prediction/` folder is Ahmed's earlier module.
@@ -18,10 +18,13 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 
 ## Hard rules
 
-- Work on `tahaDev`, the branch both of us share (decision 24).
+- Ali's sessions work and push on `Ali_Branch` only, and never commit or push to `tahaDev` (decision 39).
+  Bring Taha's work in by merging `origin/tahaDev` into `Ali_Branch`, and only when Ali asks for it.
   Pull before you start, claim a ticket by writing your name in its Owner field, and push when it is done.
   Do not pull or merge `main`.
-- `tahaDev` also carries the teammates' merged GIS and network ML work, because Taha owns the platform integration (decision 37).
+- Taha's sessions work and push on `tahaDev`, and bring Ali's work in by merging `origin/Ali_Branch` into `tahaDev` when Taha asks for it (decision 53).
+  Where a merge collides on a decision or ticket number, Ali's number stands and `tahaDev`'s is renumbered, with the old number written beside the new one.
+- `tahaDev` also carries the teammates' merged GIS and network ML work, because Taha owns the platform integration (decision 53).
   Their folders stay theirs: do not edit `antenna_cell_placement/`, `network_kpi_prediction/` or `KPI_forecasting/` except to resolve a merge, and report problems to the owner.
   When a teammate updates their branch, merge it again; in a conflict inside their folder, the owner's version wins.
 - The raw Kaggle files in `data/raw/` are committed on purpose (decision 9); do not remove them.
@@ -71,21 +74,18 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `src/prepaid_churn/retention.py` | T11 catalogue bonuses, policy assumptions, guardrails, holdout and equal-spend comparison |
 | `src/prepaid_churn/campaign.py` | T11 authoritative proposal snapshots, named reviews and approved-only release |
 | `src/prepaid_churn/retention_report.py` | T11 aggregate report with every cost and effect assumption |
-| `src/prepaid_churn/almadar.py` | T16 Almadar catalogue and market facts (loading, rules, check against the operator file); T18 `almadar_view` |
-| `src/prepaid_churn/service.py` | T15 read-only integration state and its payload builders (`load_state`, `health`, `catalogue`, `retention`, `portfolio_summary`, and `subscriber` from T20) |
+| `src/prepaid_churn/operator_market.py` | T16 operator catalogue and market facts (loading, rules, check against the operator file); T18 `operator_view` and `unconverted_behaviour` |
+| `src/prepaid_churn/service.py` | T15 read-only integration state and its payload builders (`load_state`, `refresh_campaign` from decision 47, `health`, `catalogue`, `retention` with `gift_message` from decision 51, `portfolio_summary`, and `subscriber` from T20) |
 | `src/prepaid_churn/api.py` | T15 FastAPI app, per-consumer API keys and the response models that generate `/docs` |
 | `src/prepaid_churn/privacy.py` | T15 pseudonymous IDs: the Libyan phone-number check and the salted `pseudonymize` helper |
 | `src/prepaid_churn/client.py` | T20 example client for the other components, standard library only, and the `check` behind `churn check-integration` |
 | `src/prepaid_churn/demo.py` | T14 pure layer behind the demo screens: loading, headline numbers, guardrail breakdown, SMS parts and the customer message |
 | `app/` | T14 Streamlit screens (`Home.py` plus `pages/`); thin, and the only writes are a named review and a proposed campaign (decision 34) |
 | `src/prepaid_churn/advance.py` | T19 emergency credit advice: affordability ceiling, operator denominations, zero-residual finding and report |
-| `src/prepaid_churn/sequence.py` | T12 Keras LSTM over the two monthly steps, calibrated and scored against the champion on the frozen test (experiments group) |
-| `experiments/synthetic.py` | T13 CTGAN and Gaussian copula copies of the training customers, run with `uv run --script` in their own environment (decision 27) |
-| `experiments/uplift.py` | T17 two-model uplift and Qini on two public randomised trials, with the datasets fetched into the git-ignored `data/external/` |
 | `data/processed/` | Built by `churn build-dataset` (git-ignored) |
 | `artifacts/models/` | Built by `churn train` (git-ignored) |
 | `artifacts/bundle/` | Built by `churn bundle` from a champion that passed its release gate (git-ignored) |
-| `artifacts/scores/` | `scores.csv` from `churn score` and `almadar_view.csv` from `churn almadar-view` (git-ignored) |
+| `artifacts/scores/` | `scores.csv` from `churn score` and `operator_view.csv` from `churn operator-view` (git-ignored) |
 | `artifacts/campaigns/` | T11 proposal snapshots, decision CSVs, review logs and approved-only release files (git-ignored) |
 | `docs/data_contract.md` | Input contract, generated by `churn contract`; never edit by hand |
 | `docs/output_contract.md` | Subscriber output contract, generated by `churn output-contract`; never edit by hand |
@@ -96,11 +96,11 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `docs/session_log.md` | The 2026-09-19 to 2026-09-25 session: timeline, mistakes caught, machine notes, open feedback |
 | `docs/presentation/` | Talking points for mentoring and the final presentation, and the results chart (`make_chart.py` redraws it) |
 | `docs/ali_branch_merge.md` | Step log and port table for combining `Ali_Branch` into this module |
-| `../assistants/` | T22 customer chatbot and T23 employee copilot (decision 38), a separate uv project at the repository root that calls the service; it has its own README and its own lint, format and tests |
+| `../assistants/` | T24 customer chatbot and T25 employee copilot (decision 54), a separate uv project at the repository root that calls the service; it has its own README and its own lint, format and tests |
 | `src/prepaid_churn/cli.py` | `churn` command |
 | `reports/` | Generated reports with aggregate numbers (committed) |
 | `data/raw/` | `train.csv`, `test.csv`, `data_dictionary.csv` from Kaggle (committed) |
-| `data/almadar/` | Almadar packages still sold (`offers.csv`), packages the operator retired (`excluded.csv`), market facts (`market.toml`) and the operator source files; see `docs/almadar.md` |
+| `data/operator/` | Operator packages still sold (`offers.csv`), packages the operator retired (`excluded.csv`), market facts (`market.toml`) and the operator source files; see `docs/operator.md` |
 
 ## End of every session
 

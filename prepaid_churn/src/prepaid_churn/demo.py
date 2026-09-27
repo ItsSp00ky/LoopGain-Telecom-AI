@@ -2,7 +2,7 @@
 
 The Streamlit screens in `app/` are a thin surface over this module.
 Nothing here recomputes a score, a tier or an offer.
-Every figure comes from a file that `churn tiers`, `churn almadar-view` and `churn decide`
+Every figure comes from a file that `churn tiers`, `churn operator-view` and `churn decide`
 already wrote, and the loading goes through `service.load_state`, so the screens and the
 T15 endpoints answer from the same state and cannot drift apart.
 
@@ -18,11 +18,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from prepaid_churn.almadar import OFFERS_PATH, load_offers
 from prepaid_churn.campaign import campaign_rows, load_campaign
 from prepaid_churn.data import PROJECT_ROOT
+from prepaid_churn.operator_market import OFFERS_PATH, load_offers
 from prepaid_churn.retention import REASONS
-from prepaid_churn.service import ServicePaths, ServiceState, load_state
+from prepaid_churn.service import ServicePaths, ServiceState, gift_message, load_state
 from prepaid_churn.value import TIERS
 
 # Every screen names what it is missing and the command that produces it.
@@ -32,7 +32,7 @@ PRODUCED_BY = {
     "portfolio": "uv run churn tiers --tiers-only",
     "campaign": "uv run churn decide --tiers-only --output-dir artifacts/campaigns/<name>",
     "bundle": "uv run churn bundle",
-    "almadar view": "uv run churn almadar-view",
+    "operator view": "uv run churn operator-view",
 }
 
 RISK_BANDS = ("high", "medium", "low", "already_silent")
@@ -49,7 +49,7 @@ CAMPAIGNS_DIR = PROJECT_ROOT / "artifacts" / "campaigns"
 @dataclass(frozen=True)
 class DemoPaths:
     portfolio_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "tiers.csv"
-    view_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "almadar_view.csv"
+    view_path: Path = PROJECT_ROOT / "artifacts" / "scores" / "operator_view.csv"
     campaign_dir: Path = CAMPAIGNS_DIR / "retention"
     bundle_dir: Path = PROJECT_ROOT / "artifacts" / "bundle"
     offers_path: Path = OFFERS_PATH
@@ -140,7 +140,7 @@ def load_demo(paths: DemoPaths) -> DemoState:
     if paths.view_path.exists():
         view = pd.read_csv(paths.view_path, converters={"id": str})
     else:
-        missing.append(("almadar view", PRODUCED_BY["almadar view"]))
+        missing.append(("operator view", PRODUCED_BY["operator view"]))
 
     return DemoState(
         service=service,
@@ -234,6 +234,26 @@ MISSING_TEXT = frozenset({"nan", "none", "nat", ""})
 # "NA" is never touched.
 STRINGIFIED_COLUMNS = ("reviewer", "reviewed_at", "review_note")
 
+# What a campaign row adds about a customer: its decision and its review. The customer's
+# risk, value and reasons come from the current portfolio only, because a campaign keeps
+# them as they were when it was proposed, possibly by another model or run.
+CAMPAIGN_COLUMNS = (
+    "holdout",
+    "recommended_offer_id",
+    "decision_code",
+    "status",
+    "expected_cost_lyd",
+    "expected_net_value_lyd",
+    "share_saved",
+    "policy_version",
+    "offer_reason_en",
+    "offer_reason_ar",
+    "reviewer",
+    "reviewed_at",
+    "review_note",
+    "campaign_id",
+)
+
 
 def _present(value) -> object | None:
     """None for a value that is missing, including one pandas already made into text.
@@ -251,6 +271,10 @@ def _present(value) -> object | None:
 def subscriber_view(state: DemoState, subscriber_id: str) -> dict | None:
     """Everything the subscriber screen shows for one customer, or None if unknown.
 
+    The customer's risk, value and reasons come from the current portfolio, and the
+    campaign contributes only its decision and review (`CAMPAIGN_COLUMNS`): its copy of
+    the risk is the one it was proposed with, and showing it as current was wrong.
+
     Built from a one-row frame rather than a Series throughout.
     A Series holds one dtype, so turning one back into a frame makes every column
     `object`, which is the bug that silently blanked a whole panel on `Ali_Branch`.
@@ -265,6 +289,8 @@ def subscriber_view(state: DemoState, subscriber_id: str) -> dict | None:
         if frame is None or key not in frame.columns:
             continue
         rows = frame.loc[frame[key].astype(str) == subscriber_id]
+        if name == "decision":
+            rows = rows[[column for column in rows.columns if column in CAMPAIGN_COLUMNS]]
         if not rows.empty:
             found[name] = rows.head(1)
     if not found:
@@ -384,22 +410,19 @@ def sms_parts(text: str) -> dict:
     }
 
 
-def customer_message(subscriber: dict, offer: dict | None, language: str = "ar") -> str:
-    """The text an approved customer would receive, in Arabic or English.
+def customer_message(offer: dict | None, language: str = "ar") -> str:
+    """The text an approved customer would receive, in Arabic or English (decision 51).
 
-    It states the package and the reason the reviewer approved, and nothing else.
-    No churn probability, no risk band and no value figure ever goes to the customer
-    (decision 10), so none of them is available to this function's output by construction.
+    It is the message the chatbot is given, `service.gift_message`: the package, what it
+    gives when the operator states it, and for how long. The policy's reason stays with
+    staff, and no churn
+    probability, risk band or value figure is available to it by construction
+    (decision 10). A package that has left the catalogue has nothing current to describe,
+    so it has no message.
     """
     if language not in ("ar", "en"):
         raise ValueError("The customer message is written in Arabic or English.")
-    reason = subscriber.get(f"offer_reason_{language}") or ""
-    if offer is None:
-        return str(reason).strip()
-    name = offer.get(f"name_{language}") or offer.get("name_en") or offer.get("offer_id")
-    if language == "ar":
-        return f"المدار الجديد: هديتك {name}. {reason}".strip()
-    return f"Almadar Aljadid: your gift {name}. {reason}".strip()
+    return "" if offer is None else gift_message(offer, language)
 
 
 def utc_today() -> str:
@@ -435,6 +458,26 @@ def campaign_directories(root: Path = CAMPAIGNS_DIR) -> pd.DataFrame:
     return frame.sort_values("updated", ascending=False, ignore_index=True)
 
 
+MONTH_END_PREFIX = "last_date_of_month_"
+
+
+def with_export_month_ends(subset: pd.DataFrame, export: pd.DataFrame) -> pd.DataFrame:
+    """The subset, with any missing month end filled in from the export it was taken from.
+
+    The contract needs each month's end date, and inside a whole export any customer who
+    has it supplies it (T21). A customer alone may have none: 388 rows of the demo base
+    miss at least one, so proposing for one of them failed although the whole base
+    scores. Only a month end the whole export agrees on is filled in, so a real
+    disagreement still reaches the contract check.
+    """
+    filled = subset.copy()
+    for column in (name for name in export.columns if name.startswith(MONTH_END_PREFIX)):
+        dates = export[column].dropna().unique()
+        if len(dates) == 1:
+            filled[column] = filled[column].fillna(dates[0])
+    return filled
+
+
 def propose_offers(
     paths: DemoPaths,
     output_dir: Path,
@@ -461,14 +504,16 @@ def propose_offers(
     from prepaid_churn.schema import ID
     from prepaid_churn.value import load_tiers
 
-    raw = load_raw(paths.base_path)
+    export = load_raw(paths.base_path)
+    raw = export
     if subscribers:
         wanted = {str(one) for one in subscribers}
-        raw = raw[raw[ID].astype(str).isin(wanted)]
+        raw = export[export[ID].astype(str).isin(wanted)]
         if raw.empty:
             raise ValueError(f"None of {sorted(wanted)} is in {paths.base_path.name}.")
     elif customers:
-        raw = raw.head(customers)
+        raw = export.head(customers)
+    raw = with_export_month_ends(raw, export)
 
     policy = load_policy()
     if budget_lyd is not None:

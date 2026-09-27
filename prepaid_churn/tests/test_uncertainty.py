@@ -112,3 +112,11 @@ def test_uncertainty_is_a_churn_command():
     args = build_parser().parse_args(["uncertainty", "--repeats", "500"])
     assert (args.command, args.repeats) == ("uncertainty", 500)
     assert args.report.name == "uncertainty.md"
+
+
+@pytest.mark.parametrize("repeats", ["0", "-5"])
+def test_uncertainty_refuses_fewer_than_one_resample(repeats, capsys):
+    """Zero resamples used to reach the report and fail with a KeyError."""
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["uncertainty", "--repeats", repeats])
+    assert "must be at least 1" in capsys.readouterr().err

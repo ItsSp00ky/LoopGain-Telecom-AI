@@ -43,7 +43,7 @@ language = st.radio(
 
 subscriber = subscriber_view(demo, subscriber_id) or {}
 offer = offer_row(demo, subscriber.get("recommended_offer_id"))
-message = customer_message(subscriber, offer, language)
+message = customer_message(offer, language)
 
 handset, facts = st.columns([2, 1])
 
@@ -102,6 +102,9 @@ if offer is not None:
         )
 
 st.caption(
-    "The message states the package and the reason the reviewer approved, and nothing "
-    "else. No churn probability, risk band or value figure is ever sent to a customer."
+    "The message states the package, what it gives when the operator states it, and "
+    "for how long, and nothing else; "
+    "it is the same text the chatbot is given (decision 51). The policy's reason for the "
+    "offer stays with staff, and no churn probability, risk band or value figure is ever "
+    "sent to a customer."
 )

@@ -9,7 +9,7 @@ Environment: Windows, Python 3.12, the locked runtime and the optional `experime
 All 22 tickets, T0 through T21, are marked Done.
 The prepaid module runs from the committed raw exports through scoring, value tiers, retention proposals, the HTTP service and the dashboard.
 It is ready for a local demonstration and consumer integration testing with the existing data.
-This check does not establish performance on Almadar subscribers or the effect of actually sending a retention offer.
+This check does not establish performance on operator subscribers or the effect of actually sending a retention offer.
 
 ## Pipeline reproduced
 
@@ -21,7 +21,7 @@ uv run churn train
 uv run churn evaluate --chosen-at 2026-09-19
 uv run churn bundle
 uv run churn score
-uv run churn almadar-view
+uv run churn operator-view
 uv run churn fit-tiers
 uv run churn tiers
 uv run churn advance
@@ -89,8 +89,8 @@ The optional LSTM test ran after installing the locked `experiments` group.
 Third-party deprecation warnings remain in the FastAPI test adapter and Keras/Torch array conversion; they did not cause a failure.
 The longer T12, T13 and T17 research experiments were not rerun or retuned; their existing reports and negative findings remain unchanged.
 
-The remaining limits are the ones already recorded in the model card and decisions: another market's prepaid behavior, assumed LYD conversion and retention effects, no operator-side sending or provisioning, and no measured Almadar campaign outcome.
-The source links for the Almadar files still need to be supplied.
+The remaining limits are the ones already recorded in the model card and decisions: another market's prepaid behavior, assumed LYD conversion and retention effects, no operator-side sending or provisioning, and no measured operator campaign outcome.
+The source links for the operator's files still need to be supplied.
 The example HTTP consumer was tested here; deployment of the other teams' chatbot, copilot and network/GIS applications was outside this prepaid acceptance run.
 
 ## Open this checkout

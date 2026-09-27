@@ -4,7 +4,6 @@ from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
 
-from prepaid_churn.almadar import load_offers
 from prepaid_churn.api import (
     API_KEY_HEADER,
     CHATBOT_KEY_VARIABLE,
@@ -15,14 +14,18 @@ from prepaid_churn.api import (
     keys_from_environment,
 )
 from prepaid_churn.bundle import save_bundle
-from prepaid_churn.campaign import build_campaign, review_campaign, save_campaign
+from prepaid_churn.campaign import build_campaign, review_campaign, review_file, save_campaign
 from prepaid_churn.cli import build_parser
+from prepaid_churn.demo import sms_parts
+from prepaid_churn.operator_market import load_offers
 from prepaid_churn.privacy import pseudonymize
 from prepaid_churn.retention import load_policy, propose
 from prepaid_churn.service import (
     ServiceConfigurationError,
     ServicePaths,
+    gift_message,
     load_state,
+    refresh_campaign,
 )
 
 STAMP = "2026-09-20T12:00:00+00:00"
@@ -42,7 +45,9 @@ def offers():
 
 @pytest.fixture
 def policy():
-    return replace(load_policy(), holdout_fraction=0.0)
+    # The mechanism tests keep a preferred morning offer with a larger assumed share, so they
+    # exercise the preference; the shipped policy assumes the same 5% for every offer (decision 46).
+    return replace(load_policy(), holdout_fraction=0.0, offpeak_share_saved=0.10)
 
 
 @pytest.fixture
@@ -119,6 +124,48 @@ def test_retired_approved_offer_is_withheld_and_health_explains(served, offers, 
     assert "no longer in the current catalogue" in health["problems"][0]
 
 
+@pytest.mark.parametrize(
+    ("column", "value", "problem"),
+    [
+        ("churn_probability", 2.0, "not between 0 and 1"),
+        ("risk_band", "extreme", "unknown risk_band"),
+        ("value_tier", "gold", "unknown value_tier"),
+        ("model_version", "lightgbm-some-other-model", "but the service holds"),
+    ],
+)
+def test_a_portfolio_the_service_cannot_vouch_for_is_refused(
+    served, bundle, portfolio, tmp_path, keys, column, value, problem
+):
+    """An impossible value, or another model's scores under this model's name (decision 52)."""
+    portfolio["model_version"] = bundle.version
+    portfolio.loc[0, column] = value
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "bundle", tmp_path / "tiers.csv", tmp_path / "campaign" / "proposals.json"
+        )
+    )
+    client = TestClient(create_app(state, keys))
+    health = client.get("/health").json()
+    assert health["status"] == "degraded"
+    assert any(problem in message for message in health["problems"])
+    assert copilot(client, "/portfolio/summary").status_code == 503
+    assert copilot(client, "/subscribers/0001/risk").status_code == 503
+
+
+def test_a_portfolio_scored_by_the_loaded_model_is_served(
+    served, bundle, portfolio, tmp_path, keys
+):
+    portfolio["model_version"] = bundle.version
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "bundle", tmp_path / "tiers.csv", tmp_path / "campaign" / "proposals.json"
+        )
+    )
+    assert TestClient(create_app(state, keys)).get("/health").json()["status"] == "ok"
+
+
 @pytest.mark.parametrize("ids", [["same", "same", "NA", "0004"], ["", "0002", "NA", "0004"]])
 def test_malformed_portfolio_ids_fail_at_load(served, portfolio, tmp_path, keys, ids):
     portfolio["subscriber_id"] = ids
@@ -179,9 +226,42 @@ def test_the_chatbot_gets_every_package_with_its_collection_date(client, offers)
     assert body["count"] == len(offers)
     assert {row["offer_id"] for row in body["offers"]} == set(offers["offer_id"])
     assert all(row["collected"] for row in body["offers"])
-    assert all(row["operator"] == "Almadar Aljadid" for row in body["offers"])
+    assert all(row["operator"] == "Libyan mobile operator" for row in body["offers"])
     morning = next(row for row in body["offers"] if row["offer_id"] == "SABAH_1")
     assert (morning["valid_from_hour"], morning["valid_to_hour"]) == (6, 11)
+
+
+def test_every_package_says_where_its_volume_comes_from(client):
+    """A chatbot must be able to tell a stated volume from one read from a name (decision 52)."""
+    rows = {row["offer_id"]: row for row in chatbot(client, "/catalogue").json()["offers"]}
+    assert {row["volume_source"] for row in rows.values()} <= {"stated", "name", "reported", "none"}
+    assert rows["SABAH_1"]["volume_source"] == "stated"
+    assert rows["MO_20"]["volume_source"] == "name"
+    assert rows["SLVR_1"]["volume_source"] == "reported"  # unlimited only on an earlier report
+    offer = chatbot(client, "/subscribers/0001/retention").json()["offer"]
+    assert offer["volume_source"] == "stated"
+    # The limits travel with the package: Silver's speed cap, and a family package's lines.
+    assert rows["SLVR_1"]["max_download_mbps"] == 8
+    assert rows["FAM_70"]["members"] == 3
+
+
+def test_a_portfolio_naming_a_model_is_refused_when_no_bundle_is_loaded(
+    served, portfolio, tmp_path, keys
+):
+    """Nothing can vouch for another model's scores when the bundle is missing (decision 52)."""
+    portfolio["model_version"] = "lightgbm-2026-09-19-ef9430fb"
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "missing-bundle",
+            tmp_path / "tiers.csv",
+            tmp_path / "campaign" / "proposals.json",
+        )
+    )
+    client = TestClient(create_app(state, keys))
+    health = client.get("/health").json()
+    assert any("no bundle is loaded to vouch" in message for message in health["problems"])
+    assert copilot(client, "/subscribers/0001/risk").status_code == 503
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +279,20 @@ def test_an_approved_offer_reaches_the_chatbot_with_the_package(client):
     assert body["offer"]["name_en"]
     assert body["offer"]["name_ar"]
     assert body["offer"]["price_lyd"] == 1
+    assert body["customer_message_en"] == (
+        "Your gift: Morning, unlimited data and calls from 06:00 to 11:00 for a day."
+    )
+    assert body["customer_message_ar"] == (
+        "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم."
+    )
+
+
+def test_the_customer_message_never_carries_the_policy_s_reason(client):
+    """The reason says the operator computed the customer's value (decision 51)."""
+    body = chatbot(client, "/subscribers/0001/retention").json()
+    assert body["offer_reason_en"] not in body["customer_message_en"]
+    assert body["offer_reason_ar"] not in body["customer_message_ar"]
+    assert "value" not in body["customer_message_en"]
 
 
 @pytest.mark.parametrize(
@@ -233,6 +327,21 @@ def test_the_chatbot_is_never_told_a_churn_probability(client, served, keys):
     assert "probability" not in text
 
 
+def test_an_approval_reaches_the_chatbot_without_a_restart(client, tmp_path):
+    """A reviewer approves while the service runs, and the next request serves it."""
+    assert chatbot(client, "/subscribers/0004/retention").status_code == 404
+    review_file(tmp_path / "campaign" / "proposals.json", "Ali Marghem", "approved", ["0004"])
+    response = chatbot(client, "/subscribers/0004/retention")
+    assert response.status_code == 200
+    assert response.json()["subscriber_id"] == "0004"
+    assert client.get("/health").json()["latest_outputs"]["approved_offers"] == 2
+
+
+def test_an_unchanged_campaign_is_not_read_again(served):
+    """While nobody reviews, a request costs one `stat` and keeps the state it had."""
+    assert refresh_campaign(served) is served
+
+
 def test_the_reviewer_name_stays_inside_the_operator(client):
     """The chatbot speaks to the customer; which employee approved the campaign is ours."""
     text = json.dumps(chatbot(client, "/subscribers/0001/retention").json())
@@ -254,6 +363,79 @@ def test_a_pseudonymous_id_is_looked_up_rather_than_refused(client):
     """A salted digest must not trip the phone-number check, or nothing works."""
     digest = pseudonymize("0912345678", "a-salt-long-enough-to-use")
     assert chatbot(client, f"/subscribers/{digest}/retention").status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# The customer message (decision 51)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("offer_id", "english", "arabic"),
+    [
+        ("DAY_50MB", "Your gift: Net 50MB for a day.", "هديتك: نت 50MB لمدة يوم."),
+        ("WK_1", "Your gift: Net 1 for 7 days.", "هديتك: نت 1 لمدة 7 أيام."),
+        (
+            "GOLD_7",
+            "Your gift: Golden 7, unlimited data for 7 days.",
+            "هديتك: ذهبي 7، إنترنت لا محدود لمدة 7 أيام.",
+        ),
+        (
+            "FAM_70",
+            "Your gift: Family 70, 70 GB of data and 300 minutes for 30 days.",
+            "هديتك: فاميلي 70، إنترنت 70 قيقا و300 دقيقة لمدة 30 يوماً.",
+        ),
+        ("HR5G_2", "Your gift: Net 2 hours 5G for 2 hours.", "هديتك: نت ساعتين 2_5G لمدة ساعتين."),
+        ("SOC_D", "Your gift: Social daily for a day.", "هديتك: سوشيال يومي لمدة يوم."),
+    ],
+)
+def test_the_message_says_what_the_package_gives_and_for_how_long(
+    offers, offer_id, english, arabic
+):
+    """Units are the operator's own (ميقا, قيقا, دقيقة); nothing is said that it does not state."""
+    offer = offers.set_index("offer_id").loc[offer_id].to_dict() | {"offer_id": offer_id}
+    assert gift_message(offer, "en") == english
+    assert gift_message(offer, "ar") == arabic
+
+
+@pytest.mark.parametrize("offer_id", ["DAY_QTR", "MO_20", "SLVR_1", "HR5G_1"])
+def test_the_message_never_states_what_the_operator_does_not(offers, offer_id):
+    """A volume read from the name, or unlimited as `Ali_Branch` reported it, is not said.
+
+    `نت 1/4` would otherwise become 250 MB by our own conversion, and Silver "unlimited"
+    although the operator's file only caps its speed.
+    """
+    offer = offers.set_index("offer_id").loc[offer_id].to_dict() | {"offer_id": offer_id}
+    assert offer["volume_source"] != "stated"
+    for language, words in (("en", ("GB", "MB", "unlimited")), ("ar", ("قيقا", "ميقا", "محدود"))):
+        message = gift_message(offer, language)
+        assert not any(
+            word in message.replace(str(offer[f"name_{language}"]), "") for word in words
+        )
+
+
+def test_a_row_without_its_volume_source_says_no_volume(offers):
+    """The trimmed catalogue columns carry no source, so they must not produce a promise."""
+    offer = offers.set_index("offer_id").loc["GOLD_7"].to_dict() | {"offer_id": "GOLD_7"}
+    del offer["volume_source"]
+    assert gift_message(offer, "en") == "Your gift: Golden 7 for 7 days."
+
+
+def test_a_missing_name_falls_back_instead_of_printing_nan(offers):
+    offer = offers.set_index("offer_id").loc["SOC_D"].to_dict() | {"offer_id": "SOC_D"}
+    offer["name_ar"] = float("nan")
+    assert gift_message(offer, "ar") == "هديتك: Social daily لمدة يوم."
+
+
+def test_every_package_s_message_fits_one_arabic_sms(offers):
+    """One Arabic character makes the SMS 70 characters a part; two parts are billed twice."""
+    for offer in offers.to_dict(orient="records"):
+        assert sms_parts(gift_message(offer, "ar"))["parts"] == 1, offer["offer_id"]
+
+
+def test_the_message_is_arabic_or_english(offers):
+    with pytest.raises(ValueError, match="Arabic or English"):
+        gift_message(offers.iloc[0].to_dict(), "fr")
 
 
 # ---------------------------------------------------------------------------

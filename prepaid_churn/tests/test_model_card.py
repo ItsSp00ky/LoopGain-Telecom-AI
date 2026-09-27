@@ -64,10 +64,17 @@ def test_the_validation_to_test_gap_is_quoted_from_both_reports(card):
     assert "0.4582" in card, "the card must keep showing what selection costs"
 
 
-def test_the_almadar_assumptions_match_their_report(card):
-    view = (REPORTS / "almadar_view.md").read_text(encoding="utf-8")
-    for figure in ("40 LYD", "537.17", "0.074464", "39.39"):
-        assert figure in view, f"{figure} is no longer in almadar_view.md"
+def test_the_quoted_uncertainty_ranges_are_in_their_report(card):
+    uncertainty = (REPORTS / "uncertainty.md").read_text(encoding="utf-8")
+    for figure in ("0.3006", "0.4000", "0.5725", "0.6582"):  # PR-AUC and capture, 95% ranges
+        assert figure in uncertainty, f"{figure} is no longer in uncertainty.md"
+        assert figure in card, f"{figure} is missing from the model card"
+
+
+def test_the_operator_assumptions_match_their_report(card):
+    view = (REPORTS / "operator_view.md").read_text(encoding="utf-8")
+    for figure in ("70 LYD", "537.17", "0.130313", "68.94"):
+        assert figure in view, f"{figure} is no longer in operator_view.md"
         assert figure in card, f"{figure} is missing from the model card"
 
 

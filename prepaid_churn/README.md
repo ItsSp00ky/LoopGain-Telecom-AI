@@ -1,8 +1,8 @@
 # Prepaid Churn
 
-Customer module of the Loop Gain capstone (Samsung Innovation Campus): churn risk, value and retention offers for prepaid subscribers of Almadar Aljadid in Libya.
+Customer module of the Loop Gain capstone (Samsung Innovation Campus): churn risk, value and retention offers for prepaid subscribers of a Libyan mobile operator.
 Churn means a subscriber goes inactive: no incoming or outgoing calls and no mobile data in a month.
-The model learns from real prepaid customers (upGrad data); prices, packages and money are Almadar's (decision 16).
+The model learns from real prepaid customers (upGrad data); prices, packages and money are the operator's (decision 16).
 The team's chatbot and copilot use its outputs (decision 17).
 
 **New here (for example Ali):** read the Handoff section of [TICKETS.md](TICKETS.md) first; it says how to rebuild everything and what comes next.
@@ -45,8 +45,7 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn score [--input <file>]` | T8 | Writes one [output contract](docs/output_contract.md) row per subscriber to `artifacts/scores/scores.csv` |
 | `uv run churn output-contract` | T8 | Regenerates `docs/output_contract.md` from the code |
 | `uv run churn check-integration --subscriber-id <id>` | T20 | Calls a running service the way the chatbot and the copilot do, and reports what came back |
-| `uv run churn sequence-benchmark` | T12 | Trains a Keras LSTM and compares it with the champion on the frozen test window (needs the experiments group) |
-| `uv run churn almadar-view [--input <file>]` | T18 | Shows every customer in Almadar money and packages; writes `reports/almadar_view.md` |
+| `uv run churn operator-view [--input <file>]` | T18 | Shows every customer in the operator's money and packages; writes `reports/operator_view.md` |
 | `uv run churn fit-tiers` | T10 | Fits and saves value cutoffs from `train.parquet` only; writes `reports/tiers.md` and clustering plots |
 | `uv run churn tiers [--input <file>]` | T10 | Extends live churn scores with frozen value tiers and 12-month revenue scenarios in `artifacts/scores/tiers.csv` |
 | `uv run churn tiers --tiers-only` | T10 | Assigns tiers without a churn bundle; marks risk-dependent value estimates unavailable |
@@ -56,28 +55,40 @@ The team chose to keep it in this private repo anyway (see [decision 9](docs/dec
 | `uv run churn serve` | T15 | Serves the released outputs read-only to the chatbot and copilot; needs both API keys |
 | `uv run streamlit run app/Home.py` | T14 | Opens the four demo screens over the released outputs; the only screen that writes is the named approval |
 
-Full pipeline from a fresh clone, about a minute (the processed data, models and scores are git-ignored and rebuilt):
+Full pipeline from a fresh clone, about four minutes (the processed data, models and scores are git-ignored and rebuilt):
 
 ```bash
 uv sync
+uv run churn profile
 uv run churn build-dataset
+uv run churn build-dataset --high-value
 uv run churn train
 uv run churn evaluate --chosen-at 2026-09-19
+uv run churn uncertainty
 uv run churn bundle
 uv run churn score
-uv run churn almadar-view
+uv run churn operator-view
 uv run churn fit-tiers
 uv run churn tiers
+uv run churn advance
+uv run churn decide --tiers-only --output-dir artifacts/campaigns/readiness --report reports/decisions.md
 ```
 
 `--chosen-at 2026-09-19` keeps the date the champion was frozen.
 The rebuild reproduces the frozen champion byte for byte, so the bundle is `lightgbm-2026-09-19-ef9430fb` and `git status` shows no changed report.
-Checked again on 2026-09-21 from a fresh clone of `Ali_Branch`: same bundle version, same tier artifact `tiers-v1-cd15525cb3ef`, and no committed report changed.
-The [2026-09-22 end-to-end check](reports/end_to_end.md) reproduced them again, exercised the live API and all five dashboard pages, and records how to open the checked campaign.
+The last command is the readiness run behind `reports/decisions.md`: it proposes nothing, and it needs a campaign directory that does not exist yet.
+This block regenerates every committed report.
 
-The last two commands build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
+What was checked, and when:
+
+- 2026-09-21, fresh clone of `Ali_Branch`: the pipeline reports, the same bundle and the same tier artifact `tiers-v1-cd15525cb3ef`.
+- 2026-09-22, the [end-to-end check](reports/end_to_end.md): the same again plus `emergency_credit.md`, the live API and all five dashboard pages, with how to open the checked campaign.
+- 2026-09-26, fresh clone of `Ali_Branch`: this whole block in 3.6 minutes, with `git status` empty afterwards.
+- 2026-09-26 again, after the ARPU anchor moved to 70 LYD (decision 42): the same, with tier artifact `tiers-v1-efc9739afad4`.
+
+`fit-tiers` and `tiers` build the value layer that the retention decisions (T11), the service (T15) and the demo app (T14) read.
 To go further, `uv run churn decide --output-dir artifacts/campaigns/campaign-001` proposes offers and `uv run churn approve` releases the ones a reviewer accepts.
-The Almadar packages and market facts are in `data/almadar/` ([docs/almadar.md](docs/almadar.md)).
+The operator packages and market facts are in `data/operator/` ([docs/operator.md](docs/operator.md)).
 
 ## Value tiers without new operator data
 
@@ -112,7 +123,7 @@ The CSV columns are defined in [docs/output_contract.md](docs/output_contract.md
 
 ## Retention proposals and human review
 
-T11 uses the real catalogue, frozen risk and value outputs, and explicitly assumed costs and retention effects from `data/almadar/retention.toml`.
+T11 uses the real catalogue, frozen risk and value outputs, and explicitly assumed costs and retention effects from `data/operator/retention.toml`.
 It grants catalogue products as bonuses, without changing retail prices.
 With the existing gated churn bundle available:
 
@@ -171,8 +182,8 @@ On Windows PowerShell, use `$env:PREPAID_CHURN_CHATBOT_KEY = "..."` instead of `
 | Endpoint | Key | What it returns |
 |---|---|---|
 | `GET /health` | none | Whether the bundle loads and predicts, and which outputs are being served |
-| `GET /catalogue` | chatbot | Every Almadar package with its collection date |
-| `GET /subscribers/{id}/retention` | chatbot | The approved offer and its reason, or 404; never a churn probability |
+| `GET /catalogue` | chatbot | Every operator package with its collection date |
+| `GET /subscribers/{id}/retention` | chatbot | The approved offer and the message to say to the customer, or 404; never a churn probability |
 | `GET /portfolio/summary` | copilot | Customers and LYD at risk by risk band and value tier, with the model's test metrics |
 | `GET /subscribers/{id}/risk` | copilot | One subscriber's risk, the model's reasons and their value tier; never reachable with the chatbot key |
 
@@ -180,8 +191,9 @@ Each key is accepted only on its own endpoints, so a leaked chatbot key cannot r
 Subscriber IDs are pseudonymous: an ID shaped like a Libyan mobile number is refused, and `prepaid_churn.privacy.pseudonymize` is the supported way for an operator to hash numbers before exporting them.
 The OpenAPI page at `/docs` is generated from the response models, so it is the integration documentation for the other teams.
 
-Outputs are read once when the service starts, so restart it after a new `churn approve` release.
-`/health` reports the campaign it is holding, so you can see what is being served.
+The campaign is read again whenever `churn approve` changes it, so an approval reaches the chatbot on its next request without a restart (decision 47).
+A new model or a new scoring run is read at startup, so restart the service after one.
+`/health` reports the campaign it is holding and how many offers are approved, so you can see what is being served.
 Without a bundle, `/health` reports `degraded` and the portfolio reports `risk_available` false with every `lyd_at_risk` null.
 An approved package that has left the current catalogue is withheld, and health explains that a new campaign needs to be created and reviewed.
 
@@ -201,44 +213,9 @@ It prints what each consumer sees and exits 1 if a refusal did not happen, healt
 Redirected output is UTF-8 so Arabic package names work on Windows too.
 Checked on 2026-09-22 against the rebuilt 30,000-subscriber base and an isolated QA campaign: status ok, 37 packages, the approved offer for one subscriber and all five refusals correct.
 
-## Syllabus experiments
-
-The two graded experiments live behind a separate dependency group, so a fresh clone stays small:
-
-```bash
-uv sync --group experiments
-uv run churn sequence-benchmark
-```
-
-T12 trains a Keras LSTM over the two monthly steps of each window and scores it once on the same frozen test window as T7.
-It loses, as two monthly steps predict: PR-AUC 0.2326 against LightGBM's 0.3477, and it fails two of the four release checks.
-The comparison, the thresholds and the caveats are in [reports/sequence_benchmark.md](reports/sequence_benchmark.md), and decisions 27 and 28 record why the answer is kept as it came out.
-Keras runs on the torch backend; SDV (T13) is deliberately not in this group, because it caps pandas below 3 and would downgrade the environment the champion was frozen in.
-
-T13 fits CTGAN and a Gaussian copula on real training customers and asks whether an operator could share a generated copy instead of its data.
-It runs in its own environment, so it needs no group at all:
-
-```bash
-uv run --script experiments/synthetic.py
-```
-
-The answer is no at this budget: a model trained on the best copy keeps 45% of the PR-AUC it reaches on real customers, both copies are told from real rows with a detection ROC-AUC of 1.000, and in Almadar terms the copies put customers on the wrong packages.
-The numbers, the limits and what a copy is actually good for are in [reports/synthetic.md](reports/synthetic.md) and decision 29.
-
-T17 asks whether the customers a model ranks riskiest are the ones an offer actually saves, which is the assumption behind T11:
-
-```bash
-uv run --script experiments/uplift.py
-```
-
-They are not the same customers. On Criteo's 1.4 million randomised rows, targeting by uplift reaches a Qini of 0.0698 while targeting by predicted response, the ranking T11 uses, reaches -0.1138, which is worse than random.
-The telecom dataset the action plan names, Orange Belgium, is too small to answer at all and the report says so.
-See [reports/uplift.md](reports/uplift.md) and decision 30.
-Both datasets are downloaded on demand into the git-ignored `data/external/`, because they are other people's data under non-commercial licences.
-
 ## Demo app
 
-Four screens over what the pipeline wrote, for showing the module to someone.
+Five screens over what the pipeline wrote, for showing the module to someone.
 
 ```bash
 uv run streamlit run app/Home.py
@@ -248,7 +225,7 @@ uv run streamlit run app/Home.py
 |---|---|
 | Home | The base, expected churners and revenue at risk, and what is not built yet |
 | Overview | Customers and LYD at risk by risk band and value tier, with the model's test results |
-| Subscriber | One customer: risk, plain-language reasons, value tier, the Almadar bundle held and the proposed offer |
+| Subscriber | One customer: risk, the model's reasons (high and medium risk only), value tier, the operator's bundle held and the proposed offer |
 | Campaign builder | What the guardrails removed, the holdout, cost and value, the equal-spend comparison, and approve or reject under your name |
 | Message preview | The Arabic message an approved customer would receive, and how many SMS parts it actually costs |
 | Released | What was approved, where the files are, and the endpoint the chatbot reads it from |
@@ -256,6 +233,8 @@ uv run streamlit run app/Home.py
 The sidebar picks which campaign every screen reads.
 The Campaign builder can propose a new one (how many customers, what budget), and the Subscriber screen can propose an offer for one customer; both run the same engine as `churn decide`, and neither approves anything (decision 34).
 Keep a proposed campaign small while demonstrating: 500 customers is a 1.7 MB snapshot that loads instantly, where the whole 30,000-customer base is 80 MB.
+The demo prepared on 2026-09-26 is 1,000 customers with a 35 LYD budget, proportional to 1,000 LYD for the whole base: 130 offers under the 5% policy of decision 46, 3 cut by the budget and 98 held out.
+On a fresh clone, propose the same from the Campaign builder (1,000 customers, 35 LYD) and pick it in the sidebar.
 
 By default it reads the first campaign in `artifacts/campaigns/retention`.
 To show another one, name it before starting:
@@ -276,7 +255,7 @@ The current approved message is 102 characters, so it sends, and bills, as two p
 
 ## Emergency credit advice
 
-Almadar sells two emergency credit products: an airtime advance of 1, 3 or 5 LYD, and a
+The operator sells two emergency credit products: an airtime advance of 1, 3 or 5 LYD, and a
 flat 5 LYD data advance for 2 GB over 72 hours.
 Both are offered when the balance is nearly empty, so the eligible population is selected
 on being broke.
@@ -296,9 +275,10 @@ the smallest recharge card, the data advance and the top airtime rung are all 5 
 clearing either debt with one card returns the customer to a zero balance and buys them
 nothing.
 
-On the 30,000 unlabeled customers the result says more about the product than about the
-rule. This base tops up often in very small amounts, so 46.1% cannot carry even the 1 LYD
-advance and still have something left, and the flat 5 LYD data advance suits 4.65%.
+Each customer's typical top-up, the average of the two window months (decision 50), is translated into the recharge card they would buy at the operator, because nothing below 5 LYD can be topped up there (decision 49).
+On the 30,000 unlabeled customers, 63.3% have the 5 LYD card and are advised the 3 LYD airtime advance only, which leaves 2 LYD once the card settles it.
+31.9% have the 10 LYD card or a larger one and are advised both products.
+3.9% are declined because the recharges of their whole window were worth nothing, and 0.9% had no recharge at all.
 The report states every assumption, including how much the answer moves if a different
 statistic stands in for the customer's typical top-up.
 

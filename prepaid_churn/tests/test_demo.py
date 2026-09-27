@@ -3,7 +3,6 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
-from prepaid_churn.almadar import load_offers
 from prepaid_churn.bundle import save_bundle
 from prepaid_churn.campaign import (
     build_campaign,
@@ -34,11 +33,14 @@ from prepaid_churn.demo import (
     revenue_at_risk,
     sms_parts,
     subscriber_view,
+    with_export_month_ends,
 )
+from prepaid_churn.operator_market import load_offers
 from prepaid_churn.retention import NO_OFFER, load_policy, propose
+from prepaid_churn.schema import InvalidExportError, validate
 
 STAMP = "2026-09-20T12:00:00+00:00"
-ARABIC = "المدار الجديد: هديتك نت الصباح."
+ARABIC = "هديتك: نت الصباح."
 
 
 @pytest.fixture
@@ -48,7 +50,9 @@ def offers():
 
 @pytest.fixture
 def policy():
-    return replace(load_policy(), holdout_fraction=0.0)
+    # The mechanism tests keep a preferred morning offer with a larger assumed share, so they
+    # exercise the preference; the shipped policy assumes the same 5% for every offer (decision 46).
+    return replace(load_policy(), holdout_fraction=0.0, offpeak_share_saved=0.10)
 
 
 @pytest.fixture
@@ -68,7 +72,7 @@ def customers(customers):
 
 @pytest.fixture
 def built(tmp_path, bundle, customers, offers, policy, portfolio):
-    """A checkout with a bundle, a reviewed campaign, a portfolio and an Almadar view."""
+    """A checkout with a bundle, a reviewed campaign, a portfolio and an operator view."""
     save_bundle(bundle, tmp_path / "bundle")
     decisions, comparison = propose(customers, offers, policy)
     campaign = build_campaign(customers, decisions, comparison, offers, policy, STAMP)
@@ -84,10 +88,10 @@ def built(tmp_path, bundle, customers, offers, policy, portfolio):
             "bundle_held": ["PAYG", "MO_20", "PAYG", "PAYG"],
             "bundle_price_lyd": [None, 35.0, None, None],
         }
-    ).to_csv(tmp_path / "almadar_view.csv", index=False)
+    ).to_csv(tmp_path / "operator_view.csv", index=False)
     return DemoPaths(
         portfolio_path=tmp_path / "tiers.csv",
-        view_path=tmp_path / "almadar_view.csv",
+        view_path=tmp_path / "operator_view.csv",
         campaign_dir=tmp_path / "campaign",
         bundle_dir=tmp_path / "bundle",
     )
@@ -177,6 +181,58 @@ def test_a_complete_checkout_loads_everything(demo, bundle, offers):
     assert demo.campaign_path is not None
 
 
+def test_the_subscriber_view_shows_current_risk_not_the_campaign_s(built):
+    """The campaign keeps the risk it was proposed with; the screen shows today's (decision 52)."""
+    portfolio = pd.read_csv(built.portfolio_path, converters={"subscriber_id": str})
+    portfolio.loc[portfolio["subscriber_id"] == "0001", "churn_probability"] = 0.91
+    portfolio.to_csv(built.portfolio_path, index=False)
+    subscriber = subscriber_view(load_demo(built), "0001")
+    assert subscriber["churn_probability"] == pytest.approx(0.91)
+    assert subscriber["status"] == "approved"  # the campaign still supplies its decision
+
+
+def test_a_tiers_only_portfolio_shows_no_risk_rather_than_the_campaign_s(built):
+    """Without a model there is no current risk, and the campaign's copy must not stand in."""
+    portfolio = pd.read_csv(built.portfolio_path, converters={"subscriber_id": str})
+    portfolio.drop(columns=["churn_probability", "risk_band"]).to_csv(
+        built.portfolio_path, index=False
+    )
+    subscriber = subscriber_view(load_demo(built), "0001")
+    assert subscriber.get("churn_probability") is None
+    assert subscriber.get("risk_band") is None
+    assert subscriber["recommended_offer_id"] == "SABAH_1"
+
+
+def test_the_subscriber_screen_opens_on_a_tiers_only_portfolio(built, screen):
+    """`churn tiers --tiers-only` is the documented default, and the screen crashed on it."""
+    portfolio = pd.read_csv(built.portfolio_path, converters={"subscriber_id": str})
+    portfolio.drop(columns=["churn_probability", "risk_band"]).to_csv(
+        built.portfolio_path, index=False
+    )
+    screen("pages/2_Subscriber.py")
+
+
+def test_the_released_screen_shows_the_customer_message_not_the_reason(screen):
+    """The policy's reason is for staff; the customer gets the package (decision 51)."""
+    app = screen("pages/5_Released.py")
+    assert any("هديتك: الصبح" in element.value for element in app.markdown)
+    reason = [element.value for element in app.markdown if "قيمة موجبة" in element.value]
+    staff_only = [element.value for element in app.expander[0].markdown]
+    assert reason and all(value in staff_only for value in reason)
+    assert any("--campaign-dir" in element.value for element in app.code)
+
+
+def test_one_customer_borrows_the_export_s_month_end(raw):
+    """A batch takes a missing month end from other customers; one customer alone cannot."""
+    raw.loc[3, "last_date_of_month_7"] = None
+    alone = raw.iloc[[3]]
+    with pytest.raises(InvalidExportError):
+        validate(alone, labeled=False)
+    filled = with_export_month_ends(alone, raw)
+    assert filled["last_date_of_month_7"].iloc[0] == raw["last_date_of_month_7"].iloc[0]
+    validate(filled, labeled=False)
+
+
 def test_literal_na_id_keeps_its_subscriber_view_and_recharge_card(demo):
     found = subscriber_view(demo, "NA")
     assert found is not None
@@ -194,7 +250,12 @@ def test_an_empty_checkout_names_the_command_for_each_missing_output(tmp_path):
             bundle_dir=tmp_path / "none",
         )
     )
-    assert {what for what, _ in demo.missing} == {"portfolio", "bundle", "campaign", "almadar view"}
+    assert {what for what, _ in demo.missing} == {
+        "portfolio",
+        "bundle",
+        "campaign",
+        "operator view",
+    }
     assert all(how.startswith("uv run churn") for _, how in demo.missing)
     assert demo.has_risk is False
     # The catalogue is committed, so it is there even in an unbuilt checkout.
@@ -247,7 +308,7 @@ def test_a_tiers_only_export_reports_no_bands_and_no_money_at_risk(portfolio):
 # ---------------------------------------------------------------------------
 
 
-def test_one_subscriber_joins_the_portfolio_the_decision_and_the_almadar_view(demo):
+def test_one_subscriber_joins_the_portfolio_the_decision_and_the_operator_view(demo):
     subscriber = subscriber_view(demo, "0001")
     assert subscriber["risk_band"] == "high"
     assert subscriber["value_tier"] == "high"
@@ -397,15 +458,19 @@ def test_a_long_arabic_message_is_counted_in_concatenated_parts():
     assert parts["over_one_part"] is True
 
 
-def test_the_message_names_the_package_and_the_reason(demo):
+def test_the_message_names_the_package_and_not_the_policy_s_reason(demo):
+    """The customer hears the package, never why the policy chose it (decision 51)."""
     subscriber = subscriber_view(demo, "0001")
     offer = offer_row(demo, subscriber["recommended_offer_id"])
-    arabic = customer_message(subscriber, offer, "ar")
-    english = customer_message(subscriber, offer, "en")
+    arabic = customer_message(offer, "ar")
+    english = customer_message(offer, "en")
     assert offer["name_ar"] in arabic
-    assert "06:00-11:00" in arabic
+    assert "من 06:00 إلى 11:00" in arabic
     assert offer["name_en"] in english
-    assert "06:00-11:00" in english
+    assert "from 06:00 to 11:00" in english
+    assert subscriber["offer_reason_ar"] not in arabic
+    assert subscriber["offer_reason_en"] not in english
+    assert sms_parts(arabic)["parts"] == 1
 
 
 def test_no_risk_or_value_figure_can_reach_the_customer(demo):
@@ -413,7 +478,7 @@ def test_no_risk_or_value_figure_can_reach_the_customer(demo):
     subscriber = subscriber_view(demo, "0001")
     offer = offer_row(demo, subscriber["recommended_offer_id"])
     for language in ("ar", "en"):
-        message = customer_message(subscriber, offer, language)
+        message = customer_message(offer, language)
         assert "0.5" not in message
         assert str(subscriber["value_12m_base_lyd"]) not in message
         for word in ("churn", "probability", "risk", "tier"):
@@ -422,7 +487,7 @@ def test_no_risk_or_value_figure_can_reach_the_customer(demo):
 
 def test_an_unknown_language_is_refused(demo):
     with pytest.raises(ValueError, match="Arabic or English"):
-        customer_message({}, None, "fr")
+        customer_message(None, "fr")
 
 
 # --- What the screens need to find a campaign and its released rows (T14 follow-up) ---
@@ -476,7 +541,7 @@ def test_the_app_proposes_through_the_same_engine(tmp_path, population, bundle):
     """Proposing from a screen has to be the `churn decide` path, not a shortcut of its own."""
     from conftest import build_population_raw
 
-    from prepaid_churn.almadar import load_market
+    from prepaid_churn.operator_market import load_market
     from prepaid_churn.value import fit_tiers, save_tiers
     from prepaid_churn.windows import build_datasets
 

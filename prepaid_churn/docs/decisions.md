@@ -89,7 +89,7 @@ Date: 2026-09-14.
 Chosen: the upGrad "Telecom Churn Case Study" data, Kaggle hackathon version, `train.csv` (69,999 customers).
 
 Why:
-- It is **prepaid**, like the Libyan market (Libyana and Al-Madar), and churn means inactivity, not a cancelled contract.
+- It is **prepaid**, like the Libyan market (both Libyan mobile operators are prepaid), and churn means inactivity, not a cancelled contract.
 - It is a **monthly panel** (months 6, 7, 8 plus a month 9 label), so features can come from months before the label month.
 - It has real versions of the signals a Libyan operator would use: on-net and off-net minutes, incoming and outgoing calls, recharge count, amount and date, night packs, social-network packs, roaming, and age on network.
 
@@ -105,7 +105,7 @@ The trade-off we accepted, stated plainly because it is the largest limitation i
   That leaves one month-to-month change per customer and no seasonality, no trend and no long history.
   Cell2Cell has longer histories, so this was a real choice rather than the only option.
   We took prepaid behaviour over history length, because a model of postpaid contract customers cannot be repointed at a prepaid market (decision 1), while a short history still supports the question we actually ask.
-  Almost every later limitation traces back to this line, including the T12 result that a sequence model has nothing to work with over two steps (decision 28).
+  Almost every later limitation traces back to this line.
 
 Known limits, stated in the model card:
 - Provenance is undocumented (it looks like an Indian operator: "circle" regions and rupee amounts).
@@ -160,12 +160,9 @@ SIC grades syllabus coverage, so our module covers the chapters that fit churn, 
 |---|---|
 | Ch 5 supervised learning | T6 and T7: logistic regression, LightGBM, calibration |
 | Ch 6 unsupervised learning | T10: K-Means, PCA plot, dendrogram on value features |
-| Ch 8 deep learning, Ch 9 RNN | T12: Keras LSTM vs LightGBM on the monthly panel |
-| Ch 9 GAN | T13: CTGAN "privacy-safe synthetic copy", train on synthetic and test on real |
 
 Chapters 7 and 10 (NLP and LLMs) belong to the chatbot module.
-Experiments use a separate `experiments` dependency group, so the core package stays small.
-SDV and CTGAN use the Business Source License, which allows non-production use such as this experiment.
+Chapters 8 and 9 (deep learning, RNN and GAN) are covered by the teammates' parts of the project; this module's experiments for them were removed on 2026-09-26 (decision 44).
 
 ## 9. The raw data is committed to the private repo
 
@@ -207,11 +204,11 @@ Date: 2026-09-19.
 Taha and the team want the product as close to the real market as possible, and may try to sell it.
 
 Findings:
-- Nothing in the repo contains real Libyana or Al-Madar packages or prices; only tower locations and operator codes (in the antenna module).
-- Al-Madar publishes its data packages on its website; Libyana's site blocks automated requests but works in a normal browser.
+- Nothing in the repo contains real Libyan operator packages or prices; only tower locations and operator codes (in the antenna module).
+- One Libyan operator publishes its data packages on its website; the other's site blocks automated requests but works in a normal browser.
   T16 builds a real package catalogue from these official sources, with a collection date on every row.
 - The Orange Belgium Churn-Uplift dataset in the action plan is real: 11,896 customers of a real phone retention campaign with a random control group.
-  It is postpaid, its features are anonymized, and its license is non-commercial (CC BY-NC-ND 4.0), so it serves the T17 experiment only.
+  It is postpaid, its features are anonymized, and its license is non-commercial (CC BY-NC-ND 4.0), so this module does not use it.
 
 Consequence for selling:
 - Both training datasets are for education or non-commercial use only, so models trained on them cannot be sold.
@@ -278,7 +275,7 @@ What the review found:
 - `Ali_Branch` shares no history with `main` or `tahaDev`: it is a separate repository pushed as a branch, with its own files at the repo root.
 - Its churn labels come from a formula Ali wrote (`src/cvm/synthesis/hazard.py`), applied to 100,000 generated subscribers built from Cell2Cell (US postpaid, around 2000).
   So its churn, value and uplift results measure that formula, as Ali's own docs say.
-- It also holds real, valuable work: Almadar Aljadid's published packages, prices, recharge cards and emergency credit rules, a careful offer engine design, an HTTP contract for the chatbot and copilot with grounding rules for LLMs, and a list of serving bugs found the hard way.
+- It also holds real, valuable work: the operator's published packages, prices, recharge cards and emergency credit rules, a careful offer engine design, an HTTP contract for the chatbot and copilot with grounding rules for LLMs, and a list of serving bugs found the hard way.
 
 Decided:
 - This module stays the base: real data, `uv`, and the frozen T7 champion.
@@ -288,12 +285,12 @@ Decided:
 - `Ali_Branch` stays on GitHub untouched, as the record of his work.
 
 Taken (the ticket that uses each piece is in brackets):
-- Almadar catalogue, tariffs, recharge cards and emergency credit rules (T16).
-- Mapping money onto Almadar's scale (T18).
+- Operator catalogue, tariffs, recharge cards and emergency credit rules (T16).
+- Mapping money onto the operator's scale (T18).
 - Offer engine design: the real catalogue as the action space, "no offer" as a real option, the guardrails including the cannibalisation guard keyed on the bundle a customer holds, the equal-spend comparison, the holdout and the decision log (T11).
 - Serving lessons: everything a scoring run needs travels inside the bundle, pinned library versions, a smoke prediction at load time, and one-row batches as a test case (T8).
 - The API and screen designs, and the grounding rules for LLM consumers (T14, T15, T20).
-- Prepaid value segmentation (T10), two-model uplift with Qini and the Criteo validation (T17), the emergency credit rules (T19), the synthesis engine and its quality gate (T13), and the model card template (T9).
+- Prepaid value segmentation (T10), the emergency credit rules (T19) and the model card template (T9).
 
 Not taken, and why:
 - The generated population and its formula labels, and every result measured on them: decision 7, the metrics would measure the formula.
@@ -303,24 +300,24 @@ Not taken, and why:
 - Cell2Cell, IBM Telco, UCI Iranian, Hillstrom and Online Retail as data sources: decisions 5 and 7.
 
 Conflicts between the two efforts, and how they are settled:
-- Syllabus coverage: `Ali_Branch` removed chapter tracking; it stays here, because SIC grades it (decision 8).
+- Syllabus coverage: `Ali_Branch` removed chapter tracking; it stayed here, because SIC grades it (decision 8), until the teammates' parts took chapters 8 and 9 (decision 44).
 - Data in git: `Ali_Branch` never commits data; the raw Kaggle files stay committed here (decision 9).
 - Churn definition: `Ali_Branch` uses "30 days without a top-up"; we keep the usage-based rule, because the only real label (Kaggle's month 9) uses it.
 
-## 16. Almadar Aljadid is the operator, and real customers are shown in Almadar terms
+## 16. A real Libyan operator's catalogue, and real customers shown in its terms
 
 Date: 2026-09-19.
 
-Almadar Aljadid (MCC-MNC 606-01) is the only Libyan operator with real, confirmed data in the project: its published packages, prices, recharge cards and emergency credit rules, collected by Ali on 2026-09-18.
-Libyana has none yet, so this updates decision 11: the module targets Almadar, and Libyana can be added later as more rows in the same catalogue.
+A real Libyan mobile operator, not named in this project (decision 45), is the only one with real, confirmed data here: its published packages, prices, recharge cards and emergency credit rules, collected by Ali on 2026-09-18.
+The other Libyan operator has none yet, so this updates decision 11: the module targets the first, and the other can be added later as more rows in the same catalogue.
 
 How the two datasets meet:
 - The churn model keeps training on the real upGrad customers in their original units.
   The T7 champion stays frozen.
-- The business layer (value, offers, emergency credit, app) shows each real customer in Almadar terms (T18): money in LYD, the Almadar bundle they would hold, and their usual recharge card.
+- The business layer (value, offers, emergency credit, app) shows each real customer in the operator's terms (T18): money in LYD, the operator's bundle they would hold, and their usual recharge card.
 - The conversion is one documented scale anchored on stated assumptions, kept in one file with a status per value (confirmed, assumption or estimate).
 
-What the report must say: the behaviour comes from a real prepaid operator in another market; the prices, packages and money are Almadar's; real use needs retraining on Almadar's own export (decision 11).
+What the report must say: the behaviour comes from a real prepaid operator in another market; the prices, packages and money are the operator's; real use needs retraining on the operator's own export (decision 11).
 
 ## 17. The customer MVP comes first, built to plug into the team platform
 
@@ -334,12 +331,12 @@ The instructor's review of the action plan asked to:
 The team's final goal is one platform: GIS planning, network ML, this customer module, a customer chatbot and an employee copilot.
 In the action plan, Taha owns the chatbot, the copilot and the integration, and Ali owns customer intelligence and the chatbot.
 
-Our MVP use case: "Which active prepaid customers are likely to stop using their line next month, and which approved Almadar offer should each one get?"
+Our MVP use case: "Which active prepaid customers are likely to stop using their line next month, and which approved operator offer should each one get?"
 The MVP path is T16, T8, T18, T10, T11, T15, T20, T14 and T9.
-T12, T13, T17 and T19 come after the MVP works end to end.
+T19 comes after the MVP works end to end.
 
 How the module links to each part of the platform (extends decision 10):
-- **Customer chatbot:** reads the Almadar catalogue (T16) and, for the one subscriber it is talking to, the approved offer and its reason (T15).
+- **Customer chatbot:** reads the operator's catalogue (T16) and, for the one subscriber it is talking to, the approved offer and its reason (T15).
   It never sees a churn probability.
 - **Employee copilot:** reads portfolio summaries (T15) and indexes this module's documents (model card, contracts, decisions) for retrieval with citations.
   It gets no subscriber rows and has no way to create, change or approve an offer.
@@ -422,7 +419,7 @@ It does not fit models, join stale risk CSVs, invent probabilities or reevaluate
 The catalogue remains the action space, plus an explicit `NO_OFFER` outcome.
 All interventions are bonus grants of existing products, not personalized price discounts.
 
-All T11 policy and delivery-cost assumptions are in `data/almadar/retention.toml`.
+All T11 policy and delivery-cost assumptions are in `data/operator/retention.toml`.
 Defaults: 1,000 LYD campaign budget, 15% of the base T10 value as the per-customer campaign cap, approximately 10% holdout and seed 42.
 Delivery estimates start from T16: 25% of catalogue price for metered products and 35% for unlimited products.
 The assumed share of churners saved is 5% for ordinary bonuses and 10% for the preferred morning product, `SABAH_1`.
@@ -441,7 +438,7 @@ Guardrails apply before allocation:
 
 The cap covers this campaign only; no annual cumulative limit is claimed without a cross-campaign spending ledger.
 The morning product's 06:00-11:00 restriction is included in both Arabic and English reasons.
-The source export cannot establish off-peak preference, incremental usage or actual Almadar subscriptions.
+The source export cannot establish off-peak preference, incremental usage or actual operator subscriptions.
 Each customer gets the best feasible candidate by assumed net value, with preference then offer ID as tie-breaks.
 Greedy allocation ranks customers by that net value, then subscriber ID, skipping a best candidate that does not fit the remaining budget.
 This is not a globally optimal knapsack solver and does not replace an unaffordable candidate with a smaller alternative.
@@ -528,6 +525,7 @@ The success thresholds and test metrics travel with the summary from the bundle'
 Every output is loaded once at startup and held in a frozen state.
 An endpoint that opened a file per request would eventually read a campaign that `churn approve` was halfway through rewriting.
 The cost is that a newly approved campaign is served only after a restart; `/health` reports the campaign fingerprint and load time so an operator can see exactly what is being served.
+Since 2026-09-26 the campaign is read again when its file changes, so an approval no longer needs a restart (decision 47).
 
 The service was run against this checkout on 2026-09-21.
 It reports degraded with no bundle, serves all 57 catalogue packages, summarises the 30,000-row tiers-only export with `risk_available` false and every `lyd_at_risk` null, and returns zero approved offers, because no real campaign has been approved.
@@ -580,7 +578,7 @@ The subscriber screen refuses an ID shaped like a Libyan mobile number before lo
 Date: 2026-09-21.
 
 Ali took T19 as the first experiment after the MVP.
-Almadar sells two emergency credit products, both confirmed from the operator's own documents and recorded by T16.
+The operator sells two emergency credit products, both confirmed from its own documents and recorded by T16.
 The airtime advance is 1, 3 or 5 LYD, offered when the balance is at or below 0.5 LYD.
 The data advance is a flat 5 LYD for 2 GB over 72 hours, offered when the balance is at or below 1 LYD.
 
@@ -592,7 +590,7 @@ There is no repayment model and there will not be one until an operator supplies
 Nothing in the module estimates a probability of repayment, so no figure in the report is a default rate.
 `Ali_Branch` also caps by loyalty tier, by a share of customer value, by monthly cumulative exposure and by a chronic-distress screen.
 None of those were ported: they need a repayment model, an advance history, a tenure tier or balance-level fields that this data does not contain.
-Libyana's Credit Loan, with its tenure gate, grace period and line reset, describes a different operator and is not quoted for Almadar.
+The other Libyan operator's credit loan, with its tenure gate, grace period and line reset, is a different product and is not quoted here.
 
 One rule is applied: never advise a debt larger than 0.6 of the customer's typical top-up.
 The fraction is ported from `Ali_Branch` with his reason intact, and the code refuses any fraction at or above 1.
@@ -615,6 +613,7 @@ This base tops up often and in very small amounts: the median typical top-up is 
 The smallest advance needs a top-up of at least 1.67 LYD to clear while leaving balance, so 46.1% of customers are advised nothing at all.
 The flat 5 LYD data advance needs 8.33 LYD and is advised for 4.65%, although the operator offers it to anyone whose balance is low enough.
 Those shares are computed on real upGrad behaviour from another market and are not a claim about Libyan customers.
+Decision 49 replaced them on 2026-09-27: the typical top-up is now translated into the card the customer would buy, and decision 50 reads the average of the two months instead of the quieter one.
 
 ## 24. One branch again: `tahaDev` carries both efforts
 
@@ -690,7 +689,7 @@ What was not added, although the walkthrough asked for it:
 - A list or search endpoint ("the 200 riskiest customers").
   Serving customer-level rows in bulk over HTTP is what decision 17's de-identification rule exists to prevent, and the analyst case is already covered by the committed exports and the demo app.
 - The package a customer holds and their spend, for the chatbot.
-  The Almadar view is this module's assumption (decision 16), not an operator fact, and the operator's own systems answer it correctly and in real time.
+  The operator view is this module's assumption (decision 16), not an operator fact, and the operator's own systems answer it correctly and in real time.
 - The emergency credit advice (T19).
   It is a proposal for a person, and no review step exists for it yet; a credit limit needs an approval as much as an offer does (decision 14).
 - The review queue.
@@ -698,136 +697,36 @@ What was not added, although the walkthrough asked for it:
 
 Each one is written in [integration.md](integration.md) with its reason, so a consumer asks instead of building a workaround.
 
-## 27. Keras on the torch backend, and why SDV stays out of this environment
+## 27. Removed
 
-Date: 2026-09-22.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
-T12 asks for a Keras LSTM and decision 8 puts the syllabus experiments in a separate `experiments` dependency group, so the module a teammate clones stays small.
-Both still hold, with one change and one exception.
+## 28. Removed
 
-The change: Keras runs on the torch backend instead of TensorFlow.
-T13 needs SDV, SDV needs CTGAN and CTGAN needs torch, so installing TensorFlow as well would put two deep learning runtimes in one repository to run two small experiments.
-Keras 3 is the same Keras either way; the LSTM code does not know which backend is under it.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
-The exception: SDV is not in the group.
-It caps pandas below 3, and adding it to the lock downgraded pandas from 3.0.5 to 2.3.3 for the whole project, including the default environment.
-That is not a small thing here: the frozen bundle records the library versions it was built with and refuses to load under different ones (T8), so the downgrade broke `churn score`, `churn decide` and the service in one command.
-The module stays on pandas 3, and T13 runs in its own environment (decision 28).
+## 29. Removed
 
-So `uv sync` installs what it always did, `uv sync --group experiments` adds Keras and torch for T12, and neither touches the versions the champion was frozen with.
-A run of the full pipeline after the group was added reproduced bundle `lightgbm-2026-09-19-ef9430fb` and every committed report unchanged.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
-## 28. The LSTM loses, and that is the T12 result
+## 30. Removed
 
-Date: 2026-09-22.
-
-The benchmark ran once on the frozen test window, calibrated the same way as T7 and scored with the same metrics: PR-AUC 0.2326 against LightGBM's 0.3477 and the logistic regression baseline's 0.2770, capture at 10% of 0.4941 against 0.6152.
-It fails two of the four success thresholds of decision 13 and would not be released.
-
-This is the expected answer and it is worth stating plainly rather than tuning until it looks better.
-A window here is two monthly steps.
-The movement between two points is a subtraction, the T5 features hand that subtraction to LightGBM directly, and the LSTM has to learn it from two steps and about 400 churners in the training split.
-A recurrent layer earns its place when there is a history to remember, and two steps is not a history.
-
-What was deliberately not done: no architecture search, no threshold moved, no second look at the test window.
-The architecture, the epochs and the calibrator were chosen on validation customers, and the frozen champion was not retrained or reconsidered (decision 6).
-Tuning an experiment against the test set until it beats the champion is exactly the mistake the split design exists to prevent, and the grade for this chapter does not depend on the LSTM winning.
-
-`Ali_Branch` reached the same conclusion from the other side: its API once returned an `lstm_churn_probability` beside the main score, and its own integration document records that the field and the benchmark arm were removed because "M1 is a single gradient-boosting model family now".
-Two independent efforts on this data dropped the recurrent model for the same reason.
-
-The honest caveat travels with the result in [../reports/sequence_benchmark.md](../reports/sequence_benchmark.md): with six or twelve months per customer, or with call-detail records instead of monthly totals, the comparison is worth running again.
-
-## 29. A synthetic copy is a demo, not a way to share customer data
-
-Date: 2026-09-22.
-
-T13 asked the operator's question rather than the model's: real prepaid data cannot leave a telecom operator, so can the operator fit a generator on its customers, hand out the copy, and still let someone build a model worth having?
-The experiment fits CTGAN and a Gaussian copula on 6,000 real training customers and 28 features, then trains the same LightGBM on each copy and scores all of them on the same real validation customers.
-
-The answer on this data, at this budget, is no.
-A model trained on the copula copy keeps 45% of the PR-AUC that the same model reaches on real customers, and the CTGAN copy keeps 15%.
-Both copies are told apart from real rows with a detection ROC-AUC of 1.000, so neither is realistic enough to be mistaken for the real thing either.
-CTGAN also lost the churn rate itself: 16.8% of its rows are churners against 4.7% in the real sample, and a model trained on the wrong base rate is wrong before it has learnt anything.
-
-Two results are worth keeping beyond the grade.
-
-The Gaussian copula, which is the simple baseline the GAN has to beat, beat it on every measure that matters here.
-That is a normal outcome for 60 epochs on a laptop CPU and it is reported as it came out.
-A longer fit would probably close the gap, and the report says so rather than presenting a budget as a ceiling.
-
-The business view is where the copies visibly came apart.
-Shown in Almadar terms through T18, 72% of the real customers are on pay-as-you-go, 14% hold a monthly bundle and 14% buy daily packs.
-The copula copy puts 86% on daily packs and nobody on pay-as-you-go; CTGAN puts 44% on monthly bundles.
-Every column in those copies is individually inside its real range, and the customers are still on the wrong packages, which is the failure a column-by-column quality score does not show.
-
-This is also the measured version of an argument this module already made twice.
-Decision 7 cut the generated population from the CVM proposal and decision 15 declined to carry `Ali_Branch`'s hazard-formula labels, both on the grounds that a model fitted to generated data is evidence about the generator and not about customers.
-T13 puts a number on it on our own data.
-So the rule stands and now has a citation: no synthetic row trains, calibrates or evaluates anything in this module, and no report or presentation may describe this module as producing a shareable synthetic customer base.
-
-What the copies are good for, and how this module uses them: a demo with no real customers in it, a schema to build a pipeline against, and a load test.
-That is real value and it is what the report claims.
-
-What was not measured, and would have to be before any copy left an operator: privacy.
-A copy can pass every fidelity test and still memorise a rare customer, and membership inference is the test for that, not column shapes.
-
-One honest note on method.
-The first version of the fidelity check counted rows with a negative amount and reported about 54% for both copies.
-That check was wrong: `diff_*` columns are differences and are negative for half the real customers too, so the same check called the real data 58% impossible.
-It was replaced with a comparison against the columns that are never negative in the real sample, where both copies score 0%, because SDV keeps each column inside the range it learnt.
-The wrong version is recorded here because it is the kind of check that looks like a finding and is really a bug.
-
-## 30. Risk targeting and uplift targeting are not the same ranking
-
-Date: 2026-09-22.
-
-T11 gives a bonus to the customers this module ranks riskiest and assumes a share of them are saved by it.
-That assumption is the weakest number in the module, and the upGrad data cannot test it: it has no treatment arm, so no uplift model can be fitted on it at all.
-T17 therefore measures the method on two public randomised trials and carries back the lesson, not the numbers.
-
-On Criteo's 1.4 million randomised rows, ranking by uplift reaches a Qini of 0.0698 while ranking by predicted response, which is the ranking T11 uses, reaches -0.1138.
-Twenty uninformative rankings on the same rows span plus or minus 0.0110, so the uplift ranking clears the noise and the response ranking is not merely worse, it is worse than random.
-The realised uplift in the top 30% is +2.89% against +0.02%.
-The people most likely to respond were not the people the advertisement moved, and there is no reason to expect churn to behave differently.
-
-Orange Belgium, the telecom dataset, answers nothing, and that is reported rather than dressed up.
-Its held-out 30% holds 3,569 customers and 120 churners, and every ranking, including the random one, sits inside the same noise band.
-A dataset of that size cannot estimate an uplift ranking, and the honest output of the run is that sentence.
-This is worth keeping because the SIC action plan lists Orange Belgium as a churn-uplift source: it is the right industry and the right action, and it is still too small to settle anything.
-
-What this changes in the module: nothing in the code, and one sentence in how T11 must be read.
-The riskiest decile is not the persuadable decile, so "share saved" stays an assumption with a stated value rather than a measured rate, and every LYD figure downstream of it stays a scenario.
-T11's random holdout of proposed customers is the only instrument this module has for turning that assumption into a measurement, and it only pays once a real campaign runs against it.
-That holdout was already in T11 before this experiment; T17 is the reason to keep it when someone asks why part of the budget is not spent.
-
-Two smaller decisions recorded here.
-
-The Qini implementation is ported by hand from `Ali_Branch` rather than imported from scikit-uplift, keeping both things his comments say are easy to get wrong: the control arm is rescaled to the treated arm's size at every depth, and the coefficient is normalised by the perfect ranking.
-It is then checked against `sklift.metrics.qini_auc_score` at runtime, and the agreement is printed in the report: 8.14e-06 on Criteo and 1.46e-03 on the small Orange holdout.
-An implementation that is only a call to the thing it is checked against cannot disagree with it, which is his argument and it is right.
-
-Orange's outcome is flipped on purpose.
-Its label is churn, so a call that works makes the label smaller, and an uplift model fitted on churn ranks the customers a call would lose.
-Retention is the response the campaign is trying to produce, and getting that sign wrong is the classic way an uplift study reports its best customers as its worst.
-
-The two datasets are downloaded on demand into `data/external/`, which is git-ignored.
-Both are under non-commercial licences and neither is ours to redistribute, so unlike the Kaggle data in `data/raw/` (decision 9) they are never committed.
+Removed on 2026-09-26 with the experiments it belonged to (decision 44).
 
 ## 31. The Mix families leave the catalogue, and a removal is recorded rather than silent
 
 Date: 2026-09-22.
 
-Ali confirmed that Almadar no longer sells the five Mix families, answering the question T16 left open on 2026-09-19.
+Ali confirmed that the operator no longer sells the five Mix families, answering the question T16 left open on 2026-09-19.
 He had removed the same 20 packages from his own catalogue on 2026-09-18 in commit `62040af`, which showed the removal was deliberate but never recorded a reason.
 The catalogue now holds 37 packages in 12 families, which is exactly what `Ali_Branch` held, so the difference T16 pinned with a test is closed.
 
 Deleting the rows alone was not acceptable.
-The files in `data/almadar/source/` are byte-for-byte copies of the operator's own export (port step 1), and `check_against_source` required every row in them to appear in the catalogue exactly once.
+The files in `data/operator/source/` are byte-for-byte copies of the operator's own export (port step 1), and `check_against_source` required every row in them to appear in the catalogue exactly once.
 Editing the source file to match would have destroyed the evidence, and relaxing the check would have allowed any package to disappear unnoticed, which is precisely how the Mix question arose.
 
 So a removal is now recorded.
-`data/almadar/excluded.csv` holds one row per package that the operator file lists but the operator no longer sells, each with its source row, a reason, the person who decided and the date.
+`data/operator/excluded.csv` holds one row per package that the operator file lists but the operator no longer sells, each with its source row, a reason, the person who decided and the date.
 `check_against_source` requires every source row to be either in the catalogue exactly once or recorded there, so the integrity guarantee is unchanged while the catalogue is free to shrink.
 "Unknown" in that check now means a row that is not in the operator file at all, which an excluded row still is.
 
@@ -910,6 +809,7 @@ The cost is a directory per proposal, which is why the sidebar now has a picker 
 
 **Nowhere to see what was approved.** There is a Released screen now: the approved rows, the package beside each one, who approved it and when, the three files that hold it, and the one endpoint the chatbot reads it from.
 It also says the service loads the campaign at startup, so a new release is served after a restart, which was true before and written nowhere a reviewer would look.
+Decision 47 removed that restart on 2026-09-26, and the screen now says so.
 
 One more thing was wrong and is fixed: an empty selection in the approval box meant "approve everything", so a reviewer who clicked Approve with nothing selected approved every pending proposal in the campaign.
 Reviewing everything is now a separate checkbox that says how many rows it covers, and an empty selection is an error rather than a mass approval.
@@ -962,9 +862,439 @@ It must not be carried through `churn evaluate` on this data: the test customers
 The T7 slice, PR-AUC 0.383 at 2.9% churn, is the answer to how the model does on these customers.
 `reports/dataset_high_value.md` stays as the record of the population's size: 13,708, 3,024 and 2,942 rows, with 4.2%, 4.4% and 3.0% churn.
 
-## 37. `tahaDev` is where the team's platform comes together
+## 37. Early stopping uses the train customers, not validation
+
+Date: 2026-09-25.
+
+The settled plan in TICKETS.md gave the validation customers three jobs: early stopping, calibration and threshold choice.
+T6 moved the first job to a slice of the train customers and said so in its ticket, but no decision entry recorded the change, and the settled list kept the old wording until Ali's recap found it.
+This entry records what was built; it changes no model.
+
+What T6 does: LightGBM is fitted on 90% of the train customers while the other 10%, stratified by label with seed 42, decide when to stop (100 rounds without a better log loss).
+The model is then refitted on all train customers with that tree count, 288 trees.
+
+Why: the validation customers are then used only for the T7 choices (calibration, the champion and the risk bands), and T6's validation numbers come from customers its stopping rule never saw.
+Stopping on validation and then calibrating and choosing on the same customers would have used them twice.
+The cost is small: the tree count is chosen with 90% of the train customers instead of all of them.
+
+The other LightGBM settings were set by hand and never searched: a learning rate of 0.03, 31 leaves, at least 50 customers per leaf, 80% row and column sampling and an L2 penalty of 1.0.
+They are more cautious than LightGBM's defaults, and only the tree count is fitted.
+
+
+## 38. A fifth release check for the next model: calibration where offers are made
 
 Date: 2026-09-26.
+
+Decision 13's calibration check compares the mean prediction with the observed churn rate, and the current champion passes it easily (0.13 points).
+Its probabilities are still off inside the range.
+On test, tenths 7 to 9 by predicted risk (1.1% to 10.9%) were expected to hold 98 leavers and held 134, about 3.7 standard deviations beyond chance, while the riskiest tenth was expected to hold 283 and held 259.
+The two errors cancel in the mean, so the check could not see them.
+A smaller version already shows on the validation customers the calibrator was fitted on (121 leavers against 100 predicted in those tenths), so part of it is the fixed shape of a sigmoid and part is the later month.
+
+T11 multiplies each probability by money and proposes offers only in the high and medium bands, so calibration matters most inside those bands.
+Counted by band from the frozen test predictions, read only as in decision 35:
+
+| Band | Customers | Predicted leavers | Actual leavers | Actual against predicted |
+|---|---|---|---|---|
+| high | 450 | 199 | 173 | -13% |
+| medium | 1,238 | 135 | 148 | +10% |
+| low | 7,989 | 75 | 100 | +34% |
+
+The largest miss is in the low band, where no offer is made.
+
+The next model must also pass a fifth check, written down now, before that model exists:
+
+5. **Calibration where offers are made:** in the high band and in the medium band separately, the number of customers who actually left must be within 20% of the number the model predicted (the sum of its probabilities), or within two standard deviations of chance if that is wider.
+   The standard deviation of chance is the square root of the sum of p × (1 - p) over the band's customers: the spread the count would show if every probability were exactly right.
+
+Why these levels:
+
+- A 20% error in a band's predicted leavers is a 20% error in the money T11 expects from that band, and we take that as the most a retention team could accept when splitting a budget between bands.
+  Like decision 13's levels, it is a minimum, not a number fitted to a result.
+- The allowance of two standard deviations keeps a small band from failing by chance alone: a model whose probabilities are exactly right passes each band at least 95% of the time.
+- The low band is left out because no money is spent there; its miss is reported in the model card instead.
+
+Scope:
+
+- It applies to every model evaluated after this date, starting with the retrain on an operator's own data (decisions 11 and 16).
+- It does not apply to the current champion, whose gate was recorded on 2026-09-19 with decision 13's four checks.
+  Measured the same way, the current champion would pass it (-13% and +10%).
+- When the check is coded, the recorded gate must stay as it is, so the rebuild with `--chosen-at 2026-09-19` still reproduces bundle `lightgbm-2026-09-19-ef9430fb` byte for byte.
+- Unlike decision 13's four checks, which were written after the test they were checked against, this one is written before the model it will judge is tested.
+
+## 39. Ali works on Ali_Branch, and Taha's work arrives by merge
+
+Date: 2026-09-26.
+
+Decision 24 made `tahaDev` the one shared branch, and CLAUDE.md still told every session to work there.
+Since 2026-09-22 Ali has worked on `Ali_Branch` only and forbidden commits or pushes to `tahaDev`.
+Decision 33 recorded that for one task and the handoff called the older directions historical, but a new session reads CLAUDE.md first and would have pushed to `tahaDev`.
+On 2026-09-26 `Ali_Branch` was 12 commits ahead of `tahaDev`, and `tahaDev` held one commit of Taha's (`f2cc724`, a session log and presentation material) that `Ali_Branch` did not.
+
+So, until Ali and Taha agree on one branch:
+
+- Ali's sessions work and push on `Ali_Branch` only, and never commit or push to `tahaDev`.
+- Taha's work reaches `Ali_Branch` by merging `origin/tahaDev` into it, keeping Taha's history as the merge of 2026-09-22 did, and only when Ali asks for it.
+- Taha keeps working on `tahaDev`; this entry does not decide which branch becomes the final one.
+
+CLAUDE.md and the handoff now say this.
+
+## 40. Reasons only for customers whose risk is above average
+
+Date: 2026-09-26.
+
+Every active subscriber used to get three reasons, including the 22,779 of the unlabelled base in the `low` band.
+SHAP measures each factor's push away from the average customer, so even a very safe customer has a few small upward pushes.
+A customer at 0.7% risk was given "Amount recharged on the last recharge day this month: 0", "Local incoming minutes this month: 31.5" and "Days since the last recharge, at the end of this month: 7", and the integration guide tells the copilot to quote reasons as they are.
+An employee would read them as warning signs about a customer who is very unlikely to go silent.
+
+So only `high` and `medium` subscribers, whose risk is above the validation churn rate, get the model's reasons.
+A `low` subscriber gets one line, "Low risk: nothing stands out", the same way an already silent one gets "No calls and no mobile data this month".
+The model, the probability and the band are unchanged; only the text beside them changed.
+The reasons of the other bands are computed exactly as before, and a subscriber scored alone still gets the same row as inside a batch.
+
+The model card and the integration guide also said the reasons are "written as sentences".
+They are short labels with the customer's value, and both documents now say so.
+
+## 41. The value scenario's assumptions do not hold, and T23 will replace it
+
+Date: 2026-09-26.
+
+T10's 12-month value assumes a customer keeps this month's churn risk for twelve months and never comes back after going silent (decision 19).
+Decision 19 noted that the one-month probability had not been validated as a 12-month hazard.
+Ali's recap checked both assumptions on the validation customers, whose month-9 outcome no decision had used, and left the test customers untouched.
+
+Validation customers still active in month 8, by the band their months 6 and 7 gave them:
+
+| Band | Customers | Risk predicted for month 8 | Churn in month 9 |
+|---|---|---|---|
+| high | 282 | 43.2% | 11.0% |
+| medium | 1,034 | 10.6% | 8.1% |
+| low | 8,044 | 0.9% | 3.6% |
+
+- Risk does not stay constant: after a month it moves most of the way back toward the average, down for the high band and up for the low band.
+- Silence is not always final: 28.1% of the 452 validation customers silent in month 8 were active again in month 9, close to the 26.3% of train customers found in T6.
+
+What that does:
+
+- Under constant risk, a customer's expected loss, risk times 12-month value, peaks near 20% risk and falls after it.
+  At 40 LYD a month it is 17 LYD at 5% risk, 30 LYD at 20%, 23 LYD at 43% and 4 LYD at 90%.
+- A 43%-risk customer is expected to stay 1.3 months; if those who stay kept the 11% measured in month 9, it would be 3.9 months.
+- So the value of high-risk customers is understated and that of low-risk customers overstated, while counting no comebacks overstates every loss.
+- T11 ranks candidates by risk × share saved × value - cost, so its order between medium- and high-risk customers, the "LYD at risk" figures and the campaign's equal-spend comparison all inherit these assumptions.
+
+Nothing changes before the presentation.
+The tiers report, the model card and T10 now say that the assumptions fail, and ticket T23 replaces the scenario with one built on measured risk after the first month and on comebacks.
+The rates T23 needs come from validation customers only; the churn model, its thresholds and the spent test window stay as they are.
+
+## 42. The ARPU anchor moves from 40 to 70 LYD
+
+Date: 2026-09-26.
+
+Every LYD amount in the module is a source-currency amount times one rate: the ARPU anchor divided by the mean monthly recharge of the customers active in month 8 of `train.csv`, 537.17 (T18, decision 16).
+The anchor was 40 LYD, a team estimate set just above the Net 20 bundle price of 35 LYD and chosen by Taha on 2026-09-19.
+Ali replaced it with 70 LYD on 2026-09-26, from a market report.
+
+Source: Mordor Intelligence, Libya Telecom MNO Market, public summary read on 2026-09-26.
+
+- Data and internet services were 44.9% of Libyan mobile operator revenue in 2025.
+- Data use is projected to pass 12 GB per subscriber a month by 2030.
+
+Derivation, with the operator's own monthly bundle prices from `offers.csv` (Net 10 at 30 LYD, Net 20 at 35 LYD):
+
+- 12 GB a month costs about 31 LYD by linear interpolation between those two bundles, or 35 LYD when the 20 GB bundle is bought.
+- Divided by the 44.9% data share, that is 69 to 78 LYD a month in total; 70 LYD is taken, near the low end.
+
+What the estimate is not, as the review in this session pointed out:
+
+- The 12 GB is a projection for 2030 and the 44.9% is for 2025, not measurements of today's average subscriber.
+- Dividing one customer's data spend by a market-wide revenue share assumes every customer spends like the whole market, and most prepaid SIMs do not buy a 10 to 20 GB bundle every month.
+- So 70 LYD may be high for the average prepaid SIM; 40 LYD was no better founded, because it was also a bundle price rather than an average.
+
+It stays an `assumption` in `data/operator/market.toml` until an operator or regulator figure replaces it: mobile service revenue divided by mobile subscriptions, from one source and one year.
+
+What changed, all from that one number:
+
+- The rate moves from 0.074464 to 0.130313 LYD per source unit, so every LYD amount is 1.75 times larger.
+  The viewed base now spends 68.94 LYD a month on average instead of 39.39, and 66.8% of active customers are nearest the 5 LYD card instead of 88.9%.
+- The tier cutoffs in LYD scale with it but every customer keeps the same tier, because the tiers rank customers; the artifact version moves from `tiers-v1-cd15525cb3ef` to `tiers-v1-efc9739afad4`.
+- T19 advises more: the median typical top-up is 3.30 LYD instead of 1.89, 30.6% are declined instead of 46.1%, and the data advance suits 18.3% instead of 4.65%.
+- A 1,000 LYD campaign over the 30,000 unlabelled customers proposes 2,954 offers instead of 2,911, with 11,733 LYD of assumed net value instead of 6,387, because values grow while the operator's catalogue prices do not.
+  At the same spend, targeting by risk alone is valued at 9,074 LYD and random at 2,298; 2,803 of the offers are still the morning pass.
+- The churn model, its thresholds, its reports and the spent test window are untouched, because the model never sees LYD.
+
+## 43. The holdout is a permanent control group
+
+Date: 2026-09-26.
+
+T11 holds out about 10% of customers from every campaign with a SHA-256 lottery over the subscriber ID and the policy seed, 42 in `retention.toml`.
+The seed never changes, so every campaign holds out the same customers: 2,965 of the 30,000 in the unlabelled base, who never get a retention offer.
+Nothing said whether that was intended; Ali's recap of T11 made it a choice.
+
+From now on it is deliberate:
+
+- The same customers stay out of every campaign as a permanent control group, a common design in customer marketing, sometimes called a universal control group.
+- It gives the cleanest long-run measure, if the comparison is made fairly: among the customers the rules make eligible, those held out against those who were not, whether or not a reviewer then approved their offer.
+  Comparing approved recipients with the whole held-out group would mix the offer's effect with who was chosen (an outside review, 2026-09-27, decision 52).
+  The snapshot keeps every held-out customer's inputs, so the same rules can say later which of them would have qualified.
+- The cost is that about 10% of customers never get a retention bonus; they keep everything else the operator sells.
+- Changing the seed would reshuffle the group and end that comparison, so the seed changes only with a new decision entry.
+
+Review it after the first measured campaign: the fraction can shrink once the effect is known, and the group can be rotated when a measurement cycle ends.
+
+The same recap made the campaign report say what its equal-spend comparison can show.
+The targeted plan is picked by the assumed net value and is then scored with it, so the table favours it by construction; the comparison checks the allocation against its own assumptions, not whether targeting works.
+The picking is greedy, one customer at a time, so it is not even guaranteed to be the best set under those assumptions (decision 52).
+The offer mix follows the same way from the assumed share saved: at the 70 LYD anchor, 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% of churners instead of 5%.
+
+## 44. The experiments are removed, and one note keeps their result
+
+Date: 2026-09-26.
+
+The module carried three experiments beside the product: an LSTM over the monthly steps (T12), synthetic customers from CTGAN and a Gaussian copula (T13), and uplift targeting on two public randomised trials (T17).
+Ali removed all three.
+This module is one of five parts of the project, the final report has no room for experiments the product does not use, and the teammates' parts cover the syllabus chapters they were for (decision 8).
+
+Removed: `src/prepaid_churn/sequence.py` and the `churn sequence-benchmark` command, `experiments/synthetic.py`, `experiments/uplift.py`, their tests and reports, the `experiments` dependency group with Keras and torch, and tickets T12, T13 and T17.
+Decisions 27 to 30 stay as one-line stubs so that their numbers still resolve, and dated records of past checks still say what was true on their day.
+
+What stays is one note in the model selection part of the model card and the brief:
+
+- The LSTM scored a test PR-AUC of 0.2326 against LightGBM's 0.3477, below the logistic regression too, and failed two of the four release checks.
+  With two monthly steps the change between months is one subtraction that the engineered features already give LightGBM, so a sequence model has nothing to learn.
+- A LightGBM trained on synthetic customers kept at most 45% of the real model's validation PR-AUC with the copula, and 15% with CTGAN.
+  The generated customers did not keep the real patterns: a detector told them from real rows at ROC-AUC 1.000.
+- The uplift experiment was not a churn model and did not lose to one, so the note leaves it out.
+  On a public advertising trial, ranking by uplift beat ranking by risk (Qini 0.0698 against -0.1138), but it needs a randomised campaign with a control group, which this data does not have.
+  The permanent holdout of decision 43 is what will provide that data.
+
+Nothing in the product changes: the champion, its reports, the bundle and every other command are as they were.
+
+## 45. The operator is not named
+
+Date: 2026-09-26.
+
+The packages, prices, recharge cards and emergency credit rules in this module come from a real Libyan mobile operator (decision 16).
+Ali asked that the instructor learn that the data is real and Libyan, but not which operator it came from.
+
+So the module no longer names it:
+
+- In every document, report, test and screen it is "the operator", or "a Libyan mobile operator" where it is introduced, and its catalogue rows carry the label `Libyan mobile operator`.
+- Its Arabic name, its competitor's name and its network code (the MNC) are gone; MCC 606 stays, because it only says Libya.
+- The names were replaced in two of the operator's source files too, the pay-as-you-go tariffs and the data advance description; no number changed, and the package list the catalogue is checked against was not touched.
+- Files and commands follow: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
+- The customer message starts "Your gift:" instead of the operator's name.
+
+What this does not hide:
+
+- Git history and old commit messages still contain the name; rewriting a shared history would break every teammate's clone, so it is left.
+- The antenna module belongs to the team's other parts and still names both Libyan operators, from public tower data.
+- The root `CODE_REVIEW.md` was thought to be in the same case, but it named this module's operator twice, in its prepaid part; the name was replaced there on 2026-09-27 (T21 recap).
+- The catalogue keeps the operator's own package names, short codes and service names, which someone who knows the Libyan market could recognise.
+
+Nothing about the model, the numbers or the offers changes; only names do.
+
+## 46. Every offer is assumed to keep the same 5% of leavers
+
+Date: 2026-09-26.
+
+T11 assumed that an offer keeps 5% of the customers who would otherwise leave, and that the 1 LYD morning pass keeps 10% (decision 20).
+Nothing measured the 10%: it expressed the plan's preference for off-peak bonuses, yet it decided 95% of the offers (2,803 of 2,954 in a 1,000 LYD campaign) and doubled the value the plan claimed.
+Ali asked for one share for every offer, with the reason written down.
+
+Why 5%, and the same for every offer:
+
+- No measurement supports a larger effect, or a different one per product; the holdout is what will measure it (decision 43).
+- The best-known field experiment with a mobile carrier (Ascarza, 2018, Journal of Marketing Research) found that the customers most at risk are not necessarily the ones an offer changes, so an offer cannot be assumed to keep many of them.
+- Vendor case studies report 5% to 12% fewer leavers, but none of them is a controlled experiment.
+- A larger share barely changes the plan and mostly inflates the claim.
+  On the 30,000 unlabelled customers, with one share for every offer:
+
+| Share for every offer | Offers | Assumed value | Leavers expected to be kept |
+|---|---|---|---|
+| 5% | 3,643 | 6,186 LYD | 36 |
+| 10% | 3,746 | 13,367 LYD | 74 |
+| 15% | 3,746 | 20,550 LYD | 111 |
+| 20% | 3,746 | 27,733 LYD | 148 |
+
+The offers and their mix hardly move, because the budget decides who is reached, while the claimed value grows with the share.
+So the share should be the one we can defend, and 5% is the cautious one.
+
+What changed:
+
+- With one share for every offer, cost is the only thing that separates two offers for the same customer, so each customer gets the cheapest offer that fits them.
+- A 1,000 LYD campaign now proposes 3,643 offers, 2,254 of them the morning pass and the rest the 0.5 LYD day pack, for 962.53 LYD: every customer with a positive value is funded, so the budget no longer runs out.
+- Its assumed value is 6,186 LYD instead of 11,733; at the same spend, targeting by risk alone is valued at 5,277 LYD and random at 1,012.
+- The demo campaign of 1,000 customers and 35 LYD now has 130 offers, 3 of them cut by the budget.
+- The mechanism tests keep a larger share for the morning pass, so they still exercise a preference, and a new test checks the shipped policy.
+
+The delivery costs were checked in the same recap and not changed:
+
+- Published averages put operators' operating costs at about 66% of revenue (MTN Consulting, 3Q20), and the cost of delivering 1 GB at about $1 (Dave Burstein, 2021) against a world average price of $2.59 per GB (We Are Social, January 2024), about 40%.
+- So the 25% (metered) and 35% (unlimited) shares of price sit inside published averages; a bonus that uses spare off-peak capacity probably costs less, and none of this is the operator's own cost.
+
+If the morning pass should keep an advantage, it belongs in a lower delivery cost for off-peak products, which has a reason behind it, rather than in a larger share kept, which has none.
+
+## 47. The service reads the campaign again when a review changes it
+
+Date: 2026-09-26.
+
+Decision 21 loaded every output once, at startup, so an offer approved with `churn approve` reached the chatbot only after someone restarted the service.
+Nothing reminded anyone to do that, and a reviewer who approves an offer expects the chatbot to have it, so Ali chose in the T15 recap to remove the restart.
+
+What changed:
+
+- Before answering `/health` or `/subscribers/{id}/retention`, the service compares the modified time and size of `proposals.json` with the ones it read; when they differ, it reads the campaign again.
+- While nobody reviews, that costs one file check per request and nothing is read.
+- The bundle, the catalogue and the scored portfolio are still read once, so a new model or a new scoring run still needs a restart.
+- A campaign that fails to load serves no offers and `/health` says why, exactly as at startup; it is read again when its file next changes.
+- `loaded_at` in `/health` stays the time the service started; `approved_offers` goes up when an approval lands.
+
+Why it is safe:
+
+- Decision 21 feared an endpoint reading a campaign that `churn approve` was halfway through rewriting.
+  `churn approve` writes the new file beside the old one and swaps it in with one `os.replace`, so a read sees the old campaign or the new one, never half of each.
+- The service still reads only `proposals.json`, the authority, and never the CSV views written after it (decision 14).
+- On Windows a file cannot be replaced while another program is reading it, so an approval saved in the few milliseconds the service spends reading the file fails with an error, and nothing is written; repeating it works.
+  This was checked on Ali's machine on 2026-09-26; the demo app reading the campaign at that moment has the same effect, and did before this change.
+
+How it was checked:
+
+- A test approves an offer after the app has started and then gets it from the chatbot endpoint; with the reread switched off, the same test fails.
+- The real service, started with `churn serve` on a copy of the demo campaign, answered 404 for a pending offer, then 200 after `churn approve`, in the same process.
+
+## 48. Short-pack buyers can hold a weekly pack
+
+Date: 2026-09-27.
+
+T18 matched a customer who buys only short data packs to the dearest daily pack their average data top-up pays for.
+The source data defines a short pack as any scheme valid for less than a month, and 2,935 of the 3,946 active short-pack buyers average 5 LYD or more per data top-up (median 11.86 LYD), which buys one of the operator's weekly packs.
+All of them were capped at the 3 LYD daily pack, so "14.3% hold a daily pack" mostly described the cap.
+
+Ali chose in the T18 recap to let them hold a weekly pack:
+
+- A short-pack buyer now holds the dearest daily or weekly pack their average data top-up pays for; the monthly rule and pay-as-you-go are unchanged.
+- Of the active customers, 2,342 now hold `WK_2` (8 LYD) and 593 `WK_1` (5 LYD); 1,011 stay on daily packs.
+- No offer changes. T11 reads the bundle only to keep cheap unlimited bonuses from customers holding a monthly bundle above 35 LYD, and a weekly pack is not monthly.
+  A run with the frozen bundle at the shipped 1,000 LYD budget made the same 3,643 proposals under both rules.
+- The report, the Subscriber screen and the exported view change.
+
+Not changed: a monthly-pack buyer who spends more than 80 LYD on data still holds Net 80, the dearest of the monthly family.
+The Elite bundles (100 to 200 LYD) and the 5G ones (120 to 400 LYD) stay out of the mapping; adding them would not change an offer either, because Net 80 is already a monthly bundle above 35 LYD.
+
+## 49. The credit advice reads the card a customer would buy
+
+Date: 2026-09-27.
+
+T19 took each customer's typical top-up, the average airtime recharge of the quieter window month, straight from the source data at the T18 rate.
+In the T16 recap Ali confirmed that nothing below 5 LYD can be topped up at the operator, yet among the customers who paid for their top-ups, 57.0% average less than that (median 4.26 LYD).
+So the headline, that this base tops up in very small amounts and 29.7% are declined for it, described the source market's habit rather than the operator's customers.
+T19's own scope had asked for the customer's usual recharge card, and T18 already translates top-ups that way.
+
+Ali chose in the T19 recap to read the advice from the card:
+
+- The typical top-up is now the recharge card nearest to the quieter month's average, so never less than 5 LYD; the 0.6 rule and the denominations are unchanged.
+- A quieter month whose recharges were worth nothing stays at zero and is declined with its own reason: those customers paid nothing, and the smallest card would invent a payment.
+  The source data records such recharges for about 3,000 customers a month.
+- The advice CSV keeps the converted amount and adds the card beside it.
+
+On the 30,000 unlabeled customers:
+
+| Advice | Before | Now |
+|---|---|---|
+| Declined | 29.7% | 17.2%, all of them customers whose quieter month's recharges were worth nothing |
+| 1 LYD airtime | 34.2% | none |
+| 3 LYD airtime only | 16.9% | 60.4% |
+| 5 LYD airtime and the data advance | 18.3% | 21.5% |
+| No recharge, so no advice | 0.9% | 0.9% |
+
+What the report now says:
+
+- The zero-residual finding comes first: the smallest card, the data advance and the top airtime rung are all 5 LYD.
+- The rule keeps the customers whose card is 5 LYD on the 3 LYD rung, which leaves them 2 LYD, and away from both 5 LYD debts.
+  0.6 is exactly the edge for them: any smaller fraction would advise them 1 LYD.
+- The operator offers the data advance to anyone with a low balance, and the rule advises it for the 21.5% whose card is 10 LYD or more.
+- Reading the mean or the busier month instead of the quieter one advises the data advance to 31.9% or 40.7%, so the basis is still reported.
+
+What this does not settle: the card is a translation of the source market's habit, not an observation of the operator's customers, and 0.6 is still `Ali_Branch`'s assumption.
+
+The same day Ali moved the basis from the quieter month to the average of the two months (decision 50); the figures above are for the quieter month.
+
+## 50. The credit advice reads the average of the two months
+
+Date: 2026-09-27.
+
+Decision 23 stood in for the most common top-up with the average of the quieter window month, the most cautious of the three choices the report compares.
+Once decision 49 translated top-ups into cards, that choice declined 17.2% of the customers, most of them because one month's recharges were worth nothing while the other month paid.
+Ali chose in the T19 recap to read the average of the two months instead.
+
+- A customer is now declined for paying nothing only when the recharges of the whole window were worth nothing: 1,178 customers, 3.9%.
+- The advice on the 30,000 unlabeled customers is the 3 LYD airtime advance only for 63.3%, 5 LYD with the data advance for 31.9%, declined for 3.9%, and no advice for the 0.9% with no recharge.
+- The cost is caution: the average advises credit to some customers whose quieter month alone would not support it.
+  The report keeps the quieter month's row as the cautious reference, where the data advance goes to 21.5% instead of 31.9%.
+
+## 51. Customers hear the package, not the policy's reason
+
+Date: 2026-09-27.
+
+T11 writes `offer_reason_en` and `offer_reason_ar` for every offer, and they explain the choice: "Catalogue bonus: Net 50MB; positive value under the stated retention assumptions."
+The integration guide told the chatbot to say that sentence to the customer, and the demo built its SMS from it, so a customer would have been told that the operator computed their value, with the package named twice.
+In Arabic every message in the demo campaign also needed 2 SMS parts, so each would be billed twice.
+
+Ali chose in the T20 recap to separate the two:
+
+- `service.gift_message` writes what the customer is told, from the catalogue row alone: the package, what it gives when the operator's own file states it, the hours it works when it has a window, and for how long.
+  For example "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم." and "Your gift: Net 50MB for a day."
+- The units are the operator's own, from its source files: ميقا, قيقا, دقيقة and لا محدودة.
+- A volume read from the package name, or reported by `Ali_Branch` rather than stated by the operator (the Silver family and the hourly 5G packages), is left out: the name already says it, and our reading is not the operator's promise.
+  The first version said them, so `نت 1/4` became 250 MB by our own conversion and Silver became unlimited; the T21 recap's review found it the same day.
+- The chatbot's offer answer carries it as `customer_message_ar` and `customer_message_en`, and the demo's SMS preview uses the same function, so the two cannot drift apart.
+- Every one of the 37 packages fits one Arabic SMS part; the longest, the morning pass, is 68 of 70 characters, and a test checks the whole catalogue.
+- `offer_reason_*` stays in the answer for staff who ask why the offer was made, and the guide's rule 7 says never to say it to the customer.
+
+Adding the two fields does not break a consumer, and none exists yet.
+
+## 52. What an outside review of the module changed
+
+Date: 2026-09-27.
+
+An outside review of `Ali_Branch` at `096371e` checked the code, the method and the documents, and reproduced every committed report first.
+Ali chose to act on its findings about serving, the demo and the wording, and to record the rest.
+
+The service:
+
+- A scored portfolio is now checked when the service loads it: probabilities between 0 and 1, known risk bands and value tiers, and a model version equal to the loaded bundle's.
+  With no bundle loaded, a portfolio that names a model is refused too, because nothing can vouch for it.
+  A refused portfolio makes `/health` degraded and the copilot's endpoints answer 503; before, a probability of 2.0 or another model's scores were served as healthy under this model's version.
+- Every package answer now carries `volume_source`, the speed caps and the number of shared lines, and the guide's rule 8 says to promise a volume or unlimited data only when the operator's own table states it.
+  Ali confirmed that every row comes from the operator's official website; `volume_source` records what that material states, not where it was found.
+
+The demo:
+
+- The Subscriber screen crashed on a tiers-only portfolio, which is the documented default; it opens now.
+- It showed a campaign's proposal-time risk as the customer's current risk; the campaign now supplies only its decision and review, and risk and value come from the current portfolio.
+- Proposing for one customer failed for the 388 customers of the demo base with a missing month end, although the whole base scores; the month end is now taken from the export, and only where every customer who has it agrees.
+- The Released screen showed the policy's reason under "What the customer would be sent"; it shows the customer message now, keeps the reason in a staff-only section, and says the service serves this campaign only if it was started on it.
+
+The wording:
+
+- "Wins by construction" overstated the comparison: the budget step picks greedily, so it is not guaranteed to find the best set; the campaign report, the Campaign builder, decision 43, the model card and the brief now say the table favours the plan by construction.
+- The model card defines the target as next-month usage inactivity, so a customer who keeps recharging an unused line counts as churned, and it says beside the headline that the release gate is a retrospective check (decision 13).
+- The holdout comparison is fair only between customers the rules make eligible, held out or not (decision 43).
+- T22 now includes currency: an export already in LYD must not be converted again.
+- The action plan no longer names the operator; its team name, members, title and roles still need the team's details.
+
+Recorded, not changed:
+
+- An approval keeps its offer ID when the operator changes that package's price or validity, and the service does not yet compare the approved terms in the snapshot with the current catalogue.
+- The bundle's self-check predicts an engineered sample row, so a change to the cleaning or feature code that keeps the columns would not be caught.
+- The dashboard caches a campaign until it is refreshed, so an approval made from the command line appears after a refresh.
+- The value model (T23), the policy's sensitivity to its assumptions, the cohort behind the reference spend, calling average precision PR-AUC, and reviewer sign-in are for later; none changes a result shown today.
+
+## 53. `tahaDev` is where the team's platform comes together
+
+Date: 2026-09-26.
+Written on `tahaDev` as decision 37 and renumbered 53 when Ali's decisions 37 to 52 were merged on 2026-09-27; commit messages before that merge say 37.
 
 The action plan gives Taha the chatbot, the employee copilot and "integration with GIS and Network ML outputs".
 The copilot has to read the GIS shortlist and the network forecasts, and those lived only on the teammates' own branches, none of which had reached `main`.
@@ -988,6 +1318,7 @@ This replaces two hard rules in [../CLAUDE.md](../CLAUDE.md):
   In a conflict inside their folder, the owner's version wins.
 
 "Do not pull or merge `main`" still stands.
+Decision 39 stands beside this one: Ali works on `Ali_Branch`, and `tahaDev` takes his work by merge, as it did on 2026-09-21, 2026-09-25 and 2026-09-27.
 
 The one conflict of substance was Ali's GIS fix `2c84a2c` meeting Mahmoud's rewrite of the same two files.
 Both sides had fixed the same self-exclusion bug, so Mahmoud's version was kept.
@@ -1005,9 +1336,10 @@ Found while merging, for the owners (listed in the Handoff of [../TICKETS.md](..
 - The legacy GIS optimizer keeps a weaker `top_k` check and does not clear stale exports, which Ali's removed fix did; it only serves historical reproduction.
 - The GIS research extra cannot install on Windows without the Microsoft C++ build tools, because `pyrosm` needs `cykhash` built from source.
 
-## 38. The assistants: one project, a hosted model that only phrases, and guards in code
+## 54. The assistants: one project, a hosted model that only phrases, and guards in code
 
 Date: 2026-09-26.
+Written on `tahaDev` as decision 38 and renumbered 54 with decision 53.
 
 The action plan gives the customer chatbot to Taha and Ali, and the employee copilot to Taha.
 Neither existed: `customer_support_chatbot/` held two empty files.
@@ -1039,13 +1371,20 @@ The guards are code, because a prompt is advisory:
 - Every answer shows "What I looked up": each tool call and exactly what it returned.
 
 **What leaves the machine.**
-The customer's words and the tool results (catalogue rows and the approved offer's reason) go to Groq; the subscriber ID and the campaign ID do not.
+The customer's words and the tool results (catalogue rows and the approved offer's customer message) go to Groq; the subscriber ID, the campaign ID and the policy's reason do not.
 That is acceptable for a demo on public data.
 An operator deployment would need a model it controls or a contract that covers customer messages, and that is a decision for the operator, not a setting here.
 
 **One look.**
 Both apps read one `.streamlit/config.toml`, the palette of the team's GIS demo page (`antenna_cell_placement/integrated_release/index.html`): navy text, blue primary, pale-blue cards and an orange limits note.
 `ui.py` adds what a theme cannot: the eyebrow line of that page, Arabic laid out right to left inside mixed text, and the heading size.
+
+**After Ali's decisions 45, 51 and 52 (merged 2026-09-27).**
+The assistants follow the module:
+
+- They do not name the operator (decision 45): the chatbot is a Libyan mobile operator's assistant, "the operator" in English and "المشغل" in Arabic.
+- An offer is told with the service's `customer_message_ar` or `customer_message_en` (decision 51); the policy's reason never reaches the model.
+- A data volume or "unlimited" is given only when `volume_source` says the operator states it (decision 52); otherwise the package says the volume is not stated.
 
 **Not built yet.**
 Service points wait for a list from Taha; the columns are fixed in `assistants/README.md`, and until the file exists the chatbot says the locations are not available.

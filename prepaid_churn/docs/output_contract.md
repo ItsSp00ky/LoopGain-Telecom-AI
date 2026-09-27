@@ -13,9 +13,9 @@ The file is CSV in UTF-8.
 | `subscriber_id` | text, unique | The pseudonymous subscriber ID from the export's `id` column (decision 17). |
 | `churn_probability` | number from 0 to 1; empty for `already_silent` | Calibrated probability that the subscriber makes no calls and uses no mobile data next month. 0.3 means about 30 in 100 such subscribers go silent. |
 | `risk_band` | `high`, `medium`, `low` or `already_silent` | `high`: at or above the best-F1 threshold chosen on validation customers. `medium`: above the validation churn rate. `low`: below it. `already_silent`: no calls and no data this month, so the model does not score the subscriber (decision 12). |
-| `reason_1` | text; may be empty | The factor with the largest push towards churn for this subscriber, with its value. Empty when fewer factors raise the risk. |
-| `reason_2` | text; may be empty | The factor with the 2nd largest push towards churn for this subscriber, with its value. Empty when fewer factors raise the risk. |
-| `reason_3` | text; may be empty | The factor with the 3rd largest push towards churn for this subscriber, with its value. Empty when fewer factors raise the risk. |
+| `reason_1` | text; may be empty | For a `high` or `medium` subscriber, the factor with the largest push towards churn, with its value; empty when fewer factors raise the risk. A `low` subscriber gets "Low risk: nothing stands out" in `reason_1`, and an `already_silent` one gets "No calls and no mobile data this month". |
+| `reason_2` | text; may be empty | For a `high` or `medium` subscriber, the factor with the 2nd largest push towards churn, with its value; empty when fewer factors raise the risk. A `low` subscriber gets "Low risk: nothing stands out" in `reason_1`, and an `already_silent` one gets "No calls and no mobile data this month". |
+| `reason_3` | text; may be empty | For a `high` or `medium` subscriber, the factor with the 3rd largest push towards churn, with its value; empty when fewer factors raise the risk. A `low` subscriber gets "Low risk: nothing stands out" in `reason_1`, and an `already_silent` one gets "No calls and no mobile data this month". |
 | `model_version` | text | Version of the model bundle that scored the row. |
 | `scored_at` | UTC time, ISO 8601 | When the row was scored. |
 
@@ -36,7 +36,7 @@ The tier artifact has its own version and never changes churn predictions.
 |---|---|---|
 | `recency` | nonnegative number | Days since airtime or data recharge; censored at the two-month window length when none is observed. |
 | `frequency` | nonnegative number | Mean monthly airtime plus data recharge count. |
-| `monthly_spend_lyd` | nonnegative number | Mean monthly recharge at the frozen T18 assumed LYD rate; not observed Almadar revenue. |
+| `monthly_spend_lyd` | nonnegative number | Mean monthly recharge at the frozen T18 assumed LYD rate; not observed operator revenue. |
 | `tenure` | nonnegative number | Age-on-network snapshot in days. |
 | `engagement` | integer 0 to 4 | Count of voice, data, packs and roaming used in either feature month. |
 | `recency_score` | integer 1 to 5 | Training-frozen recency quintile score; larger is better, constant training dimensions stay at 3. |
@@ -83,5 +83,5 @@ Every subscriber appears once, including holdouts and customers receiving no off
 Only approved rows enter `released.csv`, with subscriber ID, offer ID, bilingual reasons, status, reviewer, review time, note and campaign ID; no risk or monetary fields are released.
 Rejected and unreviewed proposals cannot enter that file.
 `--tiers-only` supports a readiness run without a churn bundle and proposes no offers.
-Effects and costs are assumptions in `data/almadar/retention.toml`; [../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.
+Effects and costs are assumptions in `data/operator/retention.toml`; [../reports/decisions.md](../reports/decisions.md) records them beside the scenarios.
 Local reviewer names are an audit record, not authentication; access control belongs to T15.

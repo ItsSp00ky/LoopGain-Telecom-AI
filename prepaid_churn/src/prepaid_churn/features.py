@@ -37,13 +37,14 @@ FEATURES = {
         for m in TREND_MEASURES
     },
     "cur_onnet_share": (
-        "Share of on-net minutes in the current month; a falling share can mean calls "
-        "moving to a second SIM."
+        "Share of on-net minutes in the current month. The second-SIM idea behind it has weak "
+        "support in the upGrad data: churn is highest at both ends, and only slightly higher "
+        "after a fall (T5)."
     ),
     "diff_onnet_share": "Change in on-net share from the previous month.",
     "cur_incoming_share": (
-        "Share of incoming minutes in the current month; a rising share can mean a "
-        "'receiving only' SIM."
+        "Share of incoming minutes in the current month. In the upGrad data a low share goes "
+        "with churn, the opposite of the 'receiving only' SIM idea (T5)."
     ),
     "diff_incoming_share": "Change in incoming share from the previous month.",
 }

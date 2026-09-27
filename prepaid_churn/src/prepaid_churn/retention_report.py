@@ -38,6 +38,25 @@ def decisions_report(
         for offer in offers["offer_id"]
     ]
     reasons = decisions["decision_code"].value_counts().rename("customers").to_frame()
+    preferred = int(
+        decisions.loc[proposed, "recommended_offer_id"].eq(policy.preferred_offer_id).sum()
+    )
+    same_share = policy.offpeak_share_saved == policy.share_saved
+    if not proposed.any():
+        offer_mix = []
+    elif same_share:
+        offer_mix = [
+            f"{preferred:,} of {int(proposed.sum()):,} proposals are "
+            f"`{policy.preferred_offer_id}`; with the same assumed share for every offer, "
+            "each customer gets the cheapest offer that fits them.",
+        ]
+    else:
+        offer_mix = [
+            f"{preferred:,} of {int(proposed.sum()):,} proposals are "
+            f"`{policy.preferred_offer_id}`, the offer assumed to save "
+            f"{policy.offpeak_share_saved:.0%} of churners instead of {policy.share_saved:.0%}; "
+            "the offer mix follows from that assumption, not from measured response.",
+        ]
     lines = [
         "# T11 retention decisions",
         "",
@@ -58,11 +77,20 @@ def decisions_report(
         "",
         "## Assumptions beside the results",
         "",
-        "All T11 assumptions are in `data/almadar/retention.toml`.",
+        "All T11 assumptions are in `data/operator/retention.toml`.",
         "Delivery shares start from T16's estimates, 25% for metered and 35% for unlimited "
         "products; they are not audited operator costs.",
-        "The preferred morning bonus assumes a different share saved; no campaign data "
-        "establishes this advantage, and changing it can change the winning offer.",
+        (
+            f"Every offer, the preferred morning bonus included, is assumed to save the same "
+            f"share of churners, {policy.share_saved:.0%} (decision 46); no campaign data "
+            "measures it yet."
+        )
+        if same_share
+        else (
+            "The preferred morning bonus assumes a different share saved; no campaign data "
+            "establishes this advantage, and changing it can change the winning offer."
+        ),
+        *offer_mix,
         "",
         markdown_table(assumptions, "Setting"),
         "",
@@ -78,7 +106,7 @@ def decisions_report(
         "",
         "Already-silent, unscored, low-risk and held-out customers get no proposal.",
         "The cap is per customer in this campaign, not a cumulative annual retention budget.",
-        "Current bundles are T18's behavioural mapping, not observed Almadar subscriptions.",
+        "Current bundles are T18's behavioural mapping, not observed operator subscriptions.",
         "A customer mapped to a monthly bundle above the configured base cannot receive "
         "a cheaper unlimited product, regardless of churn risk.",
         "5G and shared-family products are excluded because device, coverage and membership "
@@ -111,11 +139,24 @@ def decisions_report(
         "Fractional expected counts are diagnostic lotteries, never executable campaign rows.",
         "Zero spend makes all three scenarios zero and supports no targeting-effect claim.",
         "The comparison evaluates the stated assumptions, not an experimentally measured benefit.",
+        "The targeted plan is picked by this same assumed net value, one customer at a "
+        "time, so this table favours it by construction; the picking is greedy, so it is "
+        "not guaranteed to be the best set even under these assumptions. The table checks "
+        "the allocation against its own assumptions, not whether targeting works.",
+        "Risk only is scored with the same T10 scenario, whose constant-risk assumption makes "
+        "the riskiest customers look least worth saving (decision 41).",
         "",
         "## Review and holdout",
         "",
         "A seeded SHA-256 lottery assigns approximately the configured holdout fraction "
         "independently of input order and batch size; those customers never get an offer.",
+        "The lottery depends only on the subscriber ID and the policy seed, so every campaign "
+        "with this seed holds out the same customers: a permanent control group, kept on "
+        "purpose for a measured campaign (decision 43).",
+        "A fair measurement compares like with like: customers the rules make eligible "
+        "who were held out, against eligible customers who were not, whether or not a "
+        "reviewer approved their offer; approved recipients against the whole holdout "
+        "would mix the offer's effect with who was chosen.",
         "Keep the campaign snapshot and holdout assignment for a future measured campaign.",
         "No response outcomes or treatment effects are generated here.",
         "`churn decide` writes proposals and an empty released campaign.",

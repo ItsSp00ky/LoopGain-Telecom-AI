@@ -4,7 +4,7 @@
     The "Net fi Waqtuh" service, or what is known as "Emergency Net," is a service dedicated to prepaid subscribers, allowing them to access the internet even if they don't have enough balance. This service is especially useful when the subscriber cannot recharge their balance at the current moment to subscribe to one of the available packages. It should be noted that the subscription value for the service is deducted and recovered from the balance at the first recharge operation performed by the subscriber.
 
 *   **How to subscribe to the "Net fi Waqtuh" service?**
-    Subscribers can easily subscribe to the "Net fi Waqtuh" service via the quick commands menu by dialing *000#. It is also possible to subscribe through the Almadar application available on smartphones, which provides a convenient and fast way to activate the service at any time.
+    Subscribers can easily subscribe to the "Net fi Waqtuh" service via the quick commands menu by dialing *000#. It is also possible to subscribe through the operator's application available on smartphones, which provides a convenient and fast way to activate the service at any time.
 
 *   **Service Features:**
 

@@ -10,7 +10,6 @@ import pandas as pd
 import streamlit as st
 from _shared import configure, lyd, missing_banner, ordered_bar, refresh, state, use_campaign
 
-from prepaid_churn.almadar import InvalidCatalogueError
 from prepaid_churn.bundle import BundleError
 from prepaid_churn.campaign import review_file
 from prepaid_churn.demo import (
@@ -23,6 +22,7 @@ from prepaid_churn.demo import (
     propose_offers,
     utc_today,
 )
+from prepaid_churn.operator_market import InvalidCatalogueError
 from prepaid_churn.retention import NO_OFFER, RetentionError
 
 configure("Campaign builder", icon="campaign")
@@ -100,13 +100,19 @@ a, b, c, d = st.columns(4)
 a.metric("Customers decided", f"{totals['rows']:,}")
 b.metric("Offers proposed", f"{totals['offers']:,}")
 c.metric("Assumed cost", lyd(totals.get("expected_cost_lyd"), digits=2))
-d.metric("Held out", f"{totals['holdout']:,}", help="A random control arm that gets no offer.")
+d.metric(
+    "Held out",
+    f"{totals['holdout']:,}",
+    help="The same customers in every campaign, kept out on purpose (decision 43).",
+)
 
 held = totals["holdout"]
 st.info(
     f"**{held:,} customer{'' if held == 1 else 's'} held out, receiving nothing.** "
     "Without a control arm there is no way to measure whether a campaign worked, and "
-    "every effectiveness claim becomes an assertion.",
+    "every effectiveness claim becomes an assertion. They are the same customers in every "
+    "campaign, so that comparison builds up over time (decision 43); it is fair only "
+    "between customers the rules make eligible, held out or not.",
     icon=":material/science:",
 )
 
@@ -150,6 +156,13 @@ else:
         "Every approach is compared at the **same expected spend**. Comparing a budgeted "
         "campaign against an unconstrained blanket one measures the size of the budget, "
         "not the quality of the targeting."
+    )
+    st.warning(
+        "**This table favours our plan by construction.** It is picked by this same "
+        "assumed value, one customer at a time, so the table shows the picking works under "
+        "our own assumptions, not that targeting works. Only the held-out customers can "
+        "show that.",
+        icon=":material/warning:",
     )
 
 st.divider()

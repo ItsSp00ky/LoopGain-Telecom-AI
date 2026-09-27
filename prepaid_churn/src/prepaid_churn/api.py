@@ -21,6 +21,7 @@ Two boundaries this module owns, which `campaign.py` explicitly left to T15:
 
 import hmac
 import os
+import threading
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Path, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +36,7 @@ from prepaid_churn.service import (
     health,
     load_state,
     portfolio_summary,
+    refresh_campaign,
     retention,
     subscriber,
 )
@@ -112,7 +114,12 @@ def keys_from_environment(environ: dict | None = None) -> ApiKeys:
 
 
 class LatestOutputs(BaseModel):
-    loaded_at: str = Field(description="When this process read the outputs it is serving.")
+    loaded_at: str = Field(
+        description=(
+            "When this process started and read its outputs; the campaign is read again "
+            "whenever a review changes it, which `approved_offers` shows."
+        )
+    )
     scored_at: str | None = Field(
         default=None,
         description="Latest scoring time in the portfolio export; null without a bundle.",
@@ -135,7 +142,7 @@ class HealthResponse(BaseModel):
 
 
 class CatalogueOffer(BaseModel):
-    """One Almadar package, exactly as `data/almadar/offers.csv` records it (T16)."""
+    """One operator package, exactly as `data/operator/offers.csv` records it (T16)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -150,6 +157,23 @@ class CatalogueOffer(BaseModel):
     validity_hours: float | None = None
     data_gb: float | None = Field(default=None, description="Null when the package states none.")
     data_unlimited: bool | None = None
+    volume_source: str | None = Field(
+        default=None,
+        description=(
+            "Where `data_gb` or `data_unlimited` comes from: `stated` in the operator's own "
+            "table, read from the package `name`, `reported` by an earlier branch, or `none`. "
+            "Tell a customer a volume or unlimited data only when it is `stated`."
+        ),
+    )
+    max_download_mbps: float | None = Field(
+        default=None, description="A download speed cap the operator states, in Mbit/s."
+    )
+    max_upload_mbps: float | None = Field(
+        default=None, description="An upload speed cap the operator states, in Mbit/s."
+    )
+    members: float | None = Field(
+        default=None, description="Lines that share a family package; null for one line."
+    )
     voice_minutes: float | None = None
     voice_unlimited: bool | None = None
     network: str | None = None
@@ -179,8 +203,21 @@ class RetentionResponse(BaseModel):
 
     subscriber_id: str
     recommended_offer_id: str
-    offer_reason_en: str | None = None
-    offer_reason_ar: str | None = None
+    customer_message_ar: str = Field(
+        description=(
+            "What to say to the customer: the package, what it gives when the operator "
+            "states it, and for how long, "
+            "in one Arabic SMS part (decision 51)."
+        )
+    )
+    customer_message_en: str = Field(description="The same message in English.")
+    offer_reason_en: str | None = Field(
+        default=None,
+        description="Why the policy chose this offer, for staff; never say it to the customer.",
+    )
+    offer_reason_ar: str | None = Field(
+        default=None, description="The same reason in Arabic, for staff only."
+    )
     reviewed_at: str | None = Field(default=None, description="When a named reviewer approved it.")
     campaign_id: str | None = None
     offer: CatalogueOffer | None = Field(
@@ -238,8 +275,9 @@ class SubscriberResponse(BaseModel):
 
     The opposite rule to `RetentionResponse`: the employee asking is allowed to see the
     risk and the value, because they are deciding what to do for this customer.
-    The reasons are the model's own plain-language factors from the scoring export, so
-    the copilot quotes them rather than inventing an explanation.
+    The reasons are the model's own factors from the scoring export, each a short label
+    with the customer's value, so the copilot quotes them rather than inventing an
+    explanation. A `low` subscriber gets one line saying so instead (decision 40).
     """
 
     model_config = ConfigDict(extra="forbid", protected_namespaces=())
@@ -251,7 +289,10 @@ class SubscriberResponse(BaseModel):
     risk_band: str | None = None
     reasons: list[str] = Field(
         default_factory=list,
-        description="Why the model raised this customer's risk, in the order it ranked them.",
+        description=(
+            "Why the model raised this customer's risk, in the order it ranked them; "
+            "a `low` subscriber gets one line saying the risk is low instead."
+        ),
     )
     value_tier: str | None = None
     value_status: str | None = Field(
@@ -348,6 +389,15 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
     )
     app.state.service = state
     app.state.keys = keys
+    # The endpoints run in a thread pool, so two requests can notice the same review at
+    # once; the lock makes one of them read the campaign and the other use that read.
+    refresh_lock = threading.Lock()
+
+    def with_current_campaign() -> ServiceState:
+        """The state, with the campaign reread if a review changed it (decision 47)."""
+        with refresh_lock:
+            app.state.service = refresh_campaign(app.state.service)
+            return app.state.service
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     def read_health() -> dict:
@@ -356,7 +406,7 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
         No key is required: a liveness probe has no secret to offer, and the answer holds
         no customer data. It reports nothing beyond versions, counts and timestamps.
         """
-        return health(app.state.service)
+        return health(with_current_campaign())
 
     @app.get(
         "/catalogue",
@@ -365,7 +415,7 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
         dependencies=[Depends(_consumer(CHATBOT))],
     )
     def read_catalogue() -> dict:
-        """Every Almadar package the chatbot may talk about, with its collection date."""
+        """Every operator package the chatbot may talk about, with its collection date."""
         offers = catalogue(app.state.service)
         return {"count": len(offers), "offers": offers}
 
@@ -383,7 +433,7 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
         proposal, a proposal nobody reviewed, and a proposal a reviewer rejected. Telling
         the customer which one it was would tell them an offer was considered and refused.
         """
-        offer = retention(app.state.service, subscriber_id)
+        offer = retention(with_current_campaign(), subscriber_id)
         if offer is None:
             raise HTTPException(
                 status_code=404,
@@ -432,7 +482,9 @@ def create_app(state: ServiceState, keys: ApiKeys) -> FastAPI:
 
 
 def build_app(paths: ServicePaths, keys: ApiKeys | None = None) -> FastAPI:
-    """Load every output once, then serve it. Called by `churn serve`.
+    """Load every output, then serve it; the campaign is reread when a review changes it.
+
+    Called by `churn serve`.
 
     The keys are resolved before anything is read, so a missing one fails immediately
     rather than after a bundle load whose result was about to be served without them.

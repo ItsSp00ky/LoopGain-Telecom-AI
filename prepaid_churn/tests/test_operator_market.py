@@ -5,13 +5,13 @@ import pandas as pd
 import pytest
 from conftest import build_population
 
-from prepaid_churn.almadar import (
-    ALMADAR_DIR,
+from prepaid_churn.cli import main
+from prepaid_churn.operator_market import (
+    OPERATOR_DIR,
     PAY_AS_YOU_GO,
     STATUSES,
     VIEW_COLUMNS,
     InvalidCatalogueError,
-    almadar_view,
     bundle_held,
     check_against_source,
     load_excluded,
@@ -19,12 +19,13 @@ from prepaid_churn.almadar import (
     load_offers,
     lyd_rate,
     nearest_card,
+    operator_view,
+    unconverted_behaviour,
     validate_market,
     validate_offers,
     view_report,
 )
-from prepaid_churn.cli import main
-from prepaid_churn.windows import WINDOW_A, WINDOW_B, active_in_current_month
+from prepaid_churn.windows import WINDOW_A, WINDOW_B, active_in_current_month, window_features
 
 MARKET = {
     "arpu": {"monthly_lyd": 40.0, "status": "assumption", "source": "test"},
@@ -37,7 +38,7 @@ MARKET = {
 def two_offers() -> pd.DataFrame:
     """A metered bundle and the morning pass, as they appear in offers.csv."""
     common = {
-        "operator": "Almadar Aljadid",
+        "operator": "Libyan mobile operator",
         "network": None,
         "voice_minutes": None,
         "members": None,
@@ -168,7 +169,7 @@ def test_every_removed_package_is_recorded_with_a_reason():
 
 def test_the_source_file_still_holds_every_package():
     """The operator file is a byte-for-byte copy and is not edited when we drop a package."""
-    source = ALMADAR_DIR / "source" / "internet_offers_data_v4.csv"
+    source = OPERATOR_DIR / "source" / "internet_offers_data_v4.csv"
     rows = source.read_text(encoding="utf-8-sig").splitlines()
     assert len(rows) - 1 == 57  # header plus every package the operator published
 
@@ -271,40 +272,98 @@ def test_bundle_held_follows_the_packs_of_the_current_month():
     ]
 
 
+def test_short_pack_buyers_hold_the_dearest_daily_or_weekly_pack_they_pay_for():
+    """A short pack is anything valid for less than a month, weekly packs included (decision 48)."""
+    frame = pd.DataFrame(
+        {
+            "cur_monthly_2g": [0, 0, 0],
+            "cur_monthly_3g": [0, 0, 0],
+            "cur_sachet_2g": [1, 1, 1],
+            "cur_sachet_3g": [0, 0, 0],
+            "cur_total_rech_data": [1, 1, 1],
+            "cur_av_rech_amt_data": [50, 70, 150],  # 4, 5.6 and 12 LYD at 0.08 LYD a unit
+        }
+    )
+    held = bundle_held(frame, rate=0.08, offers=load_offers())
+    assert held.tolist() == ["DAY_HALF", "WK_1", "WK_2"]
+
+
+def test_the_report_measures_what_the_rate_does_not_convert(two_offers):
+    frame = pd.DataFrame(
+        {
+            "cur_vol_2g_mb": [0.0, 0.0, 512.0, 0.0],
+            "cur_vol_3g_mb": [0.0, 0.0, 512.0, 2048.0],
+            "prev_total_rech_num": [6, 6, 2, 0],
+            "cur_total_rech_num": [6, 6, 2, 0],
+            "prev_total_rech_amt": [300, 600, 500, 0],
+            "cur_total_rech_amt": [300, 600, 500, 0],
+            "prev_total_rech_data": [0, 0, 0, 0],
+            "cur_total_rech_data": [0, 0, 0, 0],
+            "prev_av_rech_amt_data": [0, 0, 0, 0],
+            "cur_av_rech_amt_data": [0, 0, 0, 0],
+        }
+    )
+    behaviour = unconverted_behaviour(frame, MARKET, two_offers)
+    assert behaviour["no_data_share"] == 0.5
+    assert behaviour["median_data_gb"] == 1.5
+    assert behaviour["median_topups_per_month"] == 4
+    # Average top-ups of 4, 8 and 20 LYD; the customer without one is left out.
+    assert behaviour["below_smallest_card_share"] == pytest.approx(1 / 3)
+    # Monthly spend of 24, 48, 40 and 0 LYD against a dearest package of 35 LYD.
+    assert behaviour["above_dearest_package"] == 2
+    assert behaviour["above_dearest_spend_share"] == pytest.approx(88 / 112)
+    assert behaviour["highest_spend_lyd"] == pytest.approx(48)
+
+
 def test_view_reads_only_the_window_months(raw):
     from prepaid_churn.clean import clean
     from prepaid_churn.schema import validate
 
-    before = almadar_view(clean(validate(raw)), WINDOW_A, MARKET, load_offers())
+    before = operator_view(clean(validate(raw)), WINDOW_A, MARKET, load_offers())
     changed = raw.copy()
     for column in ("total_rech_amt_8", "max_rech_amt_8", "monthly_3g_8", "sachet_2g_8"):
         changed[column] = changed[column] + 7
-    after = almadar_view(clean(validate(changed)), WINDOW_A, MARKET, load_offers())
+    after = operator_view(clean(validate(changed)), WINDOW_A, MARKET, load_offers())
     assert list(before.columns) == list(VIEW_COLUMNS)
     pd.testing.assert_frame_equal(before, after)
 
 
 def test_one_customer_alone_is_viewed_like_inside_the_batch():
     population = build_population()
-    whole = almadar_view(population, WINDOW_B, MARKET, load_offers())
-    alone = almadar_view(population.iloc[[0]], WINDOW_B, MARKET, load_offers())
+    whole = operator_view(population, WINDOW_B, MARKET, load_offers())
+    alone = operator_view(population.iloc[[0]], WINDOW_B, MARKET, load_offers())
     pd.testing.assert_frame_equal(alone, whole.iloc[[0]])
 
 
 def test_view_report_states_every_assumption():
     population = build_population()
-    view = almadar_view(population, WINDOW_B, MARKET, load_offers())
-    report = view_report(view, active_in_current_month(population, WINDOW_B), MARKET, "x.csv")
-    for expected in ("Almadar ARPU", "| assumption |", "| measured |", "| reported |", "PAYG"):
+    offers = load_offers()
+    view = operator_view(population, WINDOW_B, MARKET, offers)
+    active = active_in_current_month(population, WINDOW_B)
+    behaviour = unconverted_behaviour(
+        window_features(population, WINDOW_B)[active.to_numpy()], MARKET, offers
+    )
+    report = view_report(view, active, MARKET, "x.csv", behaviour)
+    for expected in (
+        "Operator ARPU",
+        "| assumption |",
+        "| measured |",
+        "| reported |",
+        "PAYG",
+        "## What the rate does not convert",
+        "used no mobile data this month",
+    ):
         assert expected in report
 
 
-def test_almadar_view_command(raw, tmp_path):
+def test_operator_view_command(raw, tmp_path):
     source, output, report = tmp_path / "export.csv", tmp_path / "view.csv", tmp_path / "r.md"
     raw.to_csv(source, index=False)
-    main(["almadar-view", "--input", str(source), "--output", str(output), "--report", str(report)])
+    main(
+        ["operator-view", "--input", str(source), "--output", str(output), "--report", str(report)]
+    )
     assert len(pd.read_csv(output)) == len(raw)
-    assert report.read_text(encoding="utf-8").startswith("# T18 Almadar view")
+    assert report.read_text(encoding="utf-8").startswith("# T18 operator view")
 
 
 @pytest.mark.parametrize("value", [0, -1, np.inf, np.nan, "500", True])
@@ -322,9 +381,10 @@ def test_invalid_recharge_cards_are_rejected(cards):
 
 
 def test_missing_offer_family_has_a_clear_error():
-    from prepaid_churn.windows import window_features
-
     frame = window_features(build_population(), WINDOW_B)
     offers = load_offers()
-    with pytest.raises(InvalidCatalogueError, match="monthly and daily"):
-        bundle_held(frame, 0.08, offers[offers["family_en"] != "Daily offers"])
+    short = offers["family_en"].isin(["Daily offers", "Weekly offers"])
+    with pytest.raises(InvalidCatalogueError, match="a daily or weekly one"):
+        bundle_held(frame, 0.08, offers[~short])
+    with pytest.raises(InvalidCatalogueError, match="a monthly offer family"):
+        bundle_held(frame, 0.08, offers[offers["family_en"] != "Monthly offers"])
