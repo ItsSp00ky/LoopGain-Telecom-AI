@@ -81,20 +81,14 @@ for message in st.session_state.messages:
 prompt = st.chat_input("Ask about packages or offers") or st.session_state.pop("pending", None)
 if prompt:
     ui.user_message(prompt)
-    arabic = chatbot_tools.is_arabic(prompt)
-    tools = chatbot_tools.build_tools(BASE_URL, CHATBOT_KEY, subscriber or None, arabic)
     with st.spinner("Looking it up..."):
-        turn = llm.run_turn(
-            chatbot_tools.system_prompt(
-                arabic,
-                signed_in=bool(subscriber),
-                other_account=chatbot_tools.mentions_other_account(prompt, subscriber),
-            ),
-            st.session_state.messages,
+        turn = chatbot_tools.answer(
             prompt,
-            tools,
+            st.session_state.messages,
+            subscriber,
+            BASE_URL,
+            CHATBOT_KEY,
             llm.groq_complete(),
-            chatbot_tools.fallback,
         )
     st.session_state.messages += [
         {"role": "user", "content": prompt},

@@ -111,21 +111,8 @@ def run_chatbot(base_url: str, pause: float) -> str:
     for number, question in enumerate(questions["question"]):
         if number:
             time.sleep(pause)
-        arabic = chatbot_tools.is_arabic(question["text"])
-        tools = chatbot_tools.build_tools(base_url, key, question.get("subscriber"), arabic)
-        turn = llm.run_turn(
-            chatbot_tools.system_prompt(
-                arabic,
-                signed_in=bool(question.get("subscriber")),
-                other_account=chatbot_tools.mentions_other_account(
-                    question["text"], question.get("subscriber")
-                ),
-            ),
-            [],
-            question["text"],
-            tools,
-            complete,
-            chatbot_tools.fallback,
+        turn = chatbot_tools.answer(
+            question["text"], [], question.get("subscriber"), base_url, key, complete
         )
         if (turn.replaced_because or "").startswith("the language model is unavailable"):
             # Every later question would fail the same way; say why and stop.

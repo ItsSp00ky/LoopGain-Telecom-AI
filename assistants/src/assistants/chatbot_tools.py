@@ -9,11 +9,12 @@ no name or reason in the other language to pick up.
 """
 
 import re
+from dataclasses import replace
 from functools import partial
 
 from assistants import service_client
 from assistants.language import is_arabic
-from assistants.llm import Tool, ToolCall
+from assistants.llm import Complete, Tool, ToolCall, Turn, run_turn
 
 SYSTEM_PROMPT = """\
 You are the customer assistant of Almadar Aljadid, a mobile operator in Libya, for prepaid \
@@ -83,7 +84,9 @@ def system_prompt(arabic: bool, signed_in: bool = True, other_account: bool = Fa
         f"Write your whole reply in {language}.\n{account}\n"
         + (
             "The message mentions an account or phone number that is not the signed-in "
-            "account: start by saying you can only check the customer's own account.\n"
+            "account. The screen already tells the customer you only check their own account; "
+            "do not repeat it. Answer for the signed-in account (call my_offer if they ask "
+            "about an offer and are signed in).\n"
             if other_account
             else ""
         )
@@ -333,6 +336,42 @@ def build_tools(
             ),
         )
     return tools
+
+
+OTHER_ACCOUNT_NOTICE = {
+    False: "I can only check your own signed-in account, not the number you mentioned.",
+    True: "يمكنني التحقق من حسابك أنت فقط، وليس من الرقم الذي ذكرته.",
+}
+
+
+def answer(
+    prompt: str,
+    history: list[dict],
+    subscriber_id: str | None,
+    base_url: str,
+    chatbot_key: str,
+    complete: Complete,
+    client=service_client,
+) -> Turn:
+    """One chatbot turn, as the screen and the evaluation both run it.
+
+    What the code can decide, it decides: the language, the sign-in, and whether the message
+    names someone else's number. A model told to say "I only check your own account" said it
+    in one run and not the next, so the code says it instead, in the customer's language.
+    """
+    arabic = is_arabic(prompt)
+    other_account = mentions_other_account(prompt, subscriber_id)
+    turn = run_turn(
+        system_prompt(arabic, signed_in=bool(subscriber_id), other_account=other_account),
+        history,
+        prompt,
+        build_tools(base_url, chatbot_key, subscriber_id or None, arabic, client),
+        complete,
+        fallback,
+    )
+    if other_account:
+        turn = replace(turn, reply=f"{OTHER_ACCOUNT_NOTICE[arabic]}\n\n{turn.reply}")
+    return turn
 
 
 def fallback(calls: list[ToolCall], user_text: str) -> str:

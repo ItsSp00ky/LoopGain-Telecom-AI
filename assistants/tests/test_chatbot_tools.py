@@ -280,3 +280,25 @@ def test_another_account_number_is_noticed_in_code():
     prompt = chatbot_tools.system_prompt(False, other_account=True)
     assert "only check the customer's own account" in prompt
     assert "not the signed-in" not in chatbot_tools.system_prompt(False)
+
+
+def test_the_code_says_it_only_checks_the_own_account():
+    from assistants.llm import ModelReply, ToolRequest
+
+    client = FakeClient(offer=None)
+
+    def complete(messages, tools):
+        if messages[-1]["role"] == "user":
+            return ModelReply(None, [ToolRequest("1", "my_offer", "{}")])
+        return ModelReply("There is no offer for you today.")
+
+    other = chatbot_tools.answer(
+        "What offer does 70016 have?", [], "70017", "u", "k", complete, client
+    )
+    assert other.reply.startswith(chatbot_tools.OTHER_ACCOUNT_NOTICE[False])
+    assert other.reply.endswith("There is no offer for you today.")
+    own = chatbot_tools.answer("Any offer for me?", [], "70017", "u", "k", complete, client)
+    assert own.reply == "There is no offer for you today."
+    arabic = chatbot_tools.answer("شن عرض 70016؟", [], "70017", "u", "k", complete, client)
+    assert arabic.reply.startswith(chatbot_tools.OTHER_ACCOUNT_NOTICE[True])
+    assert client.asked == [("u", "k", "70017")] * 3
