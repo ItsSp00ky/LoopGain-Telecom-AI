@@ -42,6 +42,8 @@ information.
 you cannot help with that here and suggest Almadar customer service. Never invent a phone \
 number, a website or an address.
 8. If a tool returns an error, say the service is not available right now. Never guess.
+The operator is Almadar in English and المدار in Arabic; never write its name in Latin \
+letters inside an Arabic reply.
 9. Reply in the customer's language, Arabic (Libyan dialect is fine) or English. Tool results \
 are already in that language: use the names as given, each package name in bold. Keep \
 replies short. Use bullet points, never numbered lists.
@@ -101,21 +103,19 @@ def _validity(row: dict, arabic: bool) -> str | None:
 
 def package_view(row: dict, arabic: bool, with_price: bool = True) -> dict:
     """One catalogue row as the model sees it, in one language: name, what it gives, dates."""
-    unlimited, gigabytes, minutes = (
-        ("غير محدود", "جيجا", "دقيقة")
+    unlimited, gigabytes, minutes, unstated = (
+        ("غير محدود", "جيجا", "دقيقة", "الحجم غير محدد من المدار")
         if arabic
-        else (
-            "unlimited",
-            "GB",
-            "minutes",
-        )
+        else ("unlimited", "GB", "minutes", "volume not stated by Almadar")
     )
     if row.get("data_unlimited"):
         data = unlimited
     elif row.get("data_gb"):
         data = f"{_number(row['data_gb'])} {gigabytes}"
     else:
-        data = None
+        # Every package on sale carries data; a missing volume means the operator does not
+        # state it (the Social packages), and an empty field reads as "no data".
+        data = unstated
     if row.get("voice_unlimited"):
         voice = unlimited
     elif row.get("voice_minutes"):
@@ -208,10 +208,14 @@ def my_offer(
 ) -> dict:
     """The approved offer for the signed-in customer, read fresh on every call (rule 6)."""
     if not subscriber_id:
-        return {"offer": None, "say": "The customer is not signed in, so no offer can be read."}
+        return {
+            "offer": None,
+            "say": "You are not signed in, so your offers cannot be checked. Sign in to see them.",
+            "note": "Do not say that there is no offer: nobody has checked.",
+        }
     offer = client.offer_for(base_url, chatbot_key, subscriber_id)
     if offer is None:
-        return {"offer": None, "say": "There is no offer for this customer today."}
+        return {"offer": None, "say": "There is no offer for you today."}
     # The subscriber and campaign IDs stay here: the model has no use for them, and Groq
     # never receives them.
     return {
@@ -310,6 +314,10 @@ def fallback(calls: list[ToolCall], user_text: str) -> str:
             return "The service is not available right now. Please try again later."
         if call.name == "my_offer":
             offer = result.get("offer")
+            if offer is None and "note" in result:
+                if arabic:
+                    return "لم تسجّل الدخول، لذلك لا يمكن التحقق من عروضك. سجّل الدخول لرؤيتها."
+                return result["say"]
             if offer is None:
                 return "لا يوجد عرض لك اليوم." if arabic else "There is no offer for you today."
             return f"{offer['reason']} - {offer['package']['name']}"

@@ -245,3 +245,21 @@ def test_prices_are_written_in_the_reply_language():
     assert chatbot_tools.package_view(by_id["MO_20"], False)["price"] == "35 LYD"
     assert chatbot_tools.package_view(by_id["MO_20"], True)["price"] == "35 دينار"
     assert "LYD" not in str(find_packages(CATALOGUE, True, count=10))
+
+
+def test_an_unstated_volume_is_not_called_no_data():
+    social = {row["offer_id"]: row for row in CATALOGUE}["SOC_M"]
+    assert chatbot_tools.package_view(social, False)["data"] == "volume not stated by Almadar"
+    assert chatbot_tools.package_view(social, True)["data"] == "الحجم غير محدد من المدار"
+
+
+def test_not_signed_in_asks_to_sign_in_instead_of_saying_no_offer():
+    result = my_offer("u", "k", None, client=FakeClient(offer=OFFER))
+    call = ToolCall("my_offer", {}, result)
+    assert fallback([call], "any offer?").endswith("Sign in to see them.")
+    assert "سجّل الدخول" in fallback([call], "في عرض؟")
+    assert "no offer" not in fallback([call], "any offer?").casefold()
+
+
+def test_the_prompt_names_the_operator_in_each_language():
+    assert "Almadar in English and المدار in Arabic" in chatbot_tools.SYSTEM_PROMPT
