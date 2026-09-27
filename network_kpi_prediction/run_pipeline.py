@@ -16,14 +16,14 @@ _TRAFFIC_PKG = os.path.join(_ROOT, "traffic_volume_forecast")
 
 
 DATASET_PRESETS = {
-    "earfcndl": os.path.join(_ROOT, "data", "all the data", "carrier_earfcndl_kpi_daily.csv"),
-    "carrier": os.path.join(_ROOT, "data", "all the data", "carrier_earfcndl_kpi_daily.csv"),
-    "summer": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_summer_120d.csv"),
-    "erbs-summer": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_summer_120d.csv"),
-    "full": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_full_year.csv"),
-    "erbs-full": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_full_year.csv"),
-    "macro": os.path.join(_ROOT, "data", "all the data", "macro_network_kpis_daily.csv"),
-    "traffic": os.path.join(_ROOT, "data", "all the data", "4g_traffic_volume_daily.csv"),
+    "earfcndl": os.path.join(_ROOT, "data", "carrier_earfcndl_kpi_daily.csv"),
+    "carrier": os.path.join(_ROOT, "data", "carrier_earfcndl_kpi_daily.csv"),
+    "summer": os.path.join(_ROOT, "data", "erbs_cell_kpi_summer_120d.csv"),
+    "erbs-summer": os.path.join(_ROOT, "data", "erbs_cell_kpi_summer_120d.csv"),
+    "full": os.path.join(_ROOT, "data", "erbs_cell_kpi_full_year.csv"),
+    "erbs-full": os.path.join(_ROOT, "data", "erbs_cell_kpi_full_year.csv"),
+    "macro": os.path.join(_ROOT, "data", "macro_network_kpis_daily.csv"),
+    "traffic": os.path.join(_ROOT, "data", "4g_traffic_volume_daily.csv"),
 }
 
 
@@ -50,7 +50,7 @@ Dataset Presets (--dataset):
   traffic              Daily aggregated 4G data volume in GB (4g_traffic_volume_daily.csv)
 
 Common Commands:
-  catalog              Inspect, profile, and synthesize all datasets across 'all the data'
+  catalog              Inspect, profile, and synthesize all datasets across 'data/'
   split                Stage 1: Chronological train/val/test data splitting
   train                Stage 2: Feature engineering, model benchmarking & forecasts
   plot                 Stage 3: Publication-grade 300-DPI visual figure generation
@@ -58,7 +58,7 @@ Common Commands:
   test                 Execute automated unit test suite across pipelines
 
 Examples:
-  # Profile all datasets in 'data/all the data':
+  # Profile all datasets in 'data/':
   python run_pipeline.py catalog
 
   # Cellular pipeline workflows:

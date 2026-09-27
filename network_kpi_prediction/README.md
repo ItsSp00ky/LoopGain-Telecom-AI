@@ -11,8 +11,8 @@ This subsystem contains two independent forecasting pipelines:
 
 | Pipeline | Directory | Purpose | Data Source |
 |----------|-----------|---------|-------------|
-| **3GPP Cellular KPI Forecast** | `cellular_kpi_forecast/` | Multi-band KPI prediction across 6 frequency bands, 10 KPIs, 60 series | `data/all the data/carrier_earfcndl_kpi_daily.csv` |
-| **4G Traffic Volume Forecast** | `traffic_volume_forecast/` | Macro 4G daily traffic volume forecasting with 30-day horizon | `data/all the data/4g_traffic_volume_daily.csv` |
+| **3GPP Cellular KPI Forecast** | `cellular_kpi_forecast/` | Multi-band KPI prediction across 6 frequency bands, 10 KPIs, 60 series | `data/carrier_earfcndl_kpi_daily.csv` |
+| **4G Traffic Volume Forecast** | `traffic_volume_forecast/` | Macro 4G daily traffic volume forecasting with 30-day horizon | `data/4g_traffic_volume_daily.csv` |
 
 ---
 
@@ -25,13 +25,12 @@ network_kpi_prediction/
 ├── run_pipeline.py                        # Root CLI launcher (delegates to sub-pipelines)
 ├── data_catalog.py                        # Data catalog and profiler
 │
-├── data/
-│   └── all the data/                      # Multi-tier cleaned & standardized telemetry assets
-│       ├── 4g_traffic_volume_daily.csv    # 4G daily network traffic volume (264 days)
-│       ├── macro_network_kpis_daily.csv   # Network-wide 4G radio KPIs (363 days)
-│       ├── carrier_earfcndl_kpi_daily.csv # Carrier-level EARFCNDL telemetry (6 bands, 2,065 rows)
-│       ├── erbs_cell_kpi_summer_120d.csv  # Summer 120-day high-density ERBS telemetry (125,779 rows)
-│       └── erbs_cell_kpi_full_year.csv    # Full-year cell-level telemetry (1,067 ERBS, 378,631 rows)
+├── data/                                  # Multi-tier cleaned & standardized telemetry assets
+│   ├── 4g_traffic_volume_daily.csv        # 4G daily network traffic volume (264 days)
+│   ├── macro_network_kpis_daily.csv       # Network-wide 4G radio KPIs (363 days)
+│   ├── carrier_earfcndl_kpi_daily.csv     # Carrier-level EARFCNDL telemetry (6 bands, 2,065 rows)
+│   ├── erbs_cell_kpi_summer_120d.csv      # Summer 120-day high-density ERBS telemetry (125,779 rows)
+│   └── erbs_cell_kpi_full_year.csv        # Full-year cell-level telemetry (1,067 ERBS, 378,631 rows)
 │
 ├── cellular_kpi_forecast/                 # 3GPP Rel-17 Multi-Band Cellular Pipeline (60 Series)
 │   ├── run_cellular.py                    # Pipeline CLI orchestrator
@@ -91,13 +90,13 @@ python run_pipeline.py test
 
 ### Inspect & Profile All Datasets
 ```bash
-# Automated audit & statistical synthesis of all datasets in 'data/all the data/'
+# Automated audit & statistical synthesis of all datasets in 'data/'
 python run_pipeline.py catalog
 ```
 
 ---
 
-## Multi-Tier Telemetry Data Assets (`data/all the data/`)
+## Multi-Tier Telemetry Data Assets (`data/`)
 
 The platform works natively with all 5 telecommunication datasets organized across three structural hierarchy levels:
 

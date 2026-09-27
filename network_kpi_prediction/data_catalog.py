@@ -1,6 +1,6 @@
 """data_catalog.py: Comprehensive Telemetry Data Catalog & Analytical Profiler.
 
-Profiles and inspects all datasets in 'data/all the data',
+Profiles and inspects all datasets in 'data/',
 providing cross-dataset correlation, SLA compliance auditing, and domain summaries.
 """
 
@@ -16,7 +16,7 @@ _DATA_DIR = _PKG_ROOT / "data"
 DATASET_DEFINITIONS = {
     "traffic_volume_daily": {
         "title": "4G Daily Network Accumulated Traffic Volume",
-        "primary_path": _DATA_DIR / "all the data" / "4g_traffic_volume_daily.csv",
+        "primary_path": _DATA_DIR / "4g_traffic_volume_daily.csv",
         "fallback_path": None,
         "granularity": "Daily Network-Wide Aggregate",
         "description": "Macro-level aggregated 4G data volume in GB across all sectors and user equipment.",
@@ -25,7 +25,7 @@ DATASET_DEFINITIONS = {
     },
     "macro_network_kpis": {
         "title": "Macro Network 4G Radio KPIs (Network-Wide)",
-        "primary_path": _DATA_DIR / "all the data" / "macro_network_kpis_daily.csv",
+        "primary_path": _DATA_DIR / "macro_network_kpis_daily.csv",
         "fallback_path": None,
         "granularity": "Daily Network-Wide Aggregate",
         "description": "Macro-level network-wide daily 3GPP radio KPIs covering 7 core metrics across the entire 4G grid.",
@@ -38,7 +38,7 @@ DATASET_DEFINITIONS = {
     },
     "carrier_earfcndl_telemetry": {
         "title": "Carrier-Level (EARFCNDL) 4G Telemetry",
-        "primary_path": _DATA_DIR / "all the data" / "carrier_earfcndl_kpi_daily.csv",
+        "primary_path": _DATA_DIR / "carrier_earfcndl_kpi_daily.csv",
         "fallback_path": None,
         "granularity": "Daily Carrier / Frequency Band (EARFCNDL)",
         "description": "Ground-truth multi-band radio telemetry partitioned by 3GPP EARFCNDL channels (350, 400, 1556, 1700, 3500, 6200 MHz), including manual downtime seconds.",
@@ -52,7 +52,7 @@ DATASET_DEFINITIONS = {
     },
     "erbs_cell_summer_window": {
         "title": "Summer High-Density ERBS Cell Telemetry (120-Day Window)",
-        "primary_path": _DATA_DIR / "all the data" / "erbs_cell_kpi_summer_120d.csv",
+        "primary_path": _DATA_DIR / "erbs_cell_kpi_summer_120d.csv",
         "fallback_path": None,
         "granularity": "Daily Cell / Base Station Node (1,060 ERBS)",
         "description": "Operational summer window dataset spanning 120 days of peak seasonal load across 1,060 physical ERBS nodes.",
@@ -66,7 +66,7 @@ DATASET_DEFINITIONS = {
     },
     "erbs_cell_full_year": {
         "title": "Full-Year ERBS Cell Telemetry (363 Days)",
-        "primary_path": _DATA_DIR / "all the data" / "erbs_cell_kpi_full_year.csv",
+        "primary_path": _DATA_DIR / "erbs_cell_kpi_full_year.csv",
         "fallback_path": None,
         "granularity": "Daily Cell / Base Station Node (1,067 ERBS)",
         "description": "Full-year cell-level telemetry spanning 363 days across 1,067 physical ERBS nodes totaling 378,631 observation records.",
@@ -169,7 +169,7 @@ def profile_dataset(key: str, def_entry: Dict[str, Any]) -> Dict[str, Any]:
         "title": def_entry["title"],
         "category": def_entry["category"],
         "status": "OK",
-        "path": f"data/all the data/{path.name}" if "all the data" in str(path) else path.name,
+        "path": f"data/{path.name}",
         "file_size_bytes": path.stat().st_size,
         "rows": len(df),
         "cols": len(df.columns),
@@ -410,7 +410,7 @@ def generate_catalog_markdown_report(analysis: Dict[str, Any], output_path: Opti
 
 
 if __name__ == "__main__":
-    print("Profiling all datasets in 'data/all the data'...")
+    print("Profiling all datasets in 'data/'...")
     results = analyze_all_datasets()
     out_file = _DATA_DIR / "all_datasets_analysis_report.md"
     generate_catalog_markdown_report(results, out_file)

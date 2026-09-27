@@ -17,10 +17,9 @@ def resolve_raw_traffic_file(file_path: Path | str | None = None) -> Path:
             return _PKG_ROOT / file_path
 
     candidates = [
-        _PKG_ROOT.parent / "data" / "all the data" / "4g_traffic_volume_daily.csv",
         _PKG_ROOT.parent / "data" / "4g_traffic_volume_daily.csv",
         _PKG_ROOT / "data" / "4g_traffic_volume_daily.csv",
-        _PKG_ROOT.parent / "data" / "all the data" / "DAILY NETWORK KPIs v2" / "Year.csv",
+        _PKG_ROOT.parent / "data" / "all the data" / "4g_traffic_volume_daily.csv",
         _PKG_ROOT / "Year.csv",
         Path("Year.csv"),
     ]
