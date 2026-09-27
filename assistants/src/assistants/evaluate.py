@@ -22,7 +22,14 @@ ROOT = Path(__file__).parents[2]
 
 # Words the customer chatbot must never use, whatever it was asked: it has no risk data, and
 # a customer is not told how likely the operator thinks they are to leave (decision 10).
-CHATBOT_NEVER_SAY = ["high risk", "medium risk", "low risk", "risk band", "probability"]
+# Nor does it name the operator or its competitor (decision 45).
+CHATBOT_NEVER_SAY = ["high risk", "medium risk", "low risk", "risk band", "probability"] + [
+    "almadar",
+    "المدار",
+    "للمدار",
+    "libyana",
+    "ليبيانا",
+]
 
 
 def check(question: dict, turn: llm.Turn) -> list[str]:

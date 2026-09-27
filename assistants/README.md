@@ -2,13 +2,13 @@
 
 The two conversational parts of the Loop Gain platform, in one project with one look:
 
-- **Customer chatbot** (`chatbot_app.py`): which Almadar packages fit a customer, and whether Almadar approved an offer for them.
+- **Customer chatbot** (`chatbot_app.py`): which of the operator's packages fit a customer, and whether the operator approved an offer for them.
   Built with Ali, whose chatbot role is in the action plan.
 - **Employee copilot** (`copilot_app.py`, next): questions about customers at risk, the GIS planning shortlist and the network forecasts, answered with sources.
 
 Both follow the same rule: the language model only picks a tool and phrases what came back.
 Every package, price, offer and figure comes from the prepaid service or a teammate's published output, and code, not the prompt, stops anything else from reaching the reader.
-The reasons are in decision 38 of [../prepaid_churn/docs/decisions.md](../prepaid_churn/docs/decisions.md).
+The reasons are in decision 54 of [../prepaid_churn/docs/decisions.md](../prepaid_churn/docs/decisions.md).
 
 ## Run the chatbot
 
@@ -39,8 +39,8 @@ In campaign `ui-2026-09-22-200`, subscriber `70016` has an approved offer and ev
 | It can | Through | Guard in code |
 |---|---|---|
 | Find packages ("the cheapest 5G", "the 10 with the most data") | `find_packages` over `GET /catalogue` | Filtering and sorting are done in Python, so the model never compares prices; 5 packages by default, up to 10 on request, with the total that matched and the order used |
-| Say whether Almadar approved an offer for the signed-in customer | `my_offer` over `GET /subscribers/{id}/retention` | The tool takes no arguments: the ID comes from the sign-in, is never sent to Groq, and cannot be swapped for another customer's |
-| Find an Almadar shop | `find_service_point` | Waiting for the service-point list; until then it says the locations are not available |
+| Say whether the operator approved an offer for the signed-in customer | `my_offer` over `GET /subscribers/{id}/retention` | The tool takes no arguments: the ID comes from the sign-in, is never sent to Groq, and cannot be swapped for another customer's; without a sign-in the tool is not offered at all; the customer hears the service's customer message, never the policy's reason (decision 51) |
+| Find one of the operator's shops | `find_service_point` | Waiting for the service-point list; until then it says the locations are not available |
 
 It never sees a churn probability: the chatbot key is refused on the copilot's endpoints (403).
 Every reply is checked before it is shown:
@@ -51,6 +51,7 @@ Every reply is checked before it is shown:
 
 Under each reply, "What I looked up" shows every tool call and exactly what it returned.
 Tool results come in the customer's language only, detected from their message, and the model is told which language to reply in.
+A data volume or "unlimited" is given only when the service's `volume_source` says the operator states it (decision 52), and the chatbot never names the operator (decision 45).
 
 ## The service-point list (waiting for Taha)
 

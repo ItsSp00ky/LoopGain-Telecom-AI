@@ -1,6 +1,6 @@
 # The one theme both assistants share: the Loop Gain palette of the team's GIS demo page
 # (antenna_cell_placement/integrated_release/index.html). Both apps run from this folder,
-# so this file styles the chatbot and the copilot alike (decision 38).
+# so this file styles the chatbot and the copilot alike (decision 54).
 
 [theme]
 base = "light"

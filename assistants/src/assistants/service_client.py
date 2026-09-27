@@ -81,7 +81,7 @@ def health(base_url: str) -> dict:
 
 
 def catalogue(base_url: str, chatbot_key: str) -> list[dict]:
-    """Every Almadar package the chatbot may talk about (T16)."""
+    """Every operator package the chatbot may talk about (T16)."""
     return get(base_url, "/catalogue", chatbot_key)["offers"]
 
 
@@ -133,10 +133,8 @@ def offer_sentence(offer: dict | None) -> str:
     """
     if offer is None:
         return "No approved offer [404]: say there is nothing today, and offer nothing else."
-    package = offer.get("offer") or {}
-    name = package.get("name_ar") or package.get("name_en") or offer["recommended_offer_id"]
-    reason = offer.get("offer_reason_ar") or offer.get("offer_reason_en") or ""
-    return f"{reason} [offer_reason_ar] - {name} [offer.name_ar]"
+    # The customer message, never the policy's reason, which is for staff (decision 51).
+    return f"{offer['customer_message_ar']} [customer_message_ar]"
 
 
 @dataclass

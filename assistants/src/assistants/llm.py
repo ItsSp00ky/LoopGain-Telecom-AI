@@ -15,7 +15,7 @@ from assistants.grounding import has_phone_number, ungrounded
 from assistants.service_client import ServiceError
 
 # Groq shut down Llama 3.3 70B for free accounts on 2026-08-16 and named GPT-OSS 120B as
-# its replacement; it is a production model with tool use (decision 38).
+# its replacement; it is a production model with tool use (decision 54).
 MODEL = "openai/gpt-oss-120b"
 
 # Enough for "look something up, then look up one more thing"; a model still calling tools

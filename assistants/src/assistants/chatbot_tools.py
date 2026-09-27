@@ -1,4 +1,4 @@
-"""The customer chatbot's tools, its system prompt and its safe answers (decision 38).
+"""The customer chatbot's tools, its system prompt and its safe answers (decision 54).
 
 Three tools, and each one is shaped so the model cannot do the wrong thing with it:
 `find_packages` filters and sorts in code, so the model never compares prices;
@@ -17,36 +17,37 @@ from assistants.language import is_arabic
 from assistants.llm import Complete, Tool, ToolCall, Turn, run_turn
 
 SYSTEM_PROMPT = """\
-You are the customer assistant of Almadar Aljadid, a mobile operator in Libya, for prepaid \
-customers. This is the Loop Gain capstone demo.
+You are the customer assistant of a Libyan mobile operator, for prepaid customers. \
+This is the Loop Gain capstone demo.
 
 You can only answer through your tools:
-- find_packages: the Almadar packages on sale, filtered and sorted for you.
-- my_offer: the one offer, if any, that Almadar approved for the signed-in customer.
-- find_service_point: Almadar shops and service points.
+- find_packages: the operator's packages on sale, filtered and sorted for you.
+- my_offer: the one offer, if any, that the operator approved for the signed-in customer.
+- find_service_point: the operator's shops and service points.
 
 Rules:
 1. Every package, price, volume, time and offer you mention must come from a tool result in \
 this conversation. Never invent or estimate a number. Copy numbers exactly as the tool wrote \
 them, without converting units.
 2. You never set, change or negotiate an offer or a price, and you never promise a discount. \
-If asked, say you cannot, and that offers come only from Almadar.
+If asked, say you cannot, and that offers come only from the operator.
 3. Call my_offer when the customer asks whether there is an offer, a gift or anything for \
 them. If it returns no offer, say there is nothing for them today, and do not offer something \
 else in its place.
-4. An offer from my_offer is a bonus Almadar grants. Never present it as something to buy and \
-never give it a price.
+4. An offer from my_offer is a bonus the operator grants. Tell the customer its message as \
+given. Never present it as something to buy and never give it a price.
 5. You only know the signed-in customer's own account. When asked about another customer or \
 another number, say you can only check the customer's own account. Never ask for or repeat \
 a phone number.
 6. Never talk about how likely a customer is to leave, risk or churn. You do not have that \
 information.
 7. For balance, bills, recharges, technical faults or anything your tools cannot answer, say \
-you cannot help with that here and suggest Almadar customer service. Never invent a phone \
+you cannot help with that here and suggest the operator's customer service. Never invent a phone \
 number, a website or an address.
 8. If a tool returns an error, say the service is not available right now. Never guess.
-The operator is Almadar in English and المدار in Arabic; never write its name in Latin \
-letters inside an Arabic reply.
+Never name the operator: call it "the operator" in English and "المشغل" in Arabic.
+Give a data volume or unlimited data only as a tool states it; when it says the volume is \
+not stated, say that.
 9. Reply in the customer's language, Arabic (Libyan dialect is fine) or English. Tool results \
 are already in that language: use the names as given, each package name in bold. Keep \
 replies short. Use bullet points, never numbered lists.
@@ -131,18 +132,29 @@ def _validity(row: dict, arabic: bool) -> str | None:
 
 def package_view(row: dict, arabic: bool, with_price: bool = True) -> dict:
     """One catalogue row as the model sees it, in one language: name, what it gives, dates."""
-    unlimited, gigabytes, minutes, unstated = (
-        ("غير محدود", "جيجا", "دقيقة", "الحجم غير محدد من المدار")
+    unlimited, gigabytes, minutes, unstated, by_name = (
+        ("غير محدود", "جيجا", "دقيقة", "الحجم غير محدد من المشغل", "حسب اسم الباقة")
         if arabic
-        else ("unlimited", "GB", "minutes", "volume not stated by Almadar")
+        else (
+            "unlimited",
+            "GB",
+            "minutes",
+            "volume not stated by the operator",
+            "from the package name",
+        )
     )
-    if row.get("data_unlimited"):
+    # Only the operator's own table is its promise (decision 52): a volume read from the
+    # package name says so, and one reported by an earlier branch is not given at all.
+    source = _volume_source(row)
+    if source == "stated" and row.get("data_unlimited"):
         data = unlimited
-    elif row.get("data_gb"):
+    elif source == "stated" and row.get("data_gb"):
         data = f"{_number(row['data_gb'])} {gigabytes}"
+    elif source == "name" and row.get("data_gb"):
+        data = f"{_number(row['data_gb'])} {gigabytes}{'، ' if arabic else ', '}{by_name}"
     else:
-        # Every package on sale carries data; a missing volume means the operator does not
-        # state it (the Social packages), and an empty field reads as "no data".
+        # Every package on sale carries data; a volume the operator does not state would
+        # read as "no data" if the field were left empty.
         data = unstated
     if row.get("voice_unlimited"):
         voice = unlimited
@@ -175,6 +187,19 @@ def package_view(row: dict, arabic: bool, with_price: bool = True) -> dict:
     if not with_price:
         del view["price"]
     return view
+
+
+def _volume_source(row: dict) -> str:
+    """Where the row's data volume comes from; rows from before decision 52 count as stated."""
+    return row.get("volume_source") or "stated"
+
+
+def _data_rank(row: dict) -> tuple:
+    """Most data first, counting only volumes the operator states or the name gives."""
+    source = _volume_source(row)
+    unlimited = source == "stated" and bool(row.get("data_unlimited"))
+    known = row.get("data_gb") if source in ("stated", "name") else None
+    return (not unlimited, -(known or 0))
 
 
 def _gives(row: dict, what: str) -> bool:
@@ -211,7 +236,7 @@ def find_packages(
         rows = [row for row in rows if row["price_lyd"] <= limit]
 
     if sort == "most_data":
-        rows.sort(key=lambda row: (not row.get("data_unlimited"), -(row.get("data_gb") or 0)))
+        rows.sort(key=_data_rank)
         order = "most data first"
     elif sort == "longest":
         rows.sort(key=lambda row: (-(row.get("validity_hours") or 0), row["price_lyd"]))
@@ -248,19 +273,21 @@ def my_offer(
     # never receives them.
     return {
         "offer": {
-            "reason": offer.get("offer_reason_ar" if arabic else "offer_reason_en"),
+            # What the customer is told, from the service (decision 51); the policy's reason
+            # is for staff and never reaches the model.
+            "message": offer.get("customer_message_ar" if arabic else "customer_message_en"),
             "package": package_view(
                 offer.get("offer") or {"offer_id": offer["recommended_offer_id"]},
                 arabic,
                 with_price=False,
             ),
-            "note": "A bonus Almadar grants. The customer does not pay for it.",
+            "note": "A bonus the operator grants. The customer does not pay for it.",
         }
     }
 
 
 def find_service_point(city: str | None = None) -> dict:
-    """Waiting for Taha's list of service points (TICKETS T22)."""
+    """Waiting for Taha's list of service points (TICKETS T24)."""
     return {
         "available": False,
         "say": "Service point locations are not available in this assistant yet.",
@@ -282,7 +309,7 @@ def build_tools(
     tools = [
         Tool(
             "find_packages",
-            "Find Almadar packages on sale. Every argument is optional.",
+            "Find the operator's packages on sale. Every argument is optional.",
             {
                 "type": "object",
                 "properties": {
@@ -318,7 +345,7 @@ def build_tools(
         ),
         Tool(
             "find_service_point",
-            "Almadar shops and service points in a city.",
+            "The operator's shops and service points in a city.",
             {"type": "object", "properties": {"city": {"type": ["string", "null"]}}},
             find_service_point,
         ),
@@ -330,7 +357,7 @@ def build_tools(
             1,
             Tool(
                 "my_offer",
-                "The offer Almadar approved for the signed-in customer, if there is one.",
+                "The offer the operator approved for the signed-in customer, if there is one.",
                 {"type": "object", "properties": {}},
                 partial(my_offer, base_url, chatbot_key, subscriber_id, arabic, client),
             ),
@@ -391,7 +418,7 @@ def fallback(calls: list[ToolCall], user_text: str) -> str:
                 return result["say"]
             if offer is None:
                 return "لا يوجد عرض لك اليوم." if arabic else "There is no offer for you today."
-            return f"{offer['reason']} - {offer['package']['name']}"
+            return offer["message"]
         if call.name == "find_service_point":
             if arabic:
                 return "مواقع نقاط الخدمة غير متاحة في هذا المساعد بعد."
@@ -403,9 +430,9 @@ def fallback(calls: list[ToolCall], user_text: str) -> str:
             return "\n".join(lines)
     if arabic:
         return (
-            "لا أستطيع الإجابة على هذا هنا. للرصيد والفواتير والأعطال، تواصل مع خدمة عملاء المدار."
+            "لا أستطيع الإجابة على هذا هنا. للرصيد والفواتير والأعطال، تواصل مع خدمة عملاء المشغل."
         )
     return (
         "I can't answer that here. For your balance, bills or technical problems, please "
-        "contact Almadar customer service."
+        "contact the operator's customer service."
     )

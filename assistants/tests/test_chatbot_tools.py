@@ -11,7 +11,7 @@ from assistants.service_client import ServiceError
 def row(offer_id, price, hours, name_en, **fields):
     base = {
         "offer_id": offer_id,
-        "operator": "Almadar Aljadid",
+        "operator": "Libyan mobile operator",
         "name_ar": f"ar {name_en}",
         "name_en": name_en,
         "family_en": "Family",
@@ -51,8 +51,12 @@ CATALOGUE = [
 OFFER = {
     "subscriber_id": "70016",
     "recommended_offer_id": "SABAH_1",
-    "offer_reason_en": "Catalogue bonus: Morning (06:00-11:00).",
-    "offer_reason_ar": "مكافأة من الكتالوج: الصبح (06:00-11:00).",
+    "customer_message_ar": "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم.",
+    "customer_message_en": (
+        "Your gift: Morning, unlimited internet and calls from 06:00 to 11:00 for a day."
+    ),
+    "offer_reason_en": "Catalogue bonus: Morning (06:00-11:00); positive value.",
+    "offer_reason_ar": "مكافأة من الكتالوج: الصبح (06:00-11:00)؛ قيمة موجبة.",
     "reviewed_at": "2026-09-22T10:00:00+00:00",
     "campaign_id": "abc123",
     "offer": CATALOGUE[4],
@@ -122,7 +126,9 @@ def test_my_offer_hides_the_ids_and_the_price():
     text = json.dumps(result, ensure_ascii=False)
     assert "70016" not in text and "abc123" not in text
     assert "price" not in result["offer"]["package"]
-    assert result["offer"]["reason"] == OFFER["offer_reason_ar"]
+    assert result["offer"]["message"] == OFFER["customer_message_ar"]
+    # The policy's reason is for staff (decision 51) and never reaches the model.
+    assert "قيمة موجبة" not in text and "reason" not in text
 
 
 def test_no_offer_and_no_sign_in_say_so():
@@ -163,8 +169,8 @@ def test_fallback_uses_only_tool_data_in_the_customers_language():
     offer_ar = ToolCall("my_offer", {}, my_offer("u", "k", "70016", True, client))
     offer = ToolCall("my_offer", {}, my_offer("u", "k", "70016", False, client))
     arabic = fallback([offer_ar], "في عرض ليا؟")
-    assert arabic == "مكافأة من الكتالوج: الصبح (06:00-11:00). - ar Morning"
-    assert fallback([offer], "any offer?") == "Catalogue bonus: Morning (06:00-11:00). - Morning"
+    assert arabic == OFFER["customer_message_ar"]
+    assert fallback([offer], "any offer?") == OFFER["customer_message_en"]
     none = ToolCall("my_offer", {}, {"offer": None, "say": "..."})
     assert fallback([none], "any offer?") == "There is no offer for you today."
     packages = ToolCall("find_packages", {}, find_packages(CATALOGUE, network="5G"))
@@ -199,7 +205,7 @@ def test_the_bound_language_reaches_both_tools():
     client = FakeClient(offer=OFFER)
     tools = {tool.name: tool for tool in build_tools("u", "k", "70016", True, client)}
     assert tools["find_packages"].run(needs="voice")["packages"][0]["name"] == "ar Morning"
-    assert tools["my_offer"].run()["offer"]["reason"] == OFFER["offer_reason_ar"]
+    assert tools["my_offer"].run()["offer"]["message"] == OFFER["customer_message_ar"]
 
 
 def test_validity_and_amounts_read_naturally_in_each_language():
@@ -256,8 +262,8 @@ def test_prices_are_written_in_the_reply_language():
 
 def test_an_unstated_volume_is_not_called_no_data():
     social = {row["offer_id"]: row for row in CATALOGUE}["SOC_M"]
-    assert chatbot_tools.package_view(social, False)["data"] == "volume not stated by Almadar"
-    assert chatbot_tools.package_view(social, True)["data"] == "الحجم غير محدد من المدار"
+    assert chatbot_tools.package_view(social, False)["data"] == "volume not stated by the operator"
+    assert chatbot_tools.package_view(social, True)["data"] == "الحجم غير محدد من المشغل"
 
 
 def test_not_signed_in_asks_to_sign_in_instead_of_saying_no_offer():
@@ -268,8 +274,10 @@ def test_not_signed_in_asks_to_sign_in_instead_of_saying_no_offer():
     assert "no offer" not in fallback([call], "any offer?").casefold()
 
 
-def test_the_prompt_names_the_operator_in_each_language():
-    assert "Almadar in English and المدار in Arabic" in chatbot_tools.SYSTEM_PROMPT
+def test_the_prompt_never_names_the_operator():
+    assert "Never name the operator" in chatbot_tools.SYSTEM_PROMPT
+    for name in ("Almadar", "المدار", "Libyana"):
+        assert name not in chatbot_tools.SYSTEM_PROMPT
 
 
 def test_another_account_number_is_noticed_in_code():
@@ -302,3 +310,23 @@ def test_the_code_says_it_only_checks_the_own_account():
     arabic = chatbot_tools.answer("شن عرض 70016؟", [], "70017", "u", "k", complete, client)
     assert arabic.reply.startswith(chatbot_tools.OTHER_ACCOUNT_NOTICE[True])
     assert client.asked == [("u", "k", "70017")] * 3
+
+
+def test_a_volume_is_given_only_when_the_operator_states_it():
+    """Decision 52: a volume from the name says so, and a reported one is not given."""
+    stated = row("MO_20", 35.0, 720, "Net 20", data_gb=20.0, volume_source="stated")
+    from_name = row("MO_20", 35.0, 720, "Net 20", data_gb=20.0, volume_source="name")
+    reported = row("SLVR_1", 8.0, 24, "Silver 1", data_unlimited=True, volume_source="reported")
+    assert chatbot_tools.package_view(stated, False)["data"] == "20 GB"
+    assert chatbot_tools.package_view(from_name, False)["data"] == "20 GB, from the package name"
+    assert chatbot_tools.package_view(from_name, True)["data"] == "20 جيجا، حسب اسم الباقة"
+    assert chatbot_tools.package_view(reported, True)["data"] == "الحجم غير محدد من المشغل"
+
+
+def test_most_data_counts_only_volumes_the_operator_or_the_name_gives():
+    catalogue = [
+        row("SLVR_7", 40.0, 168, "Silver 7", data_unlimited=True, volume_source="reported"),
+        row("WK_2", 8.0, 168, "Net 2", data_gb=2.0, volume_source="name"),
+        row("GOLD_7", 50.0, 168, "Golden 7", data_unlimited=True, volume_source="stated"),
+    ]
+    assert ids(find_packages(catalogue, sort="most_data")) == ["GOLD_7", "WK_2", "SLVR_7"]

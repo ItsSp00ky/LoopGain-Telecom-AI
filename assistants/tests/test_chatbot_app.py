@@ -34,7 +34,7 @@ def model(monkeypatch):
         seen.append(messages)
         if messages[-1]["role"] == "user":
             return ModelReply(None, [ToolRequest("1", "my_offer", "{}")])
-        return ModelReply(OFFER["offer_reason_en"])
+        return ModelReply(OFFER["customer_message_en"])
 
     monkeypatch.setattr(llm, "groq_complete", lambda api_key=None: complete)
     return seen
@@ -46,7 +46,7 @@ def test_the_app_refuses_to_start_without_its_keys(monkeypatch, service):
     app = AppTest.from_file(APP).run()
     assert not app.exception
     assert "PREPAID_CHURN_CHATBOT_KEY and GROQ_API_KEY" in app.error[0].value
-    assert app.title[0].value == "Almadar packages and offers"
+    assert app.title[0].value == "Packages and offers"
 
 
 def test_a_signed_in_customer_gets_their_approved_offer(monkeypatch, service, model):
@@ -58,7 +58,7 @@ def test_a_signed_in_customer_gets_their_approved_offer(monkeypatch, service, mo
     assert not app.exception
     assert service == [("chatbot-key-for-tests", "70016")]
     replies = [m for m in app.chat_message if m.name == "assistant"]
-    assert replies[0].markdown[0].value == OFFER["offer_reason_en"]
+    assert replies[0].markdown[0].value == OFFER["customer_message_en"]
     panels = [c for c in replies[0].children.values() if c.type == "status"]
     assert panels[0].label.startswith("What I looked up (1)")
     # The model never received the subscriber ID.

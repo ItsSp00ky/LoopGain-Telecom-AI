@@ -56,7 +56,7 @@ The repository is organized into four modular AI subsystems:
 
 ### 2. [Customer Chatbot & Employee Copilot](assistants/)
 - **Status**: **Customer chatbot built; employee copilot next**
-- **Objective**: Two assistants in one look. The customer chatbot answers which Almadar packages fit a prepaid customer and whether Almadar approved an offer for them; the employee copilot will answer questions about customers at risk, the GIS shortlist and the network forecasts, with sources.
+- **Objective**: Two assistants in one look. The customer chatbot answers which of the operator's packages fit a prepaid customer and whether the operator approved an offer for them; the employee copilot will answer questions about customers at risk, the GIS shortlist and the network forecasts, with sources.
 - **Grounding**: The language model only picks a tool and phrases what came back; code checks every reply, so no price, offer or figure appears that a tool did not return.
 - **Documentation**: See [`assistants/README.md`](assistants/README.md).
 

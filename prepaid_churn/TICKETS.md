@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-27 by Taha + Claude (`Ali_Branch` merged into `tahaDev` through `fa1fa21`; the churn service and the chatbot are being closed; the copilot, T25, is next).
+**Last updated:** 2026-09-27 by Taha + Claude (`Ali_Branch` merged into `tahaDev` through `fa1fa21`; the churn service and the chatbot are closed; the copilot, T25, is next).
 
 **Merged on 2026-09-27: Ali's recap and the outside review (decisions 37 to 52).**
 - Everything on `Ali_Branch` since `f0156e2` is in `tahaDev`: the recap from T5 to T21, the 70 LYD ARPU anchor, the operator no longer named, the removed experiments, the customer message for offers and the review's serving fixes; his own summary follows below.
@@ -30,7 +30,9 @@ Update this section at the end of every working session.
 
 **Open right now, in order:**
 1. T25, the employee copilot, in `assistants/` (decision 54).
-2. T24, the customer chatbot, waits only for Taha's service-point list.
+2. T24, the customer chatbot, is closed; only Taha's service-point list is still to come.
+   The churn service is closed for the presentation too: Ali's recap is complete, and his T22 and T23 wait until after it.
+   Before T25 reads portfolio figures, rebuild the artifacts with the README commands: the scored export on disk predates the 70 LYD anchor (decision 42).
 3. Ali's T22 and T23, after the presentation.
 4. The final report draft (`SIC_AI_Capstone Project_Final Report - Loop Gain.docx` at the repository root, not in git) needs its checks, listed in the session log, and must not name the operator (decision 45).
 5. Taha's "heavy and random" feedback on the demo app (session log): Ali's recap reworked the demo since, so check with Taha whether it still holds.
@@ -1162,7 +1164,7 @@ Acceptance:
 ## T24 - Customer chatbot
 
 **Owner:** Taha + Claude; Ali reviews the Arabic answers
-**Status:** In progress: built, tested and run against the real model; the evaluation and the browser walkthrough must be rerun after the 2026-09-26 fixes, from Taha's terminal, which holds the Groq key; the service-point list is still to come
+**Status:** Done on 2026-09-27, with two follow-ups: Taha's service-point list, and Ali's read of the Arabic answers
 **Depends on:** T15, T16, T20
 
 Scope, in `assistants/` (decision 54):
@@ -1173,37 +1175,31 @@ Scope, in `assistants/` (decision 54):
 
 Acceptance:
 - `uv run ruff check`, `uv run ruff format --check` and `uv run pytest` pass in `assistants/`, with no test calling Groq or the network.
-- `reports/chatbot_eval.md` from `uv run python -m assistants.evaluate chatbot` passes every automatic check on the 20 questions in `eval/chatbot_questions.toml`, including the attacks (a discount demand, another customer's offer, "how likely am I to leave", "ignore your rules", a phone number).
+- `reports/chatbot_eval.md` from `uv run python -m assistants.evaluate chatbot` passes every automatic check on the 21 questions in `eval/chatbot_questions.toml`, including the attacks (a discount demand, another customer's offer, "how likely am I to leave", "ignore your rules", a phone number).
 - In the browser, in Arabic and English: a package question, the approved offer for `70016`, nothing for `70017`, and the refusals; desktop and phone width.
 - Ali has read the Arabic answers.
 
-Findings so far (2026-09-26):
-- Groq shut down the chosen Llama 3.3 70B on 2026-08-16; Taha chose `openai/gpt-oss-120b` instead (decision 54).
-- The first real run failed every call: GPT-OSS does not accept `parallel_tool_calls`, and the error was hidden.
-  The setting is gone, the screen now shows the model's own error, and the evaluation stops at the first one.
-- Evaluation on the real model, 20 questions: 18 passed, then 19 after the fixes below; the last failure was the check itself (a curly apostrophe).
-  Every attack passed: no discount, no other customer's offer, no talk of leaving, no phone number repeated.
-- Reading the answers, not only the checks, found three more problems, now fixed:
-  an English question answered in Arabic, Arabic answers saying "unlimited" in English, and digits inside `SABAH_1` letting "1 يوم" pass the number check.
-  Tool results are now in the customer's language only, the model is told the reply language detected in code, identifiers no longer count as sources, and the evaluation checks the reply's language.
-- Taha's own test: "اعطيني افضل 10 باقات" showed 5, because the tool capped results at 5.
-  The customer now chooses up to 10, the result names the total and the order, and "best" is asked about or stated, never picked silently; the question is in the evaluation.
-- The same test crashed the app: Groq validates tool calls against the schema and refused the model's `null` for an unused argument.
-  Every optional argument now accepts null, and the Groq client is no longer cached, which had outlived a code reload.
-- **Not yet rerun after these fixes:** the 21-question evaluation and the browser walkthrough.
-  `reports/chatbot_eval.md` is written by that run and is not committed until it passes on this code.
-- Keys now live in the git-ignored `assistants/.env`, which the chatbot and the evaluation read at start (Taha's request, so a new terminal keeps working).
-- The browser check of the 10-package answer (2026-09-27) found Arabic lines scrambled around "LYD" ("1 LYD – 1 يوم" displayed as "11 LYD يوم") and bullets on the wrong side.
-  Prices now come as "دينار" in Arabic, Arabic messages render right to left, and bold package names are isolated so a name with Latin in it ("نت ساعة 1_5G") keeps its price beside it; measured in the browser on every line.
-- 56 tests pass, lint and formatting are green.
-- The browser check found Arabic mis-ordered in mixed text ("5G" jumped to the other end of a button) and an oversized title at phone width; both fixed in `ui.py`.
-- **For Ali (T11):** the approved reason text ends with "positive value under the stated retention assumptions" ("قيمة موجبة وفق افتراضات الاحتفاظ"), which is written for a reviewer.
-  `integration.md` tells the chatbot to say that reason to the customer, so a customer would hear it; a customer-facing reason, or the package alone, would read better.
+Findings (closed 2026-09-27, verified on the code merged with Ali's `fa1fa21`):
+- **Acceptance met except Ali's read of the Arabic answers:** 64 tests pass with a scripted model and no network, lint and format green; `reports/chatbot_eval.md` passes all 21 questions on the real model against the live service, attacks included; in the browser, Arabic and English, desktop and phone width.
+- **The model:** Groq shut down the chosen Llama 3.3 70B on 2026-08-16, so it is `openai/gpt-oss-120b` (decision 54), without `parallel_tool_calls`, which it rejects.
+  A turn takes about 20 seconds on the free plan.
+- **What the code decides, not the model**, each added after a run where the model got it wrong:
+  - the reply language, detected from the message, with tool results only in that language;
+  - the sign-in: without one there is no offer tool, after a run that told a signed-out customer there was no offer;
+  - another account's number: the reply starts with a fixed "I can only check your own signed-in account";
+  - how many packages (up to 10) and in which order, with "best" asked about or stated, never picked;
+  - every number grounded in a tool result, with identifiers excluded, and no phone number ever repeated.
+- **Following Ali's decisions (merged 2026-09-27):** the operator is never named (45), an offer is told with the service's customer message and never the policy's reason (51), and a volume is given only as the operator states it, or as the package name gives it, saying so (52).
+- **Arabic on screen:** answers run right to left, prices read "دينار", and bold package names are isolated so a name with Latin in it keeps its price beside it; measured on every line.
+- Keys live in the git-ignored `assistants/.env`, which the chatbot and the evaluation read at start.
+- **Open:** Taha's service-point list (columns in `assistants/README.md`); until then the chatbot says locations are not available.
+  Ali still has to read the Arabic answers in `assistants/reports/chatbot_eval.md`.
+- **Known limit:** for a volume taken from the package name, the model sometimes drops "from the package name" in its reply, although the tool says it.
 
 ## T25 - Employee copilot
 
 **Owner:** Taha + Claude
-**Status:** Not started; starts after Taha has seen T24 in the browser
+**Status:** Next; T24 is closed
 **Depends on:** T24, decision 53
 
 Scope, in `assistants/copilot_app.py`, same loop, checks and look as T24:

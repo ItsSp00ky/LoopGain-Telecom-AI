@@ -1,4 +1,4 @@
-"""The customer chatbot: Almadar packages, and the offer approved for the signed-in customer.
+"""The customer chatbot: the operator's packages, and the offer approved for the signed-in customer.
 
 Run from this folder: `uv run streamlit run chatbot_app.py`; the keys come from `.env`.
 It reads only the chatbot key, so it cannot reach a churn probability even by mistake.
@@ -18,7 +18,7 @@ EXAMPLES = [
     "شن أرخص باقة نت 5G؟",
     "Is there an offer for me today?",
     "نبي باقة فيها مكالمات",
-    "Where is the nearest Almadar shop in Tripoli?",
+    "Where is your nearest shop in Tripoli?",
 ]
 
 
@@ -30,8 +30,8 @@ def _new_conversation(subscriber: str) -> None:
 
 ui.page(
     "CUSTOMER ASSISTANT",
-    "Almadar packages and offers",
-    "Ask which packages fit you, or whether Almadar has an offer waiting for you.",
+    "Packages and offers",
+    "Ask which packages fit you, or whether there is an offer waiting for you.",
     ":material/support_agent:",
 )
 
@@ -67,8 +67,8 @@ if missing:
     st.stop()
 
 ui.note(
-    "Answers come only from Almadar's catalogue and the offers Almadar approved. "
-    "For balance, bills or faults, contact Almadar customer service."
+    "Answers come only from the operator's catalogue and the offers it approved. "
+    "For balance, bills or faults, contact the operator's customer service."
 )
 
 turns = iter(st.session_state.turns)
