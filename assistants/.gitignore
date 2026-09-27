@@ -1,0 +1,2 @@
+# Holds the Groq key and the service keys; never commit it. `.env.example` lists what goes in.
+.env

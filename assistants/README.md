@@ -12,24 +12,26 @@ The reasons are in decision 38 of [../prepaid_churn/docs/decisions.md](../prepai
 
 ## Run the chatbot
 
-It talks to the prepaid service, so start that first, from `prepaid_churn/`, with two long random keys:
+The settings live in `.env` in this folder, which is git-ignored, so they survive a new terminal.
+Copy `.env.example` to `.env` once and fill it in: your Groq key, and two long random keys for the prepaid service.
+A variable already set in the terminal wins over the file.
+
+The chatbot talks to the prepaid service, so start that first, from `prepaid_churn/`, with the same two service keys in its environment (it does not read this folder's `.env`):
 
 ```bash
-export PREPAID_CHURN_CHATBOT_KEY="<a long random string>"
-export PREPAID_CHURN_COPILOT_KEY="<a different long random string>"
+export PREPAID_CHURN_CHATBOT_KEY="<the chatbot key from .env>"
+export PREPAID_CHURN_COPILOT_KEY="<the copilot key from .env>"
 uv run churn serve --campaign-dir artifacts/campaigns/ui-2026-09-22-200
 ```
 
-Then, from this folder, with the same chatbot key and your own Groq key:
+Then, from this folder:
 
 ```bash
-export GROQ_API_KEY="<your key from console.groq.com>"
 uv sync
 uv run streamlit run chatbot_app.py
 ```
 
-On Windows PowerShell, set each variable with `$env:NAME = "..."` instead of `export`.
-`PREPAID_CHURN_URL` points at another service address; the default is `http://127.0.0.1:8000`.
+On Windows PowerShell, set a variable with `$env:NAME = "..."` instead of `export`.
 In campaign `ui-2026-09-22-200`, subscriber `70016` has an approved offer and every other subscriber has none.
 
 ## What the chatbot can and cannot do
@@ -81,7 +83,7 @@ uv run pytest
 The tests use hand-made data and a scripted model; nothing calls Groq or the network.
 `tests/test_service_client.py` fails if `src/assistants/service_client.py` stops being an exact copy of the prepaid module's example client.
 
-To ask the real model the evaluation questions in `eval/chatbot_questions.toml` and write `reports/chatbot_eval.md`, with the service running and both keys set:
+To ask the real model the evaluation questions in `eval/chatbot_questions.toml` and write `reports/chatbot_eval.md`, with the service running and `.env` filled in:
 
 ```bash
 uv run python -m assistants.evaluate chatbot

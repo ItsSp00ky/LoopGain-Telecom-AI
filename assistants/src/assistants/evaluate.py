@@ -16,7 +16,7 @@ import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
-from assistants import chatbot_tools, llm, service_client
+from assistants import chatbot_tools, env, llm, service_client
 
 ROOT = Path(__file__).parents[2]
 
@@ -135,6 +135,7 @@ def run_chatbot(base_url: str, pause: float) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    env.load()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("assistant", choices=["chatbot"])
     parser.add_argument(

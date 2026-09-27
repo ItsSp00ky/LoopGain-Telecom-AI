@@ -1,6 +1,6 @@
 """The customer chatbot: Almadar packages, and the offer approved for the signed-in customer.
 
-Run from this folder: `uv run streamlit run chatbot_app.py`.
+Run from this folder: `uv run streamlit run chatbot_app.py`; the keys come from `.env`.
 It reads only the chatbot key, so it cannot reach a churn probability even by mistake.
 """
 
@@ -8,8 +8,9 @@ import os
 
 import streamlit as st
 
-from assistants import chatbot_tools, llm, ui
+from assistants import chatbot_tools, env, llm, ui
 
+env.load()
 BASE_URL = os.environ.get("PREPAID_CHURN_URL", "http://127.0.0.1:8000")
 CHATBOT_KEY = os.environ.get("PREPAID_CHURN_CHATBOT_KEY", "")
 
