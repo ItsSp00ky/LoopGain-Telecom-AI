@@ -69,6 +69,8 @@ Every example in this guide was captured on 2026-09-27 from the real service, ho
 
 `status` is `ok` only when the bundle predicts and there is a portfolio to summarise.
 `degraded` means an output is missing or invalid, or approved offers have been withheld after leaving the current catalogue; `problems` explains why.
+The portfolio counts as invalid when a probability is outside 0 to 1, a risk band or value tier is unknown, or it was scored by another model than the one loaded, or by any model while none is loaded.
+The copilot's endpoints then answer 503 rather than serve numbers under the wrong label (decision 52).
 An endpoint needing a missing output answers 503; a withheld offer answers 404, like any other unavailable offer.
 The campaign is read again whenever a reviewer approves an offer, so a new approval is served on your next request without a restart, and `approved_offers` goes up when it lands.
 `campaign_id` tells you which campaign you are looking at.
@@ -121,6 +123,10 @@ Two calls, and nothing invented between them.
   "validity_hours": 1.0,
   "data_gb": null,
   "data_unlimited": true,
+  "volume_source": "reported",
+  "max_download_mbps": null,
+  "max_upload_mbps": null,
+  "members": null,
   "voice_minutes": null,
   "voice_unlimited": false,
   "network": "5G",
@@ -131,6 +137,11 @@ Two calls, and nothing invented between them.
 ```
 
 `data_gb` is null when the package states no volume; `data_unlimited` says which of the two it is.
+`volume_source` says where that comes from: `stated` in the operator's own table, read from the package `name`, `reported` by an earlier branch, or `none`.
+Tell a customer a volume or unlimited data only when it is `stated`; otherwise give the package name, which is the operator's own words (decision 52).
+This row is `reported`: the operator's table does not say that the hourly 5G package is unlimited.
+All the rows come from the operator's official website; `volume_source` is about what that material states, not where it was found.
+`max_download_mbps`, `max_upload_mbps` and `members` are limits that go with the package: a speed cap, and the lines sharing a family package.
 `collected` is when that row was read from the operator's material, because prices change and a stale price quoted to a customer is a complaint.
 
 `GET /subscribers/70008/retention` returns the approved offer:
@@ -145,7 +156,7 @@ Two calls, and nothing invented between them.
   "offer_reason_ar": "مكافأة من الكتالوج: نت 50MB؛ قيمة موجبة وفق افتراضات الاحتفاظ.",
   "reviewed_at": "2026-09-27T03:23:02+00:00",
   "campaign_id": "9dba975e54...",
-  "offer": { "offer_id": "DAY_50MB", "name_ar": "نت 50MB", "price_lyd": 0.5, "validity_hours": 24.0, "data_gb": 0.05, "...": "..." }
+  "offer": { "offer_id": "DAY_50MB", "name_ar": "نت 50MB", "price_lyd": 0.5, "validity_hours": 24.0, "data_gb": 0.05, "volume_source": "name", "...": "..." }
 }
 ```
 
@@ -269,6 +280,8 @@ These are project commitments (decision 17), and they are the answer to "why is 
    Call `/subscribers/{id}/retention` per conversation.
 7. **Say the customer message, never the reason.**
    `customer_message_*` is written for the customer; `offer_reason_*` is the policy's reason, for staff (decision 51).
+8. **Promise only what the operator states.**
+   Say a volume or unlimited data only when `volume_source` is `stated`; otherwise give the package name (decision 52).
 
 ## 7. What the copilot may index
 

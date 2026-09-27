@@ -124,6 +124,48 @@ def test_retired_approved_offer_is_withheld_and_health_explains(served, offers, 
     assert "no longer in the current catalogue" in health["problems"][0]
 
 
+@pytest.mark.parametrize(
+    ("column", "value", "problem"),
+    [
+        ("churn_probability", 2.0, "not between 0 and 1"),
+        ("risk_band", "extreme", "unknown risk_band"),
+        ("value_tier", "gold", "unknown value_tier"),
+        ("model_version", "lightgbm-some-other-model", "but the service holds"),
+    ],
+)
+def test_a_portfolio_the_service_cannot_vouch_for_is_refused(
+    served, bundle, portfolio, tmp_path, keys, column, value, problem
+):
+    """An impossible value, or another model's scores under this model's name (decision 52)."""
+    portfolio["model_version"] = bundle.version
+    portfolio.loc[0, column] = value
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "bundle", tmp_path / "tiers.csv", tmp_path / "campaign" / "proposals.json"
+        )
+    )
+    client = TestClient(create_app(state, keys))
+    health = client.get("/health").json()
+    assert health["status"] == "degraded"
+    assert any(problem in message for message in health["problems"])
+    assert copilot(client, "/portfolio/summary").status_code == 503
+    assert copilot(client, "/subscribers/0001/risk").status_code == 503
+
+
+def test_a_portfolio_scored_by_the_loaded_model_is_served(
+    served, bundle, portfolio, tmp_path, keys
+):
+    portfolio["model_version"] = bundle.version
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "bundle", tmp_path / "tiers.csv", tmp_path / "campaign" / "proposals.json"
+        )
+    )
+    assert TestClient(create_app(state, keys)).get("/health").json()["status"] == "ok"
+
+
 @pytest.mark.parametrize("ids", [["same", "same", "NA", "0004"], ["", "0002", "NA", "0004"]])
 def test_malformed_portfolio_ids_fail_at_load(served, portfolio, tmp_path, keys, ids):
     portfolio["subscriber_id"] = ids
@@ -187,6 +229,39 @@ def test_the_chatbot_gets_every_package_with_its_collection_date(client, offers)
     assert all(row["operator"] == "Libyan mobile operator" for row in body["offers"])
     morning = next(row for row in body["offers"] if row["offer_id"] == "SABAH_1")
     assert (morning["valid_from_hour"], morning["valid_to_hour"]) == (6, 11)
+
+
+def test_every_package_says_where_its_volume_comes_from(client):
+    """A chatbot must be able to tell a stated volume from one read from a name (decision 52)."""
+    rows = {row["offer_id"]: row for row in chatbot(client, "/catalogue").json()["offers"]}
+    assert {row["volume_source"] for row in rows.values()} <= {"stated", "name", "reported", "none"}
+    assert rows["SABAH_1"]["volume_source"] == "stated"
+    assert rows["MO_20"]["volume_source"] == "name"
+    assert rows["SLVR_1"]["volume_source"] == "reported"  # unlimited only on an earlier report
+    offer = chatbot(client, "/subscribers/0001/retention").json()["offer"]
+    assert offer["volume_source"] == "stated"
+    # The limits travel with the package: Silver's speed cap, and a family package's lines.
+    assert rows["SLVR_1"]["max_download_mbps"] == 8
+    assert rows["FAM_70"]["members"] == 3
+
+
+def test_a_portfolio_naming_a_model_is_refused_when_no_bundle_is_loaded(
+    served, portfolio, tmp_path, keys
+):
+    """Nothing can vouch for another model's scores when the bundle is missing (decision 52)."""
+    portfolio["model_version"] = "lightgbm-2026-09-19-ef9430fb"
+    portfolio.to_csv(tmp_path / "tiers.csv", index=False)
+    state = load_state(
+        ServicePaths(
+            tmp_path / "missing-bundle",
+            tmp_path / "tiers.csv",
+            tmp_path / "campaign" / "proposals.json",
+        )
+    )
+    client = TestClient(create_app(state, keys))
+    health = client.get("/health").json()
+    assert any("no bundle is loaded to vouch" in message for message in health["problems"])
+    assert copilot(client, "/subscribers/0001/risk").status_code == 503
 
 
 # ---------------------------------------------------------------------------

@@ -42,6 +42,8 @@ They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_
 - `reported`: the file does not say, and `Ali_Branch` reports the package as unlimited; 6 packages (the Silver family, which the file only caps at 8 Mbps, and the two hourly 5G packages).
 - `none`: nothing is known (the three Social packages).
 
+The integration service serves `volume_source` with every package, so the chatbot can tell a stated volume from one read from the name (decision 52).
+
 `check_against_source` proves that every family, name, price and every value the operator states still matches the source file, and that every source row appears exactly once.
 
 ### The Mix families, and how a package leaves the catalogue

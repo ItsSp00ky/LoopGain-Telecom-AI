@@ -1034,14 +1034,17 @@ Nothing said whether that was intended; Ali's recap of T11 made it a choice.
 From now on it is deliberate:
 
 - The same customers stay out of every campaign as a permanent control group, a common design in customer marketing, sometimes called a universal control group.
-- It gives the cleanest long-run measure: after several campaigns, churn among customers who were offered bonuses can be compared with churn among customers who never were, and the model chose neither group.
+- It gives the cleanest long-run measure, if the comparison is made fairly: among the customers the rules make eligible, those held out against those who were not, whether or not a reviewer then approved their offer.
+  Comparing approved recipients with the whole held-out group would mix the offer's effect with who was chosen (an outside review, 2026-09-27, decision 52).
+  The snapshot keeps every held-out customer's inputs, so the same rules can say later which of them would have qualified.
 - The cost is that about 10% of customers never get a retention bonus; they keep everything else the operator sells.
 - Changing the seed would reshuffle the group and end that comparison, so the seed changes only with a new decision entry.
 
 Review it after the first measured campaign: the fraction can shrink once the effect is known, and the group can be rotated when a measurement cycle ends.
 
 The same recap made the campaign report say what its equal-spend comparison can show.
-The targeted plan maximises the assumed net value and is then scored with it, so it wins by construction; the comparison checks the allocation against its own assumptions, not whether targeting works.
+The targeted plan is picked by the assumed net value and is then scored with it, so the table favours it by construction; the comparison checks the allocation against its own assumptions, not whether targeting works.
+The picking is greedy, one customer at a time, so it is not even guaranteed to be the best set under those assumptions (decision 52).
 The offer mix follows the same way from the assumed share saved: at the 70 LYD anchor, 2,803 of the 2,954 offers in a 1,000 LYD campaign are the morning pass, the one product assumed to save 10% of churners instead of 5%.
 
 ## 44. The experiments are removed, and one note keeps their result
@@ -1250,3 +1253,40 @@ Ali chose in the T20 recap to separate the two:
 - `offer_reason_*` stays in the answer for staff who ask why the offer was made, and the guide's rule 7 says never to say it to the customer.
 
 Adding the two fields does not break a consumer, and none exists yet.
+
+## 52. What an outside review of the module changed
+
+Date: 2026-09-27.
+
+An outside review of `Ali_Branch` at `096371e` checked the code, the method and the documents, and reproduced every committed report first.
+Ali chose to act on its findings about serving, the demo and the wording, and to record the rest.
+
+The service:
+
+- A scored portfolio is now checked when the service loads it: probabilities between 0 and 1, known risk bands and value tiers, and a model version equal to the loaded bundle's.
+  With no bundle loaded, a portfolio that names a model is refused too, because nothing can vouch for it.
+  A refused portfolio makes `/health` degraded and the copilot's endpoints answer 503; before, a probability of 2.0 or another model's scores were served as healthy under this model's version.
+- Every package answer now carries `volume_source`, the speed caps and the number of shared lines, and the guide's rule 8 says to promise a volume or unlimited data only when the operator's own table states it.
+  Ali confirmed that every row comes from the operator's official website; `volume_source` records what that material states, not where it was found.
+
+The demo:
+
+- The Subscriber screen crashed on a tiers-only portfolio, which is the documented default; it opens now.
+- It showed a campaign's proposal-time risk as the customer's current risk; the campaign now supplies only its decision and review, and risk and value come from the current portfolio.
+- Proposing for one customer failed for the 388 customers of the demo base with a missing month end, although the whole base scores; the month end is now taken from the export, and only where every customer who has it agrees.
+- The Released screen showed the policy's reason under "What the customer would be sent"; it shows the customer message now, keeps the reason in a staff-only section, and says the service serves this campaign only if it was started on it.
+
+The wording:
+
+- "Wins by construction" overstated the comparison: the budget step picks greedily, so it is not guaranteed to find the best set; the campaign report, the Campaign builder, decision 43, the model card and the brief now say the table favours the plan by construction.
+- The model card defines the target as next-month usage inactivity, so a customer who keeps recharging an unused line counts as churned, and it says beside the headline that the release gate is a retrospective check (decision 13).
+- The holdout comparison is fair only between customers the rules make eligible, held out or not (decision 43).
+- T22 now includes currency: an export already in LYD must not be converted again.
+- The action plan no longer names the operator; its team name, members, title and roles still need the team's details.
+
+Recorded, not changed:
+
+- An approval keeps its offer ID when the operator changes that package's price or validity, and the service does not yet compare the approved terms in the snapshot with the current catalogue.
+- The bundle's self-check predicts an engineered sample row, so a change to the cleaning or feature code that keeps the columns would not be caught.
+- The dashboard caches a campaign until it is refreshed, so an approval made from the command line appears after a refresh.
+- The value model (T23), the policy's sensitivity to its assumptions, the cohort behind the reference spend, calling average precision PR-AUC, and reviewer sign-in are for later; none changes a result shown today.

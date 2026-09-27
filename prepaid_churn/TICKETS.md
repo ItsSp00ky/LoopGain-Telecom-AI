@@ -39,7 +39,7 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 456 tests pass, none skipped; lint and formatting green.
+- Validation: 468 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
@@ -61,7 +61,9 @@ Update this section at the end of every working session.
   Every example in `docs/integration.md` was captured again from the real service, and the guide says how to reach it from another laptop.
 - Step 21 (T21): `CODE_REVIEW.md` no longer names the operator, and the recap's code was reviewed.
   Four findings were fixed with tests; the main one was a customer message that stated volumes and "unlimited" the operator's own file does not state.
-- Next: step 22, T22 scoring and retraining on any calendar months.
+- An outside review of `096371e` (decision 52): the service now refuses a portfolio it cannot vouch for, package answers say where each volume comes from, three demo bugs are fixed, and overstated wording is corrected.
+  The action plan no longer names the operator; its team name, members, title and roles still need the team's details.
+- The recap is complete. T22 and T23 stay open for after the presentation; the first follow-up of decision 52 is withholding an approval whose package terms changed.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -1081,6 +1083,15 @@ Recap (Ali, 2026-09-27):
   - Its report turns megabytes into gigabytes with 1,024 while the catalogue uses 1,000, so the median data use reads 0.50 GB rather than 0.51.
 - Nothing else was found wrong: the campaign reload, the weekly packs, the card-based credit advice and the resampling behave as their decisions describe.
 
+Outside review (2026-09-27, decision 52):
+- An outside review of `096371e` found problems in serving, the demo and the wording; Ali chose to fix those and record the rest.
+- The service now refuses a portfolio with impossible values, one scored by another model, or one naming a model while no bundle is loaded; it served them as healthy before.
+- Package answers carry `volume_source`, the speed caps and the shared lines, and the guide says to promise a volume only when the operator states it.
+- The Subscriber screen opens on a tiers-only portfolio and shows current risk, not a campaign's; one-customer proposals work for the 388 customers missing a month end; the Released screen shows the customer message, not the policy's reason.
+- "Wins by construction" is corrected everywhere to "favours by construction" with the greedy picking stated; the model card states the target and the retrospective gate; the holdout comparison is restricted to eligible customers; T22 includes currency.
+- The action plan no longer names the operator.
+- Recorded for later: approvals whose package terms change, the bundle self-check's reach, the dashboard cache, T23 and the naming of average precision.
+
 ## T22 - Score and retrain on any calendar months
 
 **Owner:** unclaimed
@@ -1095,6 +1106,7 @@ Scope:
 - The `vbc_3g` column names cover all twelve months.
 - `churn score` takes the export's two latest months as previous and current, instead of the fixed months 7 and 8.
 - `churn build-dataset` builds its windows from the export's own months and label month, instead of 6 to 9.
+- Currency: T18's rate turns the source currency into LYD; an export already in LYD needs the rate set to 1, or the currency named in the contract, before any amount is read (an outside review, 2026-09-27).
 - The Kaggle files keep working unchanged.
 
 Acceptance:

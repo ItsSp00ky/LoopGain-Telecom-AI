@@ -69,6 +69,13 @@ CATALOGUE_COLUMNS = (
     "validity_hours",
     "data_gb",
     "data_unlimited",
+    # Where the data volume comes from (T16), so a consumer can tell a volume the
+    # operator states from one read from the package name or reported elsewhere.
+    "volume_source",
+    # The limits that go with it: a speed cap, or lines that share a family package.
+    "max_download_mbps",
+    "max_upload_mbps",
+    "members",
     "voice_minutes",
     "voice_unlimited",
     "network",
@@ -256,7 +263,18 @@ def _withhold_retired(
     )
 
 
-def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
+def _load_portfolio(
+    path: Path, model_version: str | None = None
+) -> tuple[pd.DataFrame | None, str | None]:
+    """The scored export, or the reason it cannot be served.
+
+    Beyond the identifiers, every value the copilot quotes is checked against the output
+    contract, and an export scored by another model than the loaded bundle is refused:
+    the summary labels its numbers with the bundle's version, so serving another model's
+    numbers under it would be a false label. With no bundle loaded, an export that names
+    a model is refused too, since nothing can vouch for it. A tiers-only export, which
+    names no model, is served as before, with its risk unavailable.
+    """
     if not path.exists():
         return None, f"{path.name} not found. Run `uv run churn tiers` first."
     try:
@@ -270,7 +288,40 @@ def _load_portfolio(path: Path) -> tuple[pd.DataFrame | None, str | None]:
     ids = portfolio["subscriber_id"]
     if ids.isna().any() or ids.str.strip().eq("").any() or not ids.is_unique:
         return None, f"{path.name} needs nonempty, unique subscriber IDs."
+    problems = _portfolio_problems(portfolio, model_version)
+    if problems:
+        return None, f"{path.name} cannot be served: " + " ".join(problems)
     return portfolio, None
+
+
+def _portfolio_problems(portfolio: pd.DataFrame, model_version: str | None) -> list[str]:
+    problems = []
+    if "churn_probability" in portfolio.columns:
+        given = portfolio["churn_probability"].notna()
+        probability = pd.to_numeric(portfolio["churn_probability"], errors="coerce")
+        outside = given & ~probability.between(0, 1)
+        if outside.any():
+            problems.append(f"{int(outside.sum())} churn probabilities are not between 0 and 1.")
+    for column, allowed in (("risk_band", RISK_BANDS), ("value_tier", VALUE_TIERS)):
+        if column in portfolio.columns:
+            unknown = portfolio[column].notna() & ~portfolio[column].astype(str).isin(allowed)
+            if unknown.any():
+                problems.append(f"{int(unknown.sum())} rows have an unknown {column}.")
+    versions = (
+        sorted(set(portfolio["model_version"].dropna().astype(str)))
+        if "model_version" in portfolio.columns
+        else []
+    )
+    if versions and model_version is None:
+        problems.append(
+            f"It was scored by {', '.join(versions)}, but no bundle is loaded to vouch for it."
+        )
+    elif versions and versions != [model_version]:
+        problems.append(
+            f"It was scored by {', '.join(versions)}, but the service holds {model_version}; "
+            "score it again with `uv run churn tiers`."
+        )
+    return problems
 
 
 def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceState:
@@ -290,7 +341,9 @@ def load_state(paths: ServicePaths, campaign: dict | None = None) -> ServiceStat
     approved, campaign_id, created_at, campaign_error = _load_campaign(
         paths.campaign_path, campaign
     )
-    portfolio, portfolio_error = _load_portfolio(paths.portfolio_path)
+    portfolio, portfolio_error = _load_portfolio(
+        paths.portfolio_path, None if bundle is None else bundle.version
+    )
     offers = load_offers(paths.offers_path)
     approved, campaign_error = _withhold_retired(approved, offers, campaign_error)
     return ServiceState(

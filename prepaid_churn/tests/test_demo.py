@@ -33,9 +33,11 @@ from prepaid_churn.demo import (
     revenue_at_risk,
     sms_parts,
     subscriber_view,
+    with_export_month_ends,
 )
 from prepaid_churn.operator_market import load_offers
 from prepaid_churn.retention import NO_OFFER, load_policy, propose
+from prepaid_churn.schema import InvalidExportError, validate
 
 STAMP = "2026-09-20T12:00:00+00:00"
 ARABIC = "هديتك: نت الصباح."
@@ -177,6 +179,58 @@ def test_a_complete_checkout_loads_everything(demo, bundle, offers):
     assert len(demo.decisions) == 4
     assert len(demo.offers) == len(offers)
     assert demo.campaign_path is not None
+
+
+def test_the_subscriber_view_shows_current_risk_not_the_campaign_s(built):
+    """The campaign keeps the risk it was proposed with; the screen shows today's (decision 52)."""
+    portfolio = pd.read_csv(built.portfolio_path, converters={"subscriber_id": str})
+    portfolio.loc[portfolio["subscriber_id"] == "0001", "churn_probability"] = 0.91
+    portfolio.to_csv(built.portfolio_path, index=False)
+    subscriber = subscriber_view(load_demo(built), "0001")
+    assert subscriber["churn_probability"] == pytest.approx(0.91)
+    assert subscriber["status"] == "approved"  # the campaign still supplies its decision
+
+
+def test_a_tiers_only_portfolio_shows_no_risk_rather_than_the_campaign_s(built):
+    """Without a model there is no current risk, and the campaign's copy must not stand in."""
+    portfolio = pd.read_csv(built.portfolio_path, converters={"subscriber_id": str})
+    portfolio.drop(columns=["churn_probability", "risk_band"]).to_csv(
+        built.portfolio_path, index=False
+    )
+    subscriber = subscriber_view(load_demo(built), "0001")
+    assert subscriber.get("churn_probability") is None
+    assert subscriber.get("risk_band") is None
+    assert subscriber["recommended_offer_id"] == "SABAH_1"
+
+
+def test_the_subscriber_screen_opens_on_a_tiers_only_portfolio(built, screen):
+    """`churn tiers --tiers-only` is the documented default, and the screen crashed on it."""
+    portfolio = pd.read_csv(built.portfolio_path, converters={"subscriber_id": str})
+    portfolio.drop(columns=["churn_probability", "risk_band"]).to_csv(
+        built.portfolio_path, index=False
+    )
+    screen("pages/2_Subscriber.py")
+
+
+def test_the_released_screen_shows_the_customer_message_not_the_reason(screen):
+    """The policy's reason is for staff; the customer gets the package (decision 51)."""
+    app = screen("pages/5_Released.py")
+    assert any("هديتك: الصبح" in element.value for element in app.markdown)
+    reason = [element.value for element in app.markdown if "قيمة موجبة" in element.value]
+    staff_only = [element.value for element in app.expander[0].markdown]
+    assert reason and all(value in staff_only for value in reason)
+    assert any("--campaign-dir" in element.value for element in app.code)
+
+
+def test_one_customer_borrows_the_export_s_month_end(raw):
+    """A batch takes a missing month end from other customers; one customer alone cannot."""
+    raw.loc[3, "last_date_of_month_7"] = None
+    alone = raw.iloc[[3]]
+    with pytest.raises(InvalidExportError):
+        validate(alone, labeled=False)
+    filled = with_export_month_ends(alone, raw)
+    assert filled["last_date_of_month_7"].iloc[0] == raw["last_date_of_month_7"].iloc[0]
+    validate(filled, labeled=False)
 
 
 def test_literal_na_id_keeps_its_subscriber_view_and_recharge_card(demo):

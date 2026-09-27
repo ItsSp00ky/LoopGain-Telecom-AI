@@ -111,7 +111,8 @@ st.info(
     f"**{held:,} customer{'' if held == 1 else 's'} held out, receiving nothing.** "
     "Without a control arm there is no way to measure whether a campaign worked, and "
     "every effectiveness claim becomes an assertion. They are the same customers in every "
-    "campaign, so that comparison builds up over time (decision 43).",
+    "campaign, so that comparison builds up over time (decision 43); it is fair only "
+    "between customers the rules make eligible, held out or not.",
     icon=":material/science:",
 )
 
@@ -157,9 +158,10 @@ else:
         "not the quality of the targeting."
     )
     st.warning(
-        "**Our plan wins this table by construction.** It is chosen to get the most of "
-        "this same assumed value, so the table shows the picking works under our own "
-        "assumptions, not that targeting works. Only the held-out customers can show that.",
+        "**This table favours our plan by construction.** It is picked by this same "
+        "assumed value, one customer at a time, so the table shows the picking works under "
+        "our own assumptions, not that targeting works. Only the held-out customers can "
+        "show that.",
         icon=":material/warning:",
     )
 

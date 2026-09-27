@@ -85,5 +85,5 @@ These are documented separately because they require a modelling or product deci
 - The fourth finding is done in the prepaid module: named approvals (T11), the read-only integration service (T15) and the integration guide and check for the chatbot and copilot (T20) exist.
   No chatbot or copilot has called the service yet.
 - Findings 1 to 3 concern the legacy churn module and the GIS module, which belong to the team's other parts; they are unchanged and stay with their owners.
-- The prepaid figures above are those of 2026-09-20; the module now has 456 tests, and every later change is recorded in `prepaid_churn/docs/decisions.md`.
+- The prepaid figures above are those of 2026-09-20; the module now has 468 tests, and every later change is recorded in `prepaid_churn/docs/decisions.md`.
 - The operator's name was removed from this file on 2026-09-27, so that the prepaid module's operator stays unnamed (decision 45).

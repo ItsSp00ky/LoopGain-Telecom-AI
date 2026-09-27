@@ -8,7 +8,7 @@ files that hold them, and the one endpoint that serves them to the chatbot.
 import streamlit as st
 from _shared import campaign_dir, configure, lyd, missing_banner, rtl, state
 
-from prepaid_churn.demo import released_offers
+from prepaid_churn.demo import customer_message, offer_row, released_offers
 
 configure("Released", icon="verified")
 demo = state()
@@ -53,12 +53,15 @@ st.dataframe(
 st.subheader("What the customer would be sent")
 chosen = st.selectbox("Customer", released["subscriber_id"].tolist())
 row = released.loc[released["subscriber_id"].eq(chosen)].iloc[0]
-st.markdown(rtl(str(row["reason_ar"])), unsafe_allow_html=True)
+# The same message the chatbot is given; the policy's reason is for staff (decision 51).
+st.markdown(rtl(customer_message(offer_row(demo, row["offer_id"]), "ar")), unsafe_allow_html=True)
 st.caption(
     f"Package {row['offer_id']} ({row['package']}), approved by {row['reviewer']} at "
-    f"{row['reviewed_at']}. The **Message preview** screen shows the full message and "
-    "what it costs to send."
+    f"{row['reviewed_at']}. The **Message preview** screen shows the message in both "
+    "languages and what it costs to send."
 )
+with st.expander("Why the policy chose it (for staff, never sent to the customer)"):
+    st.markdown(rtl(str(row["reason_ar"])), unsafe_allow_html=True)
 
 st.divider()
 st.subheader("Where this lives")
@@ -97,7 +100,7 @@ st.subheader("Who is served this")
 st.markdown(
     """
     The customer chatbot asks the T15 service for one subscriber at a time, with its own
-    API key, and gets an offer only if it is on this page:
+    API key, and gets an offer only if it is released in the campaign the service serves:
 
     ```bash
     curl -H "X-API-Key: $PREPAID_CHURN_CHATBOT_KEY" \\
@@ -108,7 +111,9 @@ st.markdown(
     unreviewed one returns: the chatbot cannot tell the difference, so a customer can
     never learn that an offer was considered and refused.
 
-    A running `uv run churn serve` reads the campaign again after every approval, so the
-    chatbot gets what is on this page on its next request, without a restart.
+    A running `uv run churn serve` reads its campaign again after every approval, without
+    a restart, but it serves the campaign directory it was started with. It serves this
+    page only if it was started on this campaign:
     """
 )
+st.code(f"uv run churn serve --campaign-dir {directory}", language="bash")

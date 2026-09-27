@@ -234,6 +234,26 @@ MISSING_TEXT = frozenset({"nan", "none", "nat", ""})
 # "NA" is never touched.
 STRINGIFIED_COLUMNS = ("reviewer", "reviewed_at", "review_note")
 
+# What a campaign row adds about a customer: its decision and its review. The customer's
+# risk, value and reasons come from the current portfolio only, because a campaign keeps
+# them as they were when it was proposed, possibly by another model or run.
+CAMPAIGN_COLUMNS = (
+    "holdout",
+    "recommended_offer_id",
+    "decision_code",
+    "status",
+    "expected_cost_lyd",
+    "expected_net_value_lyd",
+    "share_saved",
+    "policy_version",
+    "offer_reason_en",
+    "offer_reason_ar",
+    "reviewer",
+    "reviewed_at",
+    "review_note",
+    "campaign_id",
+)
+
 
 def _present(value) -> object | None:
     """None for a value that is missing, including one pandas already made into text.
@@ -251,6 +271,10 @@ def _present(value) -> object | None:
 def subscriber_view(state: DemoState, subscriber_id: str) -> dict | None:
     """Everything the subscriber screen shows for one customer, or None if unknown.
 
+    The customer's risk, value and reasons come from the current portfolio, and the
+    campaign contributes only its decision and review (`CAMPAIGN_COLUMNS`): its copy of
+    the risk is the one it was proposed with, and showing it as current was wrong.
+
     Built from a one-row frame rather than a Series throughout.
     A Series holds one dtype, so turning one back into a frame makes every column
     `object`, which is the bug that silently blanked a whole panel on `Ali_Branch`.
@@ -265,6 +289,8 @@ def subscriber_view(state: DemoState, subscriber_id: str) -> dict | None:
         if frame is None or key not in frame.columns:
             continue
         rows = frame.loc[frame[key].astype(str) == subscriber_id]
+        if name == "decision":
+            rows = rows[[column for column in rows.columns if column in CAMPAIGN_COLUMNS]]
         if not rows.empty:
             found[name] = rows.head(1)
     if not found:
@@ -432,6 +458,26 @@ def campaign_directories(root: Path = CAMPAIGNS_DIR) -> pd.DataFrame:
     return frame.sort_values("updated", ascending=False, ignore_index=True)
 
 
+MONTH_END_PREFIX = "last_date_of_month_"
+
+
+def with_export_month_ends(subset: pd.DataFrame, export: pd.DataFrame) -> pd.DataFrame:
+    """The subset, with any missing month end filled in from the export it was taken from.
+
+    The contract needs each month's end date, and inside a whole export any customer who
+    has it supplies it (T21). A customer alone may have none: 388 rows of the demo base
+    miss at least one, so proposing for one of them failed although the whole base
+    scores. Only a month end the whole export agrees on is filled in, so a real
+    disagreement still reaches the contract check.
+    """
+    filled = subset.copy()
+    for column in (name for name in export.columns if name.startswith(MONTH_END_PREFIX)):
+        dates = export[column].dropna().unique()
+        if len(dates) == 1:
+            filled[column] = filled[column].fillna(dates[0])
+    return filled
+
+
 def propose_offers(
     paths: DemoPaths,
     output_dir: Path,
@@ -458,14 +504,16 @@ def propose_offers(
     from prepaid_churn.schema import ID
     from prepaid_churn.value import load_tiers
 
-    raw = load_raw(paths.base_path)
+    export = load_raw(paths.base_path)
+    raw = export
     if subscribers:
         wanted = {str(one) for one in subscribers}
-        raw = raw[raw[ID].astype(str).isin(wanted)]
+        raw = export[export[ID].astype(str).isin(wanted)]
         if raw.empty:
             raise ValueError(f"None of {sorted(wanted)} is in {paths.base_path.name}.")
     elif customers:
-        raw = raw.head(customers)
+        raw = export.head(customers)
+    raw = with_export_month_ends(raw, export)
 
     policy = load_policy()
     if budget_lyd is not None:

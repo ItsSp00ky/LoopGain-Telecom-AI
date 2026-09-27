@@ -157,6 +157,23 @@ class CatalogueOffer(BaseModel):
     validity_hours: float | None = None
     data_gb: float | None = Field(default=None, description="Null when the package states none.")
     data_unlimited: bool | None = None
+    volume_source: str | None = Field(
+        default=None,
+        description=(
+            "Where `data_gb` or `data_unlimited` comes from: `stated` in the operator's own "
+            "table, read from the package `name`, `reported` by an earlier branch, or `none`. "
+            "Tell a customer a volume or unlimited data only when it is `stated`."
+        ),
+    )
+    max_download_mbps: float | None = Field(
+        default=None, description="A download speed cap the operator states, in Mbit/s."
+    )
+    max_upload_mbps: float | None = Field(
+        default=None, description="An upload speed cap the operator states, in Mbit/s."
+    )
+    members: float | None = Field(
+        default=None, description="Lines that share a family package; null for one line."
+    )
     voice_minutes: float | None = None
     voice_unlimited: bool | None = None
     network: str | None = None

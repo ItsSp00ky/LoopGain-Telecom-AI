@@ -43,7 +43,11 @@ with risky_column:
     # Most of this base is not at risk, so a random customer is almost always a "no
     # offer". Someone opening this screen to see what an offer looks like was picking
     # one customer after another to find one, which is a bad first minute.
-    risky = portfolio.loc[portfolio.get("risk_band", pd.Series(dtype="str")).eq("high")]
+    # A tiers-only export has no risk band, so there is nobody to pick.
+    if "risk_band" in portfolio.columns:
+        risky = portfolio.loc[portfolio["risk_band"].eq("high")]
+    else:
+        risky = portfolio.iloc[:0]
     if st.button("Pick a high-risk one", width="stretch", disabled=risky.empty):
         st.session_state["subscriber_id"] = str(risky["subscriber_id"].sample(1).iloc[0])
         st.rerun()

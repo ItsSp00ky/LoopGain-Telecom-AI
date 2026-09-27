@@ -38,7 +38,8 @@ This section matters more than the metrics.
 - **Not for a decision taken without a person.** Decision 14 requires a named reviewer on every proposal, and `released.csv` contains only approved rows.
 - **Not evidence about operator subscribers.** The model is trained on the upGrad prepaid dataset from another market (decision 5). No figure in this card is a measurement of Libyan behaviour.
 - **Not a commercial model.** The training data is for education only, so a model trained on it cannot be sold (decision 11). What can be sold is the pipeline, retrained on an operator's own export.
-- **Not a cancellation predictor.** Churn here means observed inactivity, not a closed account. A subscriber who keeps a second SIM and stops using this one counts as churned, and one who keeps the line dormant but recharges does not.
+- **Not a cancellation predictor.** Churn here means observed inactivity, not a closed account. The target is next-month usage inactivity: no calls and no mobile data for the whole month.
+  A subscriber who keeps a second SIM and stops using this one counts as churned, and so does one who keeps recharging a line they no longer use; one who comes back after a silent month was still counted as churned for that month.
 - **Not for the already silent.** Subscribers with no calls and no data in the current month are not scored at all (decision 12); they receive the band `already_silent` and no probability.
 - **No language model may sit in any path that sets an offer, a price or a limit** (decision 17). The chatbot and copilot read only.
 
@@ -119,6 +120,7 @@ On the high-value slice (the top 30% by recharge amount) the model does better, 
 ### Success thresholds
 
 Four checks agreed with the instructor on 2026-09-19 (decision 13).
+They were written after the one test run, so the pass below is a check, not a pre-registered result.
 A model is fit for use only if it passes all four, and `churn bundle` refuses to package a champion that fails one.
 
 | Check | What it measures | Value | Required | Passed |
@@ -128,7 +130,7 @@ A model is fit for use only if it passes all four, and `churn bundle` refuses to
 | better_than_baseline | PR-AUC against logistic regression | 0.3477 | above 0.2770 | yes |
 | calibration | Gap between mean predicted and observed rate | 0.0013 | at most 0.01 | yes |
 
-Release gate: passed. Source: `reports/evaluation_all.md`.
+Release gate: passed, as a retrospective check, since the thresholds were written after the test run. Source: `reports/evaluation_all.md`.
 
 How sure these numbers are: resampling the frozen test predictions 2,000 times (decision 35, `reports/uncertainty.md`) gives PR-AUC 0.3477 with a 95% interval of 0.3006 to 0.4000, and top-10% capture 0.6152 with 0.5725 to 0.6582.
 LightGBM beat the baseline in all 2,000 paired resamples, and every check above still passes at the unfavourable end of its interval.
@@ -286,8 +288,8 @@ Stated plainly, because this is the section an evaluator should read hardest.
   In Libya roaming would mostly mean being abroad, so this signal is likely to behave differently there, which is one more reason the model must be retrained on the operator's own data (decisions 11 and 16).
 - **No causal claim.** The model ranks risk. It says nothing about whether contacting a subscriber changes their behaviour, which is what an offer needs. T11's "share of churners saved" is a declared assumption of 5% for every offer (decision 46), and it is not measured.
   With the same share for every offer, each customer gets the cheapest offer that fits them: in a 1,000 LYD campaign, 2,254 of the 3,643 offers are the 1 LYD morning pass and the rest the 0.5 LYD day pack.
-  The campaign report's equal-spend comparison scores the targeted plan with the same assumed value it maximises, so it wins by construction and shows nothing about whether targeting works.
-  The holdout, the same customers in every campaign (decision 43), is what can measure it.
+  The campaign report's equal-spend comparison scores the targeted plan with the same assumed value it is picked by, so the table favours it by construction and shows nothing about whether targeting works; the picking is greedy, so it is not even guaranteed to be the best set under those assumptions.
+  The holdout, the same customers in every campaign (decision 43), is what can measure it, comparing eligible customers held out with eligible customers who were not.
 - **No network-quality features.** Dropped calls and outages are not in this data. T20 defines the field contract for the network ML team to supply them later.
 - **Age on network is a snapshot**, not a per-month value, so tenure carries the timing limitation recorded in T4.
 - **Monthly recharge counters can overlap**, so the frequency measure is a count proxy rather than deduplicated transactions (T10).

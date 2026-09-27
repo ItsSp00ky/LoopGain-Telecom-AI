@@ -67,13 +67,14 @@ Both baselines retain relevance, eligibility and per-customer/cannibalisation gu
 Fractional expected counts are diagnostic lotteries, never executable campaign rows.
 Zero spend makes all three scenarios zero and supports no targeting-effect claim.
 The comparison evaluates the stated assumptions, not an experimentally measured benefit.
-The targeted plan is chosen to maximise this same assumed net value, so it scores highest by construction; the table checks the allocation against its own assumptions, not whether targeting works.
+The targeted plan is picked by this same assumed net value, one customer at a time, so this table favours it by construction; the picking is greedy, so it is not guaranteed to be the best set even under these assumptions. The table checks the allocation against its own assumptions, not whether targeting works.
 Risk only is scored with the same T10 scenario, whose constant-risk assumption makes the riskiest customers look least worth saving (decision 41).
 
 ## Review and holdout
 
 A seeded SHA-256 lottery assigns approximately the configured holdout fraction independently of input order and batch size; those customers never get an offer.
-The lottery depends only on the subscriber ID and the policy seed, so every campaign with this seed holds out the same customers: a permanent control group, kept on purpose so a measured campaign can compare them with customers who got offers (decision 43).
+The lottery depends only on the subscriber ID and the policy seed, so every campaign with this seed holds out the same customers: a permanent control group, kept on purpose for a measured campaign (decision 43).
+A fair measurement compares like with like: customers the rules make eligible who were held out, against eligible customers who were not, whether or not a reviewer approved their offer; approved recipients against the whole holdout would mix the offer's effect with who was chosen.
 Keep the campaign snapshot and holdout assignment for a future measured campaign.
 No response outcomes or treatment effects are generated here.
 `churn decide` writes proposals and an empty released campaign.
