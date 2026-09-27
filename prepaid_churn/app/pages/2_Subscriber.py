@@ -1,13 +1,16 @@
-"""Screen 2 - one customer: risk, reasons, tier, the operator's bundle held and the offer."""
+"""Screen 2 - one customer: risk, reasons, tier, bundle held, credit advice and the offer."""
 
 import pandas as pd
 import streamlit as st
 from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state, use_campaign
 
+from prepaid_churn.advance import MAX_DEBT_FRACTION
 from prepaid_churn.bundle import BundleError
 from prepaid_churn.demo import (
     CAMPAIGNS_DIR,
+    PRODUCED_BY,
     DemoPaths,
+    credit_advice,
     offer_row,
     propose_offers,
     subscriber_view,
@@ -138,6 +141,53 @@ with reason_column:
         )
         for position, reason in enumerate(reasons, start=1):
             st.markdown(f"{position}. {reason}")
+
+st.divider()
+
+# --- Emergency credit (T19) ----------------------------------------------------
+# What `churn advance` advises for this customer, beside their risk: an employee with the
+# customer on the phone should not need a CSV to answer "can I get credit?".
+st.subheader("Emergency credit")
+advice = credit_advice(demo, subscriber_id)
+if advice is None:
+    st.info(
+        "No credit advice for this customer in this checkout. "
+        f"It is written by `{PRODUCED_BY['credit advice']}`.",
+        icon=":material/info:",
+    )
+else:
+    limit = advice.get("airtime_limit_lyd")
+    advised = str(advice.get("data_advance_advised")).strip().lower() == "true"
+    topup_column, card_column, airtime_column, data_column = st.columns(4)
+    topup_column.metric(
+        "Typical top-up",
+        lyd(advice.get("typical_topup_lyd"), digits=2),
+        help="Each window month's average airtime top-up, averaged over the two months and "
+        "converted at the T18 rate (decision 50).",
+    )
+    card_column.metric(
+        "Card the advice reads",
+        lyd(advice.get("typical_card_lyd"), digits=0),
+        help="The operator's card nearest that top-up, since nothing smaller can be topped "
+        "up (decision 49). The usual card above pools both months' recharges, so the two "
+        "can differ, and a window of recharges worth nothing reads as 0 here.",
+    )
+    airtime_column.metric(
+        "Airtime advance",
+        lyd(limit, digits=0) if limit and not pd.isna(limit) else "None",
+        help=f"The largest advance the operator sells within {MAX_DEBT_FRACTION:.0%} of that "
+        "card, so clearing it at the next recharge still leaves balance.",
+    )
+    data_column.metric("Data advance", "Advised" if advised else "Not advised")
+    reason_en, reason_ar = advice.get("advice_reason_en"), advice.get("advice_reason_ar")
+    st.markdown(f"**Why** {reason_en if isinstance(reason_en, str) else '-'}")
+    if isinstance(reason_ar, str) and reason_ar.strip():
+        st.markdown(rtl(reason_ar), unsafe_allow_html=True)
+    st.caption(
+        "Rule-based advice from recharge behaviour, with no repayment model (T19, decision "
+        "23). It grants nothing: like a retention offer, a limit reaches a customer only "
+        "after a person approves it (decision 14)."
+    )
 
 st.divider()
 

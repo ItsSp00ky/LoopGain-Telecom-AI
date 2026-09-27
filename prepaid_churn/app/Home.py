@@ -3,7 +3,7 @@
 Five screens, in `app/pages/`; Streamlit orders them by filename.
 
     1  Overview           customers and LYD at risk by risk band and value tier
-    2  Subscriber         one customer: risk, reasons, tier, bundle held, proposed offer
+    2  Subscriber         one customer: risk, reasons, tier, bundle held, credit, offer
     3  Campaign builder   budget, holdout, cost and value, then named approval
     4  Message preview    the Arabic text an approved customer would receive
     5  Released           the approved offers, who approved them and where they are served

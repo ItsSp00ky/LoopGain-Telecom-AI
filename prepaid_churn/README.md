@@ -225,7 +225,7 @@ uv run streamlit run app/Home.py
 |---|---|
 | Home | The base, expected churners and revenue at risk, and what is not built yet |
 | Overview | Customers and LYD at risk by risk band and value tier, with the model's test results |
-| Subscriber | One customer: risk, the model's reasons (high and medium risk only), value tier, the operator's bundle held and the proposed offer |
+| Subscriber | One customer: risk, the model's reasons (high and medium risk only), value tier, the operator's bundle held, the emergency credit advice and the proposed offer |
 | Campaign builder | What the guardrails removed, the holdout, cost and value, the equal-spend comparison, and approve or reject under your name |
 | Message preview | The Arabic message an approved customer would receive, and how many SMS parts it actually costs |
 | Released | What was approved, where the files are, and the endpoint the chatbot reads it from |

@@ -763,6 +763,14 @@ Acceptance:
 - Every screen is opened in a browser and checked, including with a single customer.
   (Lesson from `Ali_Branch`: two of its late bugs were only visible on screen.)
 
+Findings (2026-09-27, emergency credit on the Subscriber screen):
+- At Ali's request the Subscriber screen shows T19's advice for the customer: the typical top-up, the card the advice reads, the airtime advance, whether the data advance is advised, and the reason in English and Arabic.
+- `load_demo` reads `advance.csv` from beside the operator view.
+  It is optional, so a checkout that never ran `churn advance` is not reported as broken, and the section names that command instead.
+- The screen now shows two recharge cards that can differ: T18's usual card pools both months' recharges, while T19 averages each month's top-up and reads a window of recharges worth nothing as no card.
+  They differ for 2,455 of the 29,730 customers who have both, 1,178 of them because they paid nothing in the window; the section says so in its help text, and neither rule changed.
+- 7 new tests in `tests/test_demo_credit.py`, including the real page on a customer with advice, one with no recharge, and a checkout without the file.
+
 Findings (2026-09-22, after Taha used it):
 - It was slow at everything, because a campaign over the whole base is an 80 MB snapshot that was parsed twice per load and again after every review.
   It is parsed once now, and the app can propose a campaign over as few customers as it likes: 500 customers is a 1.7 MB snapshot that loads instantly.
