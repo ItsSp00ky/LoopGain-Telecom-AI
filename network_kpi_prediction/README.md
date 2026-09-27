@@ -9,10 +9,11 @@
 
 This subsystem contains two independent forecasting pipelines:
 
-| Pipeline | Directory | Purpose | Data Source |
-|----------|-----------|---------|-------------|
+| Pipeline / Engine | Directory | Purpose | Primary Data Source |
+|---|---|---|---|
 | **3GPP Cellular KPI Forecast** | `cellular_kpi_forecast/` | Multi-band KPI prediction across 6 frequency bands, 10 KPIs, 60 series | `data/carrier_earfcndl_kpi_daily.csv` |
-| **4G Traffic Volume Forecast** | `traffic_volume_forecast/` | Macro 4G daily traffic volume forecasting with 30-day horizon | `data/4g_traffic_volume_daily.csv` |
+| **4G Traffic Volume Forecast** | `traffic_volume_forecast/` | Macro 4G traffic volume forecasting with univariate & multivariate modes | `data/4g_traffic_volume_daily.csv` |
+| **Physical ERBS Node Intelligence** | `erbs_node_analytics/` | SLA health scorecard, sleeping cell detection, clustering (1,067 towers) | `data/erbs_cell_kpi_full_year.csv` |
 
 ---
 
@@ -70,6 +71,17 @@ network_kpi_prediction/
 
 ## Quick Start
 
+### Run Physical ERBS Node Intelligence (1,067 Base Stations)
+```bash
+python run_pipeline.py erbs-audit               # Full SLA audit, sleeping cell detection, K-Means clustering & summer stress
+python run_pipeline.py inspect --erbs BTWRM1    # Instant engineering diagnostic scorecard & operational persona
+```
+
+### Run Multivariate 4G Traffic Volume Forecasting (Exogenous Radio KPIs)
+```bash
+python run_pipeline.py traffic-multi            # Benchmark multivariate exogenous model against univariate baseline
+```
+
 ### Run the Cellular KPI Pipeline (Default)
 ```bash
 python run_pipeline.py train                    # Train models + generate 365-day forecasts
@@ -82,16 +94,14 @@ python run_pipeline.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7
 python run_pipeline.py --pipeline traffic       # Full end-to-end execution
 ```
 
-### Run Tests
+### Run Full Automated Test Suite
 ```bash
-# Full test suite across both pipelines
-python run_pipeline.py test
+python run_pipeline.py test                     # Runs all 53 automated tests across cellular, traffic, and ERBS engines
 ```
 
 ### Inspect & Profile All Datasets
 ```bash
-# Automated audit & statistical synthesis of all datasets in 'data/'
-python run_pipeline.py catalog
+python run_pipeline.py catalog                  # Automated audit & statistical synthesis of all datasets in 'data/'
 ```
 
 ---

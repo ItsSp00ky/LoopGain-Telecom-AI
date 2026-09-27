@@ -482,6 +482,74 @@ def plot_future_forecast(
     return out_file
 
 
+def plot_multivariate_vs_univariate_comparison(
+    comp_df: pd.DataFrame | None = None,
+    plots_dir: Path | str | None = None,
+) -> Path:
+    """Generates 3-panel comparative performance plot contrasting Univariate vs Multivariate Exogenous models."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
+    if comp_df is None:
+        csv_p = _PKG_ROOT / "data" / "multivariate_vs_univariate_comparison.csv"
+        if csv_p.exists():
+            comp_df = pd.read_csv(csv_p)
+        else:
+            raise FileNotFoundError(f"Comparison dataframe not found at: {csv_p}")
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5), dpi=300)
+    labels = ["Univariate\nBaseline", "Multivariate\nExogenous"]
+    colors = ["#2563EB", "#059669"]
+
+    # 1. WAPE (%)
+    wapes = comp_df["Test-WAPE (%)"].values
+    bars1 = axes[0].bar(labels, wapes, color=colors, width=0.55, edgecolor="black")
+    for bar in bars1:
+        y = bar.get_height()
+        axes[0].text(bar.get_x() + bar.get_width()/2, y + 0.05, f"{y:.2f}%", ha="center", weight="bold", fontsize=11)
+    diff_wape = wapes[1] - wapes[0]
+    axes[0].set_title(f"Test WAPE (%)\n({diff_wape:+.2f}% Improvement)", fontweight="bold")
+    axes[0].set_ylabel("WAPE (%) — Lower is Better")
+    axes[0].set_ylim(0, max(wapes) * 1.25)
+
+    # 2. MAE (GB)
+    maes = comp_df["Test-MAE"].values / 1e3
+    bars2 = axes[1].bar(labels, maes, color=colors, width=0.55, edgecolor="black")
+    for bar in bars2:
+        y = bar.get_height()
+        axes[1].text(bar.get_x() + bar.get_width()/2, y + 0.5, f"{y:.1f}k GB", ha="center", weight="bold", fontsize=11)
+    pct_mae = ((maes[1] - maes[0]) / maes[0]) * 100
+    axes[1].set_title(f"Test MAE ('000 GB)\n({pct_mae:.1f}% Error Reduction)", fontweight="bold")
+    axes[1].set_ylabel("Mean Absolute Error ('000 GB) — Lower is Better")
+    axes[1].set_ylim(0, max(maes) * 1.25)
+
+    # 3. R2 Score
+    r2s = comp_df["Test-R2"].values
+    bars3 = axes[2].bar(labels, r2s, color=colors, width=0.55, edgecolor="black")
+    for bar in bars3:
+        y = bar.get_height()
+        axes[2].text(bar.get_x() + bar.get_width()/2, y + 0.02, f"{y:.4f}", ha="center", weight="bold", fontsize=11)
+    diff_r2 = r2s[1] - r2s[0]
+    axes[2].set_title(f"Test R² Score\n({diff_r2:+.4f} Accuracy Lift)", fontweight="bold")
+    axes[2].set_ylabel("R² Goodness of Fit — Higher is Better")
+    axes[2].set_ylim(0, max(r2s) * 1.25)
+
+    fig.suptitle(
+        "Multivariate 4G Traffic Model vs. Univariate Baseline (Holdout Test Performance)\n"
+        "Exogenous Radio Indicators: DL/UL Throughput, E-RAB Drop Rate, RRC SR (t-1 Shifted)",
+        fontsize=13, fontweight="bold", y=1.03
+    )
+
+    plt.tight_layout()
+    out_file = target_plots_dir / "07_multivariate_vs_univariate_comparison.png"
+    plt.savefig(out_file, dpi=300, bbox_inches="tight")
+    plt.close()
+    sync_to_artifacts(out_file)
+    print(f"[Plot 7] Saved: {out_file}")
+    return out_file
+
+
+
 def run_all_plots(
     datasets: dict,
     results: dict,

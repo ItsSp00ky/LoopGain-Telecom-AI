@@ -13,6 +13,7 @@ from pathlib import Path
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 _CELLULAR_PKG = os.path.join(_ROOT, "cellular_kpi_forecast")
 _TRAFFIC_PKG = os.path.join(_ROOT, "traffic_volume_forecast")
+_ERBS_PKG = os.path.join(_ROOT, "erbs_node_analytics")
 
 
 DATASET_PRESETS = {
@@ -41,6 +42,8 @@ Pipelines:
                        (6 carrier frequency bands x 10 standardized KPIs = 60 series)
   traffic              4G Macro Network Daily Traffic Volume Forecasting Engine
                        (Multi-model tournament, anomaly treatment, 30-day horizon)
+  erbs                 Physical ERBS Node Intelligence & Sleeping Cell Auditor
+                       (378k rows across 1,067 towers, K-Means clustering, summer stress)
 
 Dataset Presets (--dataset):
   earfcndl / carrier   Ground-truth 6-band EARFCNDL telemetry (carrier_earfcndl_kpi_daily.csv)
@@ -51,6 +54,9 @@ Dataset Presets (--dataset):
 
 Common Commands:
   catalog              Inspect, profile, and synthesize all datasets across 'data/'
+  erbs-audit / audit   Full node health profiling, sleeping cell detection, & clustering
+  inspect --erbs <ID>  Query instant health scorecard & operational persona for an ERBS node
+  traffic-multi        Train & benchmark multivariate traffic models using macro radio KPIs
   split                Stage 1: Chronological train/val/test data splitting
   train                Stage 2: Feature engineering, model benchmarking & forecasts
   plot                 Stage 3: Publication-grade 300-DPI visual figure generation
@@ -58,6 +64,13 @@ Common Commands:
   test                 Execute automated unit test suite across pipelines
 
 Examples:
+  # ERBS node intelligence workflows:
+  python run_pipeline.py erbs-audit
+  python run_pipeline.py inspect --erbs BTWRM1
+
+  # Multivariate traffic volume benchmarking:
+  python run_pipeline.py traffic-multi
+
   # Profile all datasets in 'data/':
   python run_pipeline.py catalog
 
@@ -66,11 +79,6 @@ Examples:
   python run_pipeline.py train --dataset summer --horizon-days 60
   python run_pipeline.py plot --carrier 3500 --kpi dl_throughput_mbps
   python run_pipeline.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7
-
-  # Traffic volume pipeline workflows:
-  python run_pipeline.py --pipeline traffic
-  python run_pipeline.py --pipeline traffic train --horizon 30
-  python run_pipeline.py --pipeline traffic plot
 
   # Run full automated test suite:
   python run_pipeline.py test
@@ -84,16 +92,21 @@ def run_all_tests() -> int:
     print("=" * 80)
 
     # 1. Cellular tests
-    print("\n[1/2] Running 3GPP Cellular KPI Pipeline Tests...")
+    print("\n[1/3] Running 3GPP Cellular KPI Pipeline Tests...")
     cellular_entry = os.path.join(_CELLULAR_PKG, "run_cellular.py")
     res_cellular = subprocess.run([sys.executable, cellular_entry, "test"], cwd=_CELLULAR_PKG)
 
     # 2. Traffic tests
-    print("\n[2/2] Running 4G Traffic Volume Prediction Tests...")
+    print("\n[2/3] Running 4G Traffic Volume Prediction Tests...")
     traffic_entry = os.path.join(_TRAFFIC_PKG, "run_traffic.py")
     res_traffic = subprocess.run([sys.executable, traffic_entry, "test"], cwd=_TRAFFIC_PKG)
 
-    exit_code = 0 if (res_cellular.returncode == 0 and res_traffic.returncode == 0) else 1
+    # 3. ERBS Node Intelligence tests
+    print("\n[3/3] Running Physical ERBS Node Intelligence Tests...")
+    erbs_test_entry = os.path.join(_ERBS_PKG, "tests", "test_erbs_analytics.py")
+    res_erbs = subprocess.run([sys.executable, erbs_test_entry], cwd=_ERBS_PKG)
+
+    exit_code = 0 if (res_cellular.returncode == 0 and res_traffic.returncode == 0 and res_erbs.returncode == 0) else 1
     print("\n" + "=" * 80)
     status_str = "ALL TEST SUITES PASSED" if exit_code == 0 else "ONE OR MORE TEST SUITES FAILED"
     print(f"Test Execution Result: {status_str}")
@@ -113,6 +126,23 @@ def main() -> int:
     if args and args[0] in ["catalog", "analyze-data", "profile-data"]:
         catalog_script = os.path.join(_ROOT, "data_catalog.py")
         res = subprocess.run([sys.executable, catalog_script], cwd=_ROOT)
+        return res.returncode
+
+    # ERBS Node Intelligence commands
+    if args and args[0] in ["erbs-audit", "audit"]:
+        erbs_script = os.path.join(_ERBS_PKG, "run_erbs_analytics.py")
+        res = subprocess.run([sys.executable, erbs_script, "audit"] + args[1:], cwd=_ROOT)
+        return res.returncode
+
+    if args and args[0] in ["erbs-inspect", "inspect"]:
+        erbs_script = os.path.join(_ERBS_PKG, "run_erbs_analytics.py")
+        res = subprocess.run([sys.executable, erbs_script, "inspect"] + args[1:], cwd=_ROOT)
+        return res.returncode
+
+    # Multivariate Traffic Volume Benchmark command
+    if args and args[0] in ["traffic-multi", "multivariate", "multi"]:
+        traffic_script = os.path.join(_TRAFFIC_PKG, "run_traffic.py")
+        res = subprocess.run([sys.executable, traffic_script, "multivariate"] + args[1:], cwd=_TRAFFIC_PKG)
         return res.returncode
 
     target_pkg = _CELLULAR_PKG
@@ -151,6 +181,10 @@ def main() -> int:
             elif p_val in ["cellular", "ran", "kpi"]:
                 target_pkg = _CELLULAR_PKG
                 target_script = "run_cellular.py"
+                explicit_pipeline = True
+            elif p_val in ["erbs", "nodes", "cell"]:
+                target_pkg = _ERBS_PKG
+                target_script = "run_erbs_analytics.py"
                 explicit_pipeline = True
             elif p_val in ["all", "both"]:
                 target_pkg = None

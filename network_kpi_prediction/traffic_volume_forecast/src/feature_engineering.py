@@ -183,5 +183,135 @@ def prepare_datasets(
     return datasets, scaler, feature_cols
 
 
+def resolve_macro_kpis_file(macro_csv: str | Path | None = None) -> Path:
+    """Dynamically resolves macro network KPIs dataset path."""
+    if macro_csv:
+        p = Path(macro_csv)
+        if p.exists():
+            return p
+        if (_PKG_ROOT / macro_csv).exists():
+            return _PKG_ROOT / macro_csv
+
+    candidates = [
+        _PKG_ROOT.parent / "data" / "macro_network_kpis_daily.csv",
+        _PKG_ROOT / "data" / "macro_network_kpis_daily.csv",
+        Path("data/macro_network_kpis_daily.csv"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]
+
+
+def prepare_multivariate_datasets(
+    clean_csv: str | Path | None = None,
+    macro_csv: str | Path | None = None,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    lags: list[int] | None = None,
+    rolling_windows: list[int] | None = None,
+) -> tuple[dict, StandardScaler, list[str]]:
+    """Merges traffic volume with macro radio KPIs to create multivariate exogenous features.
+
+    Strictly uses shift(1) on all radio metrics (DL/UL throughput, drop rate, RRC SR, Handover SR)
+    to eliminate lookahead leakage while enriching traffic load modeling.
+    """
+    resolved_clean = resolve_clean_traffic_file(clean_csv)
+    resolved_macro = resolve_macro_kpis_file(macro_csv)
+
+    if not resolved_macro.exists():
+        raise FileNotFoundError(f"Macro KPI dataset not found at: {resolved_macro}")
+
+    raw_df = pd.read_csv(resolved_clean)
+    if "date" not in [c.strip().strip('"') for c in raw_df.columns]:
+        from src.data_cleaning import run_clean_pipeline
+        raw_df = run_clean_pipeline(raw_path=resolved_clean)
+    else:
+        raw_df["date"] = pd.to_datetime(raw_df["date"])
+
+    macro_df = pd.read_csv(resolved_macro)
+    macro_df = macro_df.rename(columns={
+        "Date": "date",
+        "RRC Setup Success Rate": "macro_rrc_setup_sr",
+        "E-RAB Establishment Success Rate": "macro_erab_estab_sr",
+        "E-RAB Drop Rate": "macro_erab_drop_rate",
+        "Handover Success Rate": "macro_handover_sr",
+        "E-UTRAN IP Throughput UE DL": "macro_dl_throughput_mbps",
+        "E-UTRAN IP Throughput UE UL": "macro_ul_throughput_mbps",
+    })
+    macro_df["date"] = pd.to_datetime(macro_df["date"])
+
+    merged_df = pd.merge(raw_df, macro_df, on="date", how="inner").sort_values("date").reset_index(drop=True)
+
+    # 1. Base Time & Target Lag Features
+    featured_df = create_time_features(
+        merged_df, target_col="kpi_volume_gb", lags=lags, rolling_windows=rolling_windows
+    )
+
+    # 2. Exogenous Radio Features strictly on shift(1)
+    exo_cols = [
+        "macro_dl_throughput_mbps", "macro_ul_throughput_mbps",
+        "macro_erab_drop_rate", "macro_rrc_setup_sr", "macro_handover_sr"
+    ]
+    for c in exo_cols:
+        if c in featured_df.columns:
+            s = featured_df[c].shift(1)
+            featured_df[f"exo_{c}_lag1"] = s
+            featured_df[f"exo_{c}_roll7"] = s.rolling(window=7, min_periods=3).mean()
+
+    # Drop raw unshifted radio features from feature matrix
+    drop_meta = exo_cols + [c for c in featured_df.columns if c.startswith("macro_") and not c.startswith("exo_")]
+    featured_df = featured_df.drop(columns=[c for c in drop_meta if c in featured_df.columns])
+    featured_df = featured_df.dropna().reset_index(drop=True)
+
+    feature_cols = get_feature_columns(featured_df)
+
+    n = len(featured_df)
+    n_train = int(n * train_ratio)
+    n_val = int(n * val_ratio)
+
+    train_data = featured_df.iloc[:n_train].copy().reset_index(drop=True)
+    val_data = featured_df.iloc[n_train : n_train + n_val].copy().reset_index(drop=True)
+    test_data = featured_df.iloc[n_train + n_val :].copy().reset_index(drop=True)
+
+    # Fit scaler ONLY on train data per ML best practices
+    scaler = StandardScaler()
+    scaler.fit(train_data[feature_cols])
+
+    X_train_scaled = scaler.transform(train_data[feature_cols])
+    X_val_scaled = scaler.transform(val_data[feature_cols])
+    X_test_scaled = scaler.transform(test_data[feature_cols])
+
+    datasets = {
+        "train": {
+            "df": train_data,
+            "X": train_data[feature_cols],
+            "X_scaled": X_train_scaled,
+            "y": train_data["kpi_volume_gb"].values,
+            "dates": train_data["date"].values,
+        },
+        "val": {
+            "df": val_data,
+            "X": val_data[feature_cols],
+            "X_scaled": X_val_scaled,
+            "y": val_data["kpi_volume_gb"].values,
+            "dates": val_data["date"].values,
+        },
+        "test": {
+            "df": test_data,
+            "X": test_data[feature_cols],
+            "X_scaled": X_test_scaled,
+            "y": test_data["kpi_volume_gb"].values,
+            "dates": test_data["date"].values,
+        },
+        "full_df": featured_df,
+    }
+
+    print(f"[Multivariate] Datasets created with {len(feature_cols)} features (including exogenous radio indicators).")
+    print(f"[Multivariate] Samples: Train={len(train_data)}, Val={len(val_data)}, Test={len(test_data)}")
+
+    return datasets, scaler, feature_cols
+
+
 if __name__ == "__main__":
     prepare_datasets()

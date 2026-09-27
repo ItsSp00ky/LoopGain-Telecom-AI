@@ -6,6 +6,7 @@ and customizable hyperparameters, splitting ratios, and forecast horizons.
 import sys
 import argparse
 from pathlib import Path
+import pandas as pd
 import numpy as np
 
 # Ensure project package root is in sys.path
@@ -15,9 +16,9 @@ if str(_PKG_ROOT) not in sys.path:
 
 from src.data_cleaning import run_clean_pipeline, resolve_raw_traffic_file
 from src.temporal_splitting import run_split_pipeline, resolve_clean_traffic_file
-from src.feature_engineering import prepare_datasets
+from src.feature_engineering import prepare_datasets, prepare_multivariate_datasets
 from src.model_definitions import train_and_benchmark, retrain_champion, forecast_future
-from src.visualization import run_all_plots
+from src.visualization import run_all_plots, plot_multivariate_vs_univariate_comparison
 
 
 def run_clean_stage(raw_path=None, output_dir=None, z_threshold=3.0):
@@ -91,6 +92,80 @@ def run_train_stage(
         "final_metrics": final_metrics,
         "forecast_path": forecast_path,
         "forecast_df": forecast_df,
+    }
+
+
+def run_multivariate_stage(
+    clean_csv=None,
+    macro_csv=None,
+    output_dir=None,
+    train_ratio=0.70,
+    val_ratio=0.15,
+):
+    out_dir = Path(output_dir) if output_dir else _PKG_ROOT / "data"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    print("=" * 80)
+    print("MULTIVARIATE 4G TRAFFIC FORECASTING // EXOGENOUS RADIO NETWORK INTEGRATION")
+    print("Datasets: 4g_traffic_volume_daily.csv + macro_network_kpis_daily.csv")
+    print("=" * 80)
+
+    # 1. Prepare univariate baseline datasets
+    print("\n[1/3] Benchmarking Univariate Baseline (Past Volume Lags Only)...")
+    uni_datasets, _, uni_features = prepare_datasets(
+        clean_csv=clean_csv, train_ratio=train_ratio, val_ratio=val_ratio
+    )
+    uni_results, uni_metrics_df, uni_champ = train_and_benchmark(uni_datasets, uni_features)
+    _, _, uni_final_metrics = retrain_champion(uni_datasets, uni_features, uni_champ)
+
+    # 2. Prepare multivariate datasets with shifted radio KPIs
+    print("\n[2/3] Benchmarking Multivariate Exogenous Model (Volume Lags + Shifted Radio KPIs)...")
+    multi_datasets, _, multi_features = prepare_multivariate_datasets(
+        clean_csv=clean_csv, macro_csv=macro_csv, train_ratio=train_ratio, val_ratio=val_ratio
+    )
+    multi_results, multi_metrics_df, multi_champ = train_and_benchmark(multi_datasets, multi_features)
+    _, _, multi_final_metrics = retrain_champion(multi_datasets, multi_features, multi_champ)
+
+    # 3. Comparative Benchmarking
+    print("\n[3/3] Generating Univariate vs Multivariate Performance Comparison...")
+    comp_df = pd.DataFrame([
+        {
+            "Model Architecture": f"Univariate Champion ({uni_champ})",
+            "Features": len(uni_features),
+            "Test-MAE": round(uni_final_metrics["MAE"], 2),
+            "Test-RMSE": round(uni_final_metrics["RMSE"], 2),
+            "Test-WAPE (%)": round(uni_final_metrics["WAPE (%)"], 2),
+            "Test-R2": round(uni_final_metrics["R2"], 4),
+        },
+        {
+            "Model Architecture": f"Multivariate Champion ({multi_champ})",
+            "Features": len(multi_features),
+            "Test-MAE": round(multi_final_metrics["MAE"], 2),
+            "Test-RMSE": round(multi_final_metrics["RMSE"], 2),
+            "Test-WAPE (%)": round(multi_final_metrics["WAPE (%)"], 2),
+            "Test-R2": round(multi_final_metrics["R2"], 4),
+        }
+    ])
+
+    print("\n" + "=" * 80)
+    print("UNIVARIATE VS. MULTIVARIATE PERFORMANCE COMPARISON:")
+    print("=" * 80)
+    print(comp_df.to_string(index=False))
+    print("=" * 80 + "\n")
+
+    comp_csv = out_dir / "multivariate_vs_univariate_comparison.csv"
+    comp_df.to_csv(comp_csv, index=False)
+    print(f"Comparison metrics exported to: {comp_csv.resolve()}")
+
+    # Generate publication plot
+    plot_multivariate_vs_univariate_comparison(comp_df, plots_dir=_PKG_ROOT / "plots")
+
+    return {
+        "comparison_df": comp_df,
+        "univariate_champion": uni_champ,
+        "multivariate_champion": multi_champ,
+        "univariate_metrics": uni_final_metrics,
+        "multivariate_metrics": multi_final_metrics,
     }
 
 
@@ -259,6 +334,14 @@ def main(argv=None) -> int:
     plot_p.add_argument("--forecast-csv", type=str, default=None, help="Path to forecast CSV")
     plot_p.add_argument("--plots-dir", "-p", type=str, default=None, help="Directory to save plots")
 
+    # multivariate
+    multi_p = subparsers.add_parser("multivariate", aliases=["multi"], help="Benchmark multivariate exogenous radio KPIs against univariate baseline")
+    multi_p.add_argument("--data-path", "-d", type=str, default=None, help="Path to clean traffic CSV")
+    multi_p.add_argument("--macro-path", "-m", type=str, default=None, help="Path to macro radio KPIs CSV")
+    multi_p.add_argument("--output-dir", "-o", type=str, default=None, help="Output directory")
+    multi_p.add_argument("--train-ratio", type=float, default=0.70, help="Train ratio (default: 0.70)")
+    multi_p.add_argument("--val-ratio", type=float, default=0.15, help="Val ratio (default: 0.15)")
+
     # test
     subparsers.add_parser("test", help="Execute all unit tests for the traffic volume prediction pipeline")
 
@@ -310,6 +393,15 @@ def main(argv=None) -> int:
             clean_csv=args.clean_csv,
             forecast_csv=args.forecast_csv,
             plots_dir=args.plots_dir,
+        )
+        return 0
+    elif args.command in ["multivariate", "multi"]:
+        res = run_multivariate_stage(
+            clean_csv=getattr(args, "data_path", None),
+            macro_csv=getattr(args, "macro_path", None),
+            output_dir=getattr(args, "output_dir", None),
+            train_ratio=getattr(args, "train_ratio", 0.70),
+            val_ratio=getattr(args, "val_ratio", 0.15),
         )
         return 0
     elif args.command == "test":
