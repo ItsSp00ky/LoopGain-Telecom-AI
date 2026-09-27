@@ -147,6 +147,13 @@ def test_the_chatbot_has_exactly_its_three_tools():
     assert names == ["find_packages", "my_offer", "find_service_point"]
 
 
+def test_without_a_sign_in_there_is_no_offer_tool_to_misread():
+    names = [tool.name for tool in build_tools("u", "k", None, client=FakeClient())]
+    assert names == ["find_packages", "find_service_point"]
+    assert "not signed in" in chatbot_tools.system_prompt(False, signed_in=False)
+    assert "is signed in" in chatbot_tools.system_prompt(False)
+
+
 def test_service_points_wait_for_their_data():
     assert chatbot_tools.find_service_point("Tripoli")["available"] is False
 
@@ -208,7 +215,7 @@ def test_validity_and_amounts_read_naturally_in_each_language():
 
 
 def test_the_prompt_names_the_detected_language():
-    assert chatbot_tools.system_prompt(True).endswith("Write your whole reply in Arabic.\n")
+    assert "Write your whole reply in Arabic.\n" in chatbot_tools.system_prompt(True)
     assert "latest message is in English" in chatbot_tools.system_prompt(False)
 
 

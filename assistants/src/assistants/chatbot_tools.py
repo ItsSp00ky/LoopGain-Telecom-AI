@@ -34,8 +34,9 @@ them. If it returns no offer, say there is nothing for them today, and do not of
 else in its place.
 4. An offer from my_offer is a bonus Almadar grants. Never present it as something to buy and \
 never give it a price.
-5. You only know the signed-in customer. Never discuss other customers, and never ask for or \
-repeat a phone number.
+5. You only know the signed-in customer's own account. When asked about another customer or \
+another number, say you can only check the customer's own account. Never ask for or repeat \
+a phone number.
 6. Never talk about how likely a customer is to leave, risk or churn. You do not have that \
 information.
 7. For balance, bills, recharges, technical faults or anything your tools cannot answer, say \
@@ -56,12 +57,18 @@ many match in total.
 """
 
 
-def system_prompt(arabic: bool) -> str:
-    """The rules, plus the language of this turn as detected in code, not guessed."""
+def system_prompt(arabic: bool, signed_in: bool = True) -> str:
+    """The rules, plus what the code knows about this turn: its language and the sign-in."""
     language = "Arabic" if arabic else "English"
+    account = (
+        "The customer is signed in; my_offer reads their own account."
+        if signed_in
+        else "The customer is not signed in, so their offers cannot be checked. If they ask "
+        "about an offer, tell them to sign in first, and do not say whether they have one."
+    )
     return (
         f"{SYSTEM_PROMPT}\nThe customer's latest message is in {language}. "
-        f"Write your whole reply in {language}.\n"
+        f"Write your whole reply in {language}.\n{account}\n"
     )
 
 
@@ -251,7 +258,7 @@ def build_tools(
     def packages(**arguments) -> dict:
         return find_packages(client.catalogue(base_url, chatbot_key), arabic, **arguments)
 
-    return [
+    tools = [
         Tool(
             "find_packages",
             "Find Almadar packages on sale. Every argument is optional.",
@@ -289,18 +296,25 @@ def build_tools(
             packages,
         ),
         Tool(
-            "my_offer",
-            "The offer Almadar approved for the signed-in customer, if there is one.",
-            {"type": "object", "properties": {}},
-            partial(my_offer, base_url, chatbot_key, subscriber_id, arabic, client),
-        ),
-        Tool(
             "find_service_point",
             "Almadar shops and service points in a city.",
             {"type": "object", "properties": {"city": {"type": ["string", "null"]}}},
             find_service_point,
         ),
     ]
+    # Without a sign-in there is no account to read, so the model gets no tool whose empty
+    # answer it could retell as "no offer".
+    if subscriber_id:
+        tools.insert(
+            1,
+            Tool(
+                "my_offer",
+                "The offer Almadar approved for the signed-in customer, if there is one.",
+                {"type": "object", "properties": {}},
+                partial(my_offer, base_url, chatbot_key, subscriber_id, arabic, client),
+            ),
+        )
+    return tools
 
 
 def fallback(calls: list[ToolCall], user_text: str) -> str:

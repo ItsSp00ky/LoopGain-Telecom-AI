@@ -114,7 +114,7 @@ def run_chatbot(base_url: str, pause: float) -> str:
         arabic = chatbot_tools.is_arabic(question["text"])
         tools = chatbot_tools.build_tools(base_url, key, question.get("subscriber"), arabic)
         turn = llm.run_turn(
-            chatbot_tools.system_prompt(arabic),
+            chatbot_tools.system_prompt(arabic, signed_in=bool(question.get("subscriber"))),
             [],
             question["text"],
             tools,

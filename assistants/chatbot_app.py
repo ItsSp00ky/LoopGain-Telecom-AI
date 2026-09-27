@@ -85,7 +85,7 @@ if prompt:
     tools = chatbot_tools.build_tools(BASE_URL, CHATBOT_KEY, subscriber or None, arabic)
     with st.spinner("Looking it up..."):
         turn = llm.run_turn(
-            chatbot_tools.system_prompt(arabic),
+            chatbot_tools.system_prompt(arabic, signed_in=bool(subscriber)),
             st.session_state.messages,
             prompt,
             tools,
