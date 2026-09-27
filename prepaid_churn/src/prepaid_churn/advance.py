@@ -316,6 +316,11 @@ def basis_sensitivity(advice: pd.DataFrame, market: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _shown(value: float, template: str) -> str:
+    """A report figure, or "-" when there is nothing to measure it on."""
+    return "-" if pd.isna(value) else template.format(value)
+
+
 def _share_table(advice: pd.DataFrame) -> pd.DataFrame:
     counts = advice["airtime_limit_lyd"].value_counts().sort_index()
     return pd.DataFrame(
@@ -373,6 +378,12 @@ def advice_report(advice: pd.DataFrame, market: dict, source: str) -> str:
         f"only the {max(lower_rungs):g} LYD rung" if lower_rungs else "no advance at all"
     )
     cards_facts = market["recharge_cards"]
+    median_topup_text = _shown(median_topup, "{:.2f} LYD")
+    below_text = _shown(below_share, "{:.1%}")
+    smallest_text = _shown(smallest_share, "{:.1%}")
+    zero_text = _shown(zero_share, "{:.1%}")
+    data_text = _shown(data_share, "{:.1%}")
+    residual_text = _shown(median_residual, "{:.2f} LYD")
     basis_text = (
         "the recharge card nearest to the average airtime recharge of the two window months"
     )
@@ -479,8 +490,8 @@ so one quiet month does not decide the advice alone.
 
 That average is then translated into the card the customer would buy (decision 49).
 The converted amounts are the source market's habit rather than the operator's: among the
-customers who paid for their top-ups the median is {median_topup:.2f} LYD, and
-{below_share:.1%} of them average less than the smallest card, which nobody can top up at the
+customers who paid for their top-ups the median is {median_topup_text}, and
+{below_text} of them average less than the smallest card, which nobody can top up at the
 operator.
 So the typical top-up is the card nearest to that average, the same translation as the
 usual card of T18, and never less than {smallest:g} LYD.
@@ -502,7 +513,7 @@ A reader who wants the cautious answer should read the quieter month's row.
 
 ## What the rule advises
 
-For {smallest_share:.1%} of the customers who recharged, the usual card is the smallest one,
+For {smallest_text} of the customers who recharged, the usual card is the smallest one,
 {smallest:g} LYD.
 At {MAX_DEBT_FRACTION:g} the rule allows them the {floor_rung:g} LYD rung, which leaves
 {smallest - floor_rung:g} LYD once their card settles it, and keeps them off the debts that
@@ -510,13 +521,13 @@ would take the whole card: {", ".join(trapped) if trapped else "none"}.
 The {floor_rung:g} LYD rung needs a fraction of at least {floor_rung / smallest:g} for them;
 below it their card would allow {below_the_edge}.
 
-For {zero_share:.1%} of the customers who recharged, the recharges of the whole window were
+For {zero_text} of the customers who recharged, the recharges of the whole window were
 worth nothing.
 They are declined, because they show no capacity to repay.
 
 The data advance needs a card of at least {data_needs:.2f} LYD, so {data_card}.
 The operator offers it to anyone whose balance is low enough, and the rule advises it for
-{data_share:.1%} of the base.
+{data_text} of the base.
 
 ## What is advised
 
@@ -533,7 +544,7 @@ At a flat {products[DATA]:g} LYD it needs a card of at least {data_needs:.2f} LY
 leave balance.
 
 Among the {int(advised.sum())} customers advised an airtime limit, the median balance left after
-their usual card settles it is {median_residual:.2f} LYD.
+their usual card settles it is {residual_text}.
 
 ## What this advice does not do
 

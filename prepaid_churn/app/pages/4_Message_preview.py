@@ -102,7 +102,8 @@ if offer is not None:
         )
 
 st.caption(
-    "The message states the package, what it gives and for how long, and nothing else; "
+    "The message states the package, what it gives when the operator states it, and "
+    "for how long, and nothing else; "
     "it is the same text the chatbot is given (decision 51). The policy's reason for the "
     "offer stays with staff, and no churn probability, risk band or value figure is ever "
     "sent to a customer."

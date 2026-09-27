@@ -360,6 +360,14 @@ def run_output_contract(args: argparse.Namespace) -> None:
     print(f"Output contract written to {args.output}")
 
 
+def _positive_int(text: str) -> int:
+    """A count of at least 1, so `--repeats 0` is refused with a message, not a KeyError."""
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, not {value}")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     from prepaid_churn.retention import POLICY_PATH
 
@@ -415,7 +423,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Put 95%% intervals on the frozen test metrics; changes no model (T7).",
     )
     uncertainty.add_argument("--data-dir", type=Path, default=PROCESSED_DIR / "all")
-    uncertainty.add_argument("--repeats", type=int, default=2000)
+    uncertainty.add_argument("--repeats", type=_positive_int, default=2000)
     uncertainty.add_argument("--report", type=Path, default=REPORTS_DIR / "uncertainty.md")
     uncertainty.set_defaults(handler=run_uncertainty)
 

@@ -1085,7 +1085,8 @@ So the module no longer names it:
 What this does not hide:
 
 - Git history and old commit messages still contain the name; rewriting a shared history would break every teammate's clone, so it is left.
-- The antenna module and the root `CODE_REVIEW.md` belong to the team's other parts and still name both Libyan operators, from public tower data.
+- The antenna module belongs to the team's other parts and still names both Libyan operators, from public tower data.
+- The root `CODE_REVIEW.md` was thought to be in the same case, but it named this module's operator twice, in its prepaid part; the name was replaced there on 2026-09-27 (T21 recap).
 - The catalogue keeps the operator's own package names, short codes and service names, which someone who knows the Libyan market could recognise.
 
 Nothing about the model, the numbers or the offers changes; only names do.
@@ -1239,9 +1240,11 @@ In Arabic every message in the demo campaign also needed 2 SMS parts, so each wo
 
 Ali chose in the T20 recap to separate the two:
 
-- `service.gift_message` writes what the customer is told, from the catalogue row alone: the package, what it gives, the hours it works when it has a window, and for how long.
-  For example "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم." and "Your gift: Net 50MB, 50 MB of data for a day."
-- The units are the operator's own, from its source files: ميقا, قيقا, دقيقة and لا محدودة; a package whose content the operator does not state gets its name and validity only.
+- `service.gift_message` writes what the customer is told, from the catalogue row alone: the package, what it gives when the operator's own file states it, the hours it works when it has a window, and for how long.
+  For example "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم." and "Your gift: Net 50MB for a day."
+- The units are the operator's own, from its source files: ميقا, قيقا, دقيقة and لا محدودة.
+- A volume read from the package name, or reported by `Ali_Branch` rather than stated by the operator (the Silver family and the hourly 5G packages), is left out: the name already says it, and our reading is not the operator's promise.
+  The first version said them, so `نت 1/4` became 250 MB by our own conversion and Silver became unlimited; the T21 recap's review found it the same day.
 - The chatbot's offer answer carries it as `customer_message_ar` and `customer_message_en`, and the demo's SMS preview uses the same function, so the two cannot drift apart.
 - Every one of the 37 packages fits one Arabic SMS part; the longest, the morning pass, is 68 of 70 characters, and a test checks the whole catalogue.
 - `offer_reason_*` stays in the answer for staff who ask why the offer was made, and the guide's rule 7 says never to say it to the customer.

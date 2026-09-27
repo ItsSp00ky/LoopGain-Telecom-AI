@@ -188,7 +188,8 @@ class RetentionResponse(BaseModel):
     recommended_offer_id: str
     customer_message_ar: str = Field(
         description=(
-            "What to say to the customer: the package, what it gives and for how long, "
+            "What to say to the customer: the package, what it gives when the operator "
+            "states it, and for how long, "
             "in one Arabic SMS part (decision 51)."
         )
     )

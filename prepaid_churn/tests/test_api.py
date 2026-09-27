@@ -298,26 +298,19 @@ def test_a_pseudonymous_id_is_looked_up_rather_than_refused(client):
 @pytest.mark.parametrize(
     ("offer_id", "english", "arabic"),
     [
+        ("DAY_50MB", "Your gift: Net 50MB for a day.", "هديتك: نت 50MB لمدة يوم."),
+        ("WK_1", "Your gift: Net 1 for 7 days.", "هديتك: نت 1 لمدة 7 أيام."),
         (
-            "DAY_50MB",
-            "Your gift: Net 50MB, 50 MB of data for a day.",
-            "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم.",
-        ),
-        (
-            "WK_1",
-            "Your gift: Net 1, 1 GB of data for 7 days.",
-            "هديتك: نت 1، إنترنت 1 قيقا لمدة 7 أيام.",
+            "GOLD_7",
+            "Your gift: Golden 7, unlimited data for 7 days.",
+            "هديتك: ذهبي 7، إنترنت لا محدود لمدة 7 أيام.",
         ),
         (
             "FAM_70",
             "Your gift: Family 70, 70 GB of data and 300 minutes for 30 days.",
             "هديتك: فاميلي 70، إنترنت 70 قيقا و300 دقيقة لمدة 30 يوماً.",
         ),
-        (
-            "HR5G_2",
-            "Your gift: Net 2 hours 5G, unlimited data for 2 hours.",
-            "هديتك: نت ساعتين 2_5G، إنترنت لا محدود لمدة ساعتين.",
-        ),
+        ("HR5G_2", "Your gift: Net 2 hours 5G for 2 hours.", "هديتك: نت ساعتين 2_5G لمدة ساعتين."),
         ("SOC_D", "Your gift: Social daily for a day.", "هديتك: سوشيال يومي لمدة يوم."),
     ],
 )
@@ -328,6 +321,35 @@ def test_the_message_says_what_the_package_gives_and_for_how_long(
     offer = offers.set_index("offer_id").loc[offer_id].to_dict() | {"offer_id": offer_id}
     assert gift_message(offer, "en") == english
     assert gift_message(offer, "ar") == arabic
+
+
+@pytest.mark.parametrize("offer_id", ["DAY_QTR", "MO_20", "SLVR_1", "HR5G_1"])
+def test_the_message_never_states_what_the_operator_does_not(offers, offer_id):
+    """A volume read from the name, or unlimited as `Ali_Branch` reported it, is not said.
+
+    `نت 1/4` would otherwise become 250 MB by our own conversion, and Silver "unlimited"
+    although the operator's file only caps its speed.
+    """
+    offer = offers.set_index("offer_id").loc[offer_id].to_dict() | {"offer_id": offer_id}
+    assert offer["volume_source"] != "stated"
+    for language, words in (("en", ("GB", "MB", "unlimited")), ("ar", ("قيقا", "ميقا", "محدود"))):
+        message = gift_message(offer, language)
+        assert not any(
+            word in message.replace(str(offer[f"name_{language}"]), "") for word in words
+        )
+
+
+def test_a_row_without_its_volume_source_says_no_volume(offers):
+    """The trimmed catalogue columns carry no source, so they must not produce a promise."""
+    offer = offers.set_index("offer_id").loc["GOLD_7"].to_dict() | {"offer_id": "GOLD_7"}
+    del offer["volume_source"]
+    assert gift_message(offer, "en") == "Your gift: Golden 7 for 7 days."
+
+
+def test_a_missing_name_falls_back_instead_of_printing_nan(offers):
+    offer = offers.set_index("offer_id").loc["SOC_D"].to_dict() | {"offer_id": "SOC_D"}
+    offer["name_ar"] = float("nan")
+    assert gift_message(offer, "ar") == "هديتك: Social daily لمدة يوم."
 
 
 def test_every_package_s_message_fits_one_arabic_sms(offers):

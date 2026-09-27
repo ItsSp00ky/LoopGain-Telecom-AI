@@ -389,6 +389,11 @@ _DAYS = ("a day", "days", ("يوم", "يومين", "أيام", "يوماً", "ي
 _MINUTES = ("a minute", "minutes", ("دقيقة", "دقيقتين", "دقائق", "دقيقة", "دقيقة"))
 
 
+def _present(value) -> bool:
+    """A catalogue cell that holds text: not missing, not NaN and not blank."""
+    return value is not None and not pd.isna(value) and bool(str(value).strip())
+
+
 def _number(value) -> float | None:
     """A catalogue cell as a number (a flag becomes 0 or 1), or None when it is empty."""
     if value is None or pd.isna(value):
@@ -420,13 +425,20 @@ def _volume(gigabytes: float, language: str) -> str:
 
 
 def _gives(offer: dict, language: str) -> str | None:
-    """What the package gives, from the catalogue; None when the operator states nothing."""
-    data_unlimited = bool(_number(offer.get("data_unlimited")))
+    """What the package gives, as the operator states it; None when it states nothing.
+
+    Data is said only when the operator's own file states it (`volume_source` "stated"):
+    a volume read from the package name is already in the name, in the operator's words,
+    and one that `Ali_Branch` reported is not the operator's to promise (T16).
+    A row without `volume_source` is treated the same way, so nothing unstated slips in.
+    """
+    stated = offer.get("volume_source") == "stated"
+    data_unlimited = stated and bool(_number(offer.get("data_unlimited")))
     voice_unlimited = bool(_number(offer.get("voice_unlimited")))
     if data_unlimited and voice_unlimited:
         return "unlimited data and calls" if language == "en" else "إنترنت ومكالمات لا محدودة"
     parts = []
-    gigabytes = _number(offer.get("data_gb"))
+    gigabytes = _number(offer.get("data_gb")) if stated else None
     if data_unlimited:
         parts.append("unlimited data" if language == "en" else "إنترنت لا محدود")
     elif gigabytes:
@@ -444,8 +456,10 @@ def _gives(offer: dict, language: str) -> str | None:
 def gift_message(offer: dict, language: str = "ar") -> str:
     """What the customer is told about an approved offer, in Arabic or English (decision 51).
 
-    The package, what it gives, the hours it works when it has a window, and for how
-    long, all from the catalogue row, for example "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم."
+    The package, what it gives when the operator states it, the hours it works when it
+    has a window, and for how long, all from the full catalogue row; for example
+    "هديتك: الصبح، إنترنت ومكالمات لا محدودة من 06:00 إلى 11:00 لمدة يوم." and, for a package
+    whose volume is only in its name, "هديتك: نت 50MB لمدة يوم."
     It is what the chatbot says and what the demo sends as the SMS, and every package in
     the catalogue fits one Arabic SMS part.
     The policy's reason (`offer_reason_*`) is not in it: read to a customer, it says the
@@ -454,7 +468,8 @@ def gift_message(offer: dict, language: str = "ar") -> str:
     """
     if language not in ("ar", "en"):
         raise ValueError("The customer message is written in Arabic or English.")
-    name = offer.get(f"name_{language}") or offer.get("name_en") or offer.get("offer_id")
+    names = (offer.get(f"name_{language}"), offer.get("name_en"), offer.get("offer_id"))
+    name = next((str(value).strip() for value in names if _present(value)), "")
     text = f"{GIFT_PREFIX[language]}{name}"
     gives = _gives(offer, language)
     if gives:
@@ -498,21 +513,21 @@ def retention(state: ServiceState, subscriber_id: str) -> dict | None:
         for name, value in _json_safe(rows.iloc[[0]])[0].items()
         if name in CHATBOT_RELEASE_COLUMNS
     }
-    offer = _offer_details(state, row["recommended_offer_id"])
-    if offer is None:
+    package = _catalogue_row(state, row["recommended_offer_id"])
+    if package is None:
         return None
+    # The message is written from the whole row, which says where each volume comes from;
+    # the chatbot is shown only the catalogue columns.
     messages = {
-        f"customer_message_{language}": gift_message(offer, language) for language in ("ar", "en")
+        f"customer_message_{language}": gift_message(package, language) for language in ("ar", "en")
     }
+    offer = {name: package[name] for name in CATALOGUE_COLUMNS if name in package}
     return row | messages | {"offer": offer}
 
 
-def _offer_details(state: ServiceState, offer_id: object) -> dict | None:
+def _catalogue_row(state: ServiceState, offer_id: object) -> dict | None:
     offers = state.offers.loc[state.offers["offer_id"].astype(str) == str(offer_id)]
-    if offers.empty:
-        return None
-    columns = [name for name in CATALOGUE_COLUMNS if name in offers.columns]
-    return _json_safe(offers[columns].iloc[[0]])[0]
+    return None if offers.empty else _json_safe(offers.iloc[[0]])[0]
 
 
 def subscriber(state: ServiceState, subscriber_id: str) -> dict | None:

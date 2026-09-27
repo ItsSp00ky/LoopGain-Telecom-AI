@@ -6,7 +6,7 @@ Delivery: `Ali_Branch`, replacing its previous tracked CVM tree at the owner's e
 
 ## Scope and approach
 
-Reviewed the active prepaid pipeline from CSV ingestion through cleaning, feature windows, training, calibration, release gating, bundle loading, scoring and Almadar mapping.
+Reviewed the active prepaid pipeline from CSV ingestion through cleaning, feature windows, training, calibration, release gating, bundle loading, scoring and the operator mapping.
 Also reviewed geospatial cleaning, feature extraction, model training, candidate ranking and supplementary demand/cell evidence, plus the legacy churn module and chatbot scaffold.
 Changes keep the source branch's pure functions and thin CLI in prepaid, and its existing extractor class, pandas/scipy approach and unittest style in GIS.
 No dependencies, model families, feature definitions, business assumptions or frozen thresholds were changed.
@@ -29,7 +29,7 @@ No dependencies, model families, feature definitions, business assumptions or fr
 | High | Site consolidation | KD-tree positions were treated as DataFrame labels, breaking filtered frames; reported distances used the first tower instead of the centroid. | Map positions to index labels, use the projected cluster centroid and replace the shifting list queue with `deque`. |
 | Medium | Regional demand | The join discarded the caller's row index; infinite demand was ranked as usable evidence. | Preserve the index and reject non-finite demand values. |
 | High | Candidate filtering | An empty strict search relaxed caller limits and could still send an empty frame to estimators. | Respect the requested minimums, validate limits, skip inference for empty results and overwrite stale CSV/GeoJSON outputs with an empty result. |
-| Medium | Almadar inputs | Invalid conversion scales, card ladders and missing offer families reached arithmetic or array indexing. | Reject invalid market values and missing families with the existing catalogue error type. |
+| Medium | Operator inputs | Invalid conversion scales, card ladders and missing offer families reached arithmetic or array indexing. | Reject invalid market values and missing families with the existing catalogue error type. |
 | Medium | GIS artifact paths | Training ignored caller-supplied output directories. | Save models and metrics in the requested directories and create the equipment directory when needed. |
 
 ## Validation
@@ -80,3 +80,10 @@ These are documented separately because they require a modelling or product deci
 4. **Product gap: the chatbot remains a scaffold and the integration API/approval workflow are future tickets.**
    Complete T10/T11/T15/T20 rather than treating this CLI review as an end-to-end deployed retention service.
 
+## Status on 2026-09-27
+
+- The fourth finding is done in the prepaid module: named approvals (T11), the read-only integration service (T15) and the integration guide and check for the chatbot and copilot (T20) exist.
+  No chatbot or copilot has called the service yet.
+- Findings 1 to 3 concern the legacy churn module and the GIS module, which belong to the team's other parts; they are unchanged and stay with their owners.
+- The prepaid figures above are those of 2026-09-20; the module now has 456 tests, and every later change is recorded in `prepaid_churn/docs/decisions.md`.
+- The operator's name was removed from this file on 2026-09-27, so that the prepaid module's operator stays unnamed (decision 45).

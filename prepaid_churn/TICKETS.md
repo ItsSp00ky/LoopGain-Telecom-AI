@@ -9,7 +9,7 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T21; prior notes retained).
+**Last updated:** 2026-09-27 by Ali (step-by-step recap of the module, now at T22; prior notes retained).
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -39,7 +39,7 @@ Update this section at the end of every working session.
   The holdout, the same customers in every campaign, is now a deliberate permanent control group (decision 43).
 - Steps 12 and 13 were skipped, and at Ali's request the experiments of T12, T13 and T17 were removed, with their code, tests, reports and the `experiments` dependency group (decision 44).
   One note in the model card and in T7 keeps their result: both tested models were worse than LightGBM.
-- Validation: 447 tests pass, none skipped; lint and formatting green.
+- Validation: 456 tests pass, none skipped; lint and formatting green.
 - Step 14 (T14): the Campaign builder no longer presents its comparison as evidence, and names the holdout as the same customers every time.
 - At Ali's request the operator is no longer named anywhere in the module (decision 45): it is "the operator" or "a Libyan mobile operator".
   Files and commands followed: `data/operator/`, `src/prepaid_churn/operator_market.py`, `churn operator-view`, `reports/operator_view.md` and `docs/operator.md`.
@@ -59,7 +59,9 @@ Update this section at the end of every working session.
   The advice is now 3 LYD only for 63.3%, 5 LYD with the data advance for 31.9% and declined for 3.9%; nobody who paid for a top-up is declined.
 - Step 20 (T20): customers now hear the package, not the policy's reason: the offer answer and the demo SMS share one message that fits one Arabic SMS part (decision 51).
   Every example in `docs/integration.md` was captured again from the real service, and the guide says how to reach it from another laptop.
-- Next: step 21, T21 the code and logic review.
+- Step 21 (T21): `CODE_REVIEW.md` no longer names the operator, and the recap's code was reviewed.
+  Four findings were fixed with tests; the main one was a customer message that stated volumes and "unlimited" the operator's own file does not state.
+- Next: step 22, T22 scoring and retraining on any calendar months.
 
 **Ali's branch sync, 2026-09-22**
 
@@ -1030,7 +1032,7 @@ Readiness follow-up (Ali, 2026-09-22):
 
 Recap (Ali, 2026-09-27):
 - The guide told the chatbot to say `offer_reason_ar` to the customer, and the demo built its SMS from it: "positive value under the stated retention assumptions" would tell a customer that the operator computed their value, and in Arabic every message cost 2 SMS parts.
-- The offer answer now carries `customer_message_ar` and `customer_message_en`: the package, what it gives and for how long, and the hours for the morning pass, from the catalogue in the operator's own units (decision 51).
+- The offer answer now carries `customer_message_ar` and `customer_message_en`: the package, what it gives when the operator states it, and for how long, and the hours for the morning pass, from the catalogue in the operator's own units (decision 51).
   The demo SMS is the same text, and every one of the 37 packages fits one Arabic SMS part; the longest, the morning pass, is 68 of 70 characters.
 - `offer_reason_*` stays in the answer as the policy's reason for staff, and the guide's new rule 7 says never to say it to the customer.
 - Every example in `docs/integration.md` was captured again on 2026-09-27 from the real service, at 70 LYD and on a copy of the demo campaign with subscriber 70008 approved; the notes about the 40 LYD anchor are gone.
@@ -1064,6 +1066,20 @@ Findings:
 - No new infrastructure, dependencies or business logic were introduced.
 - The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](reports/end_to_end.md).
   Validation now passes 420 tests with none skipped; the frozen model and prior research results are unchanged.
+
+Recap (Ali, 2026-09-27):
+- `CODE_REVIEW.md` named this module's operator twice, in its prepaid part, although decision 45 assumed it only named operators from public tower data.
+  The name is replaced by "the operator", decision 45 says so, and a dated status note records that the fourth open finding is done while the other three stay with their teams.
+- Every code change of the recap was reviewed for correctness: 16 commits since 2026-09-25, in 24 files.
+  Four findings were fixed, each with a test that fails on the old code:
+  - Medium: the customer message stated what the operator does not state; `نت 1/4` became 250 MB by our own conversion, and the Silver family and the hourly 5G packages became unlimited on `Ali_Branch`'s report. It now states a package's content only when the operator's file does (decision 51).
+  - Low: `churn uncertainty --repeats 0` reached the report and failed with a KeyError; the command now refuses fewer than one resample.
+  - Low: the credit report printed "nan" where nothing could be measured; it now prints "-".
+  - Low: a missing package name would have reached the customer as "nan"; the message falls back to the English name or the ID.
+- Two findings were noted and left, because neither changes a conclusion:
+  - The operator view's share of top-ups under 5 LYD, 49.9%, counts the 1.9% whose recharges were worth nothing, which T19 declines separately; among those who paid it is 48.9%.
+  - Its report turns megabytes into gigabytes with 1,024 while the catalogue uses 1,000, so the median data use reads 0.50 GB rather than 0.51.
+- Nothing else was found wrong: the campaign reload, the weekly packs, the card-based credit advice and the resampling behave as their decisions describe.
 
 ## T22 - Score and retrain on any calendar months
 

@@ -388,7 +388,8 @@ def customer_message(offer: dict | None, language: str = "ar") -> str:
     """The text an approved customer would receive, in Arabic or English (decision 51).
 
     It is the message the chatbot is given, `service.gift_message`: the package, what it
-    gives and for how long. The policy's reason stays with staff, and no churn
+    gives when the operator states it, and for how long. The policy's reason stays with
+    staff, and no churn
     probability, risk band or value figure is available to it by construction
     (decision 10). A package that has left the catalogue has nothing current to describe,
     so it has no message.

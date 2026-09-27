@@ -339,6 +339,8 @@ def test_the_report_states_every_assumption_and_the_finding(advice, market):
     ):
         assert phrase in report, f"the report no longer explains {phrase!r}"
     assert f"{MAX_DEBT_FRACTION:g}" in report
+    # The hand-made customers paid nothing, so several figures cannot be measured.
+    assert "nan" not in report
     assert (
         "the other Libyan operator" in report
     )  # the correction that its credit loan does not transfer

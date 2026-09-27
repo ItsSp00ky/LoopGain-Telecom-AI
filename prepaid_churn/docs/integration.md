@@ -139,8 +139,8 @@ Two calls, and nothing invented between them.
 {
   "subscriber_id": "70008",
   "recommended_offer_id": "DAY_50MB",
-  "customer_message_ar": "هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم.",
-  "customer_message_en": "Your gift: Net 50MB, 50 MB of data for a day.",
+  "customer_message_ar": "هديتك: نت 50MB لمدة يوم.",
+  "customer_message_en": "Your gift: Net 50MB for a day.",
   "offer_reason_en": "Catalogue bonus: Net 50MB; positive value under the stated retention assumptions.",
   "offer_reason_ar": "مكافأة من الكتالوج: نت 50MB؛ قيمة موجبة وفق افتراضات الاحتفاظ.",
   "reviewed_at": "2026-09-27T03:23:02+00:00",
@@ -149,7 +149,8 @@ Two calls, and nothing invented between them.
 }
 ```
 
-Say `customer_message_ar` to the customer, or `customer_message_en` in English: it names the package, what it gives and for how long, and fits one SMS.
+Say `customer_message_ar` to the customer, or `customer_message_en` in English: it names the package, what it gives when the operator's own material states it, and for how long, and fits one SMS.
+Net 50MB's volume is only in its name, so the message does not repeat it; the morning pass's content is stated, so its message says it.
 The morning pass's message also gives its hours, `من 06:00 إلى 11:00`.
 `offer_reason_*` is why the policy chose the offer, written for staff: never say it to the customer, because it tells them the operator computed their value (decision 51).
 Anything more about the package comes from `offer`, and only from it.
@@ -334,7 +335,7 @@ Run on 2026-09-27 against the service above: the 30,000-subscriber base and the 
 ## Chatbot, with the chatbot key
 - /catalogue: 37 packages, for example HR5G_1 (Net 1 hour 5G) at 5.0 LYD, collected 2026-09-18
 - /subscribers/70008/retention: DAY_50MB, approved 2026-09-27T03:23:02+00:00
-- the chatbot may say: هديتك: نت 50MB، إنترنت 50 ميقا لمدة يوم. [customer_message_ar]
+- the chatbot may say: هديتك: نت 50MB لمدة يوم. [customer_message_ar]
 
 ## Copilot, with the copilot key
 - /portfolio/summary: 30000 subscribers, risk available True, scored 2026-09-26T15:28:25+00:00
