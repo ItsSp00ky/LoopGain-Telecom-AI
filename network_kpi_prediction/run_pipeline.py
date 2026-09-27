@@ -16,14 +16,14 @@ _TRAFFIC_PKG = os.path.join(_ROOT, "traffic_volume_forecast")
 
 
 DATASET_PRESETS = {
-    "earfcndl": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (7)", "Data.csv"),
-    "carrier": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (7)", "Data.csv"),
-    "summer": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (8)", "Data.csv"),
-    "erbs-summer": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (8)", "Data.csv"),
-    "full": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (9)", "Data.csv"),
-    "erbs-full": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (9)", "Data.csv"),
-    "macro": os.path.join(_ROOT, "data", "all the data", "data investigation on 4G radio nodes v2 (6)", "Data.csv"),
-    "traffic": os.path.join(_ROOT, "data", "all the data", "DAILY NETWORK KPIs v2", "Year.csv"),
+    "earfcndl": os.path.join(_ROOT, "data", "all the data", "carrier_earfcndl_kpi_daily.csv"),
+    "carrier": os.path.join(_ROOT, "data", "all the data", "carrier_earfcndl_kpi_daily.csv"),
+    "summer": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_summer_120d.csv"),
+    "erbs-summer": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_summer_120d.csv"),
+    "full": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_full_year.csv"),
+    "erbs-full": os.path.join(_ROOT, "data", "all the data", "erbs_cell_kpi_full_year.csv"),
+    "macro": os.path.join(_ROOT, "data", "all the data", "macro_network_kpis_daily.csv"),
+    "traffic": os.path.join(_ROOT, "data", "all the data", "4g_traffic_volume_daily.csv"),
 }
 
 
@@ -43,11 +43,11 @@ Pipelines:
                        (Multi-model tournament, anomaly treatment, 30-day horizon)
 
 Dataset Presets (--dataset):
-  earfcndl / carrier   Ground-truth 6-band EARFCNDL telemetry (v2 (7))
-  summer / erbs-summer Summer high-density 120-day ERBS telemetry (v2 (8))
-  full / erbs-full     Full-year 1,067 ERBS base station telemetry (v2 (9))
-  macro                Network-wide macro 4G radio KPIs (v2 (6))
-  traffic              Daily aggregated 4G data volume in GB (Year.csv)
+  earfcndl / carrier   Ground-truth 6-band EARFCNDL telemetry (carrier_earfcndl_kpi_daily.csv)
+  summer / erbs-summer Summer high-density 120-day ERBS telemetry (erbs_cell_kpi_summer_120d.csv)
+  full / erbs-full     Full-year 1,067 ERBS base station telemetry (erbs_cell_kpi_full_year.csv)
+  macro                Network-wide macro 4G radio KPIs (macro_network_kpis_daily.csv)
+  traffic              Daily aggregated 4G data volume in GB (4g_traffic_volume_daily.csv)
 
 Common Commands:
   catalog              Inspect, profile, and synthesize all datasets across 'all the data'

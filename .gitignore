@@ -40,6 +40,10 @@ Thumbs.db
 dataset_profiles.txt
 *.zip
 
+# Generated document builds at repository root
+/*.docx
+/*.html
+
 # Heavy raw geospatial tiles and elevation archives (>100MB)
 *.hgt
 Libya_SRTM/

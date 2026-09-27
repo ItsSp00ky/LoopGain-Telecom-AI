@@ -129,14 +129,10 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None, col_ma
     """
     if raw_path is None:
         candidates = [
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (7)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (9)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
-            os.path.join(_REPO_ROOT, 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (8)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (6)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'Data2.csv'),
-            os.path.join(_REPO_ROOT, 'Data2.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'carrier_earfcndl_kpi_daily.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'erbs_cell_kpi_full_year.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'erbs_cell_kpi_summer_120d.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'macro_network_kpis_daily.csv'),
         ]
         raw_path = next((p for p in candidates if os.path.exists(p)), candidates[0])
 
@@ -234,14 +230,10 @@ def load_clean_data(data_path: str = None) -> pd.DataFrame:
     if not os.path.exists(resolved):
         # Auto-ingest raw ERBS telemetry if available
         raw_candidates = [
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (7)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (9)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
-            os.path.join(_REPO_ROOT, 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (8)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (6)', 'Data.csv'),
-            os.path.join(_REPO_ROOT, '..', 'Data2.csv'),
-            os.path.join(_REPO_ROOT, 'Data2.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'carrier_earfcndl_kpi_daily.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'erbs_cell_kpi_full_year.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'erbs_cell_kpi_summer_120d.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'macro_network_kpis_daily.csv'),
         ]
         raw_found = next((p for p in raw_candidates if os.path.exists(p)), None)
         if raw_found:
