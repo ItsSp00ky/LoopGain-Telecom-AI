@@ -81,33 +81,47 @@ python run_pipeline.py --pipeline traffic       # Full end-to-end execution
 
 ### Run Tests
 ```bash
-# Cellular pipeline tests
-cd cellular_kpi_forecast && python run_cellular.py test
+# Full test suite across both pipelines
+python run_pipeline.py test
+```
 
-# Traffic pipeline tests
-python -m unittest discover -s traffic_volume_forecast/tests -p "test_*.py" -v
+### Inspect & Profile All Datasets
+```bash
+# Automated audit & statistical synthesis of all datasets in 'data/all the data/'
+python run_pipeline.py catalog
 ```
 
 ---
 
-## Data Assets
+## Multi-Tier Telemetry Data Assets (`data/all the data/`)
 
-### Raw Data (`data/raw/`)
-- **`erbs_cell_kpi_full_year.csv`** — 378,631 rows × 11 columns: daily cell-level KPIs from 1,067 ERBS base stations across 6 frequency bands (Sep 2025 → Sep 2026).
-- **`4g_traffic_volume_daily.csv`** — 264 rows × 2 columns: daily aggregated 4G network traffic volume in GB (Jan → Sep 2026).
+The platform works natively with all 5 telecommunication datasets organized across three structural hierarchy levels:
 
-### KPI Columns (ERBS Data)
-| Column | Description | Unit |
-|--------|-------------|------|
-| RRC Setup Success Rate | Radio Resource Control setup success | % |
-| E-RAB Establishment Success Rate | Bearer initialization success | % |
-| E-RAB Drop Rate | Bearer abnormal termination | % |
-| Handover Success Rate (4G Intra System) | Intra-frequency handover | ratio |
-| Handover Success Rate | Overall handover success | % |
-| 4G Cell Av. (%) | Cell operational availability | % |
-| E-UTRAN IP Throughput UE DL | Downlink throughput per UE | Mbps |
-| E-UTRAN IP Throughput UE UL | Uplink throughput per UE | Mbps |
-| Avg RRC Connected users | Average connected users | UEs |
+| Hierarchy Level | Directory / Dataset | Granularity | Observations | Key Attributes |
+|---|---|---|---|---|
+| **Level 1 (Macro)** | `DAILY NETWORK KPIs v2/Year.csv` | Daily Network Aggregate | 264 days | Overall 4G Data Volume (GB) |
+| **Level 1 (Macro)** | `data investigation on 4G radio nodes v2 (6)/Data.csv` | Daily Network Aggregate | 363 days | 7 core 3GPP Radio KPIs |
+| **Level 2 (Carrier)** | `data investigation on 4G radio nodes v2 (7)/Data.csv` | Carrier Band (EARFCNDL) | 2,065 rows | 6 Frequency Bands + `pmCellDowntimeMan` |
+| **Level 3 (Cell/Node)**| `data investigation on 4G radio nodes v2 (8)/Data.csv` | Physical ERBS (1,060 nodes)| 125,779 rows | 120-Day Summer Peak Operational Window |
+| **Level 3 (Cell/Node)**| `data investigation on 4G radio nodes v2 (9)/Data.csv` | Physical ERBS (1,067 nodes)| 378,631 rows | Full-Year 363-Day Cell Telemetry |
+
+### Direct Workflow with Any Dataset (`--dataset`)
+```bash
+# Work directly with ground-truth EARFCNDL telemetry:
+python run_pipeline.py train --dataset earfcndl
+
+# Work with the 120-day summer operational stress window:
+python run_pipeline.py train --dataset summer
+
+# Work with full-year cell-level telemetry:
+python run_pipeline.py train --dataset full
+
+# Work with macro network 4G KPIs:
+python run_pipeline.py train --dataset macro
+
+# Work with 4G traffic volume data:
+python run_pipeline.py --pipeline traffic train --dataset traffic
+```
 
 ---
 

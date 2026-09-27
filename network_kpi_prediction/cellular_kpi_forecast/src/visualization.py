@@ -556,14 +556,34 @@ def generate_all_plots(
     # 1. Load Data
     if not os.path.exists(clean_csv_path):
         for alt in [
-            os.path.join("data", clean_csv_path),
-            "carrier_ran_kpi_clean.csv",
-            os.path.join("data", "carrier_ran_kpi_clean.csv"),
-            "carrier_kpi_clean.csv",
-            os.path.join("data", "carrier_kpi_clean.csv"),
+            os.path.join(_REPO_ROOT, "data", "output", os.path.basename(clean_csv_path)),
+            os.path.join(_REPO_ROOT, "data", os.path.basename(clean_csv_path)),
+            os.path.join(_REPO_ROOT, os.path.basename(clean_csv_path)),
+            os.path.join(_REPO_ROOT, "data", "carrier_ran_kpi_clean.csv"),
+            os.path.join(_REPO_ROOT, "data", "carrier_kpi_clean.csv"),
         ]:
             if os.path.exists(alt):
                 clean_csv_path = alt
+                break
+
+    if not os.path.exists(forecast_csv_path):
+        for alt in [
+            os.path.join(_REPO_ROOT, "data", "output", os.path.basename(forecast_csv_path)),
+            os.path.join(_REPO_ROOT, "data", os.path.basename(forecast_csv_path)),
+            os.path.join(_REPO_ROOT, os.path.basename(forecast_csv_path)),
+        ]:
+            if os.path.exists(alt):
+                forecast_csv_path = alt
+                break
+
+    if not os.path.exists(metrics_json_path):
+        for alt in [
+            os.path.join(_REPO_ROOT, "data", "output", os.path.basename(metrics_json_path)),
+            os.path.join(_REPO_ROOT, "data", os.path.basename(metrics_json_path)),
+            os.path.join(_REPO_ROOT, os.path.basename(metrics_json_path)),
+        ]:
+            if os.path.exists(alt):
+                metrics_json_path = alt
                 break
 
     hist_df = pd.read_csv(clean_csv_path)

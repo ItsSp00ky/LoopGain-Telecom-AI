@@ -48,7 +48,34 @@ class SeasonalNaiveModel:
         raise ValueError(f"Feature lag_{self.lag} required for SeasonalNaiveModel")
 
 
-def train_and_benchmark(datasets: dict, feature_cols: list[str]) -> tuple[dict, pd.DataFrame, str]:
+DEFAULT_MODEL_PARAMS: dict[str, dict[str, Any]] = {
+    "ridge": {"alpha": 10.0},
+    "random_forest": {
+        "n_estimators": 150,
+        "max_depth": 6,
+        "min_samples_split": 4,
+        "random_state": 42
+    },
+    "xgboost": {
+        "n_estimators": 150,
+        "max_depth": 4,
+        "learning_rate": 0.04,
+        "subsample": 0.85,
+        "colsample_bytree": 0.85,
+        "reg_alpha": 0.5,
+        "reg_lambda": 1.0,
+        "random_state": 42,
+        "n_jobs": 2,
+    },
+    "seasonal_naive": {"lag": 7}
+}
+
+
+def train_and_benchmark(
+    datasets: dict,
+    feature_cols: list[str],
+    model_params: dict[str, dict[str, Any]] | None = None,
+) -> tuple[dict, pd.DataFrame, str]:
     """Trains multiple candidate models, evaluates them on Validation and Test sets,
 
     and logs comprehensive performance comparisons.
@@ -57,28 +84,23 @@ def train_and_benchmark(datasets: dict, feature_cols: list[str]) -> tuple[dict, 
     print("STEP 3: MULTI-MODEL BENCHMARKING & TRAINING")
     print("=" * 60)
 
+    params = model_params or DEFAULT_MODEL_PARAMS
+
     train = datasets["train"]
     val = datasets["val"]
     test = datasets["test"]
 
     # Candidate models definition
+    rf_params = params.get("random_forest", DEFAULT_MODEL_PARAMS["random_forest"])
+    xgb_params = params.get("xgboost", DEFAULT_MODEL_PARAMS["xgboost"])
+    ridge_params = params.get("ridge", DEFAULT_MODEL_PARAMS["ridge"])
+    sn_params = params.get("seasonal_naive", DEFAULT_MODEL_PARAMS["seasonal_naive"])
+
     models: dict[str, Any] = {
-        "Seasonal Naive (t-7)": SeasonalNaiveModel(lag=7),
-        "Ridge Regression": Ridge(alpha=10.0),
-        "Random Forest": RandomForestRegressor(
-            n_estimators=150, max_depth=6, min_samples_split=4, random_state=42
-        ),
-        "XGBoost Regressor": XGBRegressor(
-            n_estimators=150,
-            max_depth=4,
-            learning_rate=0.04,
-            subsample=0.85,
-            colsample_bytree=0.85,
-            reg_alpha=0.5,
-            reg_lambda=1.0,
-            random_state=42,
-            n_jobs=2,
-        ),
+        "Seasonal Naive (t-7)": SeasonalNaiveModel(**sn_params),
+        "Ridge Regression": Ridge(**ridge_params),
+        "Random Forest": RandomForestRegressor(**rf_params),
+        "XGBoost Regressor": XGBRegressor(**xgb_params),
     }
 
     results = {}
@@ -138,10 +160,19 @@ def train_and_benchmark(datasets: dict, feature_cols: list[str]) -> tuple[dict, 
 
 
 def retrain_champion(
-    datasets: dict, feature_cols: list[str], champion_name: str
+    datasets: dict,
+    feature_cols: list[str],
+    champion_name: str,
+    model_params: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[Any, np.ndarray, dict]:
     """Retrains the champion model on Train + Validation combined, then evaluates on Test."""
     print(f"\nRetraining champion '{champion_name}' on Train + Validation combined...")
+
+    params = model_params or DEFAULT_MODEL_PARAMS
+    rf_params = params.get("random_forest", DEFAULT_MODEL_PARAMS["random_forest"])
+    xgb_params = params.get("xgboost", DEFAULT_MODEL_PARAMS["xgboost"])
+    ridge_params = params.get("ridge", DEFAULT_MODEL_PARAMS["ridge"])
+    sn_params = params.get("seasonal_naive", DEFAULT_MODEL_PARAMS["seasonal_naive"])
 
     train = datasets["train"]
     val = datasets["val"]
@@ -152,23 +183,11 @@ def retrain_champion(
     y_train_val = np.concatenate([train["y"], val["y"]])
 
     if champion_name == "XGBoost Regressor":
-        champion_model = XGBRegressor(
-            n_estimators=180,
-            max_depth=4,
-            learning_rate=0.04,
-            subsample=0.85,
-            colsample_bytree=0.85,
-            reg_alpha=0.5,
-            reg_lambda=1.0,
-            random_state=42,
-            n_jobs=2,
-        )
+        champion_model = XGBRegressor(**xgb_params)
         champion_model.fit(X_train_val, y_train_val)
         test_pred = champion_model.predict(test["X"])
     elif champion_name == "Random Forest":
-        champion_model = RandomForestRegressor(
-            n_estimators=180, max_depth=6, min_samples_split=4, random_state=42
-        )
+        champion_model = RandomForestRegressor(**rf_params)
         champion_model.fit(X_train_val, y_train_val)
         test_pred = champion_model.predict(test["X"])
     elif champion_name == "Ridge Regression":
@@ -176,11 +195,11 @@ def retrain_champion(
         scaler = StandardScaler()
         X_tv_scaled = scaler.fit_transform(X_train_val)
         X_test_scaled = scaler.transform(test["X"])
-        champion_model = Ridge(alpha=10.0)
+        champion_model = Ridge(**ridge_params)
         champion_model.fit(X_tv_scaled, y_train_val)
         test_pred = champion_model.predict(X_test_scaled)
     else:
-        champion_model = SeasonalNaiveModel(lag=7)
+        champion_model = SeasonalNaiveModel(**sn_params)
         test_pred = champion_model.predict(test["df"])
 
     final_test_metrics = calculate_metrics(test["y"], test_pred)
@@ -250,6 +269,7 @@ def forecast_future(
         rolling_mean_14 = float(np.mean(last_14))
         rolling_std_14 = float(np.std(last_14))
         rolling_mean_28 = float(np.mean(last_28))
+        rolling_std_28 = float(np.std(last_28))
 
         diff_1 = lag_1 - lag_2
         diff_7 = lag_1 - values_history[-8]
@@ -281,6 +301,7 @@ def forecast_future(
             "rolling_mean_14": rolling_mean_14,
             "rolling_std_14": rolling_std_14,
             "rolling_mean_28": rolling_mean_28,
+            "rolling_std_28": rolling_std_28,
             "diff_1": diff_1,
             "diff_7": diff_7,
             "ratio_7_28": ratio_7_28,

@@ -25,9 +25,10 @@ from src.model_definitions import TargetTransformer, apply_boundary_anchoring
 def resolve_file(filename: str) -> str:
     """Resolves data paths checking multiple standard directory locations."""
     candidates = [
-        os.path.join(_REPO_ROOT, filename),
-        os.path.join(_REPO_ROOT, "data", filename),
         os.path.join(_REPO_ROOT, "data", "output", filename),
+        os.path.join(_REPO_ROOT, "data", filename),
+        os.path.join(_REPO_ROOT, filename),
+        os.path.join(_REPO_ROOT, "..", "data", filename),
     ]
     for p in candidates:
         if os.path.exists(p):
@@ -170,13 +171,13 @@ def query_predictions(carrier: int, kpi: str, days: int = 7, force_live: bool = 
         if not success:
             print(f"[!] Live model bundle not found for Carrier {carrier}, KPI {kpi}. Falling back to precomputed table...", file=sys.stderr)
             if not query_predictions_precomputed(carrier, kpi, days):
-                print(f"[!] No predictions available. Run 'python train.py' to train models and generate forecasts.", file=sys.stderr)
+                print(f"[!] No predictions available. Run 'python run_cellular.py train' to train models and generate forecasts.", file=sys.stderr)
                 sys.exit(1)
     else:
         if not query_predictions_precomputed(carrier, kpi, days):
             # Fallback to live inference
             if not query_predictions_live(carrier, kpi, days):
-                print(f"[!] Neither precomputed forecast nor trained model bundle found. Run 'python train.py' first.", file=sys.stderr)
+                print(f"[!] Neither precomputed forecast nor trained model bundle found. Run 'python run_cellular.py train' first.", file=sys.stderr)
                 sys.exit(1)
 
 

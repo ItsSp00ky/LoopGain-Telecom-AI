@@ -3,12 +3,20 @@ Generates calendar/cyclical signals, weekly lags, rolling window statistics, and
 Strictly ensures zero target leakage using shifted past windows.
 """
 
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
+_PKG_ROOT = Path(__file__).resolve().parent.parent
 
-def create_time_features(df: pd.DataFrame, target_col: str = "kpi_volume_gb") -> pd.DataFrame:
+
+def create_time_features(
+    df: pd.DataFrame,
+    target_col: str = "kpi_volume_gb",
+    lags: list[int] | None = None,
+    rolling_windows: list[int] | None = None,
+) -> pd.DataFrame:
     """Generates comprehensive tabular time-series features from the contiguous KPI series.
 
     All lag and rolling statistics strictly use shift(1) to avoid lookahead leakage.
@@ -34,34 +42,37 @@ def create_time_features(df: pd.DataFrame, target_col: str = "kpi_volume_gb") ->
     df["trend_step"] = (df["date"] - start_date).dt.days
 
     # 2. Lag Features (Shifted so row t only sees observations up to t-1)
+    if lags is None:
+        lags = [1, 2, 3, 7, 14, 21, 28]
     target_series = df[target_col]
-    lags = [1, 2, 3, 7, 14, 21, 28]
     for lag in lags:
         df[f"lag_{lag}"] = target_series.shift(lag)
 
     # 3. Rolling Window Statistics (computed on shift(1) to strictly prevent lookahead)
+    if rolling_windows is None:
+        rolling_windows = [7, 14, 28]
     shifted = target_series.shift(1)
-    df["rolling_mean_7"] = shifted.rolling(window=7, min_periods=3).mean()
-    df["rolling_std_7"] = shifted.rolling(window=7, min_periods=3).std().fillna(0)
-    df["rolling_min_7"] = shifted.rolling(window=7, min_periods=3).min()
-    df["rolling_max_7"] = shifted.rolling(window=7, min_periods=3).max()
-
-    df["rolling_mean_14"] = shifted.rolling(window=14, min_periods=7).mean()
-    df["rolling_std_14"] = shifted.rolling(window=14, min_periods=7).std().fillna(0)
-
-    df["rolling_mean_28"] = shifted.rolling(window=28, min_periods=14).mean()
+    for w in rolling_windows:
+        min_p = max(1, w // 2)
+        df[f"rolling_mean_{w}"] = shifted.rolling(window=w, min_periods=min_p).mean()
+        df[f"rolling_std_{w}"] = shifted.rolling(window=w, min_periods=min_p).std().fillna(0)
+    if 7 in rolling_windows:
+        df["rolling_min_7"] = shifted.rolling(window=7, min_periods=3).min()
+        df["rolling_max_7"] = shifted.rolling(window=7, min_periods=3).max()
 
     # 4. Momentum & Relative Growth Differences
-    df["diff_1"] = df["lag_1"] - df["lag_2"]
-    df["diff_7"] = df["lag_1"] - df["lag_8"] if "lag_8" in df else (df["lag_1"] - target_series.shift(8))
-    df["ratio_7_28"] = df["rolling_mean_7"] / (df["rolling_mean_28"] + 1e-6)
+    df["diff_1"] = df["lag_1"] - df["lag_2"] if "lag_2" in df else (df["lag_1"] - target_series.shift(2))
+    df["diff_7"] = df["lag_1"] - (df["lag_8"] if "lag_8" in df else target_series.shift(8))
+    short_w = rolling_windows[0] if rolling_windows else 7
+    long_w = rolling_windows[-1] if rolling_windows else 28
+    df[f"ratio_{short_w}_{long_w}"] = df.get(f"rolling_mean_{short_w}", shifted) / (df.get(f"rolling_mean_{long_w}", shifted) + 1e-6)
 
-    # Drop rows with NaN from initial lag window (first 28 days)
-    # The remaining rows have full feature support
+    # Drop rows with NaN from initial lag window
+    warmup_days = max(lags) if lags else 28
     initial_len = len(df)
     df = df.dropna().reset_index(drop=True)
     dropped_rows = initial_len - len(df)
-    print(f"[Features] Created {df.shape[1] - 2} features. Dropped {dropped_rows} warmup rows for lag window (28 days).")
+    print(f"[Features] Created {df.shape[1] - 2} features. Dropped {dropped_rows} warmup rows for lag window ({warmup_days} days).")
 
     return df
 
@@ -72,16 +83,49 @@ def get_feature_columns(df: pd.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in excluded]
 
 
+def resolve_clean_traffic_file(clean_csv: str | Path | None = None) -> Path:
+    """Dynamically resolves clean traffic dataset path."""
+    if clean_csv:
+        p = Path(clean_csv)
+        if p.exists():
+            return p
+        if (_PKG_ROOT / clean_csv).exists():
+            return _PKG_ROOT / clean_csv
+
+    candidates = [
+        _PKG_ROOT / "data" / "traffic_kpi_clean.csv",
+        _PKG_ROOT.parent / "data" / "traffic_kpi_clean.csv",
+        Path("data/traffic_kpi_clean.csv"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]
+
+
 def prepare_datasets(
-    clean_csv: str = "data/traffic_kpi_clean.csv",
+    clean_csv: str | Path | None = None,
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
+    lags: list[int] | None = None,
+    rolling_windows: list[int] | None = None,
 ) -> tuple[dict, StandardScaler, list[str]]:
     """Loads clean data, builds features, splits chronologically, and fits scaler ONLY on train."""
-    raw_df = pd.read_csv(clean_csv)
-    raw_df["date"] = pd.to_datetime(raw_df["date"])
+    resolved_csv = resolve_clean_traffic_file(clean_csv)
+    if not resolved_csv.exists():
+        raise FileNotFoundError(f"Clean traffic dataset not found at: {resolved_csv}")
 
-    featured_df = create_time_features(raw_df, target_col="kpi_volume_gb")
+    raw_df = pd.read_csv(resolved_csv)
+    cols = [c.strip().strip('"') for c in raw_df.columns]
+    if "date" not in cols:
+        from src.data_cleaning import run_clean_pipeline
+        raw_df = run_clean_pipeline(raw_path=resolved_csv)
+    else:
+        raw_df["date"] = pd.to_datetime(raw_df["date"])
+
+    featured_df = create_time_features(
+        raw_df, target_col="kpi_volume_gb", lags=lags, rolling_windows=rolling_windows
+    )
     feature_cols = get_feature_columns(featured_df)
 
     n = len(featured_df)

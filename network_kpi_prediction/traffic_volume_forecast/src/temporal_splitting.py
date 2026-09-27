@@ -5,11 +5,14 @@ from pathlib import Path
 import pandas as pd
 
 
+_PKG_ROOT = Path(__file__).resolve().parent.parent
+
+
 def chronological_split(
     df: pd.DataFrame,
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
-    save_dir: str | Path | None = "data",
+    save_dir: str | Path | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Splits time series data strictly chronologically into Train, Validation, and Test sets.
 
@@ -48,8 +51,14 @@ def chronological_split(
     assert val_df["date"].max() < test_df["date"].min(), "Leakage detected between Val and Test!"
     print("Validation check passed: No temporal overlap or future leakage.")
 
-    if save_dir:
-        save_path = Path(save_dir)
+    if save_dir is not False:
+        if save_dir is None:
+            save_path = _PKG_ROOT / "data" / "splits"
+        else:
+            save_path = Path(save_dir)
+            if not save_path.is_absolute():
+                save_path = _PKG_ROOT / save_path
+
         save_path.mkdir(parents=True, exist_ok=True)
         train_df.to_csv(save_path / "train.csv", index=False)
         val_df.to_csv(save_path / "val.csv", index=False)
@@ -60,11 +69,42 @@ def chronological_split(
     return train_df, val_df, test_df
 
 
-def run_split_pipeline(input_csv: str = "data/traffic_kpi_clean.csv") -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def resolve_clean_traffic_file(input_csv: str | Path | None = None) -> Path:
+    """Dynamically resolves clean traffic dataset path."""
+    if input_csv:
+        p = Path(input_csv)
+        if p.exists():
+            return p
+        if (_PKG_ROOT / input_csv).exists():
+            return _PKG_ROOT / input_csv
+
+    candidates = [
+        _PKG_ROOT / "data" / "traffic_kpi_clean.csv",
+        _PKG_ROOT.parent / "data" / "traffic_kpi_clean.csv",
+        Path("data/traffic_kpi_clean.csv"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]
+
+
+def run_split_pipeline(
+    input_csv: str | Path | None = None,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    save_dir: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Reads cleaned KPI data and executes chronological split."""
-    df = pd.read_csv(input_csv)
-    df["date"] = pd.to_datetime(df["date"])
-    return chronological_split(df)
+    resolved_csv = resolve_clean_traffic_file(input_csv)
+    df = pd.read_csv(resolved_csv)
+    cols = [c.strip().strip('"') for c in df.columns]
+    if "date" not in cols:
+        from src.data_cleaning import run_clean_pipeline
+        df = run_clean_pipeline(raw_path=resolved_csv)
+    else:
+        df["date"] = pd.to_datetime(df["date"])
+    return chronological_split(df, train_ratio=train_ratio, val_ratio=val_ratio, save_dir=save_dir)
 
 
 if __name__ == "__main__":

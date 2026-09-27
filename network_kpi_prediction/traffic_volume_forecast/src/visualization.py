@@ -36,7 +36,8 @@ plt.rcParams.update({
     "grid.linestyle": "--",
 })
 
-LOCAL_PLOTS_DIR = Path("plots")
+_PKG_ROOT = Path(__file__).resolve().parent.parent
+LOCAL_PLOTS_DIR = _PKG_ROOT / "plots"
 
 
 def sync_to_artifacts(fig_path: Path) -> Path:
@@ -51,8 +52,21 @@ def sync_to_artifacts(fig_path: Path) -> Path:
     return fig_path
 
 
-def plot_eda_and_anomalies(clean_csv: str = "data/traffic_kpi_clean.csv") -> Path:
+def plot_eda_and_anomalies(
+    clean_csv: str | Path | None = None,
+    plots_dir: Path | str | None = None,
+) -> Path:
     """Generates historical time series, trend, 7-day rolling mean, and highlighted anomalies."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
+    if clean_csv is None:
+        clean_csv = _PKG_ROOT / "data" / "traffic_kpi_clean.csv"
+    else:
+        clean_csv = Path(clean_csv)
+        if not clean_csv.exists() and (_PKG_ROOT / clean_csv).exists():
+            clean_csv = _PKG_ROOT / clean_csv
+
     df = pd.read_csv(clean_csv)
     df["date"] = pd.to_datetime(df["date"])
 
@@ -140,7 +154,7 @@ def plot_eda_and_anomalies(clean_csv: str = "data/traffic_kpi_clean.csv") -> Pat
     ax2.set_ylabel("Volume ('000 GB)")
 
     plt.tight_layout()
-    out_file = LOCAL_PLOTS_DIR / "01_eda_and_anomalies.png"
+    out_file = target_plots_dir / "01_eda_and_anomalies.png"
     plt.savefig(out_file, dpi=300)
     plt.close()
     sync_to_artifacts(out_file)
@@ -148,8 +162,11 @@ def plot_eda_and_anomalies(clean_csv: str = "data/traffic_kpi_clean.csv") -> Pat
     return out_file
 
 
-def plot_chronological_splits(datasets: dict) -> Path:
+def plot_chronological_splits(datasets: dict, plots_dir: Path | str | None = None) -> Path:
     """Generates visualization of train, validation, and test splits along the timeline."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
     train_df = datasets["train"]["df"]
     val_df = datasets["val"]["df"]
     test_df = datasets["test"]["df"]
@@ -195,7 +212,7 @@ def plot_chronological_splits(datasets: dict) -> Path:
     ax.legend(loc="upper left", framealpha=0.95)
 
     plt.tight_layout()
-    out_file = LOCAL_PLOTS_DIR / "02_chronological_splits.png"
+    out_file = target_plots_dir / "02_chronological_splits.png"
     plt.savefig(out_file, dpi=300)
     plt.close()
     sync_to_artifacts(out_file)
@@ -203,8 +220,11 @@ def plot_chronological_splits(datasets: dict) -> Path:
     return out_file
 
 
-def plot_model_comparison(metrics_df: pd.DataFrame) -> Path:
+def plot_model_comparison(metrics_df: pd.DataFrame, plots_dir: Path | str | None = None) -> Path:
     """Generates comparison bar charts of error metrics across all candidate models."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
     df = metrics_df.copy()
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
@@ -258,7 +278,7 @@ def plot_model_comparison(metrics_df: pd.DataFrame) -> Path:
                      xytext=(0, 3), textcoords="offset points", ha="center", fontsize=8.5)
 
     plt.tight_layout()
-    out_file = LOCAL_PLOTS_DIR / "03_model_benchmark_metrics.png"
+    out_file = target_plots_dir / "03_model_benchmark_metrics.png"
     plt.savefig(out_file, dpi=300)
     plt.close()
     sync_to_artifacts(out_file)
@@ -267,9 +287,12 @@ def plot_model_comparison(metrics_df: pd.DataFrame) -> Path:
 
 
 def plot_actual_vs_predicted(
-    datasets: dict, results: dict, champion_name: str
+    datasets: dict, results: dict, champion_name: str, plots_dir: Path | str | None = None
 ) -> Path:
     """Plots actual vs predicted trajectories on the holdout test set with residual diagnostics."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
     test = datasets["test"]
     dates = pd.to_datetime(test["dates"])
     y_true = test["y"] / 1e3
@@ -301,7 +324,7 @@ def plot_actual_vs_predicted(
     ax2.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
 
     plt.tight_layout()
-    out_file = LOCAL_PLOTS_DIR / "04_actual_vs_predicted_test.png"
+    out_file = target_plots_dir / "04_actual_vs_predicted_test.png"
     plt.savefig(out_file, dpi=300)
     plt.close()
     sync_to_artifacts(out_file)
@@ -310,9 +333,12 @@ def plot_actual_vs_predicted(
 
 
 def plot_feature_importance(
-    champion_model: Any, feature_cols: list[str], champion_name: str
+    champion_model: Any, feature_cols: list[str], champion_name: str, plots_dir: Path | str | None = None
 ) -> Path:
     """Plots top predictive feature importances for tree-based champion models."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
     fig, ax = plt.subplots(figsize=(12, 7))
 
     if hasattr(champion_model, "feature_importances_"):
@@ -336,7 +362,7 @@ def plot_feature_importance(
                     xytext=(4, 0), textcoords="offset points", va="center", fontsize=8.5)
 
     plt.tight_layout()
-    out_file = LOCAL_PLOTS_DIR / "05_feature_importance.png"
+    out_file = target_plots_dir / "05_feature_importance.png"
     plt.savefig(out_file, dpi=300)
     plt.close()
     sync_to_artifacts(out_file)
@@ -345,11 +371,29 @@ def plot_feature_importance(
 
 
 def plot_future_forecast(
-    clean_csv: str = "data/traffic_kpi_clean.csv",
-    forecast_csv: str = "data/future_30d_forecast.csv",
+    clean_csv: str | Path | None = None,
+    forecast_csv: str | Path | None = None,
     capacity_threshold: float = 1200000.0,
+    plots_dir: Path | str | None = None,
 ) -> Path:
     """Generates next 30-day forecast projection with 80% and 95% uncertainty cones and capacity lines."""
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
+    if clean_csv is None:
+        clean_csv = _PKG_ROOT / "data" / "traffic_kpi_clean.csv"
+    else:
+        clean_csv = Path(clean_csv)
+        if not clean_csv.exists() and (_PKG_ROOT / clean_csv).exists():
+            clean_csv = _PKG_ROOT / clean_csv
+
+    if forecast_csv is None:
+        forecast_csv = _PKG_ROOT / "data" / "future_30d_forecast.csv"
+    else:
+        forecast_csv = Path(forecast_csv)
+        if not forecast_csv.exists() and (_PKG_ROOT / forecast_csv).exists():
+            forecast_csv = _PKG_ROOT / forecast_csv
+
     history = pd.read_csv(clean_csv)
     history["date"] = pd.to_datetime(history["date"])
     forecast = pd.read_csv(forecast_csv)
@@ -430,7 +474,7 @@ def plot_future_forecast(
     ax.legend(loc="upper left", framealpha=0.95)
 
     plt.tight_layout()
-    out_file = LOCAL_PLOTS_DIR / "06_future_30d_forecast.png"
+    out_file = target_plots_dir / "06_future_30d_forecast.png"
     plt.savefig(out_file, dpi=300)
     plt.close()
     sync_to_artifacts(out_file)
@@ -445,23 +489,27 @@ def run_all_plots(
     champion_name: str,
     champion_model: Any,
     feature_cols: list[str],
+    clean_csv: str | Path | None = None,
+    forecast_csv: str | Path | None = None,
+    plots_dir: Path | str | None = None,
 ) -> list[Path]:
     """Generates all 6 production charts and syncs them to the artifacts directory."""
     print("=" * 60)
     print("STEP 4: GENERATING PUBLICATION-QUALITY VISUALIZATIONS")
     print("=" * 60)
-    LOCAL_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
 
     generated = [
-        plot_eda_and_anomalies(),
-        plot_chronological_splits(datasets),
-        plot_model_comparison(metrics_df),
-        plot_actual_vs_predicted(datasets, results, champion_name),
-        plot_feature_importance(champion_model, feature_cols, champion_name),
-        plot_future_forecast(),
+        plot_eda_and_anomalies(clean_csv=clean_csv, plots_dir=target_plots_dir),
+        plot_chronological_splits(datasets, plots_dir=target_plots_dir),
+        plot_model_comparison(metrics_df, plots_dir=target_plots_dir),
+        plot_actual_vs_predicted(datasets, results, champion_name, plots_dir=target_plots_dir),
+        plot_feature_importance(champion_model, feature_cols, champion_name, plots_dir=target_plots_dir),
+        plot_future_forecast(clean_csv=clean_csv, forecast_csv=forecast_csv, plots_dir=target_plots_dir),
     ]
 
-    print(f"Successfully generated {len(generated)} visual figures.\n")
+    print(f"Successfully generated {len(generated)} visual figures in {target_plots_dir.resolve()}.\n")
     return generated
 
 

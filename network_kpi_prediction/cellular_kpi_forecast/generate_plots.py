@@ -31,7 +31,7 @@ def resolve_file(filename: str) -> str:
     return candidates[0]
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Network-ML // Stage 3: Publication-Grade Telemetry Plot Generator"
     )
@@ -62,18 +62,36 @@ def main():
         help="Generate only for specified 3GPP KPI key"
     )
     parser.add_argument(
+        "--clean-csv",
+        type=str,
+        default=None,
+        help="Custom path to clean historical telemetry CSV"
+    )
+    parser.add_argument(
+        "--forecast-csv",
+        type=str,
+        default=None,
+        help="Custom path to forecast CSV"
+    )
+    parser.add_argument(
+        "--metrics-json",
+        type=str,
+        default=None,
+        help="Custom path to model metrics JSON"
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress verbose progress logs"
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    clean_csv = resolve_file("carrier_ran_kpi_clean.csv")
+    clean_csv = args.clean_csv or resolve_file("carrier_ran_kpi_clean.csv")
     if not os.path.exists(clean_csv):
-        clean_csv = resolve_file("carrier_kpi_clean.csv")
-    forecast_csv = resolve_file("carrier_kpi_forecast_2026_2027.csv")
-    metrics_json = resolve_file("model_metrics.json")
+        clean_csv = args.clean_csv or resolve_file("carrier_kpi_clean.csv")
+    forecast_csv = args.forecast_csv or resolve_file("carrier_kpi_forecast_2026_2027.csv")
+    metrics_json = args.metrics_json or resolve_file("model_metrics.json")
 
     for fpath in [clean_csv, forecast_csv, metrics_json]:
         if not os.path.exists(fpath):

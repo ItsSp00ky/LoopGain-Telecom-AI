@@ -17,7 +17,7 @@ from src.data_cleaning import load_clean_data
 from src.temporal_splitting import split_carrier_data, export_splits
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="KPI Prediction Pipeline // Stage 1: Chronological Dataset Splitter"
     )
@@ -55,7 +55,7 @@ def main():
         default=0.15,
         help="Fraction of data for testing (default: 0.15)"
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     print("=" * 80)
     print("KPI PREDICTION PIPELINE // STAGE 1: CHRONOLOGICAL DATASET SPLITTER")

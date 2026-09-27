@@ -4,7 +4,7 @@ Single Source of Truth for 3GPP Rel-17 KPI Specifications, SLA Thresholds,
 Physical Domain Boundaries, Spectrum Definitions, and NOC Color Palettes.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import numpy as np
 
 # 3GPP Functional Taxonomy Categories
@@ -190,6 +190,37 @@ BAND_COLORS: Dict[int, str] = {
     1700: '#EC4899',  # Pink
     3500: '#8B5CF6',  # Purple
     6200: '#06B6D4'   # Cyan
+}
+
+# 3GPP Physical Domain Constants
+SECONDS_PER_DAY: float = 86400.0
+DAYS_PER_YEAR: float = 365.25
+DEFAULT_SPLIT_RATIOS: Dict[str, float] = {'train': 0.70, 'val': 0.15, 'test': 0.15}
+DEFAULT_FORECAST_HORIZON_DAYS: int = 365
+
+# Prefix classification rules mapping raw cell base station identifiers into 3GPP spectrum frequency tiers
+ERBS_CARRIER_PREFIX_RULES: List[Tuple[Tuple[str, ...], int]] = [
+    (('NT',), 350),                                            # Band 350 MHz (Macro Regional Coverage Tier)
+    (('SUR', 'TLILM', 'COW', 'VIP', 'TS', 'SBR'), 400),       # Band 400 MHz (Rural Sub-1GHz Cluster)
+    (('NSB', 'NSU'), 1556),                                   # Band 1556 MHz (Mid-Band FDD Urban Tier)
+    (('ZWY', 'ZW', 'PH'), 1700),                              # Band 1700 MHz (AWS/PCS Uplink Tier)
+    (('NZW', 'ZAW', 'TR', 'T', 'TI'), 3500),                  # Band 3500 MHz (C-Band Regional Capacity Tier)
+]
+DEFAULT_CARRIER_BAND: int = 6200                              # Band 6200 MHz (High-Throughput Small Cell / Micro Cluster)
+
+# Mapping of raw vendor telemetry columns to 3GPP standardized KPI keys
+RAW_COLUMN_TO_KPI_MAP: Dict[str, str] = {
+    'RRC Setup Success Rate': 'rrc_setup_sr',
+    'E-RAB Establishment Success Rate': 'erab_estab_sr',
+    'E-RAB Drop Rate': 'erab_drop_rate',
+    'Handover Success Rate ( 4G Intra System)': 'handover_intra_sr',
+    'Handover Success Rate': 'handover_sr',
+    '4G Cell Av. (%)': 'availability_pct',
+    'E-UTRAN IP Throughput UE DL': 'dl_throughput_mbps',
+    'E-UTRAN IP Throughput UE UL': 'ul_throughput_mbps',
+    'Avg RRC Connected users': 'connected_users',
+    'pmCellDowntimeMan': 'downtime_sec',
+    'downtime_sec': 'downtime_sec',
 }
 
 def apply_bounds(arr: np.ndarray, kpi: str) -> np.ndarray:

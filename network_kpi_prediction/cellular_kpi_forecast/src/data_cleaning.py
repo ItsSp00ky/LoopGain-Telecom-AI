@@ -14,7 +14,11 @@ _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from src.kpi_config import KPI_CONFIG, KPI_KEYS, CARRIER_BANDS, apply_bounds
+from src.kpi_config import (
+    KPI_CONFIG, KPI_KEYS, CARRIER_BANDS, apply_bounds,
+    ERBS_CARRIER_PREFIX_RULES, DEFAULT_CARRIER_BAND,
+    RAW_COLUMN_TO_KPI_MAP, SECONDS_PER_DAY
+)
 
 
 def clean_telemetry(df: pd.DataFrame) -> pd.DataFrame:
@@ -90,32 +94,34 @@ def validate_telemetry(df: pd.DataFrame) -> Dict[str, Any]:
     return report
 
 
-def map_erbs_to_carrier(erbs_id: Any) -> int:
+def map_erbs_to_carrier(
+    erbs_id: Any,
+    prefix_rules: list = None,
+    default_band: int = None
+) -> int:
     """
-    Classifies raw cell base station identifiers into 3GPP spectrum frequency tiers:
-    - NT (667 ERBS) -> Band 350 MHz (Macro Regional Coverage Tier)
-    - SUR, TLILM, COW, VIP, TS, SBR (9 ERBS) -> Band 400 MHz (Rural Sub-1GHz Cluster)
-    - NSB, NSU (83 ERBS) -> Band 1556 MHz (Mid-Band FDD Urban Tier)
-    - ZWY, ZW, PH (27 ERBS) -> Band 1700 MHz (AWS/PCS Uplink Tier)
-    - NZW, ZAW, TR, T, TI (253 ERBS) -> Band 3500 MHz (C-Band Regional Capacity Tier)
-    - Small Cells, DAS, DOT, Core Towers (28 ERBS) -> Band 6200 MHz (High-Throughput Small Cell / Micro Cluster)
+    Classifies raw cell base station identifiers into 3GPP spectrum frequency tiers
+    using prefix matching rules defined in KPI_CONFIG (or supplied prefix_rules):
+    - NT -> Band 350 MHz (Macro Regional Coverage Tier)
+    - SUR, TLILM, COW, VIP, TS, SBR -> Band 400 MHz (Rural Sub-1GHz Cluster)
+    - NSB, NSU -> Band 1556 MHz (Mid-Band FDD Urban Tier)
+    - ZWY, ZW, PH -> Band 1700 MHz (AWS/PCS Uplink Tier)
+    - NZW, ZAW, TR, T, TI -> Band 3500 MHz (C-Band Regional Capacity Tier)
+    - Default (Small Cells, DAS, DOT, Core Towers) -> Band 6200 MHz (High-Throughput Small Cell / Micro Cluster)
     """
+    if prefix_rules is None:
+        prefix_rules = ERBS_CARRIER_PREFIX_RULES
+    if default_band is None:
+        default_band = DEFAULT_CARRIER_BAND
+
     s = str(erbs_id).strip()
-    if s.startswith('NT'):
-        return 350
-    elif s.startswith(('SUR', 'TLILM', 'COW', 'VIP', 'TS', 'SBR')):
-        return 400
-    elif s.startswith(('NSB', 'NSU')):
-        return 1556
-    elif s.startswith(('ZWY', 'ZW', 'PH')):
-        return 1700
-    elif s.startswith(('NZW', 'ZAW', 'TR', 'T', 'TI')):
-        return 3500
-    else:
-        return 6200
+    for prefixes, band in prefix_rules:
+        if s.startswith(prefixes):
+            return band
+    return default_band
 
 
-def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.DataFrame:
+def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None, col_map: Dict[str, str] = None) -> pd.DataFrame:
     """
     Ingests raw ERBS cell-level telemetry (erbs_cell_kpi_full_year.csv),
     aggregates metrics per carrier frequency band and date, computes cluster downtime,
@@ -123,8 +129,12 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.
     """
     if raw_path is None:
         candidates = [
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (7)', 'Data.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (9)', 'Data.csv'),
             os.path.join(_REPO_ROOT, '..', 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
             os.path.join(_REPO_ROOT, 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (8)', 'Data.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (6)', 'Data.csv'),
             os.path.join(_REPO_ROOT, '..', 'Data2.csv'),
             os.path.join(_REPO_ROOT, 'Data2.csv'),
         ]
@@ -141,20 +151,18 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.
     if df['date'].isna().any():
         df['date'] = pd.to_datetime(df[date_col], errors='coerce')
 
-    erbs_col = next((c for c in df.columns if 'erbs' in c.lower()), 'ERBS Id')
-    df['carrier_freq'] = df[erbs_col].apply(map_erbs_to_carrier)
+    has_earfcndl = 'earfcndl' in df.columns
+    has_erbs = any('erbs' in c.lower() for c in df.columns)
 
-    raw_col_map = {
-        'RRC Setup Success Rate': 'rrc_setup_sr',
-        'E-RAB Establishment Success Rate': 'erab_estab_sr',
-        'E-RAB Drop Rate': 'erab_drop_rate',
-        'Handover Success Rate ( 4G Intra System)': 'handover_intra_sr',
-        'Handover Success Rate': 'handover_sr',
-        '4G Cell Av. (%)': 'availability_pct',
-        'E-UTRAN IP Throughput UE DL': 'dl_throughput_mbps',
-        'E-UTRAN IP Throughput UE UL': 'ul_throughput_mbps',
-        'Avg RRC Connected users': 'connected_users',
-    }
+    if has_earfcndl:
+        df['carrier_freq'] = pd.to_numeric(df['earfcndl'], errors='coerce').fillna(DEFAULT_CARRIER_BAND).astype(int)
+    elif has_erbs:
+        erbs_col = next((c for c in df.columns if 'erbs' in c.lower()), 'ERBS Id')
+        df['carrier_freq'] = df[erbs_col].apply(map_erbs_to_carrier)
+    else:
+        df['carrier_freq'] = DEFAULT_CARRIER_BAND
+
+    raw_col_map = col_map if col_map is not None else RAW_COLUMN_TO_KPI_MAP
 
     found_map = {}
     used_cols = set()
@@ -162,7 +170,7 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.
     for raw_name, std_name in raw_col_map.items():
         matched = next((c for c in df.columns if c.strip().lower() == raw_name.lower() or c.strip().lower() == std_name.lower()), None)
         if matched and matched not in used_cols:
-            df[matched] = pd.to_numeric(df[matched], errors='coerce')
+            df[matched] = pd.to_numeric(df[matched].astype(str).str.replace(',', '').str.strip(), errors='coerce')
             found_map[matched] = std_name
             used_cols.add(matched)
 
@@ -171,7 +179,7 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.
         if std_name not in found_map.values():
             matched = next((c for c in df.columns if (raw_name.lower() in c.lower() or std_name.lower() in c.lower()) and c not in used_cols), None)
             if matched:
-                df[matched] = pd.to_numeric(df[matched], errors='coerce')
+                df[matched] = pd.to_numeric(df[matched].astype(str).str.replace(',', '').str.strip(), errors='coerce')
                 found_map[matched] = std_name
                 used_cols.add(matched)
 
@@ -179,12 +187,20 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.
     daily_carrier = df.groupby(['date', 'carrier_freq']).agg(agg_dict).reset_index()
     daily_carrier = daily_carrier.rename(columns=found_map)
 
-    cell_counts = df.groupby(['date', 'carrier_freq'])[erbs_col].nunique().reset_index().rename(columns={erbs_col: 'active_cells'})
-    daily_carrier = pd.merge(daily_carrier, cell_counts, on=['date', 'carrier_freq'])
-    daily_carrier['downtime_sec'] = 86400.0 * daily_carrier['active_cells'] * np.maximum(0.0, 1.0 - (daily_carrier['availability_pct'] / 100.0))
+    if 'downtime_sec' not in daily_carrier.columns:
+        if has_erbs:
+            erbs_col = next((c for c in df.columns if 'erbs' in c.lower()), 'ERBS Id')
+            cell_counts = df.groupby(['date', 'carrier_freq'])[erbs_col].nunique().reset_index().rename(columns={erbs_col: 'active_cells'})
+            daily_carrier = pd.merge(daily_carrier, cell_counts, on=['date', 'carrier_freq'])
+            avail = daily_carrier.get('availability_pct', 100.0)
+            daily_carrier['downtime_sec'] = SECONDS_PER_DAY * daily_carrier['active_cells'] * np.maximum(0.0, 1.0 - (avail / 100.0))
+            daily_carrier = daily_carrier.drop(columns=['active_cells'], errors='ignore')
+        else:
+            avail = daily_carrier.get('availability_pct', 100.0)
+            daily_carrier['downtime_sec'] = SECONDS_PER_DAY * np.maximum(0.0, 1.0 - (avail / 100.0))
+
     daily_carrier['dt'] = daily_carrier['date'].dt.strftime('%Y-%m-%d')
     daily_carrier['date'] = daily_carrier['dt']
-    daily_carrier = daily_carrier.drop(columns=['active_cells'])
 
     cleaned_df = clean_telemetry(daily_carrier)
 
@@ -198,22 +214,32 @@ def ingest_raw_erbs_telemetry(raw_path: str = None, out_path: str = None) -> pd.
 
 def load_clean_data(data_path: str = None) -> pd.DataFrame:
     """Convenience loader resolving carrier_ran_kpi_clean.csv from standard data paths."""
-    if data_path and os.path.exists(data_path):
-        resolved = data_path
+    if data_path:
+        if os.path.exists(data_path):
+            resolved = data_path
+        elif os.path.exists(os.path.join(_REPO_ROOT, data_path)):
+            resolved = os.path.join(_REPO_ROOT, data_path)
+        else:
+            resolved = data_path
     else:
         candidates = [
             os.path.join(_REPO_ROOT, 'data', 'carrier_ran_kpi_clean.csv'),
             os.path.join(_REPO_ROOT, 'carrier_ran_kpi_clean.csv'),
             os.path.join(_REPO_ROOT, 'data', 'carrier_kpi_clean.csv'),
-            os.path.join(_REPO_ROOT, 'carrier_kpi_clean.csv')
+            os.path.join(_REPO_ROOT, 'carrier_kpi_clean.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'carrier_ran_kpi_clean.csv'),
         ]
         resolved = next((p for p in candidates if os.path.exists(p)), candidates[0])
 
     if not os.path.exists(resolved):
         # Auto-ingest raw ERBS telemetry if available
         raw_candidates = [
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (7)', 'Data.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (9)', 'Data.csv'),
             os.path.join(_REPO_ROOT, '..', 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
             os.path.join(_REPO_ROOT, 'data', 'raw', 'erbs_cell_kpi_full_year.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (8)', 'Data.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'all the data', 'data investigation on 4G radio nodes v2 (6)', 'Data.csv'),
             os.path.join(_REPO_ROOT, '..', 'Data2.csv'),
             os.path.join(_REPO_ROOT, 'Data2.csv'),
         ]
@@ -221,6 +247,12 @@ def load_clean_data(data_path: str = None) -> pd.DataFrame:
         if raw_found:
             return ingest_raw_erbs_telemetry(raw_found, resolved)
         raise FileNotFoundError(f"Telemetry file '{resolved}' not found.")
+
+    sample = pd.read_csv(resolved, nrows=5)
+    sample_cols = [c.strip().strip('"').lower() for c in sample.columns]
+    is_already_clean = ('date' in sample_cols or 'dt' in sample_cols) and ('carrier_freq' in sample_cols)
+    if not is_already_clean:
+        return ingest_raw_erbs_telemetry(resolved)
 
     df = pd.read_csv(resolved)
     return clean_telemetry(df)

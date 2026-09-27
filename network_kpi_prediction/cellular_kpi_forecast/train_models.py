@@ -17,6 +17,7 @@ _REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
+import argparse
 import json
 import warnings
 from datetime import datetime
@@ -24,7 +25,11 @@ import numpy as np
 import pandas as pd
 import joblib
 
-from src.kpi_config import KPI_CONFIG, KPI_KEYS, CARRIER_BANDS, apply_bounds
+from src.kpi_config import (
+    KPI_CONFIG, KPI_KEYS, CARRIER_BANDS, apply_bounds,
+    DEFAULT_SPLIT_RATIOS, DEFAULT_FORECAST_HORIZON_DAYS
+)
+from src.data_cleaning import load_clean_data
 from src.temporal_splitting import split_carrier_data, export_splits
 from src.feature_engineering import (
     extract_time_features, compute_autoregressive_features,
@@ -38,44 +43,77 @@ from src.model_definitions import (
 
 warnings.filterwarnings('ignore')
 
-def run_pipeline():
+def run_pipeline(
+    data_path: str = None,
+    output_dir: str = None,
+    models_dir: str = None,
+    splits_dir: str = None,
+    train_ratio: float = None,
+    val_ratio: float = None,
+    test_ratio: float = None,
+    horizon_days: int = None,
+    target_carriers: list = None,
+    target_kpis: list = None
+):
+    train_ratio = train_ratio if train_ratio is not None else DEFAULT_SPLIT_RATIOS['train']
+    val_ratio = val_ratio if val_ratio is not None else DEFAULT_SPLIT_RATIOS['val']
+    test_ratio = test_ratio if test_ratio is not None else DEFAULT_SPLIT_RATIOS['test']
+    horizon_days = horizon_days if horizon_days is not None else DEFAULT_FORECAST_HORIZON_DAYS
+    active_carriers = target_carriers if target_carriers is not None else CARRIER_BANDS
+    active_kpis = target_kpis if target_kpis is not None else KPI_KEYS
+
+    if models_dir is None:
+        models_dir = os.path.join(_REPO_ROOT, 'models')
+    if splits_dir is None:
+        splits_dir = os.path.join(_REPO_ROOT, 'data', 'splits')
+    if output_dir is None:
+        output_dir = os.path.join(_REPO_ROOT, 'data', 'output')
+
+    os.makedirs(models_dir, exist_ok=True)
+    os.makedirs(splits_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+
     print("=" * 105, flush=True)
     print("NETWORK-ML // S-TIER TELECOM KPI MODEL TRAINING & BENCHMARKING ENGINE", flush=True)
     print("Architecture: 3GPP Rel-17 NWDAF & O-RAN Non-RT RIC SMO (A1 Policy)", flush=True)
-    print("Validation: Chronological 3-Way Split (70% Train / 15% Validation / 15% Holdout Test)", flush=True)
+    print(f"Validation: Chronological 3-Way Split ({train_ratio*100:.0f}% Train / {val_ratio*100:.0f}% Validation / {test_ratio*100:.0f}% Holdout Test)", flush=True)
+    print(f"Forecast Horizon: {horizon_days} Days Forward", flush=True)
     print("=" * 105, flush=True)
-
-    os.makedirs('models', exist_ok=True)
-    os.makedirs('data/splits', exist_ok=True)
-    os.makedirs('data/output', exist_ok=True)
 
     # 1. Ingest Telemetry & Generate Chronological Splits
     print("\n[1/4] Ingesting cleaned carrier telemetry & executing chronological 3-way split...", flush=True)
-    candidates = [
-        os.path.join('data', 'carrier_ran_kpi_clean.csv'),
-        'carrier_ran_kpi_clean.csv',
-        os.path.join('data', 'carrier_kpi_clean.csv'),
-        'carrier_kpi_clean.csv'
-    ]
-    data_path = next((p for p in candidates if os.path.exists(p)), candidates[0])
+    if data_path is None:
+        candidates = [
+            os.path.join(_REPO_ROOT, 'data', 'carrier_ran_kpi_clean.csv'),
+            os.path.join(_REPO_ROOT, 'carrier_ran_kpi_clean.csv'),
+            os.path.join(_REPO_ROOT, 'data', 'carrier_kpi_clean.csv'),
+            os.path.join(_REPO_ROOT, 'carrier_kpi_clean.csv'),
+            os.path.join(_REPO_ROOT, '..', 'data', 'carrier_ran_kpi_clean.csv'),
+        ]
+        data_path = next((p for p in candidates if os.path.exists(p)), candidates[0])
+    elif not os.path.isabs(data_path) and not os.path.exists(data_path):
+        alt = os.path.join(_REPO_ROOT, data_path)
+        if os.path.exists(alt):
+            data_path = alt
+
     if not os.path.exists(data_path):
         print(f"Error: Dataset '{data_path}' not found.", file=sys.stderr)
         sys.exit(1)
 
-    df = pd.read_csv(data_path)
+    df = load_clean_data(data_path)
     df['date'] = pd.to_datetime(df['date'])
 
     base_feature_cols = get_feature_columns()
     all_feature_cols = get_all_feature_columns()
-    print(f"  Loaded {len(df):,} observations across {len(CARRIER_BANDS)} carrier bands: {CARRIER_BANDS}", flush=True)
+    print(f"  Loaded {len(df):,} observations across {len(active_carriers)} carrier bands: {active_carriers}", flush=True)
     print(f"  Engineered {len(base_feature_cols)} base time features + 4 autoregressive features = {len(all_feature_cols)} total features.", flush=True)
 
     # Execute and persist the 3-way chronological split
     train_df, val_df, test_df, split_manifest = split_carrier_data(
-        df, train_ratio=0.70, val_ratio=0.15, test_ratio=0.15
+        df, train_ratio=train_ratio, val_ratio=val_ratio, test_ratio=test_ratio
     )
-    split_paths = export_splits(train_df, val_df, test_df, split_manifest, output_dir='data/splits')
-    print(f"  Chronological splits exported: Train={len(train_df):,}r (70%), Val={len(val_df):,}r (15%), Test={len(test_df):,}r (15%)", flush=True)
+    split_paths = export_splits(train_df, val_df, test_df, split_manifest, output_dir=splits_dir)
+    print(f"  Chronological splits exported: Train={len(train_df):,}r ({train_ratio*100:.0f}%), Val={len(val_df):,}r ({val_ratio*100:.0f}%), Test={len(test_df):,}r ({test_ratio*100:.0f}%)", flush=True)
 
     # 2. Chronological Benchmarking & Validation-Based Selection
     print("\n[2/4] Training on Train Set -> Selecting Champion on Validation Set -> Evaluating on Test Set...", flush=True)
@@ -87,7 +125,7 @@ def run_pipeline():
     summary_metrics = {}
     all_forecasts = []
 
-    for carrier in CARRIER_BANDS:
+    for carrier in active_carriers:
         sub_df = df[df['carrier_freq'] == carrier].sort_values('date').reset_index(drop=True)
         if sub_df.empty:
             continue
@@ -97,8 +135,8 @@ def run_pipeline():
 
         # 3-Way Chronological split
         n_total = len(sub_df)
-        n_train = int(np.round(n_total * 0.70))
-        n_val = int(np.round(n_total * 0.15))
+        n_train = int(np.round(n_total * train_ratio))
+        n_val = int(np.round(n_total * val_ratio))
         n_test = n_total - n_train - n_val
 
         train_raw = sub_df.iloc[:n_train].copy()
@@ -121,9 +159,9 @@ def run_pipeline():
         X_test_base = test_feats[base_feature_cols].values
         X_full_base = full_feats[base_feature_cols].values
 
-        # Build 365-day forward calendar
+        # Build forward calendar
         last_hist_date = sub_df['date'].max()
-        future_dates = pd.date_range(start=last_hist_date + pd.Timedelta(days=1), periods=365, freq='D')
+        future_dates = pd.date_range(start=last_hist_date + pd.Timedelta(days=1), periods=horizon_days, freq='D')
         future_df = pd.DataFrame({'date': future_dates})
         future_dow = future_df['date'].dt.dayofweek.values
         future_feats = extract_time_features(future_df, base_date=base_date)
@@ -132,7 +170,7 @@ def run_pipeline():
         carrier_forecast = future_df[['date']].copy()
         carrier_forecast['carrier_freq'] = carrier
 
-        for kpi in KPI_KEYS:
+        for kpi in active_kpis:
             y_train = train_raw[kpi].values
             y_val = val_raw[kpi].values
             y_test = test_raw[kpi].values
@@ -223,10 +261,10 @@ def run_pipeline():
                 best_alpha = 1.0
                 prod_model = HybridTrendSeasonalModel(kpi)
                 prod_model.fit(X_full, y_full)
-                # 365-day recursive autoregressive roll-forward
+                # Recursive autoregressive roll-forward across horizon_days
                 buffer = list(y_full_t[-14:])
                 future_preds_t = []
-                for step in range(365):
+                for step in range(horizon_days):
                     step_lag1 = buffer[-1]
                     step_lag7 = buffer[-7]
                     step_mean7 = float(np.mean(buffer[-7:]))
@@ -241,10 +279,10 @@ def run_pipeline():
                 prod_model = DampedFourierRidgeModel(kpi)
                 prod_model.fit(X_full, y_full)
                 best_alpha = prod_model.best_alpha
-                # 365-day recursive autoregressive roll-forward
+                # Recursive autoregressive roll-forward across horizon_days
                 buffer = list(y_full_t[-14:])
                 future_preds_t = []
-                for step in range(365):
+                for step in range(horizon_days):
                     step_lag1 = buffer[-1]
                     step_lag7 = buffer[-7]
                     step_mean7 = float(np.mean(buffer[-7:]))
@@ -323,7 +361,7 @@ def run_pipeline():
                 'residual_std': residual_std,
                 'metrics': summary_metrics[str(carrier)][kpi]
             }
-            joblib.dump(bundle, f'models/{carrier}_{kpi}_bundle.joblib')
+            joblib.dump(bundle, os.path.join(models_dir, f'{carrier}_{kpi}_bundle.joblib'))
 
             # Log row
             print(
@@ -337,37 +375,80 @@ def run_pipeline():
         all_forecasts.append(carrier_forecast)
 
     # 3. Serialize Validation & Test Artifacts
-    print("\n[3/4] Serializing benchmark artifacts to 'model_metrics.json' and 'model_metrics.csv'...", flush=True)
+    print(f"\n[3/4] Serializing benchmark artifacts to '{output_dir}'...", flush=True)
     bench_df = pd.DataFrame(benchmark_records)
-    bench_df.to_csv('data/output/model_metrics.csv', index=False)
+    metrics_csv_path = os.path.join(output_dir, 'model_metrics.csv')
+    bench_df.to_csv(metrics_csv_path, index=False)
 
     payload = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "standard": "3GPP_NWDAF_REL17_TS28.552",
-        "split_ratios": {"train": 0.70, "val": 0.15, "test": 0.15},
-        "total_carriers": len(CARRIER_BANDS),
-        "total_kpis": len(KPI_KEYS),
+        "split_ratios": {"train": train_ratio, "val": val_ratio, "test": test_ratio},
+        "forecast_horizon_days": horizon_days,
+        "total_carriers": len(active_carriers),
+        "total_kpis": len(active_kpis),
         "feature_count": len(all_feature_cols),
         "features": all_feature_cols,
         "metrics_summary": summary_metrics,
         "benchmarks": benchmark_records
     }
-    with open('data/output/model_metrics.json', 'w', encoding='utf-8') as f:
+    metrics_json_path = os.path.join(output_dir, 'model_metrics.json')
+    with open(metrics_json_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, indent=2, default=str)
 
     # 4. Save Multi-Carrier Projections
-    print("\n[4/4] Assembling full 365-day forward multi-carrier projections...", flush=True)
+    print(f"\n[4/4] Assembling full {horizon_days}-day forward multi-carrier projections...", flush=True)
     final_forecast_df = pd.concat(all_forecasts, ignore_index=True)
     final_forecast_df['date'] = final_forecast_df['date'].dt.strftime('%Y-%m-%d')
-    cols_order = ['date', 'carrier_freq'] + KPI_KEYS + [f"{k}_p05" for k in KPI_KEYS] + [f"{k}_p95" for k in KPI_KEYS]
+    cols_order = ['date', 'carrier_freq'] + active_kpis + [f"{k}_p05" for k in active_kpis] + [f"{k}_p95" for k in active_kpis]
     final_forecast_df = final_forecast_df[cols_order]
 
-    output_csv = 'data/output/carrier_kpi_forecast_2026_2027.csv'
+    output_csv = os.path.join(output_dir, 'carrier_kpi_forecast_2026_2027.csv')
     final_forecast_df.to_csv(output_csv, index=False)
     print(f"  [OK] Exported {len(final_forecast_df):,} forward projections to '{output_csv}'", flush=True)
     print("=" * 105, flush=True)
     print("MODEL TRAINING & FORECAST PIPELINE SUCCESSFULLY COMPLETED [S-TIER]", flush=True)
     print("=" * 105, flush=True)
 
+    return {
+        'forecast_csv': output_csv,
+        'metrics_json': metrics_json_path,
+        'metrics_csv': metrics_csv_path,
+        'models_dir': models_dir,
+        'splits_dir': splits_dir
+    }
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="3GPP Cellular KPI Model Training & Forecasting Engine")
+    parser.add_argument("--data-path", type=str, default=None, help="Path to clean telemetry CSV")
+    parser.add_argument("--output-dir", type=str, default=None, help="Output directory for metrics and forecasts")
+    parser.add_argument("--models-dir", type=str, default=None, help="Directory to save serialized models")
+    parser.add_argument("--splits-dir", type=str, default=None, help="Directory to save dataset splits")
+    parser.add_argument("--train-ratio", type=float, default=None, help="Train ratio (default: 0.70)")
+    parser.add_argument("--val-ratio", type=float, default=None, help="Val ratio (default: 0.15)")
+    parser.add_argument("--test-ratio", type=float, default=None, help="Test ratio (default: 0.15)")
+    parser.add_argument("--horizon-days", type=int, default=None, help="Forward forecast horizon in days (default: 365)")
+    parser.add_argument("--carrier", type=int, choices=CARRIER_BANDS, default=None, help="Train only for a specific carrier band")
+    parser.add_argument("--kpi", type=str, choices=KPI_KEYS, default=None, help="Train only for a specific KPI")
+
+    args = parser.parse_args(argv)
+    carriers = [args.carrier] if args.carrier else None
+    kpis = [args.kpi] if args.kpi else None
+
+    run_pipeline(
+        data_path=args.data_path,
+        output_dir=args.output_dir,
+        models_dir=args.models_dir,
+        splits_dir=args.splits_dir,
+        train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+        horizon_days=args.horizon_days,
+        target_carriers=carriers,
+        target_kpis=kpis
+    )
+
+
 if __name__ == '__main__':
-    run_pipeline()
+    main()
