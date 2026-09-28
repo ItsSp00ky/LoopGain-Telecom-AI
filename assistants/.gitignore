@@ -1,2 +1,5 @@
 # Holds the Groq key and the service keys; never commit it. `.env.example` lists what goes in.
 .env
+
+# Work orders the employees confirmed in the copilot: runtime data, never committed.
+runtime/

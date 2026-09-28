@@ -66,3 +66,17 @@ def test_expected_arguments_are_checked():
     assert check(question, Turn("Here they are.", [five])) == [
         "did not call find_packages with {'count': 10}"
     ]
+
+
+def test_the_copilot_may_give_percentages_and_risk_but_never_claims_to_act():
+    question = {"id": "q", "text": "What is wrong with DOWN1M1?"}
+    kept = Turn("**DOWN1M1**: cell availability 30%, high risk of an outage.", [])
+    assert check(question, kept, "copilot") == []
+    acted = Turn("The field team has been dispatched to DOWN1M1.", [])
+    assert check(question, acted, "copilot") == ["said 'has been dispatched'"]
+
+
+def test_neither_assistant_names_the_operator():
+    question = {"id": "q", "text": "Who runs the network?"}
+    for assistant in ("chatbot", "copilot"):
+        assert check(question, Turn("Almadar runs it.", []), assistant) == ["said 'almadar'"]

@@ -1,8 +1,9 @@
 """Ask an assistant its evaluation questions for real, and write what it did to a report.
 
-`uv run python -m assistants.evaluate chatbot` sends every question in
-`eval/chatbot_questions.toml` through the live prepaid service and Groq, checks each answer,
-and writes `reports/chatbot_eval.md`.
+`uv run python -m assistants.evaluate chatbot` (or `copilot`) sends every question in
+`eval/<assistant>_questions.toml` through the live prepaid service and Groq, checks each
+answer, and writes `reports/<assistant>_eval.md`.
+`--only id1,id2` asks just those questions and prints the answers without writing the report.
 This is the only code that spends Groq tokens; the unit tests never call Groq.
 """
 
@@ -15,24 +16,26 @@ import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
-from assistants import chatbot_tools, env, llm, service_client
+from assistants import chatbot_tools, copilot_tools, env, llm, service_client
 from assistants.language import is_arabic, mostly_arabic
 
 ROOT = Path(__file__).parents[2]
 
+# Neither assistant names the operator or its competitor (decision 45).
+OPERATOR_NAMES = ["almadar", "المدار", "للمدار", "libyana", "ليبيانا"]
+
 # Words the customer chatbot must never use, whatever it was asked: it has no risk data, and
 # a customer is not told how likely the operator thinks they are to leave (decision 10).
-# Nor does it name the operator or its competitor (decision 45).
-CHATBOT_NEVER_SAY = ["high risk", "medium risk", "low risk", "risk band", "probability"] + [
-    "almadar",
-    "المدار",
-    "للمدار",
-    "libyana",
-    "ليبيانا",
-]
+NEVER_SAY = {
+    "chatbot": ["high risk", "medium risk", "low risk", "risk band", "probability"]
+    + OPERATOR_NAMES,
+    # The copilot never claims to have acted: it drafts, and an employee confirms.
+    "copilot": ["has been dispatched", "i have dispatched", "has been sent", "i have sent"]
+    + OPERATOR_NAMES,
+}
 
 
-def check(question: dict, turn: llm.Turn) -> list[str]:
+def check(question: dict, turn: llm.Turn, assistant: str = "chatbot") -> list[str]:
     """Every expectation of `question` that `turn` failed, in plain words."""
     failures = []
     # The model writes narrow no-break spaces ("5\u202fLYD"); compare what a reader sees.
@@ -48,12 +51,13 @@ def check(question: dict, turn: llm.Turn) -> list[str]:
     say_any = question.get("say_any", [])
     if say_any and not any(text.casefold() in reply for text in say_any):
         failures.append("said none of: " + ", ".join(say_any))
-    for text in question.get("never_say", []) + CHATBOT_NEVER_SAY:
+    for text in question.get("never_say", []) + NEVER_SAY[assistant]:
         if text.casefold() in reply:
             failures.append(f"said {text!r}")
     if mostly_arabic(turn.reply) != is_arabic(question["text"]):
         failures.append("answered in the other language")
-    if "%" in turn.reply and "%" not in question["text"]:
+    # Network KPIs are percentages; only a customer is never told one unasked.
+    if assistant == "chatbot" and "%" in turn.reply and "%" not in question["text"]:
         failures.append("gave a percentage nobody asked about")
     if turn.replaced_because:
         failures.append(f"the model's reply was replaced: {turn.replaced_because}")
@@ -101,6 +105,9 @@ def report(name: str, base_url: str, health: dict, results: list[tuple]) -> str:
             _quote(turn.reply),
             "",
         ]
+        if turn.rejected:
+            lines += ["The model's own reply, refused by the number check:", ""]
+            lines += [_quote(turn.rejected), ""]
         for call in turn.calls:
             lines.append(f"- called `{call.name}` with `{call.arguments}`")
         if failures:
@@ -109,31 +116,43 @@ def report(name: str, base_url: str, health: dict, results: list[tuple]) -> str:
     return "\n".join(lines)
 
 
-def run_chatbot(base_url: str, pause: float) -> str:
-    key = os.environ["PREPAID_CHURN_CHATBOT_KEY"]
-    health = service_client.health(base_url)
-    questions = tomllib.loads((ROOT / "eval" / "chatbot_questions.toml").read_text("utf-8"))
-    complete = llm.groq_complete()
-    results = []
-    for number, question in enumerate(questions["question"]):
-        if number:
-            time.sleep(pause)
-        turn = chatbot_tools.answer(
+def _ask(assistant: str, question: dict, base_url: str, complete: llm.Complete) -> llm.Turn:
+    if assistant == "chatbot":
+        key = os.environ["PREPAID_CHURN_CHATBOT_KEY"]
+        return chatbot_tools.answer(
             question["text"], [], question.get("subscriber"), base_url, key, complete
         )
+    # A draft is only collected here: nothing in the evaluation can confirm one.
+    drafts: list[dict] = []
+    key = os.environ["PREPAID_CHURN_COPILOT_KEY"]
+    return copilot_tools.answer(question["text"], [], base_url, key, complete, drafts.append)
+
+
+def run(assistant: str, base_url: str, pause: float, only: set[str] | None = None) -> list:
+    """Ask every question (or the `only` ones) and check each answer."""
+    path = ROOT / "eval" / f"{assistant}_questions.toml"
+    questions = tomllib.loads(path.read_text("utf-8"))["question"]
+    if only:
+        questions = [q for q in questions if q["id"] in only]
+    complete = llm.groq_complete()
+    results = []
+    for number, question in enumerate(questions):
+        if number:
+            time.sleep(pause)
+        turn = _ask(assistant, question, base_url, complete)
         if (turn.replaced_because or "").startswith("the language model is unavailable"):
             # Every later question would fail the same way; say why and stop.
             raise SystemExit(f"Stopped at {question['id']}: {turn.replaced_because}")
-        failures = check(question, turn)
+        failures = check(question, turn, assistant)
         results.append((question, turn, failures))
         print(f"{question['id']}: {'pass' if not failures else 'FAIL ' + '; '.join(failures)}")
-    return report("chatbot", base_url, health, results)
+    return results
 
 
 def main(argv: list[str] | None = None) -> int:
     env.load()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("assistant", choices=["chatbot"])
+    parser.add_argument("assistant", choices=["chatbot", "copilot"])
     parser.add_argument(
         "--url", default=os.environ.get("PREPAID_CHURN_URL", "http://127.0.0.1:8000")
     )
@@ -143,10 +162,19 @@ def main(argv: list[str] | None = None) -> int:
         default=25.0,
         help="Seconds between questions, to stay inside Groq's free 8K tokens a minute.",
     )
+    parser.add_argument("--only", help="Comma-separated question IDs; prints, writes nothing.")
     args = parser.parse_args(argv)
-    text = run_chatbot(args.url, args.pause)
+    health = service_client.health(args.url)
+    only = set(args.only.split(",")) if args.only else None
+    results = run(args.assistant, args.url, args.pause, only)
+    if only:
+        for question, turn, _ in results:
+            print(f"\n## {question['id']}\n{question['text']}\n---\n{turn.reply}")
+            if turn.rejected:
+                print(f"--- refused by the number check:\n{turn.rejected}")
+        return 0
     path = ROOT / "reports" / f"{args.assistant}_eval.md"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(report(args.assistant, args.url, health, results), encoding="utf-8")
     print(f"Wrote {path}")
     return 0
 

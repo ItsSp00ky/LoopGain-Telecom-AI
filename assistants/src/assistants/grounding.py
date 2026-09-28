@@ -12,7 +12,8 @@ from decimal import Decimal, InvalidOperation
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹٫٬", "01234567890123456789.,")
 
 # A thousands comma is followed by exactly three digits; any other comma is a decimal one.
-_THOUSANDS = re.compile(r"(?<=\d),(?=\d{3}(?!\d))")
+# The model also groups thousands with a no-break, narrow no-break or thin space ("68 900").
+_THOUSANDS = re.compile(r"(?<=\d)[,   ](?=\d{3}(?!\d))")
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 
 # "1. " or "2) " at the start of a line numbers a list; it is not a figure.
@@ -46,6 +47,17 @@ PHONE_NUMBER = re.compile(
 
 def has_phone_number(text: str) -> bool:
     return PHONE_NUMBER.search(text.translate(_DIGITS)) is not None
+
+
+PHONE_MASK = "[phone number removed]"
+
+
+def mask_phone_numbers(text: str) -> str:
+    """The text with every Libyan phone number replaced, so none reaches the model."""
+    normalized = text.translate(_DIGITS)
+    if not PHONE_NUMBER.search(normalized):
+        return text
+    return PHONE_NUMBER.sub(PHONE_MASK, normalized)
 
 
 def ungrounded(reply: str, sources: list[str]) -> set[str]:

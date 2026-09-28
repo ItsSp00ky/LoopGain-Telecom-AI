@@ -54,6 +54,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "groq" },
+    { name = "pandas" },
     { name = "streamlit" },
 ]
 
@@ -66,6 +67,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "groq" },
+    { name = "pandas" },
     { name = "streamlit" },
 ]
 

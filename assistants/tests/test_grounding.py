@@ -15,6 +15,10 @@ def test_thousands_separators_are_not_decimals():
     assert numbers("1,060,786 GB") == {"1060786"}
     assert numbers("٬ 1٬200 GB") == {"1200"}
     assert numbers("2,5 LYD") == {"2.5"}
+    # The model groups thousands with narrow, thin and no-break spaces too.
+    assert numbers("68 900 people, 1 111 492 GB") == {"68900", "1111492"}
+    # An ordinary space still separates two numbers.
+    assert numbers("rank 1 of 20 212") == {"1", "20", "212"}
 
 
 def test_a_number_from_a_tool_or_the_user_is_grounded():

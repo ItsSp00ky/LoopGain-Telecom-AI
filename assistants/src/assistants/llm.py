@@ -73,6 +73,8 @@ class Turn:
     calls: list[ToolCall]
     # Why the model's own reply was not used, or None when it was.
     replaced_because: str | None = None
+    # The reply the number check refused, for the evaluation report only; never shown.
+    rejected: str | None = None
 
 
 class ModelUnavailable(RuntimeError):
@@ -182,7 +184,7 @@ def run_turn(
                 return Turn(fallback(calls, user_text), calls, "the reply held a phone number")
             if invented:
                 reason = "the reply had numbers no tool returned: " + ", ".join(sorted(invented))
-                return Turn(fallback(calls, user_text), calls, reason)
+                return Turn(fallback(calls, user_text), calls, reason, rejected=text)
             return Turn(text, calls)
 
         messages.append(
