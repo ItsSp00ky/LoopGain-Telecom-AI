@@ -9,28 +9,34 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-28 by Taha + Claude (Ali merged through `bf498d4`; the churn service and the chatbot are closed; the chatbot's part of the final report is written; the copilot, T25, is next and planned).
+**Last updated:** 2026-09-28, evening, by Claude while Taha slept (Maher's and Mohamed's new work merged; the prepaid artifacts rebuilt on the 70 LYD anchor; the employee copilot, T25, built and waiting for Taha to test).
 
-**New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (two sessions: 2026-09-26 to 2026-09-28 first, then 2026-09-19 to 2026-09-25), then ticket T25 below.
+**New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (session 3 first), then ticket T25 below.
 [docs/study_guide.md](docs/study_guide.md) explains the whole module and the chatbot in plain words.
 
-**Where things stand on 2026-09-28**
-- `tahaDev` carries Ali's work through `bf498d4` (decisions 37 to 52, and the credit advice on the Subscriber screen), the teammates' GIS and network ML branches (decision 53), and the customer chatbot (decision 54).
-- 37 local commits are not pushed yet; the last push was `fbc3ac3` on 2026-09-26. Push only when Taha asks.
+**Where things stand on 2026-09-28, evening**
+- `tahaDev` carries Ali's work through `bf498d4`, the teammates' GIS and network ML branches (decision 53, merged again on 2026-09-28: Maher through `9c1a267`, Mohamed through `7d8a945`), the customer chatbot (decision 54) and the employee copilot (decision 55).
+- 54 commits are not pushed yet, Maher's 10 and Mohamed's 2 among them (they arrived with the merges); the last push was `fbc3ac3` on 2026-09-26. Push only when Taha asks.
 - The churn module: 475 tests, lint and format green; the frozen champion is unchanged (`lightgbm-2026-09-19-ef9430fb`).
-- The chatbot (T24, closed): 64 tests green; 21 of 21 evaluation questions pass on the real model against the merged service (`../assistants/reports/chatbot_eval.md`, 2026-09-28).
-- The final report: the chatbot's part is added in the report's own format, as `SIC_AI_Capstone_Project_Final_Report_Prepaid_Churn_short,_credit_with_chatbot.docx` on Taha's Desktop (not in git); the original file there is unchanged.
+  Its artifacts on disk were rebuilt with the README commands on 2026-09-28: the tiers are now `tiers-v1-efc9739afad4` (the 70 LYD anchor of decision 42), every committed report came out unchanged, and the old artifacts are backed up in the session's scratchpad.
+- The chatbot (T24, closed): 21 of 21 evaluation questions on 2026-09-28; its approved demo offer (subscriber 70016) still works after the rebuild.
+- The copilot (T25): built, 111 tests green in `assistants/` (the chatbot's 64 included), browser-checked at desktop and phone width; the evaluation is in `../assistants/reports/copilot_eval.md` and summed up in T25. Taha tests it next.
+- Groq's free limit of 200K tokens a day was reached on 2026-09-28 at about 19:40 UTC, after three full evaluations of the copilot and one of the chatbot. Until the rolling day frees tokens, questions in either app get "the language model is unavailable"; the copilot's alerts and work orders work without the model.
+- The final report: the chatbot's part is in `SIC_AI_Capstone_Project_Final_Report_Prepaid_Churn_short,_credit_with_chatbot.docx` on Taha's Desktop (not in git); the copilot's part is not written yet.
 
 **Open right now, in order:**
-1. T25, the employee copilot, built the same way as the chatbot: plan, tools, first steps and open questions are in the ticket.
-   It starts by reading what is new on the other branches since the commits in the session log's "Branches as last merged", then rebuilds the prepaid artifacts, because the scored export on disk predates the 70 LYD anchor (decision 42).
-2. Push the 37 commits when Taha says so.
-3. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
-4. Ali's final report ("the brief"), which he shared on Telegram and is not in the repository: Taha will provide it, so the chatbot's part can be checked against its style.
-5. Tell the owners what the merges found (decision 53): Maher's MASE claim and missing `xgboost`, Mohamed's early stopping on the test set and duplicate file, the local Claude settings in the GIS folder.
-6. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
-7. Ali's T22 and T23, after the presentation.
-8. Taha's "heavy and random" feedback on the demo app (session log, first session): Ali reworked the demo since, so ask Taha whether it still holds.
+1. Taha tests the copilot: start the service and `uv run streamlit run copilot_app.py --server.port 8502` from `assistants/` (the README says how), then answer T25's open questions.
+2. Push when Taha says so.
+3. The copilot's part of the final report, in the report's own format, once Taha is happy with the copilot.
+4. Tell the owners what the merges found (decisions 53 and 55):
+   - Maher: his MASE claim (17 of 60, not all); `xgboost` still missing from `requirements.txt`; `pytest` from his folder root fails because two packages are both named `src`; his forecasts are now git-ignored, so nobody else can read them without running his pipeline (a committed release folder, as the GIS team has, would fix it); "verified sleeping cells" are an IsolationForest that flags 5% of towers by construction, on yearly averages; the "churn risk targets" export is a formula with no link to customers.
+   - Mohamed: his two new systems sit at the repository root, not in `KPI_forecasting/`; their input data (`Data_Cleaned.csv`, `tower_mapping.csv`) is not committed, so they cannot be rerun; two `__pycache__` files are committed; the README's "109 days in advance" is one day ahead of past days; steering "neighbours" are towers whose names share a prefix; the QoE boost is a formula, not a measurement; the capacity ceiling uses the test period; the old early-stopping-on-test issue is gone in the new model.
+   - GIS: the local Claude settings in `antenna_cell_placement/.claude/`.
+5. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
+6. Ali's final report ("the brief"), which Taha will provide, so the chatbot's part can be checked against its style.
+7. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
+8. Ali's T22 and T23, after the presentation.
+9. Taha's "heavy and random" feedback on the demo app (session log, first session): ask Taha whether it still holds.
 
 **Merged on 2026-09-27 and 2026-09-28: Ali's recap, the outside review and the credit advice screen.**
 - Numbers that collided were renumbered on our side, so his stand: our decisions 37 and 38 are now 53 and 54, and our tickets T22 and T23 are now T24 (chatbot) and T25 (copilot).
@@ -1206,56 +1212,55 @@ Findings (closed 2026-09-27, verified on the code merged with Ali's `fa1fa21`):
 ## T25 - Employee copilot
 
 **Owner:** Taha + Claude
-**Status:** Next; planned on 2026-09-28, not started
-**Depends on:** T24, decisions 53 and 54
+**Status:** Built on 2026-09-28 while Taha slept, at his request; waiting for Taha to test it in the browser
+**Depends on:** T24, decisions 53 to 55
 
-What it is: a Streamlit chat for an operator's employees, in `assistants/copilot_app.py`, that answers questions about customers at risk, the GIS planning shortlist and the network forecasts, with the source of every figure shown under the answer.
-It follows the instructor's condition for the copilot: retrieval-grounded answers over approved outputs, with citations, and a refusal when there is no evidence (decision 17).
+What it is: `assistants/copilot_app.py`, a Streamlit page for an operator's employees, built the same way as the chatbot (decision 54).
+It alerts on towers in trouble, explains a tower, sums up the network, gives the GIS team's ranked sites, and reads customers at risk, with the source of every figure under the answer.
+Taha's brief: warn the employee about bad towers, make their work easier, and never act alone.
+The reasons for every choice are in decision 55.
 
-Reuse, already built for T24 (decision 54):
-- `src/assistants/llm.py`: the turn loop (`run_turn`), tool definitions and the Groq model.
-- `src/assistants/grounding.py`: the number check and the phone-number check.
-- `src/assistants/ui.py`, `.streamlit/config.toml`: the shared look and the "What I looked up" panel.
-- `src/assistants/env.py` and `.env`: `PREPAID_CHURN_COPILOT_KEY` is already there.
-- `src/assistants/service_client.py`: `portfolio_summary()` and `risk_for()` already call the copilot endpoints.
+What was built:
 
-Tools, all read-only; the file paths go in one module and in the README so their owners know not to rename them:
+| Tool | Reads |
+|---|---|
+| `tower_alerts`, and the alert panel on the page | Maher's daily KPIs per tower (`network_kpi_prediction/data/erbs_cell_kpi_full_year.csv`), with the rules in `assistants/src/assistants/network.py` |
+| `tower_status` | the same file: every KPI against its target and severe limit, and the last 7 days |
+| `network_overview` | the tower alerts, Maher's network-wide KPIs and 4G traffic volume |
+| `expansion_priorities`, `explain_location` | the GIS release (`antenna_cell_placement/integrated_release/`) |
+| `portfolio_summary`, `subscriber_risk` | the prepaid service with the copilot key |
+| `draft_work_order` | nothing: it hands the screen a draft, and only a named employee pressing Confirm saves it (`assistants/runtime/work_orders.jsonl`, git-ignored) |
 
-| Area | Tool | Reads |
-|---|---|---|
-| Customers | `portfolio_summary()` | `/portfolio/summary` with the copilot key |
-| Customers | `subscriber_risk(id)` | `/subscribers/{id}/risk`; the employee types the ID, and the service refuses phone-shaped ones |
-| GIS | `expansion_priorities(municipality?, top_n?)` | `antenna_cell_placement/integrated_release/shortlist.csv` (20 ranked sites) and `manifest.json` (constraints, versions, Tripoli only) |
-| GIS | `explain_location(candidate_id)` | `antenna_cell_placement/integrated_release/candidates.csv` (2,223 candidates with score components and rejection reasons) |
-| Network | `kpi_forecast(band, kpi, days)` | `network_kpi_prediction/kpi_prediction_pipeline/data/output/carrier_kpi_forecast_2026_2027.csv` and its `model_metrics.csv` row, with the SLA target from Maher's `src/config.py` copied into a small cited table |
-| Network | `traffic_forecast(days)` | `network_kpi_prediction/kpi_prediction_pipeline_traffic/data/future_30d_forecast.csv` against the 1.2M GB alert |
-| Network | `network_model_quality()` | both teams' metrics, with the caveats computed from the files (only 17 of 60 of Maher's series beat the naive baseline; Mohamed's metrics are optimistic because his model early-stops on the test set) |
-| Documents | `search_docs(query_en)` | BM25 over Markdown sections, no vector store: the prepaid documents `integration.md` section 7 allows, the GIS `README.md` and `document/*.md`, and both network READMEs; the model writes the query in English so Arabic questions still work |
+Every path the copilot reads from the teammates' folders is in `assistants/src/assistants/sources.py`.
 
-Rules, in code where possible, as for the chatbot:
-- Citations are built from the trace (tool, file and row, or `document#heading`), never written by the model.
-- Per band, never per cell: the network data has no cells.
-- The GIS score is a planning heuristic, not coverage.
-- Refused, each with its reason: per-cell congestion, anomalies (no module built an anomaly model), anywhere outside Tripoli, "new site or more capacity", bulk customer lists, approvals, phone numbers.
+What changed from the plan of 2026-09-28 morning, after reading the teammates' new work:
+- Maher's forecasts are no longer committed (git-ignored since 2026-09-27), so `kpi_forecast` and `traffic_forecast` were not built; the copilot says it has no forecasts.
+- Maher now commits daily KPIs for each tower, so "per band, never per cell" no longer holds; the copilot alerts per tower instead, and refuses only what the data cannot say (a tower's location, the future).
+- `network_model_quality` and `search_docs` were left out: the tools cover the questions the demo needs.
+- Mohamed's tower predictions and traffic steering suggestions are not used (decision 55).
 
-First steps:
-0. Fetch every branch and read what is new since the commits listed in "Branches as last merged" (session 2 of [docs/session_log.md](docs/session_log.md)), above all the GIS and network ML work the copilot reads; merge it the same way as before (decision 53) once Taha agrees, and update the file paths below if they moved.
-1. Rebuild the prepaid artifacts with the README commands, because the scored export on disk predates the 70 LYD anchor (decision 42); the bundle must still be `lightgbm-2026-09-19-ef9430fb`.
-2. Settle the open questions below with Taha.
-3. Build the customer and GIS tools first, then network, then documents; each with tests on small hand-made files.
-4. Write `eval/copilot_questions.toml` and run it on the real model, then read every answer.
-5. Record the retrieval and file-reading choices as decision 55.
+Findings:
+- On 2026-09-19, the last day in the tower data, the rules find 15 critical, 34 major and 215 warning towers of the 1,052 that reported; reading the file takes 0.4 seconds.
+- 47 new tests (111 in `assistants/`), none calling Groq or the network; lint and format green.
+- Browser check at desktop and phone width: the alert banner, the toast, the alert table, drafting from the panel and confirming with a name all work; the Confirm button stays disabled until a name is typed.
+- The evaluation on the real model (`assistants/reports/copilot_eval.md`), every answer read:
+  - First full run: 16 of 22. Reading the answers found six things, each fixed in code or in the data given to the model: the model added up a total, computed a share, picked "all" alert levels, wrote thousands with thin spaces, misread a GIS component, and listed today's alerts for "tomorrow".
+  - Second full run: 22 of 22.
+  - A browser test then found the model describing a work order in words without drafting it; a new question covers it, and code now guards it (decision 55).
+  - Third full run, 23 questions: 20 of 23; this is the report in git. Its three failures (a refusal worded outside the check, the model quoting a draft's ID, and its own rounded ranges for the GIS sites) were fixed and pass with `--only`.
+  - A final full run stopped after 7 of 23, all passing, at Groq's free limit of 200K tokens a day; run `uv run python -m assistants.evaluate copilot` once it frees up to refresh the report.
+- Known language slips, for Ali's review: the subscriber's reasons come from the service in English and the model translates them, and one Arabic run said "the last two minutes" for "the last two months"; one GIS answer says rank 1 "covers a gap" although its gap component is 0.02.
 
-Open questions to settle at the start:
-- Who asks, and in which language: planning engineers, customer-care staff, or both; Arabic, English or both?
-- Which question groups the demo needs first (customers, GIS, network, documents).
-- Reading the teammates' published files by fixed paths, as planned, or asking them for small endpoints.
-- Whether answers should link to the GIS team's offline maps (`integrated_release/planning_map.html`).
+Open questions for Taha:
+- Who uses it first, planning engineers, the network operations centre or customer care, and which language they write in.
+- Whether the severe limits of decision 55 look right to the network team (Maher), and whether 49 towers needing attention on one day is a sensible list.
+- Whether to ask Maher to commit a release folder with his forecasts, as the GIS team does, so the copilot can answer "what next week looks like".
+- Whether answers should link to the GIS team's offline map (`integrated_release/planning_map.html`).
 
 Acceptance:
-- Lint, format and tests pass in `assistants/`, with no test calling Groq or the network, and the chatbot's tests still pass.
-- `reports/copilot_eval.md` passes every automatic check, including the attacks (approve an offer, list the 200 riskiest customers, a phone number, a per-cell question), and every answer has been read.
-- In the browser, desktop and phone width, in the same look as the chatbot.
+- Lint, format and tests pass in `assistants/`, with no test calling Groq or the network, and the chatbot's tests still pass. Done.
+- `reports/copilot_eval.md` passes every automatic check, including the attacks (act alone, approve an offer, list the riskiest customers, a phone number, a rules override), and every answer has been read.
+- In the browser, desktop and phone width, in the same look as the chatbot. Done by Claude; Taha to test.
 
 ## Future work (needs real operator data)
 

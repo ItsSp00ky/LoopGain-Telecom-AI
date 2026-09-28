@@ -4,6 +4,84 @@ The long working sessions, written down so the next session can start without th
 The sources of truth stay where they were: [../CLAUDE.md](../CLAUDE.md), the Handoff at the top of [../TICKETS.md](../TICKETS.md), and [decisions.md](decisions.md).
 This file is the narrative that connects them: what happened, in what order, what went wrong, and what is still open.
 
+# Session 3: 2026-09-28, evening (the copilot)
+
+## Where things stand
+
+- Maher's and Mohamed's new work is merged into `tahaDev` (decision 53); the GIS branches and Ali's had not moved.
+- The prepaid artifacts are rebuilt on the 70 LYD anchor; the model is unchanged and every committed report came out the same.
+- The employee copilot (T25, decision 55) is built and waiting for Taha to test it in the browser.
+
+## Timeline
+
+### 1. What was new on the branches
+
+- `git fetch origin`: `maher_kpi_prediction` moved from `732e88c` to `9c1a267`, `MNK_forecasting` from `2425707` to `7d8a945`, and `main` from `a4368a0` to `674d9f6` (a folder added, then deleted: no net change, and `main` stays unmerged).
+  No new branch appeared.
+- Maher rebuilt his folder: new daily KPIs for each of 1,067 base stations, a health index, flagged towers and a graph model; his forecasts became git-ignored outputs.
+- Mohamed added two systems at the repository root: next-day predictions for each tower, and traffic steering suggestions built on them.
+- Both are read critically in decision 55, and the findings for the owners are in the Handoff.
+
+### 2. Taha's go-ahead, and the merges
+
+- Taha went to sleep for an hour and wrote: "if you see it is good plan start and do the copilot and when i am awake i will test it", and "i want it to give the employee alert when there is bad anthenaa and make life easier but cannot do the action alone".
+- Maher's branch merged with one conflict, in the root `.gitignore`, where both sides' lines were kept; Mohamed's merged cleanly.
+- Maher's 57 tests pass through his launcher with `xgboost` added; prepaid 475 and assistants 64 passed before any change.
+
+### 3. The prepaid artifacts rebuilt
+
+- `churn build-dataset`, `score`, `operator-view`, `fit-tiers`, `tiers` and `advance`, as the README lists them; the bundle and campaigns were not touched.
+- The service was restarted on the new files; subscriber 70016's monthly spend went from 33.10 to 57.92 LYD, 1.75 times, as decision 42 intends, and the chatbot's approved offer still answers.
+
+### 4. The copilot
+
+- Built on the chatbot's loop, checks and look: the tower alerts computed in code, the GIS release, the prepaid service with the copilot key, and work orders that only a named employee can confirm.
+- The alert rules were set on the real data: plain SLA targets flag about 250 towers a day, so severe limits and levels were added (15 critical, 34 major, 215 warnings on 2026-09-19).
+- Browser check at desktop and phone width; the alert table was changed to short labels, worst problem first, after it cut off the text an employee needed.
+- The first evaluation passed 16 of 22; reading every answer found six things to fix, each fixed in code or in the data given to the model, not by rewording the prompt (below).
+- The second passed 22 of 22; a browser test then found a draft described but not made, which led to a 23rd question and a guard in code; the third run passed 20 of 23, its failures were fixed and pass with `--only`, and the fourth stopped at Groq's daily limit (T25 has the details).
+
+## Mistakes caught this session, and the lesson from each
+
+- **The model added up a total itself** (the portfolio's LYD at risk). The tool now returns the total; give the model the number it needs rather than telling it not to compute.
+- **The model computed a share, and it passed only because "23" was inside a tower name.** Digits in names can ground a figure by accident; the tool now returns the share itself.
+- **The model wrote numbers with thin spaces ("68 900")**, which the number check read as two numbers. The check now accepts those spaces as thousands separators, for both assistants.
+- **The model described a work order without making one**, in the browser, when asked for a tower's status and a draft in one message. The tower's result now tells it to draft, and a line in code says so when no draft was made; a test in the browser caught what the evaluation's single-request questions could not.
+- **The model picked "all" for "which towers need attention"** and listed warnings too. The option was removed; a choice the model should not make should not be offered.
+- **A running Streamlit app kept an old module after a code change** and raised `KeyError`. Restart the app after changing anything under `src/`; only the page script reloads by itself.
+- **The heredoc trap struck twice more**, once with `\n` and once with a line-continuation backslash. Use the Edit or Write tool for Python.
+
+## Working on this machine (additions)
+
+- Start the copilot from `assistants/`: `uv run streamlit run copilot_app.py --server.port 8502 --server.headless true`.
+- `uv run python -m assistants.evaluate copilot --only id1,id2` asks a few questions without writing the report. The free plan's 200K tokens a day ran out on 2026-09-28 after one chatbot run, three full copilot runs and some reruns; plan at most two full runs a day, and use `--only` while fixing.
+- Maher's tests: from `network_kpi_prediction/`, `uv run --no-project --python 3.12 --with-requirements requirements.txt --with pytest --with xgboost python run_pipeline.py test` (retry once on uv's path error).
+
+## What is on disk but not in git (additions)
+
+- `assistants/runtime/work_orders.jsonl`, the confirmed work orders; the browser test's record was deleted.
+- The prepaid artifacts from before the rebuild, in the session's scratchpad (`artifacts_backup_2026-09-28`).
+
+## Branches as last merged into `tahaDev` (2026-09-28, evening)
+
+Anything on these branches after the commit shown is new since this session.
+
+| Branch | Owner | Last merged | Notes |
+|---|---|---|---|
+| `Ali_Branch` | Ali | `bf498d4` | the prepaid module |
+| `integration/antenna-planning-v2` | Mahmoud, with Ahmed | `2eca2dd` | the team's final GIS; the copilot reads `antenna_cell_placement/integrated_release/` |
+| `mahalm_antenna_cell_placement` | Mahmoud | `8a2be6c` | contained in the GIS integration |
+| `maher_kpi_prediction` | Maher | `9c1a267` | `network_kpi_prediction/`; the copilot reads `data/` |
+| `MNK_forecasting` | Mohamed | `7d8a945` | `KPI_forecasting/`, `01_KPI_Towers_Forecasting_System/`, `02_Traffic_Steering_SON_System/`; the copilot reads none of it (decision 55) |
+| `ahmed_cell_placement` | Ahmed | not merged (`15dc13a`) | superseded by the GIS integration (decision 53) |
+| `main` | team | `a4368a0` | at `674d9f6` now with no net change; never merge `main` itself |
+
+## Starting the next session
+
+Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
+
+> I am Taha. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, session 3 of `prepaid_churn/docs/session_log.md` and ticket T25. I tested the copilot; here is what I found: <your notes>. Confirm the tests in `prepaid_churn/` and `assistants/` pass, then walk me through what you would change, and wait for my answers before writing code.
+
 # Session 2: 2026-09-26 to 2026-09-28
 
 ## Where things stand on 2026-09-28
@@ -83,7 +161,7 @@ This file is the narrative that connects them: what happened, in what order, wha
 - On Taha's Desktop: the final report as received, and the `_with_chatbot.docx` version.
 - `artifacts/scores/` still holds the scored export from before the 70 LYD anchor; T25's first step rebuilds it.
 
-## Branches as last merged into `tahaDev` (2026-09-28)
+## Branches as merged on 2026-09-28, morning (session 3 has the latest)
 
 Anything on these branches after the commit shown is new since this session.
 
@@ -97,7 +175,7 @@ Anything on these branches after the commit shown is new since this session.
 | `ahmed_cell_placement` | Ahmed | not merged (`15dc13a`) | superseded by the GIS integration (decision 53) |
 | `main` | team | `a4368a0` | arrived inside the teammates' branches; never merge `main` itself |
 
-## Starting the next session (the copilot)
+## Starting the next session (the copilot; used on 2026-09-28 evening)
 
 The plan: compact, then read everything new on the other branches, then build the copilot the same way as the chatbot.
 Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:

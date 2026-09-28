@@ -1388,3 +1388,74 @@ The assistants follow the module:
 
 **Not built yet.**
 Service points wait for a list from Taha; the columns are fixed in `assistants/README.md`, and until the file exists the chatbot says the locations are not available.
+
+## 55. The employee copilot: tower alerts in code, and work orders only a person confirms
+
+Date: 2026-09-28.
+
+Taha asked for a copilot that warns an employee when a tower is in trouble, makes their work easier, and cannot act alone.
+It is `assistants/copilot_app.py`, built the same way as the chatbot (decision 54): the same tool loop, number check, safe answers, sources panel and look.
+
+**What it reads.**
+Committed files at fixed paths, all listed in one module, `assistants/src/assistants/sources.py`, and the prepaid service with the copilot key:
+
+- Maher's daily KPIs for each of 1,067 base stations, 2025-09-20 to 2026-09-19 (`network_kpi_prediction/data/erbs_cell_kpi_full_year.csv`), and his network-wide KPIs and 4G traffic volume.
+- The GIS release: `shortlist.csv`, `candidates.csv` and `manifest.json` in `antenna_cell_placement/integrated_release/`.
+- `/portfolio/summary` and `/subscribers/{id}/risk` from the prepaid service.
+
+Files rather than endpoints, because that is what the teammates publish, and asking each for a service before the presentation is not realistic.
+The copilot never writes to their folders, and if a path moves only `sources.py` changes.
+
+**What it does not read, and why.**
+
+- Maher's forecasts.
+  Since his rebuild of 2026-09-27 they are git-ignored runtime outputs, so a fresh checkout has none; the copilot says it has no forecasts.
+  If Maher commits a release folder, as the GIS team does, a later version can read them.
+- Mohamed's tower predictions and traffic steering suggestions.
+  The predictions are one day ahead from yesterday's actual value, for past days, not forecasts.
+  The steering pairs towers whose names share a prefix, not radio neighbours, and its QoE boost is a formula, so handing its suggestions to an engineer as actions would mislead.
+  His input data is not committed either, so neither system can be rerun.
+- Maher's health index and flagged towers.
+  They are yearly averages, his outputs are git-ignored, and his IsolationForest flags 5% of towers by construction.
+
+**The alerts are rules in code, not a model.**
+For the latest day in the file, each tower's KPIs are checked against two limits:
+
+| KPI | Target (Maher's SLA thresholds) | Severe |
+|---|---|---|
+| Cell availability | 95% | below 50%: critical |
+| Call drop rate | 0.5% | above 1%: major |
+| Connection setup success | 99.5% | below 98%: major |
+| Data session setup success | 99.5% | below 98%: major |
+| Handover success | 97.5% | below 90%: major |
+| Download speed | none | below 2 Mbps: major |
+
+A tower that is up but carries under a quarter of its usual users (its median over the 28 days before, when that is at least 5) is a sleeping cell, and critical.
+A KPI past its target only is a warning, and so is a tower that reported in the week before but not on the latest day.
+Three severe limits come from Maher's own sleeping-cell rule (2 Mbps, 1%, 98%); the others are ours, set where one day is worth a person's time.
+On 2026-09-19 the rules find 15 critical, 34 major and 215 warning towers of the 1,052 that reported.
+Rules, because every alert can be checked against the file line by line, and no record of real faults exists to train or validate a model on.
+
+**It cannot act alone.**
+The model's only action is `draft_work_order`, which saves nothing and hands the screen a draft.
+The draft shows under the conversation with the tower's problems; the employee can change the action or add a note, and only a named employee pressing Confirm writes it, to `assistants/runtime/work_orders.jsonl` (git-ignored).
+No code path lets the model reach that write, and a line added in code under every drafting reply says the draft waits for the employee.
+In the browser, asked "what is wrong with DAS18M1? Draft a remote check for it", the model looked the tower up and then described a draft in words without making one.
+Two things in code now cover that: when the message asks for a work order, the tower's result tells the model to call `draft_work_order`, and if no draft was made after all, a line under the reply says that nothing is waiting to be confirmed.
+A work order is a record for the team; nothing is sent to any network system.
+The alert table offers the same draft-then-confirm flow without the chat.
+Customer actions stay where they were: offers are approved by a named review in the prepaid dashboard (decision 34), and the copilot only reads.
+
+**Guards added for the copilot.**
+
+- A Libyan phone number in the employee's message is removed before the model sees it, and `subscriber_risk` refuses a phone-shaped ID before calling the service.
+- The GIS distance columns named after each operator are never passed to the model (decision 45).
+- The prompt carries the date of the tower data, so answers say "on 2026-09-19", never "now".
+
+**What leaves the machine.**
+The employee's words and the tool results go to Groq: tower KPIs, GIS rows, portfolio totals, and one subscriber's risk band, reasons and value when asked.
+Phone numbers do not.
+The caveat of decision 54 holds: an operator deployment needs a model it controls or a contract that covers this data.
+
+**Not built.**
+The document search planned in T25 (`search_docs`) was left out: the tools answer the questions the demo needs, and it can be added later without changing the rest.
