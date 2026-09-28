@@ -9,33 +9,32 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-27 by Taha + Claude (`Ali_Branch` merged into `tahaDev` through `fa1fa21`; the churn service and the chatbot are closed; the copilot, T25, is next).
+**Last updated:** 2026-09-28 by Taha + Claude (Ali merged through `bf498d4`; the churn service and the chatbot are closed; the chatbot's part of the final report is written; the copilot, T25, is next and planned).
 
-**Merged on 2026-09-27: Ali's recap and the outside review (decisions 37 to 52).**
-- Everything on `Ali_Branch` since `f0156e2` is in `tahaDev`: the recap from T5 to T21, the 70 LYD ARPU anchor, the operator no longer named, the removed experiments, the customer message for offers and the review's serving fixes; his own summary follows below.
-- Numbers that collided were renumbered on our side, so his stand: our decisions 37 and 38 are now 53 and 54, and our tickets T22 and T23 (chatbot, copilot) are now T24 and T25.
-  His T22 (any calendar months) and T23 (a value built on measured risk) stay open for after the presentation.
-- Decisions 39 and 53 together settle the branch question: Ali works on `Ali_Branch`, and `tahaDev` takes his work by merge along with the teammates' branches.
+**New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (two sessions: 2026-09-26 to 2026-09-28 first, then 2026-09-19 to 2026-09-25), then ticket T25 below.
+[docs/study_guide.md](docs/study_guide.md) explains the whole module and the chatbot in plain words.
 
-**Team branches merged, 2026-09-26 (decision 53):**
-- `tahaDev` carries Mahmoud's final GIS (`integration/antenna-planning-v2`), Maher's `maher_kpi_prediction` and Mohamed's `MNK_forecasting`, so the employee copilot can read their outputs.
-  `ahmed_cell_placement` is not merged, because the GIS integration already carries his audited work.
-- Their folders stay theirs: we only resolve merges there and report problems (the hard rule in [CLAUDE.md](CLAUDE.md)).
-- **Tell the owners** (details in decision 53):
-  - Maher: his README's MASE claim does not match his `model_metrics.csv` (17 of 60), and `xgboost` is missing from his `requirements.txt`.
-  - Mohamed: his model early-stops on the test set, and two of his prediction files are identical.
-  - Mahmoud and Ahmed: local Claude settings are committed under `antenna_cell_placement/.claude/`, and the legacy optimizer lacks Ali's stricter checks.
-
-**New session? Read [docs/session_log.md](docs/session_log.md) after this Handoff.** It is the log of the 2026-09-19 to 2026-09-25 session: what was done in what order, the mistakes caught, how to run things on Taha's machine, and what is on disk but not in git.
+**Where things stand on 2026-09-28**
+- `tahaDev` carries Ali's work through `bf498d4` (decisions 37 to 52, and the credit advice on the Subscriber screen), the teammates' GIS and network ML branches (decision 53), and the customer chatbot (decision 54).
+- 37 local commits are not pushed yet; the last push was `fbc3ac3` on 2026-09-26. Push only when Taha asks.
+- The churn module: 475 tests, lint and format green; the frozen champion is unchanged (`lightgbm-2026-09-19-ef9430fb`).
+- The chatbot (T24, closed): 64 tests green; 21 of 21 evaluation questions pass on the real model against the merged service (`../assistants/reports/chatbot_eval.md`, 2026-09-28).
+- The final report: the chatbot's part is added in the report's own format, as `SIC_AI_Capstone_Project_Final_Report_Prepaid_Churn_short,_credit_with_chatbot.docx` on Taha's Desktop (not in git); the original file there is unchanged.
 
 **Open right now, in order:**
-1. T25, the employee copilot, in `assistants/` (decision 54).
-2. T24, the customer chatbot, is closed; only Taha's service-point list is still to come.
-   The churn service is closed for the presentation too: Ali's recap is complete, and his T22 and T23 wait until after it.
-   Before T25 reads portfolio figures, rebuild the artifacts with the README commands: the scored export on disk predates the 70 LYD anchor (decision 42).
-3. Ali's T22 and T23, after the presentation.
-4. The final report draft (`SIC_AI_Capstone Project_Final Report - Loop Gain.docx` at the repository root, not in git) needs its checks, listed in the session log, and must not name the operator (decision 45).
-5. Taha's "heavy and random" feedback on the demo app (session log): Ali's recap reworked the demo since, so check with Taha whether it still holds.
+1. T25, the employee copilot, built the same way as the chatbot: plan, tools, first steps and open questions are in the ticket.
+   It starts by reading what is new on the other branches since the commits in the session log's "Branches as last merged", then rebuilds the prepaid artifacts, because the scored export on disk predates the 70 LYD anchor (decision 42).
+2. Push the 37 commits when Taha says so.
+3. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
+4. Ali's final report ("the brief"), which he shared on Telegram and is not in the repository: Taha will provide it, so the chatbot's part can be checked against its style.
+5. Tell the owners what the merges found (decision 53): Maher's MASE claim and missing `xgboost`, Mohamed's early stopping on the test set and duplicate file, the local Claude settings in the GIS folder.
+6. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
+7. Ali's T22 and T23, after the presentation.
+8. Taha's "heavy and random" feedback on the demo app (session log, first session): Ali reworked the demo since, so ask Taha whether it still holds.
+
+**Merged on 2026-09-27 and 2026-09-28: Ali's recap, the outside review and the credit advice screen.**
+- Numbers that collided were renumbered on our side, so his stand: our decisions 37 and 38 are now 53 and 54, and our tickets T22 and T23 are now T24 (chatbot) and T25 (copilot).
+- Decisions 39 and 53 together settle the branch question: Ali works on `Ali_Branch`, and `tahaDev` takes his work by merge along with the teammates' branches.
 
 **Ali's step-by-step recap, 2026-09-25 and 2026-09-26**
 
@@ -1207,15 +1206,56 @@ Findings (closed 2026-09-27, verified on the code merged with Ali's `fa1fa21`):
 ## T25 - Employee copilot
 
 **Owner:** Taha + Claude
-**Status:** Next; T24 is closed
-**Depends on:** T24, decision 53
+**Status:** Next; planned on 2026-09-28, not started
+**Depends on:** T24, decisions 53 and 54
 
-Scope, in `assistants/copilot_app.py`, same loop, checks and look as T24:
-- Customers: `/portfolio/summary` and `/subscribers/{id}/risk` with the copilot key.
-- GIS: the Tripoli shortlist and candidates in `antenna_cell_placement/integrated_release/`.
-- Network: Maher's KPI and traffic forecasts and both network models' metrics, with the caveats in decision 53.
-- Documents: BM25 over the Markdown the modules publish, with citations built from the trace, not written by the model.
-- Refuses what no module provides: per-cell congestion, anomalies, anywhere outside Tripoli, "new site or more capacity", bulk customer lists and approvals.
+What it is: a Streamlit chat for an operator's employees, in `assistants/copilot_app.py`, that answers questions about customers at risk, the GIS planning shortlist and the network forecasts, with the source of every figure shown under the answer.
+It follows the instructor's condition for the copilot: retrieval-grounded answers over approved outputs, with citations, and a refusal when there is no evidence (decision 17).
+
+Reuse, already built for T24 (decision 54):
+- `src/assistants/llm.py`: the turn loop (`run_turn`), tool definitions and the Groq model.
+- `src/assistants/grounding.py`: the number check and the phone-number check.
+- `src/assistants/ui.py`, `.streamlit/config.toml`: the shared look and the "What I looked up" panel.
+- `src/assistants/env.py` and `.env`: `PREPAID_CHURN_COPILOT_KEY` is already there.
+- `src/assistants/service_client.py`: `portfolio_summary()` and `risk_for()` already call the copilot endpoints.
+
+Tools, all read-only; the file paths go in one module and in the README so their owners know not to rename them:
+
+| Area | Tool | Reads |
+|---|---|---|
+| Customers | `portfolio_summary()` | `/portfolio/summary` with the copilot key |
+| Customers | `subscriber_risk(id)` | `/subscribers/{id}/risk`; the employee types the ID, and the service refuses phone-shaped ones |
+| GIS | `expansion_priorities(municipality?, top_n?)` | `antenna_cell_placement/integrated_release/shortlist.csv` (20 ranked sites) and `manifest.json` (constraints, versions, Tripoli only) |
+| GIS | `explain_location(candidate_id)` | `antenna_cell_placement/integrated_release/candidates.csv` (2,223 candidates with score components and rejection reasons) |
+| Network | `kpi_forecast(band, kpi, days)` | `network_kpi_prediction/kpi_prediction_pipeline/data/output/carrier_kpi_forecast_2026_2027.csv` and its `model_metrics.csv` row, with the SLA target from Maher's `src/config.py` copied into a small cited table |
+| Network | `traffic_forecast(days)` | `network_kpi_prediction/kpi_prediction_pipeline_traffic/data/future_30d_forecast.csv` against the 1.2M GB alert |
+| Network | `network_model_quality()` | both teams' metrics, with the caveats computed from the files (only 17 of 60 of Maher's series beat the naive baseline; Mohamed's metrics are optimistic because his model early-stops on the test set) |
+| Documents | `search_docs(query_en)` | BM25 over Markdown sections, no vector store: the prepaid documents `integration.md` section 7 allows, the GIS `README.md` and `document/*.md`, and both network READMEs; the model writes the query in English so Arabic questions still work |
+
+Rules, in code where possible, as for the chatbot:
+- Citations are built from the trace (tool, file and row, or `document#heading`), never written by the model.
+- Per band, never per cell: the network data has no cells.
+- The GIS score is a planning heuristic, not coverage.
+- Refused, each with its reason: per-cell congestion, anomalies (no module built an anomaly model), anywhere outside Tripoli, "new site or more capacity", bulk customer lists, approvals, phone numbers.
+
+First steps:
+0. Fetch every branch and read what is new since the commits listed in "Branches as last merged" (session 2 of [docs/session_log.md](docs/session_log.md)), above all the GIS and network ML work the copilot reads; merge it the same way as before (decision 53) once Taha agrees, and update the file paths below if they moved.
+1. Rebuild the prepaid artifacts with the README commands, because the scored export on disk predates the 70 LYD anchor (decision 42); the bundle must still be `lightgbm-2026-09-19-ef9430fb`.
+2. Settle the open questions below with Taha.
+3. Build the customer and GIS tools first, then network, then documents; each with tests on small hand-made files.
+4. Write `eval/copilot_questions.toml` and run it on the real model, then read every answer.
+5. Record the retrieval and file-reading choices as decision 55.
+
+Open questions to settle at the start:
+- Who asks, and in which language: planning engineers, customer-care staff, or both; Arabic, English or both?
+- Which question groups the demo needs first (customers, GIS, network, documents).
+- Reading the teammates' published files by fixed paths, as planned, or asking them for small endpoints.
+- Whether answers should link to the GIS team's offline maps (`integrated_release/planning_map.html`).
+
+Acceptance:
+- Lint, format and tests pass in `assistants/`, with no test calling Groq or the network, and the chatbot's tests still pass.
+- `reports/copilot_eval.md` passes every automatic check, including the attacks (approve an offer, list the 200 riskiest customers, a phone number, a per-cell question), and every answer has been read.
+- In the browser, desktop and phone width, in the same look as the chatbot.
 
 ## Future work (needs real operator data)
 

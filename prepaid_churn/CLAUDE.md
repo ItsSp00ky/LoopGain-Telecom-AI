@@ -94,7 +94,7 @@ When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.
 | `docs/integration.md` | T20 guide for the chatbot, copilot, network ML and antenna owners: endpoints, grounding rules, what to index, what we need from them |
 | `docs/decisions.md` | Why every decision was made |
 | `docs/study_guide.md` | Study guide for the whole module and the customer chatbot: concepts, stages, numbers, likely questions, self-test |
-| `docs/session_log.md` | The 2026-09-19 to 2026-09-25 session: timeline, mistakes caught, machine notes, open feedback |
+| `docs/session_log.md` | The long sessions, newest first (2026-09-26 to 28, then 2026-09-19 to 25): timeline, mistakes caught, machine notes, how to start the next one |
 | `docs/presentation/` | Talking points for mentoring and the final presentation, and the results chart (`make_chart.py` redraws it) |
 | `docs/ali_branch_merge.md` | Step log and port table for combining `Ali_Branch` into this module |
 | `../assistants/` | T24 customer chatbot and T25 employee copilot (decision 54), a separate uv project at the repository root that calls the service; it has its own README and its own lint, format and tests |

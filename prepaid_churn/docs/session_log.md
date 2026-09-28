@@ -1,8 +1,110 @@
-# Session log: 2026-09-19 to 2026-09-25 (Taha + Claude)
+# Session log (Taha + Claude)
 
-One long working session, written down so the next session can start without the chat.
+The long working sessions, written down so the next session can start without the chat; the newest comes first.
 The sources of truth stay where they were: [../CLAUDE.md](../CLAUDE.md), the Handoff at the top of [../TICKETS.md](../TICKETS.md), and [decisions.md](decisions.md).
 This file is the narrative that connects them: what happened, in what order, what went wrong, and what is still open.
+
+# Session 2: 2026-09-26 to 2026-09-28
+
+## Where things stand on 2026-09-28
+
+- `tahaDev` holds Ali's work through `bf498d4`, the teammates' GIS and network ML branches (decision 53) and the customer chatbot in `assistants/` (decision 54).
+- 37 local commits are not pushed; the last push was `fbc3ac3` on 2026-09-26. Taha pushes only on request.
+- The churn module: 475 tests, lint and format green, the frozen champion unchanged.
+- The chatbot (T24) is closed: 64 tests green, 21 of 21 evaluation questions on the real model (`../../assistants/reports/chatbot_eval.md`).
+- The final report's chatbot part is written; the copilot (T25) is next and planned in its ticket.
+- [study_guide.md](study_guide.md) explains the module and the chatbot for Taha.
+
+## Timeline
+
+### 1. Ali's first merge, and the teammates' branches (2026-09-25 and 26)
+
+- `Ali_Branch` through `f0156e2` merged into `tahaDev` (decisions 35 and 36, the recap to T4).
+- Taha asked for every teammate branch to be read and merged: Mahmoud's final GIS `integration/antenna-planning-v2`, Maher's `maher_kpi_prediction` and Mohamed's `MNK_forecasting` went in, one merge commit each (decision 53).
+  `ahmed_cell_placement` was not merged, because the GIS integration already carries his audited work.
+- Two conflicts, where Ali's GIS fix met Mahmoud's rewrite; the owner's version won, and Ali's superseded optimizer test was removed with its guarantees kept by the GIS tests.
+- Findings for the owners, in decision 53: Maher's MASE claim (17 of 60, not all), Mohamed's early stopping on the test set, and more.
+
+### 2. The customer chatbot (2026-09-26)
+
+- Taha chose Groq's free Llama 3.3 70B, but Groq had retired it on 2026-08-16; he then chose `openai/gpt-oss-120b`.
+- `assistants/` replaced the empty `customer_support_chatbot/` placeholder: one project for the chatbot and the future copilot, with the tool loop, the reply checks and one look taken from the GIS demo page.
+- First push of the session: `f2cc724..fbc3ac3`, on Taha's request.
+
+### 3. Real runs, and what they found (2026-09-26 and 27)
+
+- Taha holds the Groq key; he put it in the git-ignored `assistants/.env`, which the chatbot and the evaluation read, so Claude never handles it.
+- Every real run found something the tests on a scripted model could not; each fix went into code, not the prompt (the table in [study_guide.md](study_guide.md), Part 6).
+- Six evaluation rounds, from a first run that failed every call to 21 of 21.
+
+### 4. Ali's review merged, the chatbot aligned (2026-09-27)
+
+- `Ali_Branch` through `fa1fa21`: decisions 37 to 52, among them the 70 LYD anchor, the removed experiments, the operator no longer named and the customer message for offers.
+- Colliding numbers were renumbered on our side: decisions 37 and 38 became 53 and 54, tickets T22 and T23 became T24 and T25.
+- The chatbot followed decisions 45, 51 and 52: no operator name, the service's customer message, volumes only as the operator states them. T24 was closed.
+
+### 5. Ali's last commit, the report and the study guide (2026-09-28)
+
+- `Ali_Branch` through `bf498d4` (the credit advice on the Subscriber screen): no conflicts, no chatbot change needed, 21 of 21 again.
+- The final report: Ali and Taha's prepaid part was in `SIC_AI_Capstone_Project_Final_Report_Prepaid_Churn_short,_credit.docx` on Taha's Desktop; the chatbot's part was added under every section as a "Customer chatbot" block, cloned from the report's own XML so nothing is restyled, with Tables 3 and 4 and Figures 7 and 8.
+  The result is the `_with_chatbot.docx` beside it; the original is unchanged.
+- Figures 7 and 8 come from `../../assistants/report_figures/`.
+- Ali's own final report ("the brief") is not in the repository; Taha will share it from Telegram.
+
+## Mistakes caught this session, and the lesson from each
+
+- **The chosen model no longer existed.** Check a provider's current models and free limits before building on one.
+- **Every call failed silently at first.** GPT-OSS rejects `parallel_tool_calls`, and the error was swallowed; errors now show and the evaluation stops at the first one.
+- **Groq validates tool calls against the schema.** The model filled unused arguments with null and the call was refused; every optional argument now accepts null.
+- **A cached client outlived a code reload** and raised the old error class; nothing is cached across reloads now.
+- **21 of 21 checks passed while answers were wrong** (English answered in Arabic, "no data" for unstated volumes). Always read the answers, not only the checks.
+- **Rules in the prompt were followed in one run and not the next.** When code can decide something (language, sign-in, another account's number), code decides it.
+- **The heredoc trap struck twice more**: `\n` inside Python written through a bash heredoc becomes a real newline. Write Python files with the Write tool.
+- **A report image overwrote the footer logo** (`image7.png` already existed), which also made Word hang. Give new media unique names and check before copying.
+- **A test passed for the wrong reason**, monkeypatching a module attribute that a default argument had already bound; the fake is now passed in, and the test asserts it was used.
+- **A watcher was pointed at the wrong task output**; check task IDs before arming one.
+
+## Working on this machine (additions to session 1's list)
+
+- The keys live in `assistants/.env` (git-ignored): `GROQ_API_KEY` (Taha's), and the two service keys.
+- Start the service from `prepaid_churn/` with the service keys from that file, never reading the Groq line:
+  `export $(grep '^PREPAID_CHURN_.*_KEY=' ../assistants/.env | xargs)` then `uv run churn serve --campaign-dir artifacts/campaigns/ui-2026-09-22-200`.
+- Start the chatbot from `assistants/`: `uv run streamlit run chatbot_app.py --server.port 8501 --server.headless true`; it listens on 127.0.0.1 only.
+- In campaign `ui-2026-09-22-200`, subscriber 70016 has an approved offer (the morning pass) and 70017 has none.
+- Word 16 is installed and scriptable: export a `.docx` to PDF through the Word COM object, inside a PowerShell job with a timeout, because a hidden dialog can hang it.
+  Then render pages with `uv run --no-project --python 3.12 --with pymupdf`.
+- Screenshots of a Streamlit app: headless Edge through the DevTools protocol, with `suppress_origin=True` in `websocket-client` (`../../assistants/report_figures/chatbot_screenshot.py`).
+- The GIS research extra cannot install here (`pyrosm` needs the Microsoft C++ build tools); run the GIS tests with the planning environment plus `--with joblib --with lightgbm --with scikit-learn --with rasterstats --with xgboost --with matplotlib --with seaborn --with openpyxl`.
+- Maher's tests: `uv run --no-project --python 3.12 --with-requirements requirements.txt --with xgboost`, retrying once if uv reports a path error after building the environment.
+
+## What is on disk but not in git (additions)
+
+- `assistants/.env`, with the keys.
+- On Taha's Desktop: the final report as received, and the `_with_chatbot.docx` version.
+- `artifacts/scores/` still holds the scored export from before the 70 LYD anchor; T25's first step rebuilds it.
+
+## Branches as last merged into `tahaDev` (2026-09-28)
+
+Anything on these branches after the commit shown is new since this session.
+
+| Branch | Owner | Last merged | Notes |
+|---|---|---|---|
+| `Ali_Branch` | Ali | `bf498d4` | the prepaid module |
+| `integration/antenna-planning-v2` | Mahmoud, with Ahmed | `2eca2dd` | the team's final GIS; the copilot reads `antenna_cell_placement/integrated_release/` |
+| `mahalm_antenna_cell_placement` | Mahmoud | `8a2be6c` | contained in the GIS integration |
+| `maher_kpi_prediction` | Maher | `732e88c` | `network_kpi_prediction/`: KPI and traffic forecasts |
+| `MNK_forecasting` | Mohamed | `2425707` | `KPI_forecasting/`: next-day KPI predictions |
+| `ahmed_cell_placement` | Ahmed | not merged (`15dc13a`) | superseded by the GIS integration (decision 53) |
+| `main` | team | `a4368a0` | arrived inside the teammates' branches; never merge `main` itself |
+
+## Starting the next session (the copilot)
+
+The plan: compact, then read everything new on the other branches, then build the copilot the same way as the chatbot.
+Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
+
+> I am Taha. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, session 2 of `prepaid_churn/docs/session_log.md` (including "Branches as last merged") and ticket T25. Run `git fetch origin` for every branch, and for each teammate branch show me what is new since the commit it was last merged at, and whether any new branch appeared. Read what changed in the GIS and network ML work, because the copilot reads their outputs, and tell me how it affects the T25 plan. Confirm the tests in `prepaid_churn/` and `assistants/` pass. Then walk me through the T25 plan for the employee copilot, built the same way as the chatbot, with its open questions, and wait for my answers before merging or writing any code.
+
+# Session 1: 2026-09-19 to 2026-09-25
 
 ## Where things stand on 2026-09-25
 
