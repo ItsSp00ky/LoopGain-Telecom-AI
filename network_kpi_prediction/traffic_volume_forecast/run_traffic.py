@@ -18,7 +18,7 @@ from src.data_cleaning import run_clean_pipeline, resolve_raw_traffic_file
 from src.temporal_splitting import run_split_pipeline, resolve_clean_traffic_file
 from src.feature_engineering import prepare_datasets, prepare_multivariate_datasets
 from src.model_definitions import train_and_benchmark, retrain_champion, forecast_future
-from src.visualization import run_all_plots, plot_multivariate_vs_univariate_comparison
+from src.visualization import run_all_plots, plot_multivariate_vs_univariate_comparison, plot_traffic_diagnostic_overview
 
 
 def run_clean_stage(raw_path=None, output_dir=None, z_threshold=3.0):
@@ -179,6 +179,7 @@ def run_plot_stage(
     clean_csv=None,
     forecast_csv=None,
     plots_dir=None,
+    include_legacy=False,
 ):
     target_plots_dir = Path(plots_dir) if plots_dir else _PKG_ROOT / "plots"
 
@@ -202,6 +203,7 @@ def run_plot_stage(
         clean_csv=clean_csv,
         forecast_csv=forecast_csv,
         plots_dir=target_plots_dir,
+        include_legacy_single_panels=include_legacy,
     )
 
 
@@ -333,6 +335,7 @@ def main(argv=None) -> int:
     plot_p.add_argument("--clean-csv", type=str, default=None, help="Path to clean historical CSV")
     plot_p.add_argument("--forecast-csv", type=str, default=None, help="Path to forecast CSV")
     plot_p.add_argument("--plots-dir", "-p", type=str, default=None, help="Directory to save plots")
+    plot_p.add_argument("--include-legacy", action="store_true", help="Also generate individual legacy single-panel plots")
 
     # multivariate
     multi_p = subparsers.add_parser("multivariate", aliases=["multi"], help="Benchmark multivariate exogenous radio KPIs against univariate baseline")
@@ -393,6 +396,7 @@ def main(argv=None) -> int:
             clean_csv=args.clean_csv,
             forecast_csv=args.forecast_csv,
             plots_dir=args.plots_dir,
+            include_legacy=getattr(args, "include_legacy", False),
         )
         return 0
     elif args.command in ["multivariate", "multi"]:

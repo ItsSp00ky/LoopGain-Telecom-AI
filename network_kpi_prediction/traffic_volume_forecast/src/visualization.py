@@ -550,6 +550,155 @@ def plot_multivariate_vs_univariate_comparison(
 
 
 
+def plot_traffic_diagnostic_overview(
+    clean_csv: str | Path | None = None,
+    datasets: dict | None = None,
+    results: dict | None = None,
+    champion_name: str | None = None,
+    plots_dir: Path | str | None = None,
+    dpi: int = 300,
+) -> Path:
+    """
+    Consolidates traffic diagnostics into a unified 3-panel publication figure:
+    1. Historical Trajectory & Anomaly Detection (Raw vs Outage-Adjusted & Severe Anomalies)
+    2. Chronological Zero-Leakage Splits (Train / Validation / Test Partitions)
+    3. Holdout Actual vs. Seasonal Reference & Champion Model Trajectory
+    Saves to: plots/traffic_diagnostic_overview.png
+    """
+    target_plots_dir = Path(plots_dir) if plots_dir else LOCAL_PLOTS_DIR
+    target_plots_dir.mkdir(parents=True, exist_ok=True)
+
+    if clean_csv is None:
+        clean_csv = _PKG_ROOT / "data" / "traffic_kpi_clean.csv"
+    else:
+        clean_csv = Path(clean_csv)
+        if not clean_csv.exists() and (_PKG_ROOT / clean_csv).exists():
+            clean_csv = _PKG_ROOT / clean_csv
+
+    df = pd.read_csv(clean_csv)
+    df["date"] = pd.to_datetime(df["date"])
+
+    if datasets is None:
+        from src.feature_engineering import prepare_datasets
+        datasets, _, feature_cols = prepare_datasets(clean_csv=clean_csv)
+
+    if results is None or champion_name is None:
+        from src.model_definitions import train_and_benchmark
+        if "feature_cols" not in locals():
+            from src.feature_engineering import get_feature_columns
+            feature_cols = get_feature_columns(datasets["train"]["df"])
+        bench_results, _, bench_champ = train_and_benchmark(datasets, feature_cols)
+        if results is None:
+            results = bench_results
+        if champion_name is None:
+            champion_name = bench_champ
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(15, 13), dpi=dpi)
+
+    # 1. Panel 1: Historical Trajectory & Anomaly Detection
+    raw_vol = (df["kpi_volume_gb_raw"] if "kpi_volume_gb_raw" in df.columns else df["kpi_volume_gb"]) / 1e3
+    clean_vol = df["kpi_volume_gb"] / 1e3
+    ax1.plot(df["date"], raw_vol, color="#94A3B8", alpha=0.55, linewidth=1.2, label="Raw Observed Daily Volume")
+    ax1.plot(df["date"], clean_vol, color="#2563EB", linewidth=1.8, label="Cleaned KPI Volume (Outage-Adjusted)")
+    rolling_7d = clean_vol.rolling(7, center=True).mean()
+    ax1.plot(df["date"], rolling_7d, color="#D97706", linewidth=2.2, linestyle="-", label="7-Day Rolling Trend Baseline")
+
+    if "is_anomaly" in df.columns:
+        anomalies = df[df["is_anomaly"]]
+    else:
+        anomalies = pd.DataFrame()
+
+    if not anomalies.empty:
+        anom_raw = (anomalies["kpi_volume_gb_raw"] if "kpi_volume_gb_raw" in anomalies.columns else anomalies["kpi_volume_gb"]) / 1e3
+        ax1.scatter(
+            anomalies["date"], anom_raw,
+            color="#DC2626", s=85, zorder=5, edgecolors="black", linewidth=1.2,
+            label=f"Detected Severe Outages/Anomalies (n={len(anomalies)})"
+        )
+        for _, row in anomalies.iterrows():
+            date_label = row["date"].strftime("%b %d")
+            r_val = (row["kpi_volume_gb_raw"] if "kpi_volume_gb_raw" in row and pd.notnull(row["kpi_volume_gb_raw"]) else row["kpi_volume_gb"]) / 1e3
+            ax1.annotate(
+                f"{date_label}\n({r_val:,.0f}k GB)",
+                xy=(row["date"], r_val),
+                xytext=(0, -28),
+                textcoords="offset points",
+                ha="center",
+                fontsize=8.0,
+                weight="bold",
+                color="#DC2626",
+                arrowprops=dict(arrowstyle="->", color="#DC2626", lw=1),
+            )
+
+    ax1.set_title("1. Anomaly Detection & Historical Trajectory (Outage Treatment & Trend Baseline)", fontsize=11.5, fontweight="bold", pad=8)
+    ax1.set_ylabel("Volume ('000 GB)", fontsize=10)
+    ax1.xaxis.set_major_locator(mdates.MonthLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax1.legend(loc="upper left", framealpha=0.92, fontsize=9)
+
+    # 2. Panel 2: Chronological Splits
+    train_df = datasets["train"]["df"]
+    val_df = datasets["val"]["df"]
+    test_df = datasets["test"]["df"]
+
+    ax2.plot(train_df["date"], train_df["kpi_volume_gb"] / 1e3, color="#2563EB", linewidth=1.8, label=f"Train Partition (n={len(train_df)}d, 70%)")
+    ax2.plot(val_df["date"], val_df["kpi_volume_gb"] / 1e3, color="#F59E0B", linewidth=1.8, label=f"Validation Partition (n={len(val_df)}d, 15%)")
+    ax2.plot(test_df["date"], test_df["kpi_volume_gb"] / 1e3, color="#10B981", linewidth=1.8, label=f"Holdout Test Partition (n={len(test_df)}d, 15%)")
+
+    ax2.axvspan(train_df["date"].min(), train_df["date"].max(), color="#DBEAFE", alpha=0.35)
+    ax2.axvspan(val_df["date"].min(), val_df["date"].max(), color="#FEF3C7", alpha=0.35)
+    ax2.axvspan(test_df["date"].min(), test_df["date"].max(), color="#D1FAE5", alpha=0.35)
+
+    ax2.axvline(val_df["date"].min(), color="#D97706", linestyle=":", linewidth=2)
+    ax2.axvline(test_df["date"].min(), color="#059669", linestyle=":", linewidth=2)
+
+    ax2.set_title("2. Chronological Partitions (Zero-Leakage Train / Validation / Test Splits)", fontsize=11.5, fontweight="bold", pad=8)
+    ax2.set_ylabel("Volume ('000 GB)", fontsize=10)
+    ax2.xaxis.set_major_locator(mdates.MonthLocator())
+    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax2.legend(loc="upper left", framealpha=0.92, fontsize=9)
+
+    # 3. Panel 3: Holdout Actual vs. Seasonal Reference
+    test = datasets["test"]
+    test_dates = pd.to_datetime(test["dates"] if "dates" in test else test["df"]["date"])
+    y_true = (test["y"] if "y" in test else test["df"]["kpi_volume_gb"].values) / 1e3
+
+    champ_pred = results[champion_name]["test_pred"] / 1e3
+    naive_pred = results["Seasonal Naive (t-7)"]["test_pred"] / 1e3 if "Seasonal Naive (t-7)" in results else None
+
+    ax3.plot(test_dates, y_true, color="#0F172A", marker="o", markersize=4.5, linewidth=2.0, label="Actual Observed Volume")
+    ax3.plot(test_dates, champ_pred, color="#2563EB", marker="s", markersize=4.0, linewidth=2.0, linestyle="--", label=f"Champion Prediction ({champion_name})")
+    if naive_pred is not None:
+        ax3.plot(test_dates, naive_pred, color="#94A3B8", linewidth=1.6, linestyle=":", label="Seasonal Reference Baseline (Seasonal Naive t-7)")
+
+    # Highlight residual error envelope
+    ax3.fill_between(test_dates, y_true, champ_pred, color="#93C5FD", alpha=0.3, label="Champion Residual Envelope |y - y_hat|")
+
+    start_str = test_dates.min().strftime('%b %d')
+    end_str = test_dates.max().strftime('%b %d, %Y')
+    ax3.set_title(f"3. Holdout Actual vs. Champion Model & Seasonal Reference ({start_str} – {end_str})", fontsize=11.5, fontweight="bold", pad=8)
+    ax3.set_ylabel("Volume ('000 GB)", fontsize=10)
+    ax3.set_xlabel("Date", fontsize=10)
+    ax3.xaxis.set_major_locator(mdates.DayLocator(interval=5))
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+    ax3.legend(loc="upper left", framealpha=0.92, fontsize=9)
+
+    fig.suptitle(
+        "4G Macro Traffic Volume Diagnostic Overview // Anomaly Detection, Chronological Splits & Holdout Benchmark",
+        fontsize=14,
+        fontweight="bold",
+        y=0.995,
+    )
+
+    plt.tight_layout(rect=[0, 0.01, 1, 0.98])
+    out_file = target_plots_dir / "traffic_diagnostic_overview.png"
+    plt.savefig(out_file, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    sync_to_artifacts(out_file)
+    print(f"[Traffic Diagnostic Overview] Saved: {out_file}")
+    return out_file
+
+
 def run_all_plots(
     datasets: dict,
     results: dict,
@@ -560,8 +709,9 @@ def run_all_plots(
     clean_csv: str | Path | None = None,
     forecast_csv: str | Path | None = None,
     plots_dir: Path | str | None = None,
+    include_legacy_single_panels: bool = False,
 ) -> list[Path]:
-    """Generates all 6 production charts and syncs them to the artifacts directory."""
+    """Generates consolidated publication charts and syncs them to the artifacts directory."""
     print("=" * 60)
     print("STEP 4: GENERATING PUBLICATION-QUALITY VISUALIZATIONS")
     print("=" * 60)
@@ -569,13 +719,25 @@ def run_all_plots(
     target_plots_dir.mkdir(parents=True, exist_ok=True)
 
     generated = [
-        plot_eda_and_anomalies(clean_csv=clean_csv, plots_dir=target_plots_dir),
-        plot_chronological_splits(datasets, plots_dir=target_plots_dir),
+        plot_traffic_diagnostic_overview(
+            clean_csv=clean_csv,
+            datasets=datasets,
+            results=results,
+            champion_name=champion_name,
+            plots_dir=target_plots_dir,
+            dpi=300
+        ),
         plot_model_comparison(metrics_df, plots_dir=target_plots_dir),
-        plot_actual_vs_predicted(datasets, results, champion_name, plots_dir=target_plots_dir),
         plot_feature_importance(champion_model, feature_cols, champion_name, plots_dir=target_plots_dir),
         plot_future_forecast(clean_csv=clean_csv, forecast_csv=forecast_csv, plots_dir=target_plots_dir),
     ]
+
+    if include_legacy_single_panels:
+        generated.extend([
+            plot_eda_and_anomalies(clean_csv=clean_csv, plots_dir=target_plots_dir),
+            plot_chronological_splits(datasets, plots_dir=target_plots_dir),
+            plot_actual_vs_predicted(datasets, results, champion_name, plots_dir=target_plots_dir),
+        ])
 
     print(f"Successfully generated {len(generated)} visual figures in {target_plots_dir.resolve()}.\n")
     return generated

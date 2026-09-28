@@ -23,19 +23,19 @@ traffic_volume_forecast/
 │   ├── test.csv                  # Holdout test partition (Aug 17 - Sep 21)
 │   └── future_30d_forecast.csv   # 30-day recursive forecast with 80% and 95% confidence intervals
 └── plots/
-    ├── 01_eda_and_anomalies.png          # Historical trajectory & detected outages/anomalies
-    ├── 02_chronological_splits.png       # Strict zero-leakage timeline partitions
+    ├── traffic_diagnostic_overview.png   # Consolidated 3-panel publication diagnostic (Anomalies, Splits, Holdout vs Naive)
     ├── 03_model_benchmark_metrics.png   # WAPE (%) and MAE comparison across models
     ├── 04_actual_vs_predicted_test.png   # Holdout actuals vs predictions and residuals
     ├── 05_feature_importance.png         # Top predictive drivers for the champion model
-    └── 06_future_30d_forecast.png        # 30-day forecast cone with capacity threshold
+    ├── 06_future_30d_forecast.png        # 30-day forecast cone with capacity threshold
+    └── 07_multivariate_vs_univariate_comparison.png # Exogenous feature ablation study
 ```
 
 ## Quick Start
 
 Execute the complete pipeline end-to-end:
 ```powershell
-cd cellular_kpi_forecast
+cd traffic_volume_forecast
 python run_traffic.py
 ```
 

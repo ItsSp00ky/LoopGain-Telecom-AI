@@ -104,10 +104,13 @@ LoopGain-Telecom-AI/
 │
 └── network_kpi_prediction/            # Module 4: Network KPI & Traffic Forecasting
     ├── README.md                      # Detailed Subsystem Documentation
-    ├── main.py                        # Unified Subsystem CLI
+    ├── run_pipeline.py                # Unified Subsystem CLI Launcher
+    ├── data_catalog.py                # Telemetry Catalog & Profiler
     ├── requirements.txt               # Dependencies
-    ├── kpi_prediction_pipeline/       # 3GPP Cellular Telemetry Pipeline (60 series)
-    └── kpi_prediction_pipeline_traffic/ # 4G Traffic Volume Pipeline
+    ├── artifacts/                     # Standalone Visual Artifacts & Manifests
+    ├── cellular_kpi_forecast/         # 3GPP Cellular Telemetry Pipeline (60 series)
+    ├── traffic_volume_forecast/       # 4G Traffic Volume Pipeline
+    └── erbs_node_analytics/           # Physical ERBS Node Intelligence & ST-GNN
 ```
 
 ---
