@@ -1,133 +1,163 @@
-# Network KPI & Traffic Prediction Engine
-### Loop Gain – AI Telecom Suite // Samsung Innovation Campus (SIC) Capstone Project
+# Network KPI Prediction — 3GPP & 4G Traffic Forecasting Platform
 
-[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
-[![Domain](https://img.shields.io/badge/Domain-3GPP_Rel--17_NWDAF-orange.svg)](#)
-[![Tests](https://img.shields.io/badge/Tests-48%20Passed%20(100%25)-brightgreen.svg)](#)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
-
-An enterprise-grade telecommunications analytics and time-series forecasting subsystem engineered by **Maher Alqadhi** as part of **Team Loop Gain**. Built in accordance with **3GPP Rel-17 NWDAF (TS 28.552 / TS 29.520)** and **O-RAN Near-RT RIC A1 Policy** specifications.
+> **Samsung Innovation Campus (SIC) AI Capstone** // Loop Gain Team
+> Dual-engine time-series forecasting platform for telecom network KPI prediction.
 
 ---
 
-## 🎯 System Objectives
+## Architecture Overview
 
-1. **Cellular Multi-Band Telemetry Forecasting**: Generates 365-day forward predictions with 90% heteroscedastic prediction intervals (p05–p95) across 6 carrier frequency tiers and 10 standardized 3GPP operational metrics (60 distinct time series).
-2. **4G Network Traffic Volume Forecasting**: Predicts 30-day macro network traffic volume (GB) with 80% and 95% confidence intervals, providing early warning alerts for carrier capacity thresholds (1.2M GB).
-3. **Automated Model Tournament**: Competitively evaluates Damped Fourier Ridge Regression, Hybrid Residual Decomposition Trees, and Adaptive Seasonal Baselines against out-of-sample holdout test sets, guaranteeing $MASE \le 1.0$.
+This subsystem contains two independent forecasting pipelines:
+
+| Pipeline / Engine | Directory | Purpose | Primary Data Source |
+|---|---|---|---|
+| **3GPP Cellular KPI Forecast** | `cellular_kpi_forecast/` | Multi-band KPI prediction across 6 frequency bands, 10 KPIs, 60 series | `data/carrier_earfcndl_kpi_daily.csv` |
+| **4G Traffic Volume Forecast** | `traffic_volume_forecast/` | Macro 4G traffic volume forecasting with univariate & multivariate modes | `data/4g_traffic_volume_daily.csv` |
+| **Physical ERBS Node Intelligence** | `erbs_node_analytics/` | SLA health scorecard, sleeping cell detection, clustering (1,067 towers) | `data/erbs_cell_kpi_full_year.csv` |
 
 ---
 
-## 🌐 Subsystem Architecture
+## Repository Structure
 
 ```
 network_kpi_prediction/
-├── main.py                               # Subsystem Unified CLI Dispatcher
-├── requirements.txt                      # Subsystem Python Dependencies
-├── README.md                             # Subsystem Documentation
+├── README.md                              # This file
+├── requirements.txt                       # Python dependencies
+├── run_pipeline.py                        # Root CLI launcher (delegates to sub-pipelines)
+├── data_catalog.py                        # Data catalog and profiler
 │
-├── kpi_prediction_pipeline/              # 3GPP Rel-17 Multi-Band Cellular Pipeline (60 Series)
-│   ├── main.py                           # Unified CLI (split, train, plot, predict, test)
-│   ├── train.py                          # Tournament Training & 365-Day Roll-Forward Engine
-│   ├── plot.py                           # 300-DPI Publication Plot Engine
-│   ├── predict.py                        # On-Demand Dynamic ML & Ribbon Inference CLI
-│   ├── split.py                          # Chronological 3-Way Dataset Splitter
+├── data/                                  # Multi-tier cleaned & standardized telemetry assets
+│   ├── 4g_traffic_volume_daily.csv        # 4G daily network traffic volume (264 days)
+│   ├── macro_network_kpis_daily.csv       # Network-wide 4G radio KPIs (363 days)
+│   ├── carrier_earfcndl_kpi_daily.csv     # Carrier-level EARFCNDL telemetry (6 bands, 2,065 rows)
+│   ├── erbs_cell_kpi_summer_120d.csv      # Summer 120-day high-density ERBS telemetry (125,779 rows)
+│   └── erbs_cell_kpi_full_year.csv        # Full-year cell-level telemetry (1,067 ERBS, 378,631 rows)
+│
+├── erbs_node_analytics/                  # Physical ERBS Base Station Intelligence & ST-GNN
+│   ├── run_erbs_analytics.py              # Subsystem CLI orchestrator (audit, gnn, inspect)
 │   ├── src/
-│   │   ├── config.py                     # Single Source of Truth for 3GPP KPIs, SLAs & Bands
-│   │   ├── clean.py                      # Schema Validation, Null Handling & Boundary Clipping
-│   │   ├── split.py                      # Monotonic Leak-Free Dataset Partitioning
-│   │   ├── features.py                   # Damped Trends, Orthogonal Harmonics & Shift(1) Lags
-│   │   ├── models.py                     # TargetTransformer, FourierRidge, HybridTrees, Quantiles
-│   │   ├── plots.py                      # 80 Publication-Grade Matplotlib Dashboards (300 DPI)
-│   │   └── export.py                     # Markdown Reports & RFC 8259 JSON Payloads
-│   ├── data/
-│   │   ├── carrier_ran_kpi_clean.csv     # Clean Multi-Band Telemetry
-│   │   ├── splits/                       # Train (70%), Val (15%), Test (15%) Datasets
-│   │   └── output/                       # 365-Day Predictions & model_metrics.csv/json
-│   ├── models/                           # 60 Serialized Production Model Bundles (.joblib)
-│   ├── plots/                            # 80 Generated Charts (Single, Grids, Multi-Band)
-│   └── tests/                            # 41 Unit Tests (100% Pass Rate)
+│   │   ├── node_profiler.py               # 3GPP SLA compliance & IsolationForest sleeping cells
+│   │   ├── node_clustering.py             # Behavioral PCA clustering & operational personas
+│   │   ├── summer_stress.py               # 120-day summer thermal & capacity degradation
+│   │   ├── topology_graph.py              # Zero-GPS 1,067-node graph & Laplacian construction
+│   │   ├── spectral_gnn.py                # Spatio-Temporal GNN (ChebNet + Dynamic Attention)
+│   │   ├── gnn_visualizer.py              # Adjacency heatmap, spillover CDF, attention graphs
+│   │   ├── visualizer.py                  # 300-DPI publication figures
+│   │   └── export_synergy.py              # Cross-subsystem bridge dataset exports
+│   └── tests/                             # Unit tests for ERBS intelligence & GNN
 │
-└── kpi_prediction_pipeline_traffic/      # Macro 4G Network Traffic Volume Pipeline
-    ├── main.py                           # Sequential 6-Step Traffic Pipeline Runner
-    ├── Year.csv                          # Historical 4G Telemetry (365 Days)
-    ├── src/
-    │   ├── clean.py                      # Robust IQR Seasonal Residual Anomaly Imputation
-    │   ├── split.py                      # Chronological Train/Val/Test Splitter
-    │   ├── features.py                   # Multi-Week Lags, Rolling Windows & Momentum Diff
-    │   ├── models.py                     # Multi-Model Benchmarking (XGBoost, RF, Ridge, Naive)
-    │   └── plots.py                      # 6 Production Visualizations (EDA, Splits, Cones)
-    ├── data/                             # Partitioned Sets & 30-Day Forward Forecast CSV
-    ├── plots/                            # 6 Generated Visual Figures (300 DPI)
-    └── tests/                            # 7 Unit Tests (100% Pass Rate)
+├── cellular_kpi_forecast/                 # 3GPP Rel-17 Multi-Band Cellular Pipeline (60 Series)
+│   ├── run_cellular.py                    # Pipeline CLI orchestrator
+│   ├── train_models.py                    # Stage 2: Model training & champion selection
+│   ├── generate_plots.py                  # Stage 3: Publication-grade plot generation
+│   ├── run_inference.py                   # On-demand model inference CLI
+│   ├── run_split.py                       # Stage 1: Chronological dataset splitting
+│   ├── src/
+│   │   ├── kpi_config.py                  # 3GPP KPI specs, SLA thresholds, spectrum bands
+│   │   ├── data_cleaning.py              # ERBS telemetry ingestion & cleaning
+│   │   ├── feature_engineering.py         # Fourier harmonics, damped trends, AR features
+│   │   ├── model_definitions.py           # Ridge, Hybrid Ensemble, Seasonal Baseline, Quantile
+│   │   ├── temporal_splitting.py          # Chronological train/val/test splitting
+│   │   ├── visualization.py              # 300-DPI publication plot engine
+│   │   └── report_export.py              # MD/JSON/CSV export generators
+│   ├── tests/                             # Unit & integration tests
+│   ├── data/                              # Runtime data (generated)
+│   ├── models/                            # Serialized model bundles (generated)
+│   └── plots/                             # Plot images (generated)
+│
+├── traffic_volume_forecast/               # 4G Network Traffic Volume Pipeline
+│   ├── run_traffic.py                     # Pipeline orchestrator
+│   ├── src/
+│   │   ├── data_cleaning.py              # Traffic data cleaning & anomaly treatment
+│   │   ├── feature_engineering.py         # Time features & dataset preparation
+│   │   ├── model_definitions.py           # Multi-model benchmarking & forecasting
+│   │   ├── visualization.py              # Traffic plot generation
+│   │   └── temporal_splitting.py          # Chronological splitting
+│   ├── tests/                             # Traffic pipeline tests
+│   ├── data/                              # Runtime data (generated)
+│   └── plots/                             # Plot images (generated)
 ```
 
 ---
 
-## 📊 3GPP Cellular Spectrum Bands & Standardized Metrics
+## Quick Start
 
-### Spectrum Frequency Tiers
-* **Band 350 MHz**: Macro Regional Coverage (~1,760 Cells)
-* **Band 400 MHz**: Rural Sub-1GHz Cluster (~8 Cells)
-* **Band 1556 MHz**: Mid-Band FDD Urban (~25 Cells)
-* **Band 1700 MHz**: AWS/PCS Uplink Tier (~8 Cells)
-* **Band 3500 MHz**: C-Band TDD Capacity Tier (~1,500 Cells)
-* **Band 6200 MHz**: Upper 6GHz High-Throughput Cluster (~1,600 Cells)
-
-### 3GPP Standardized KPIs
-| Category | Metric | Unit | SLA Target | Transform |
-| :--- | :--- | :--- | :--- | :--- |
-| **Accessibility** | `rrc_setup_sr` | % | $\ge 99.0\%$ | Identity |
-| **Accessibility** | `erab_estab_sr` | % | $\ge 99.0\%$ | Identity |
-| **Retainability** | `erab_drop_rate` | % | $\le 0.50\%$ | Identity |
-| **Mobility** | `handover_intra_sr` | ratio | $\ge 0.980$ | Identity |
-| **Mobility** | `handover_sr` | % | $\ge 98.0\%$ | Identity |
-| **Availability** | `availability_pct` | % | $\ge 99.5\%$ | Identity |
-| **Capacity** | `dl_throughput_mbps` | Mbps | $\ge 5.0$ Mbps | `log1p` |
-| **Capacity** | `ul_throughput_mbps` | Mbps | $\ge 1.0$ Mbps | `log1p` |
-| **Capacity** | `connected_users` | UEs | Active traffic | `log1p` |
-| **Survivability** | `downtime_sec` | cell-sec | $\le 3,600$s | `log1p` |
-
----
-
-## ⚡ Quickstart & Execution
-
-### 1. Installation
-```powershell
-pip install -r requirements.txt
+### Run Physical ERBS Node Intelligence & Spatial GNN (1,067 Base Stations)
+```bash
+python run_pipeline.py erbs-audit               # Full SLA audit, sleeping cell detection, K-Means clustering & summer stress
+python run_pipeline.py gnn                      # Train & benchmark Spatio-Temporal GNN (ChebNet + Dynamic Attention)
+python run_pipeline.py inspect --erbs BTWRM1    # Instant engineering diagnostic scorecard, persona & spatial neighbors
 ```
 
-### 2. Running Automated Test Suites (48 Tests)
-```powershell
-# Run Cellular Pipeline unit tests (41 tests)
-python main.py test
-
-# Run Traffic Pipeline unit tests (7 tests)
-python -m unittest discover -s kpi_prediction_pipeline_traffic/tests -p "test_*.py" -v
+### Run Multivariate 4G Traffic Volume Forecasting (Exogenous Radio KPIs)
+```bash
+python run_pipeline.py traffic-multi            # Benchmark multivariate exogenous model against univariate baseline
 ```
 
-### 3. Real-Time Dynamic Predictions
-```powershell
-# Live on-demand ML inference from model bundle
-python main.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7 --live
-
-# Table lookup from 365-day precomputed forecast
-python main.py predict --carrier 1556 --kpi rrc_setup_sr --days 7
+### Run the Cellular KPI Pipeline (Default)
+```bash
+python run_pipeline.py train                    # Train models + generate 365-day forecasts
+python run_pipeline.py plot                     # Generate all 78 publication plots
+python run_pipeline.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7
 ```
 
-### 4. Running the 4G Traffic Pipeline
-```powershell
-python main.py --pipeline traffic
+### Run the Traffic Volume Pipeline
+```bash
+python run_pipeline.py --pipeline traffic       # Full end-to-end execution
+```
+
+### Run Full Automated Test Suite
+```bash
+python run_pipeline.py test                     # Runs all 57 automated tests across cellular, traffic, and ERBS/GNN engines
+```
+
+### Inspect & Profile All Datasets
+```bash
+python run_pipeline.py catalog                  # Automated audit & statistical synthesis of all datasets in 'data/'
 ```
 
 ---
 
-## 🏆 Key Benchmark Results
+## Multi-Tier Telemetry Data Assets (`data/`)
 
-* **Data Integrity**: **100% Physically Bounded** (0 NaNs, 0 infinities across 2,190 projection rows).
-* **Holdout Skill**: **90.0%** of all 60 cellular series achieved positive out-of-sample skill score ($R^2_{bench} > 0$).
-* **Model Tournament Selection**:
-  * **FourierRidge**: 40.0% (Stationary harmonic series)
-  * **AdaptiveBaseline**: 40.0% (Guaranteed holdout $MASE \le 1.0$)
-  * **HybridEnsemble**: 20.0% (Non-linear user growth & capacity dynamics)
-* **Traffic Forecast**: 30-day projected volume operates with **100% capacity safety margin** (no breach of 1.2M GB threshold).
+The platform works natively with all 5 telecommunication datasets organized across three structural hierarchy levels:
+
+| Hierarchy Level | Dataset File | Granularity | Observations | Key Attributes |
+|---|---|---|---|---|
+| **Level 1 (Macro)** | `4g_traffic_volume_daily.csv` | Daily Network Aggregate | 264 days | Overall 4G Data Volume (GB) |
+| **Level 1 (Macro)** | `macro_network_kpis_daily.csv` | Daily Network Aggregate | 363 days | 7 core 3GPP Radio KPIs |
+| **Level 2 (Carrier)** | `carrier_earfcndl_kpi_daily.csv` | Carrier Band (EARFCNDL) | 2,065 rows | 6 Frequency Bands + `pmCellDowntimeMan` |
+| **Level 3 (Cell/Node)**| `erbs_cell_kpi_summer_120d.csv` | Physical ERBS (1,060 nodes)| 125,779 rows | 120-Day Summer Peak Operational Window |
+| **Level 3 (Cell/Node)**| `erbs_cell_kpi_full_year.csv` | Physical ERBS (1,067 nodes)| 378,631 rows | Full-Year 363-Day Cell Telemetry |
+
+### Direct Workflow with Any Dataset (`--dataset`)
+```bash
+# Work directly with ground-truth EARFCNDL telemetry:
+python run_pipeline.py train --dataset earfcndl
+
+# Work with the 120-day summer operational stress window:
+python run_pipeline.py train --dataset summer
+
+# Work with full-year cell-level telemetry:
+python run_pipeline.py train --dataset full
+
+# Work with macro network 4G KPIs:
+python run_pipeline.py train --dataset macro
+
+# Work with 4G traffic volume data:
+python run_pipeline.py --pipeline traffic train --dataset traffic
+```
+
+---
+
+## Model Architecture
+
+### Cellular Pipeline: 3-Model Tournament
+1. **Damped Fourier Ridge** — Regularized linear model with orthogonal Fourier harmonics
+2. **Hybrid Trend-Seasonal Ensemble** — Ridge base + HistGBT residual decomposition
+3. **Adaptive Seasonal Baseline** — Day-of-week median with recent operational window
+
+Champion selection via MASE on validation set; holdout test verification.
+
+### Traffic Pipeline: Multi-Model Benchmarking
+Ridge, HGBT, Seasonal Naive — evaluated on WAPE, MAE, RMSE, MASE.
