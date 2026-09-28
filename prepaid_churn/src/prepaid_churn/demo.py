@@ -2,9 +2,9 @@
 
 The Streamlit screens in `app/` are a thin surface over this module.
 Nothing here recomputes a score, a tier or an offer.
-Every figure comes from a file that `churn tiers`, `churn operator-view` and `churn decide`
-already wrote, and the loading goes through `service.load_state`, so the screens and the
-T15 endpoints answer from the same state and cannot drift apart.
+Every figure comes from a file that `churn tiers`, `churn operator-view`, `churn advance` and
+`churn decide` already wrote, and the loading goes through `service.load_state`, so the
+screens and the T15 endpoints answer from the same state and cannot drift apart.
 
 The one thing the app may write is a review, and it writes it through `campaign.review_file`
 like `churn approve` does: the same lock, the same atomic replacement and the same audit
@@ -33,6 +33,7 @@ PRODUCED_BY = {
     "campaign": "uv run churn decide --tiers-only --output-dir artifacts/campaigns/<name>",
     "bundle": "uv run churn bundle",
     "operator view": "uv run churn operator-view",
+    "credit advice": "uv run churn advance",
 }
 
 RISK_BANDS = ("high", "medium", "low", "already_silent")
@@ -61,6 +62,11 @@ class DemoPaths:
     @property
     def campaign_path(self) -> Path:
         return self.campaign_dir / "proposals.json"
+
+    @property
+    def advice_path(self) -> Path:
+        """T19's credit advice, which `churn advance` writes beside the operator view."""
+        return self.view_path.with_name("advance.csv")
 
     @classmethod
     def from_environment(cls, environ: dict | None = None) -> "DemoPaths":
@@ -94,6 +100,7 @@ class DemoState:
     service: ServiceState
     decisions: pd.DataFrame | None = None
     view: pd.DataFrame | None = None
+    advice: pd.DataFrame | None = None
     campaign: dict | None = None
     campaign_path: Path | None = None
     missing: tuple[tuple[str, str], ...] = ()
@@ -142,10 +149,17 @@ def load_demo(paths: DemoPaths) -> DemoState:
     else:
         missing.append(("operator view", PRODUCED_BY["operator view"]))
 
+    # Optional, so it is not listed as missing: every screen works without it, and the
+    # Subscriber screen names the command that writes it.
+    advice = None
+    if paths.advice_path.exists():
+        advice = pd.read_csv(paths.advice_path, converters={"id": str})
+
     return DemoState(
         service=service,
         decisions=decisions,
         view=view,
+        advice=advice,
         campaign=campaign,
         campaign_path=paths.campaign_path if campaign is not None else None,
         missing=tuple(missing),
@@ -307,6 +321,21 @@ def subscriber_view(state: DemoState, subscriber_id: str) -> dict | None:
         if isinstance(merged.get(column), str) and merged[column].strip()
     ]
     return merged
+
+
+def credit_advice(state: DemoState, subscriber_id: str) -> dict | None:
+    """T19's emergency credit advice for one customer, or None when there is none.
+
+    It is advice for a person, like a retention proposal (decision 14): `churn advance`
+    grants nothing, and the screen only shows what the rule advises and why.
+    """
+    advice = state.advice
+    if advice is None or "id" not in advice.columns:
+        return None
+    rows = advice.loc[advice["id"].astype(str) == str(subscriber_id)]
+    if rows.empty:
+        return None
+    return {name: rows.iloc[0][name] for name in rows.columns}
 
 
 def offer_row(state: DemoState, offer_id: object) -> dict | None:
