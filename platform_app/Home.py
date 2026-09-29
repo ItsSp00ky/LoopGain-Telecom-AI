@@ -36,7 +36,19 @@ hero(
 # ---------------------------------------------------------------------------
 st.subheader("Network at a glance")
 
-gis_col, kpi_col, churn_col = st.columns(3)
+gis_col, health_col, kpi_col, churn_col = st.columns(4)
+
+with health_col:
+    kpi_status, kpi_status_error = get_json(KPI_API_URL, "/kpis/status")
+    if kpi_status_error:
+        st.metric("Network KPI SLA breaches", "—", help=f"Unavailable: {kpi_status_error}")
+    else:
+        st.metric(
+            "Network KPI SLA breaches",
+            f"{kpi_status['breaches']} / {kpi_status['checked']}",
+            help="Latest observed value of every KPI on every band, against its SLA.",
+        )
+        st.caption(f"As of **{kpi_status['as_of']}**, 10 KPIs x 6 bands")
 
 with gis_col:
     with st.container():
@@ -93,7 +105,7 @@ modules = [
         "name": "Network KPI Forecast",
         "icon": "monitoring",
         "status_url": KPI_API_URL,
-        "description": "4G traffic volume forecast, chronological split, real held-out metrics.",
+        "description": "All 10 radio KPIs on 6 bands: live SLA health, forecasts with accuracy flags, 4G traffic.",
         "page": "pages/2_Network_KPI.py",
         "page_label": "Open Network KPI",
     },

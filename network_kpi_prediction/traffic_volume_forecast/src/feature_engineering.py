@@ -232,10 +232,10 @@ def aggregate_carrier_kpis_daily(carrier_csv: str | Path | None = None) -> pd.Da
     close a plain per-band mean already tracks the project's own pre-aggregated macro
     file for the KPIs both files share (checked directly: same-day RRC Setup Success
     Rate differs by 0.01 between a simple band mean and the macro file's own value).
-    `pmCellDowntimeMan`'s unit is not documented in the source export (values run into
-    the tens of millions, consistent with a raw counter, not minutes or seconds), so
-    it is kept as a relative signal (`network_cell_downtime_raw`), never converted to
-    a calendar duration.
+    `pmCellDowntimeMan` is a band-cluster total in cell-seconds (see
+    `cellular_kpi_forecast/src/kpi_config.py`), and bands have very different cell
+    counts (9 to 667), so a plain mean across bands is not a per-cell duration; it is
+    kept as a relative signal (`network_cell_downtime_raw`).
     """
     path = Path(carrier_csv) if carrier_csv else resolve_carrier_kpis_file()
     if not path.exists():

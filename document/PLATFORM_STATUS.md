@@ -19,11 +19,24 @@ connected.
   files - true of this checkout right now), `/assess` returns a clean 503 and the page
   shows that instead of crashing; `/shortlist`, `/rooftops` and `/map` don't need that
   data, only the completed run, so they work regardless.
-- **Network KPI page** (`platform_app/pages/2_Network_KPI.py`) calls
-  `network_kpi_prediction`'s new `api.py`, which runs the real
-  `traffic_volume_forecast` pipeline (clean, chronological split, four-model
-  benchmark, champion retrain, recursive forecast) live and returns the actual held-out
-  test metrics (WAPE/MAE/RMSE/R2) plus the forecast series with 80%/95% intervals.
+- **Network KPI page** (`platform_app/pages/2_Network_KPI.py`) covers every KPI the
+  operator data holds - RRC setup, E-RAB establishment, E-RAB drop, intra-4G and
+  overall handover, availability, DL/UL throughput, connected users, downtime - on
+  all 6 bands, in four tabs:
+  - *KPI health*: latest observed value of all 60 band x KPI readings against its
+    SLA, straight from the carrier export (13 of 60 breach on 2026-09-17; downtime is
+    divided by the band's cell count because its SLA is per cell).
+  - *KPI forecasts*: any band x KPI from a completed `cellular_kpi_forecast` run
+    (`run_cellular.py train`, ~80 s; outputs committed under
+    `cellular_kpi_forecast/data/output/`), with history, a 5th-95th percentile band,
+    the SLA line, and a trust badge.
+  - *Forecast accuracy*: only 21 of the 60 forecasts beat a naive baseline on
+    held-out data (MASE < 1); availability, connected users and downtime beat it on
+    none. Forecasts that don't are still shown but labelled "trend sketch only".
+  - *Traffic volume*: `traffic_volume_forecast` run live (~2 s) on traffic history
+    only. Using every KPI as input (`run_traffic.py enriched`) was tried and did not
+    improve held-out accuracy once a same-day leak in the old multivariate code was
+    fixed (2.22% vs 2.34% test WAPE); the previously reported 1.74% relied on that leak.
 - **Home page** is a real cross-module dashboard, not health pings: GIS shortlist
   count and top score (from `/shortlist`), next-day traffic forecast and held-out
   WAPE (from `/traffic/30day`), and subscribers monitored plus revenue at risk (from
@@ -55,10 +68,8 @@ connected.
 
 ## What's not connected at all
 
-- Of `network_kpi_prediction`'s three pipelines, only `traffic_volume_forecast` has
-  an API route. `cellular_kpi_forecast` (multi-band 3GPP KPI forecasting) and
-  `erbs_node_analytics` (ST-GNN sleeping-cell/topology intelligence) are real,
-  tested pipelines in that module but have no platform API route yet.
+- `erbs_node_analytics` (per-tower ST-GNN, sleeping-cell detection, 1,067 towers) is
+  the one `network_kpi_prediction` pipeline with no platform route yet.
 - `traffic_steering_son/` (congestion detection, mobility load balancing) has no
   API route and is not reachable from the platform shell at all yet.
 - GIS's KPI-as-congestion-signal idea from `antenna_cell_placement`'s own pilot
