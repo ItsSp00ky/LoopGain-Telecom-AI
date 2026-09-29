@@ -100,7 +100,7 @@ Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
 - The churn module: 475 tests, lint and format green, the frozen champion unchanged.
 - The chatbot (T24) is closed: 64 tests green, 21 of 21 evaluation questions on the real model (`../../assistants/reports/chatbot_eval.md`).
 - The final report's chatbot part is written; the copilot (T25) is next and planned in its ticket.
-- [study_guide.md](study_guide.md) explains the module and the chatbot for Taha.
+- Taha's study guide of the module and the chatbot is on his laptop only (`study_guide.md`, git-ignored).
 
 ## Timeline
 
@@ -121,7 +121,7 @@ Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
 ### 3. Real runs, and what they found (2026-09-26 and 27)
 
 - Taha holds the Groq key; he put it in the git-ignored `assistants/.env`, which the chatbot and the evaluation read, so Claude never handles it.
-- Every real run found something the tests on a scripted model could not; each fix went into code, not the prompt (the table in [study_guide.md](study_guide.md), Part 6).
+- Every real run found something the tests on a scripted model could not; each fix went into code, not the prompt (the table in Taha's local study guide, Part 6).
 - Six evaluation rounds, from a first run that failed every call to 21 of 21.
 
 ### 4. Ali's review merged, the chatbot aligned (2026-09-27)

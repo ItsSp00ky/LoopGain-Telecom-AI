@@ -12,7 +12,7 @@ Update this section at the end of every working session.
 **Last updated:** 2026-09-29 by Taha + Claude (`tahaDev` pushed; the copilot's part added to the final report; a start guide for every team member in `../assistants/TEAM_GUIDE.md`; the copilot, T25, waits for Taha's test and his answers to its open questions).
 
 **New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (session 3 first), then ticket T25 below.
-[docs/study_guide.md](docs/study_guide.md) explains the whole module and the chatbot in plain words.
+Taha keeps a personal study guide of the module and the chatbot on his laptop (`docs/study_guide.md`, git-ignored).
 
 **Where things stand on 2026-09-29**
 - `tahaDev` carries Ali's work through `bf498d4`, the teammates' GIS and network ML branches (decision 53, merged again on 2026-09-28: Maher through `9c1a267`, Mohamed through `7d8a945`), the customer chatbot (decision 54) and the employee copilot (decision 55).
