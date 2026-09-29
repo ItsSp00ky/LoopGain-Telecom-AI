@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4G LTE Cell Towers Operational KPI Forecast Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js for High Performance Hardware-Accelerated Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    
+    <!-- Top Navigation & Brand Header -->
+    <header class="top-nav">
+      <div class="brand-wrapper">
+        <div class="brand-icon">📡</div>
+        <div class="brand-text">
+          <h1>4G LTE Cellular KPI Forecast Visualizer</h1>
+          <p>Libya Mobile Network Grid &bull; 1,067 Base Stations &bull; XGBoost Gradient Boosting</p>
+        </div>
+      </div>
+
+      <div class="view-mode-tabs">
+        <button id="btn-mode-network" class="mode-tab-btn active" onclick="setDashboardMode('network')">
+          <span>🌐</span> Countrywide Macro
+        </button>
+        <button id="btn-mode-tower" class="mode-tab-btn" onclick="setDashboardMode('tower')">
+          <span>🗼</span> Tower Micro Explorer
+        </button>
+      </div>
+
+      <div class="status-badge">
+        <span class="pulse-dot"></span>
+        <span>109-Day Out-of-Time Test Horizon</span>
+      </div>
+    </header>
+
+    <!-- Context / Telecom Info Banner -->
+    <div class="info-banner" id="info-banner">
+      <div class="info-icon">💡</div>
+      <div class="info-text">
+        <h4 id="banner-title">High-Fidelity Countrywide Demand Tracking</h4>
+        <p id="banner-desc">Showing nationwide aggregate load across all 1,067 base stations. Countrywide connected user volume achieves an extraordinary <strong>1.38% MAPE</strong> (Mean Absolute Percentage Error) through hierarchical variance cancellation.</p>
+      </div>
+    </div>
+
+    <!-- Live Performance Metric Cards (4 Pillars) -->
+    <div class="stat-grid" id="stat-cards-container">
+      <!-- Card 1: Connected Users -->
+      <div class="glass-card" id="card-users">
+        <div class="card-header">
+          <span class="card-title">Connected Users</span>
+          <div class="card-icon-pill" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">👥</div>
+        </div>
+        <div class="card-value" id="val-users">-- <span class="card-unit" id="unit-users">users</span></div>
+        <div class="card-footer">
+          <span class="pill-badge cyan" id="badge-users-r2">R²: --</span>
+          <span style="color: var(--text-muted);" id="badge-users-mae">MAE: --</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Downlink Throughput -->
+      <div class="glass-card" id="card-throughput">
+        <div class="card-header">
+          <span class="card-title">Downlink Speed</span>
+          <div class="card-icon-pill" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">🚀</div>
+        </div>
+        <div class="card-value" id="val-throughput">-- <span class="card-unit">Mbps</span></div>
+        <div class="card-footer">
+          <span class="pill-badge green" id="badge-dl-r2">R²: --</span>
+          <span style="color: var(--text-muted);" id="badge-dl-mae">MAE: --</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Cell Availability -->
+      <div class="glass-card" id="card-avail">
+        <div class="card-header">
+          <span class="card-title">Cell Availability</span>
+          <div class="card-icon-pill" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">📶</div>
+        </div>
+        <div class="card-value" id="val-avail">-- <span class="card-unit">%</span></div>
+        <div class="card-footer">
+          <span class="pill-badge cyan" id="badge-avail-mape">MAPE: --</span>
+          <span style="color: var(--text-muted);" id="badge-avail-mae">MAE: --</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Drop Rate -->
+      <div class="glass-card" id="card-drop">
+        <div class="card-header">
+          <span class="card-title">Session Drop Rate</span>
+          <div class="card-icon-pill" style="background: rgba(244, 63, 94, 0.15); color: var(--coral);">⚠️</div>
+        </div>
+        <div class="card-value" id="val-drop">-- <span class="card-unit">%</span></div>
+        <div class="card-footer">
+          <span class="pill-badge amber" id="badge-drop-mae">MAE: --</span>
+          <span style="color: var(--text-muted);" id="badge-drop-mape">MAPE: --</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tower Explorer Filter Controls (Shown in Tower Mode) -->
+    <div class="explorer-controls" id="tower-controls" style="display: none;">
+      <div class="control-row">
+        <div class="search-select-box">
+          <input type="text" id="tower-search-input" class="search-input" placeholder="🔍 Search or enter Tower ID (e.g. TWR_0001, TWR_0015)..." autocomplete="off">
+          <div class="autocomplete-dropdown" id="tower-dropdown"></div>
+        </div>
+
+        <div class="quick-pick-chips">
+          <span class="chip-label">Quick Towers:</span>
+          <button class="quick-chip active" onclick="selectTower('TWR_0001')">TWR_0001</button>
+          <button class="quick-chip" onclick="selectTower('TWR_0002')">TWR_0002</button>
+          <button class="quick-chip" onclick="selectTower('TWR_0015')">TWR_0015</button>
+          <button class="quick-chip" onclick="selectTower('TWR_0033')">TWR_0033</button>
+          <button class="quick-chip" onclick="selectTower('TWR_0100')">TWR_0100</button>
+          <button class="quick-chip" onclick="selectTower('TWR_0250')">TWR_0250</button>
+          <button class="quick-chip" onclick="selectTower('TWR_0500')">TWR_0500</button>
+        </div>
+      </div>
+
+      <!-- KPI Selector Tabs -->
+      <div class="kpi-tabs-row">
+        <button class="kpi-tab active" id="tab-connected_users" onclick="switchActiveKPI('connected_users')">
+          <span>👥</span> Connected Users
+        </button>
+        <button class="kpi-tab" id="tab-dl_throughput" onclick="switchActiveKPI('dl_throughput')">
+          <span>🚀</span> DL Throughput (Mbps)
+        </button>
+        <button class="kpi-tab" id="tab-cell_availability" onclick="switchActiveKPI('cell_availability')">
+          <span>📶</span> Cell Availability (%)
+        </button>
+        <button class="kpi-tab" id="tab-drop_rate" onclick="switchActiveKPI('drop_rate')">
+          <span>⚠️</span> E-RAB Drop Rate (%)
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Forecast Visualization Chart -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title-area">
+          <h2 id="main-chart-title">
+            <span id="chart-icon">📈</span>
+            <span id="chart-heading-text">Countrywide Total Connected Users Forecast</span>
+          </h2>
+          <div class="chart-subtitle" id="chart-subtitle">
+            109-Day Chronological Test Window (June 03, 2026 &mdash; September 19, 2026) &bull; Zero Data Leakage
+          </div>
+        </div>
+
+        <div class="chart-legend-custom">
+          <div class="legend-item">
+            <span class="legend-line actual"></span>
+            <span>Actual (Ground Truth)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-line pred"></span>
+            <span>XGBoost ML Forecast</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="forecastCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Residual Error Delta Chart -->
+    <div class="residual-card">
+      <div class="chart-header" style="margin-bottom: 12px;">
+        <div class="chart-title-area">
+          <h2 style="font-size: 15px;">📊 Forecast Residual Tracking (Daily Delta = Actual &minus; Predicted)</h2>
+          <div class="chart-subtitle">Green / Blue bars indicate close alignment; red peaks identify transient radio interference or anomaly events.</div>
+        </div>
+      </div>
+      <div class="residual-canvas-wrapper">
+        <canvas id="residualCanvas"></canvas>
+      </div>
+    </div>
+
+    <footer>
+      4G LTE Telecommunications Network KPI Forecasting Engine &bull; Ericsson Radio Base Station (ERBS) Grid &bull; Libya Operations
+    </footer>
+  </div>
+
+  <!-- Embedded dataset fallback for instant zero-CORS browser viewing -->
+  <script src="data/forecast_data.js"></script>
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
