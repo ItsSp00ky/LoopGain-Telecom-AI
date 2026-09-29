@@ -107,7 +107,7 @@ arrow((81.9, y1 + h1 / 2), (87.6, y1 + h1 / 2))
 # Row 2: the tools, run in code.
 y2, h2 = 28, 10
 net = box(20, y2, 16.5, h2, ["tower_alerts", "tower_status", "network_overview"])
-gis = box(38, y2, 16.5, h2, ["expansion_priorities", "explain_location"])
+gis = box(38, y2, 16.5, h2, ["expansion_priorities", "explain_location", "measured_service"])
 cus = box(56, y2, 15.5, h2, ["portfolio_summary", "subscriber_risk"])
 drf = box(73, y2, 14, h2, ["draft_work_order", "(saves nothing)"], ORANGE_FILL, ORANGE_EDGE)
 ax.text(
@@ -135,7 +135,7 @@ box(
     y3,
     14.5,
     h3,
-    ["GIS team: ranked", "sites in Tripoli", "(committed release)"],
+    ["GIS team, release 3:", "ranked sites and", "signal readings"],
     GREEN_FILL,
     GREEN_EDGE,
     size=7.2,
