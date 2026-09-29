@@ -1,8 +1,10 @@
 """OpenCellID cell observations, kept separate from inferred physical mast sites."""
 
 import json
+from functools import lru_cache
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from pyproj import Transformer
@@ -11,7 +13,7 @@ from scipy.spatial import cKDTree
 from antenna_cell_placement.config import (
     OPENCELLID_RAW_PATH, OPENCELLID_CLEANED_PATH, OPENCELLID_REPORT_PATH,
     CLEANED_PHYSICAL_SITES_CSV, RECOMMENDATIONS_CSV, REPORTS_DIR,
-    LIBYA_BBOX, CRS_PROJECTED_LIBYA,
+    LIBYA_BBOX, CRS_PROJECTED_LIBYA, ADMIN0_GEOJSON_PATH, CRS_WGS84,
 )
 
 COLUMNS = 'radio mcc net area cell unit lon lat range samples changeable created updated averageSignal'.split()
@@ -26,9 +28,15 @@ def load_cells(path: Path, as_of=None):
     not a measurement of confidence: >=2 samples and updated within 730 days.
     """
     raw = pd.read_csv(path, header=None, dtype=str)
+    if raw.empty:
+        raise ValueError("OpenCellID input is empty")
+    # Named collected exports may append provider/country provenance columns.
+    if set(COLUMNS).issubset(raw.iloc[0].str.strip().tolist()):
+        raw.columns = raw.iloc[0].str.strip().tolist()
+        raw = raw.iloc[1:][COLUMNS].copy()
     if raw.shape[1] != len(COLUMNS):
         raise ValueError(f'Expected 14 OpenCellID columns, found {raw.shape[1]}')
-    if raw.iloc[0].str.strip().tolist() == COLUMNS:
+    if not raw.empty and raw.iloc[0].str.strip().tolist() == COLUMNS:
         raw = raw.iloc[1:].copy()
     raw.columns = COLUMNS
     df = raw.copy()
@@ -84,6 +92,12 @@ def load_cells(path: Path, as_of=None):
 def projected(lons, lats):
     transformer = Transformer.from_crs('EPSG:4326', CRS_PROJECTED_LIBYA, always_xy=True)
     return np.column_stack(transformer.transform(np.asarray(lons), np.asarray(lats)))
+
+
+@lru_cache(maxsize=1)
+def _libya_boundary():
+    """Load the supplied national boundary once in WGS84."""
+    return gpd.read_file(ADMIN0_GEOJSON_PATH).to_crs(CRS_WGS84).geometry.union_all()
 
 
 def annotate_candidates(candidates, cells=None):

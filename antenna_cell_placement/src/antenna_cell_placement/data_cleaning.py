@@ -14,6 +14,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 from scipy.spatial import cKDTree
+from scipy.cluster.hierarchy import fclusterdata
 
 from antenna_cell_placement.config import (
     RAW_SQLITE_PATH,
@@ -90,32 +91,47 @@ def load_raw_records_from_sqlite(db_path: Path = RAW_SQLITE_PATH) -> pd.DataFram
     return pd.DataFrame(records)
 
 
+def _location_groups(grouped):
+    """Keep conflicting locations apart instead of inventing a median between them.
+
+    A 1 km complete-linkage threshold is a screening assumption, not a source
+    accuracy bound. Every cluster has a maximum pairwise distance of 1 km.
+    Ported from ahmed_cell_placement@2c48a27 (antenna_cell_placement.data_cleaning).
+    """
+    from antenna_cell_placement.opencellid import projected
+
+    for identity, group in grouped:
+        if len(group) == 1:
+            yield identity, group, 1, False
+            continue
+        group = group.sort_values(["latitude", "longitude"], kind="stable")
+        coords = projected(group.longitude, group.latitude)
+        labels = fclusterdata(coords, t=1000.0, criterion="distance", method="complete")
+        unique = sorted(set(labels), key=lambda label: tuple(coords[labels == label].mean(axis=0)))
+        for number, label in enumerate(unique, start=1):
+            yield identity, group.loc[labels == label], number, len(unique) > 1
+
+
 def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
     """
     Deduplicates raw observations by grouping strictly on (rat, region_id, site_id).
     This fixes the regional scoping collision where distinct towers were collapsed.
+
+    Within one (rat, region_id, site_id) identity, observations reported more than
+    1 km apart are kept as separate rows (location_group/location_conflict) instead
+    of being averaged into a location neither observation actually reported.
     """
     grouped = df_raw.groupby(["rat", "region_id", "site_id"])
     towers = []
 
-    for (rat, region_id, site_id), group in grouped:
+    for (rat, region_id, site_id), group, location_group, conflict in _location_groups(grouped):
         all_channels = sorted(list(set(c for sublist in group["channels"] for c in sublist)))
         all_bands = sorted(list(set(b for sublist in group["bands"] for b in sublist)))
         all_bws = [bw for sublist in group["bandwidths"] for bw in sublist]
 
-        if all_bws:
-            tot_bw = sum(all_bws)
-        else:
-            # Standard spectral bandwidth allocations in Libya:
-            # LTE: 20MHz nominal (or 10MHz if Band 20 only)
-            # UMTS: 5MHz nominal per carrier
-            # GSM: 0.4MHz nominal (2x200kHz carriers)
-            if rat == "LTE":
-                tot_bw = 10.0 if (all_bands == [20]) else 20.0
-            elif rat == "UMTS":
-                tot_bw = 5.0 * max(1, len(all_channels))
-            else:
-                tot_bw = 0.4 * max(1, len(all_channels))
+        # Missing source bandwidth remains missing. It cannot be reconstructed
+        # reliably from RAT, channel count, or a presumed spectrum allocation.
+        tot_bw = sum(all_bws) if all_bws else np.nan
 
         valid_mcc = group["mcc"].dropna()
         mcc_val = valid_mcc.iloc[0] if not valid_mcc.empty else "606"
@@ -132,6 +148,8 @@ def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
 
         towers.append({
             "tower_id": len(towers) + 1,
+            "location_group": location_group,
+            "location_conflict": conflict,
             "rat": rat,
             "rat_subtype": group["rat_subtype"].iloc[-1],
             "region_id": region_id,
@@ -154,7 +172,8 @@ def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
             "bands_str": ",".join(map(str, all_bands)),
             "band_count": len(all_bands),
             "primary_band": all_bands[0] if all_bands else (-1),
-            "total_bandwidth_mhz": round(float(tot_bw), 1),
+            "total_bandwidth_mhz": round(float(tot_bw), 1) if np.isfinite(tot_bw) else np.nan,
+            "bandwidth_data_available": bool(all_bws),
             "tower_type": group["tower_type"].iloc[0],
             "has_timing_advance": int(group["has_timing_advance"].max()),
             "has_signal_strength": int(group["has_signal_strength"].max()),
