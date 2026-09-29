@@ -62,7 +62,12 @@ def verify(run):
             assert heights == 0
     inventory = json.loads((run / 'inventory_audit.json').read_text())
     assert inventory['owner_confirmed_almadar_records'] == 645
-    assert inventory['owner_confirmed_almadar_radio_groups'] == 645
+    assert inventory['owner_attribution_correct']
+    crosswalk = pd.read_csv(run / 'source_crosswalk.csv')
+    owner = crosswalk.loc[crosswalk.owner_confirmed_almadar.fillna(False)]
+    assert len(owner) == 645
+    assert owner.loc[owner.status.eq('retained'), 'operator'].eq('Al-Madar').all()
+    assert inventory['clusters_with_diameter_over_50m'] == 0
     report = {'artifact_hashes_match': True, 'strict_constraints_hold': True,
               'batch_assess_score_matches': True, 'missing_optional_osm_assess_passed': True,
               'primary_has_no_ml_columns': True, 'footprint_coordinates_inside_geometry': True,

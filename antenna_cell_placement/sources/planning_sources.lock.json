@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "reviewed_utc": "2026-09-23",
-  "baseline_commit": "8a2be6c928945ce8c52dba93e975e72aea0123d2",
-  "ahmed_commit": "15dc13a021f12f259319d611dc291ab6de9e4bbe",
-  "policy": "Changed required sources block runtime; optional failures disable context. Updates require a new reviewed source lock, feature/score version and documented comparison.",
+  "reviewed_utc": "2026-09-29",
+  "baseline_commit": "2eca2dd45c1e8ac0dba496f5825d350dba088368",
+  "ahmed_commit": "2c48a27494545988561acc4782e6b23530d33af0",
+  "policy": "Changed required sources block runtime; optional failures disable context. GIS measurement and score formulas are unchanged; inventory changes have a separate explicit version and matched comparison.",
   "population_unit_note": "Density interpretation is explicit; exact UN adjustment of the local file is unresolved.",
   "sources": [
     {
@@ -341,6 +341,105 @@
       "group": "footprints",
       "required": false,
       "units": null
+    },
+    {
+      "path": "data/inventory_v3/inventory_manifest.json",
+      "sha256": "ff64c65c99d44d42c632044a911fef54d2debe8ed70d3436c7bf6e9605e8f061",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/physical_sites.csv",
+      "sha256": "b4ea6bb3383bd1aa48895ed20ec6f6a68c4bc1ddeb5585ab259924e8dea9d042",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/radio_references.csv",
+      "sha256": "1cf43d932f5617d6b6e1b3aecc840d740c1d7f4bafc490b8392ec6e698b11f2d",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/reconciliation.json",
+      "sha256": "a90b818db26795cfcc925006bcb9a086200dd1aff712b76722f25c8f1ee25b21",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/rejected_records.csv",
+      "sha256": "16ef7ac13610acaccd2dd28da5ff1c86cccc3fe01a4899a7b60588deb35ca82a",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/source_crosswalk.csv",
+      "sha256": "a17c77e05e810f2b25f83bf7ab2ef22ba06b7fe84aacd7a9c2aae130d0eecc21",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "sources/collected_sources.lock.json",
+      "sha256": "5c25dd18649e821d94accf4e1516b7e2433c5d413b438120e18cf7cc0563ab3d",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "pilot_snapshot.json",
+      "sha256": "93af8a09147467a98478c6afaef510e02cb2ce889bce8b6d853105d0e2935bc1",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/2026-09-26-17-13-40.csv",
+      "sha256": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/2026-09-26-17-13-48.csv",
+      "sha256": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/2026-09-28-15-41-22.csv",
+      "sha256": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/libya_antennas/opencellid_libya.csv",
+      "sha256": "f5ca5e20da533bcfd2350fca435e6284365b4fa8769a664aa42fd522c8d4da67",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/libya_collected_antennas/beacondb/beacondb_libya_antennas.csv",
+      "sha256": "655ac05f80f3cb53d31e53d223d6d3233b578764b93262aee49f1d80292ed210",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv",
+      "sha256": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
     }
-  ]
+  ],
+  "inventory_version": "reconciled-geodesic-20260929-v1"
 }

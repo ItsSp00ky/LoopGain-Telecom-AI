@@ -1,5 +1,7 @@
 # Integrated antenna planning: implementation and verification
 
+> Current update (2026-09-29): see [measured service and reconciled inventory](SEPT29_INTEGRATION.md). The active demo is `integrated_release_v3/`; earlier metrics and source versions below remain historical evidence.
+
 Implemented 23 September 2026; final validation 25 September 2026. Integration branch: `integration/antenna-planning-v2`.
 
 ## 1. What was combined

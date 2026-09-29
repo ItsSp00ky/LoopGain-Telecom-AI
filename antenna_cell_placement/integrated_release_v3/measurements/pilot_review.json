@@ -1,0 +1,411 @@
+{
+  "status": "review_ready",
+  "eligible_measurements": 4874,
+  "service_area_operator_radio_groups": 209,
+  "training_days": [
+    "2026-09-23",
+    "2026-09-24"
+  ],
+  "holdout_day": null,
+  "holdout_days": [
+    "2026-09-26",
+    "2026-09-28"
+  ],
+  "snapshot_version": 2,
+  "snapshot_sha256": "93af8a09147467a98478c6afaef510e02cb2ce889bce8b6d853105d0e2935bc1",
+  "training_samples": 2975,
+  "holdout_samples": 1899,
+  "reconciliation": {
+    "conflicted_identities": 6,
+    "preferred_for_review": 0,
+    "survey_resolved_identities": 0,
+    "runtime_policy": "Retain all conflicting references for conservative screening; exclude them from reliable pilot anchors.",
+    "decisions": [
+      {
+        "mcc": "606",
+        "mnc": "0",
+        "rat": "LTE",
+        "region_id": "1610",
+        "site_id": "1169",
+        "status": "unresolved",
+        "preferred_location_group": null,
+        "reason": "insufficient_independent_location_evidence",
+        "maximum_separation_m": 5797.6,
+        "alternatives": [
+          {
+            "location_group": 1,
+            "latitude": 32.82758856,
+            "longitude": 13.12972132,
+            "source_verified": false,
+            "last_seen_utc": "2026-09-07T07:46:31+00:00",
+            "timestamp_valid": true,
+            "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+          },
+          {
+            "location_group": 2,
+            "latitude": 32.83740098832827,
+            "longitude": 13.068900723036386,
+            "source_verified": false,
+            "last_seen_utc": "2026-08-24T00:00:00+00:00",
+            "timestamp_valid": true,
+            "source_files": "Libyan_cells_dataset/cells.sqlite3"
+          }
+        ],
+        "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+      },
+      {
+        "mcc": "606",
+        "mnc": "0",
+        "rat": "LTE",
+        "region_id": "2120",
+        "site_id": "1130",
+        "status": "unresolved",
+        "preferred_location_group": null,
+        "reason": "insufficient_independent_location_evidence",
+        "maximum_separation_m": 634871.6,
+        "alternatives": [
+          {
+            "location_group": 1,
+            "latitude": 31.96910285949707,
+            "longitude": 20.03230667114257,
+            "source_verified": false,
+            "last_seen_utc": "2026-09-22T20:19:12+00:00",
+            "timestamp_valid": true,
+            "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+          },
+          {
+            "location_group": 2,
+            "latitude": 32.88610054219486,
+            "longitude": 13.368000266956203,
+            "source_verified": false,
+            "last_seen_utc": "2026-08-27T00:00:00+00:00",
+            "timestamp_valid": true,
+            "source_files": "Libyan_cells_dataset/cells.sqlite3"
+          }
+        ],
+        "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+      },
+      {
+        "mcc": "606",
+        "mnc": "0",
+        "rat": "LTE",
+        "region_id": "6390",
+        "site_id": "1138",
+        "status": "unresolved",
+        "preferred_location_group": null,
+        "reason": "insufficient_independent_location_evidence",
+        "maximum_separation_m": 3313.8,
+        "alternatives": [
+          {
+            "location_group": 1,
+            "latitude": 32.23550022123307,
+            "longitude": 20.18570025250913,
+            "source_verified": false,
+            "last_seen_utc": "2026-08-24T00:00:00+00:00",
+            "timestamp_valid": true,
+            "source_files": "Libyan_cells_dataset/cells.sqlite3"
+          },
+          {
+            "location_group": 2,
+            "latitude": 32.25914764404297,
+            "longitude": 20.207199096679688,
+            "source_verified": false,
+            "last_seen_utc": "2026-08-30T18:56:16+00:00",
+            "timestamp_valid": true,
+            "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+          }
+        ],
+        "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+      },
+      {
+        "mcc": "606",
+        "mnc": "0",
+        "rat": "LTE",
+        "region_id": "6390",
+        "site_id": "1196",
+        "status": "unresolved",
+        "preferred_location_group": null,
+        "reason": "insufficient_independent_location_evidence",
+        "maximum_separation_m": 1085.3,
+        "alternatives": [
+          {
+            "location_group": 1,
+            "latitude": 32.09150091717926,
+            "longitude": 20.15980097583546,
+            "source_verified": false,
+            "last_seen_utc": "2026-08-13T00:00:00+00:00",
+            "timestamp_valid": true,
+            "source_files": "Libyan_cells_dataset/cells.sqlite3"
+          },
+          {
+            "location_group": 2,
+            "latitude": 32.09576416015625,
+            "longitude": 20.149452209472656,
+            "source_verified": false,
+            "last_seen_utc": "2026-09-20T13:29:24+00:00",
+            "timestamp_valid": true,
+            "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+          }
+        ],
+        "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+      },
+      {
+        "mcc": "606",
+        "mnc": "0",
+        "rat": "LTE",
+        "region_id": "6410",
+        "site_id": "2003",
+        "status": "unresolved",
+        "preferred_location_group": null,
+        "reason": "insufficient_independent_location_evidence",
+        "maximum_separation_m": 844584.3,
+        "alternatives": [
+          {
+            "location_group": 1,
+            "latitude": 32.757200943796256,
+            "longitude": 21.74974200600072,
+            "source_verified": false,
+            "last_seen_utc": "2026-09-07T02:35:52+00:00",
+            "timestamp_valid": true,
+            "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+          },
+          {
+            "location_group": 2,
+            "latitude": 32.75740031018911,
+            "longitude": 12.73410038389652,
+            "source_verified": false,
+            "last_seen_utc": "2026-06-06T00:00:00+00:00",
+            "timestamp_valid": true,
+            "source_files": "Libyan_cells_dataset/cells.sqlite3"
+          }
+        ],
+        "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+      },
+      {
+        "mcc": "606",
+        "mnc": "1",
+        "rat": "GSM",
+        "region_id": "1114",
+        "site_id": "1649",
+        "status": "unresolved",
+        "preferred_location_group": null,
+        "reason": "insufficient_independent_location_evidence",
+        "maximum_separation_m": 1095.8,
+        "alternatives": [
+          {
+            "location_group": 1,
+            "latitude": 32.02070018607912,
+            "longitude": 20.162200638263545,
+            "source_verified": false,
+            "last_seen_utc": "2026-03-15T00:00:00+00:00",
+            "timestamp_valid": true,
+            "source_files": "Libyan_cells_dataset/cells.sqlite3"
+          },
+          {
+            "location_group": 2,
+            "latitude": 32.02819084398674,
+            "longitude": 20.169767090768524,
+            "source_verified": false,
+            "last_seen_utc": "2026-09-12T19:24:17+00:00",
+            "timestamp_valid": true,
+            "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+          }
+        ],
+        "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+      }
+    ]
+  },
+  "pilot": {
+    "status": "measured_review_only",
+    "h3_r7": "87384b2d0ffffff",
+    "latitude": 32.874825624948194,
+    "longitude": 13.334322438358061,
+    "training_samples": 375,
+    "training_spatial_bins_r9": 19,
+    "training_days": 2,
+    "training_cells": 41,
+    "nearby_source_verified_nonconflicting_references": 0,
+    "qualifying_training_areas": 17,
+    "selection_policy": "Training data only; prefer nearby nonconflicting source-verified references, then days, spatial bins, and cell identities. Counts do not establish survey accuracy.",
+    "rf_validation_ready": false,
+    "holdout_samples": 313,
+    "temporal_validation": {
+      "status": "evaluated",
+      "method": "Training day/device/H3-9 block medians, aggregated by operator/RAT/H3-8; equal holdout block weighting.",
+      "holdout_blocks": 34,
+      "matched_blocks": 26,
+      "coverage_pct": 76.47,
+      "mae_db": 8.115384615384615,
+      "bias_db": -3.5,
+      "by_operator_radio": [
+        {
+          "mcc": 606,
+          "mnc": 0,
+          "radio": "UMTS",
+          "blocks": 6,
+          "mae_db": 8.666666666666666,
+          "bias_db": -4.666666666666667
+        },
+        {
+          "mcc": 606,
+          "mnc": 1,
+          "radio": "LTE",
+          "blocks": 11,
+          "mae_db": 11.181818181818182,
+          "bias_db": -7.909090909090909
+        },
+        {
+          "mcc": 606,
+          "mnc": 1,
+          "radio": "UMTS",
+          "blocks": 9,
+          "mae_db": 4.0,
+          "bias_db": 2.6666666666666665
+        }
+      ],
+      "by_holdout_day": [
+        {
+          "day": "2026-09-26",
+          "holdout_blocks": 19,
+          "matched_blocks": 13,
+          "coverage_pct": 68.42,
+          "mae_db": 9.692307692307692,
+          "bias_db": -6.0
+        },
+        {
+          "day": "2026-09-28",
+          "holdout_blocks": 15,
+          "matched_blocks": 13,
+          "coverage_pct": 86.67,
+          "mae_db": 6.538461538461538,
+          "bias_db": -1.0
+        }
+      ]
+    }
+  },
+  "sector_identity_matching": {
+    "measurement_identities": 449,
+    "matched_identities": 0,
+    "interpretation": "Exact MCC/MNC/RAT/area/cell matching; unmatched observations remain useful measured service evidence."
+  },
+  "temporal_validation": {
+    "status": "evaluated",
+    "method": "Training day/device/H3-9 block medians, aggregated by operator/RAT/H3-8; equal holdout block weighting.",
+    "holdout_blocks": 258,
+    "matched_blocks": 74,
+    "coverage_pct": 28.68,
+    "mae_db": 7.675675675675675,
+    "bias_db": -1.7432432432432432,
+    "by_operator_radio": [
+      {
+        "mcc": 606,
+        "mnc": 0,
+        "radio": "UMTS",
+        "blocks": 23,
+        "mae_db": 7.173913043478261,
+        "bias_db": -1.2608695652173914
+      },
+      {
+        "mcc": 606,
+        "mnc": 1,
+        "radio": "LTE",
+        "blocks": 29,
+        "mae_db": 9.448275862068966,
+        "bias_db": -3.896551724137931
+      },
+      {
+        "mcc": 606,
+        "mnc": 1,
+        "radio": "UMTS",
+        "blocks": 22,
+        "mae_db": 5.863636363636363,
+        "bias_db": 0.5909090909090909
+      }
+    ],
+    "by_holdout_day": [
+      {
+        "day": "2026-09-26",
+        "holdout_blocks": 55,
+        "matched_blocks": 26,
+        "coverage_pct": 47.27,
+        "mae_db": 8.423076923076923,
+        "bias_db": -3.423076923076923
+      },
+      {
+        "day": "2026-09-28",
+        "holdout_blocks": 203,
+        "matched_blocks": 48,
+        "coverage_pct": 23.65,
+        "mae_db": 7.270833333333333,
+        "bias_db": -0.8333333333333334
+      }
+    ]
+  },
+  "rf_readiness": {
+    "status": "not_ready",
+    "simulation_enabled": false,
+    "sector_rows": 2494,
+    "engineering_complete_sectors": 0,
+    "valid_field_counts": {
+      "frequency_mhz": 0,
+      "bandwidth_mhz": 703,
+      "azimuth_bearing_deg": 2124,
+      "mechanical_tilt_deg": 0,
+      "electrical_tilt_deg": 0,
+      "height_m": 0,
+      "tx_power_dbm": 0,
+      "feeder_loss_db": 0,
+      "gain_dbi": 0,
+      "pattern_reference": 0
+    },
+    "missing_everywhere": [
+      "frequency_mhz",
+      "mechanical_tilt_deg",
+      "electrical_tilt_deg",
+      "height_m",
+      "tx_power_dbm",
+      "feeder_loss_db",
+      "gain_dbi",
+      "pattern_reference"
+    ],
+    "exact_measurement_sector_matches": 0,
+    "requirements": [
+      "Surveyed site coordinates with provenance",
+      "Complete per-sector engineering parameters and antenna pattern",
+      "Exact measurement/sector associations",
+      "Independent RF validation and approved error thresholds"
+    ],
+    "interpretation": "Input-readiness audit only. No antenna height, frequency, transmit power, tilt, or propagation predictions are invented."
+  },
+  "operator_asset_review": null,
+  "sources": [
+    {
+      "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\Libyan_cells_dataset\\cells.sqlite3",
+      "sha256": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06"
+    },
+    {
+      "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+      "sha256": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134"
+    },
+    {
+      "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\2026-09-26-17-13-40.csv",
+      "sha256": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e"
+    },
+    {
+      "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\2026-09-26-17-13-48.csv",
+      "sha256": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d"
+    },
+    {
+      "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\2026-09-28-15-41-22.csv",
+      "sha256": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a"
+    }
+  ],
+  "limitations": [
+    "Measurements describe the collected routes, days, devices, and networks only.",
+    "Service summaries separate operators and technologies; generic dBm is not RSRP.",
+    "The held-out-day median baseline measures temporal repeatability, not RF prediction accuracy.",
+    "Pilot selection never uses held-out signal values or held-out sample support.",
+    "Conflicted locations remain conservative screening references, not reliable pilot anchors.",
+    "No measured-area summary changes national placement scores."
+  ]
+}

@@ -19,3 +19,17 @@ data/cleaned/h3/*.geojson linguist-generated=true
 /integrated_release/** -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
 
 /eval_reports/integrated_ml_comparison/** -text whitespace=cr-at-eol
+
+# September 29 source snapshots retain exact audited bytes.
+data/new_data/** -text
+data/external/libya_official_2022_2025/*.csv -text
+/data/inventory_v3/** -text whitespace=cr-at-eol
+/integrated_release_v3/** -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
+/data/new_data/** -text whitespace=cr-at-eol
+/pilot_snapshot.json -text whitespace=cr-at-eol
+# Keep the exact configuration bytes fingerprinted in the completed release.
+/src/antenna_cell_placement/config.py -text whitespace=cr-at-eol
+/sources/collected_sources.lock.json -text whitespace=cr-at-eol
+/tools/download_chongqing_5g.py -text whitespace=cr-at-eol
+/data/external/chongqing_5g_2026/** -text whitespace=cr-at-eol
+/data/external/libya_official_2022_2025/** -text whitespace=cr-at-eol

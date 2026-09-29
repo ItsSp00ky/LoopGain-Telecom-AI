@@ -1,0 +1,24 @@
+{
+  "retrieved_on": "2026-09-26",
+  "license": "Other (Open), as declared by the Libya Open Data Portal; retain source attribution",
+  "sources": {
+    "population_by_region_2022.csv": {
+      "publisher": "Libya Bureau of Statistics and Census",
+      "dataset_page": "https://opendata.gia.gov.ly/dashboard/dataset/groups/population_number",
+      "url": "https://opendata.gia.gov.ly/dashboard/dataset/dfda9f93-48e0-4da8-890f-3b1495e270e3/resource/a676cb46-2491-4ce8-8ff7-c591f8b4f151/download/population-distribution-by-region-and-sex-for-the-year-2022.csv",
+      "reference_year": 2022,
+      "unit": "reported people by region and sex",
+      "bytes": 1487,
+      "sha256": "a72d23dcf8d8e98568622cc2f4da57d88473bcb535e26ef665c8dd9fdd3d1161"
+    },
+    "mobile_users_by_technology_2019_2025.csv": {
+      "publisher": "Libya General Authority for Communications and Informatics",
+      "dataset_page": "https://opendata.gia.gov.ly/dashboard/dataset/comm",
+      "url": "https://opendata.gia.gov.ly/dashboard/dataset/b9d9e949-f02d-4e82-9a85-4479edc071a7/resource/b3909bf8-269f-4319-a008-25f21c8e616e/download/distribution-of-mobile-phone-users-by-network-for-the-years-2019-2025-csv.csv",
+      "reference_years": [2019, 2025],
+      "unit": "provider-reported mobile users by technology; uniqueness across lines or people is not documented",
+      "bytes": 416,
+      "sha256": "150c714b18023c4c2be2d026256e5f2a63c9bd9fe9825f869993c170a786c1a5"
+    }
+  }
+}

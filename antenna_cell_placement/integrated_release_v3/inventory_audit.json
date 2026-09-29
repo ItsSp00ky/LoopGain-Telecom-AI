@@ -1,0 +1,30 @@
+{
+  "inventory_version": "reconciled-geodesic-20260929-v1",
+  "as_of_utc": "2026-09-29T19:00:00Z",
+  "raw_observations": 4258,
+  "collected_records": 2494,
+  "retained_source_records": 6726,
+  "rejected_source_records": 26,
+  "network_scoped_radio_groups": 2670,
+  "physical_sites": 2344,
+  "owner_confirmed_almadar_records": 645,
+  "owner_confirmed_almadar_retained_records": 643,
+  "owner_attribution_correct": true,
+  "conflicted_identities": 6,
+  "conflicted_physical_sites": 12,
+  "max_cluster_diameter_m": 49.57914459915266,
+  "clusters_with_diameter_over_50m": 0,
+  "policy": "Retain conflicting references for conservative screening, exclude them from reliable pilot anchors; no conflict is survey-resolved. No engineering parameters inferred.",
+  "inputs": {
+    "Libyan_cells_dataset/cells.sqlite3": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06",
+    "data/cleaned/cleaned_radio_towers.csv": "b592f853411d650ec012b132f4026a8e9fadc079e002eda05ad3da69dd0c76ed",
+    "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134"
+  },
+  "artifacts": {
+    "physical_sites.csv": "b4ea6bb3383bd1aa48895ed20ec6f6a68c4bc1ddeb5585ab259924e8dea9d042",
+    "radio_references.csv": "1cf43d932f5617d6b6e1b3aecc840d740c1d7f4bafc490b8392ec6e698b11f2d",
+    "reconciliation.json": "a90b818db26795cfcc925006bcb9a086200dd1aff712b76722f25c8f1ee25b21",
+    "rejected_records.csv": "16ef7ac13610acaccd2dd28da5ff1c86cccc3fe01a4899a7b60588deb35ca82a",
+    "source_crosswalk.csv": "a17c77e05e810f2b25f83bf7ab2ef22ba06b7fe84aacd7a9c2aae130d0eecc21"
+  }
+}
