@@ -1,0 +1,276 @@
+"""Screen 2 - one customer: risk, reasons, tier, bundle held, credit advice and the offer."""
+
+import pandas as pd
+import streamlit as st
+from _shared import configure, degraded_notice, lyd, missing_banner, rtl, state, use_campaign
+
+from prepaid_churn.advance import MAX_DEBT_FRACTION
+from prepaid_churn.bundle import BundleError
+from prepaid_churn.demo import (
+    CAMPAIGNS_DIR,
+    PRODUCED_BY,
+    DemoPaths,
+    credit_advice,
+    offer_row,
+    propose_offers,
+    subscriber_view,
+    utc_today,
+)
+from prepaid_churn.operator_market import InvalidCatalogueError, load_market
+from prepaid_churn.privacy import looks_like_phone_number
+from prepaid_churn.retention import NO_OFFER, RetentionError
+
+configure("Subscriber", icon="person")
+demo = state()
+
+st.title("Subscriber")
+
+if missing_banner(demo, ("portfolio",)):
+    st.stop()
+
+portfolio = demo.portfolio
+
+left, random_column, risky_column = st.columns([3, 1, 1])
+
+# The buttons are handled before the box is drawn, and write into the box's own state.
+# Keeping a separate "picked" value meant a typed ID silently won over the button, so
+# "Pick one at random" looked broken once anything had been typed. Only visible on screen.
+with random_column:
+    st.write("")
+    if st.button("Pick one at random", width="stretch"):
+        st.session_state["subscriber_id"] = str(portfolio["subscriber_id"].sample(1).iloc[0])
+        st.rerun()
+
+with risky_column:
+    st.write("")
+    # Most of this base is not at risk, so a random customer is almost always a "no
+    # offer". Someone opening this screen to see what an offer looks like was picking
+    # one customer after another to find one, which is a bad first minute.
+    # A tiers-only export has no risk band, so there is nobody to pick.
+    if "risk_band" in portfolio.columns:
+        risky = portfolio.loc[portfolio["risk_band"].eq("high")]
+    else:
+        risky = portfolio.iloc[:0]
+    if st.button("Pick a high-risk one", width="stretch", disabled=risky.empty):
+        st.session_state["subscriber_id"] = str(risky["subscriber_id"].sample(1).iloc[0])
+        st.rerun()
+
+with left:
+    subscriber_id = st.text_input(
+        "Subscriber ID",
+        key="subscriber_id",
+        placeholder="a pseudonymous ID, never a phone number",
+        help="IDs are pseudonymous by contract. A Libyan mobile number is refused here.",
+    ).strip()
+
+if not subscriber_id:
+    st.info("Enter an ID, or pick one at random.", icon=":material/search:")
+    st.stop()
+
+# The privacy rule is enforced here as well as in the T15 service, because a Streamlit
+# widget value reaches the session state and the server log before any lookup happens.
+if looks_like_phone_number(subscriber_id):
+    st.error(
+        "**That looks like a Libyan mobile number.** This module only handles "
+        "pseudonymous IDs, so nothing was looked up. An operator hashes numbers with "
+        "`prepaid_churn.privacy.pseudonymize` before exporting them.",
+        icon=":material/block:",
+    )
+    st.stop()
+
+subscriber = subscriber_view(demo, subscriber_id)
+if subscriber is None:
+    st.warning("That ID is not in the current export.", icon=":material/person_off:")
+    st.stop()
+
+st.code(subscriber_id, language=None)
+degraded_notice(demo)
+
+# --- The headline numbers ----------------------------------------------------
+probability = subscriber.get("churn_probability")
+has_probability = probability is not None and not pd.isna(probability)
+
+a, b, c, d = st.columns(4)
+a.metric(
+    "Churn probability",
+    "-" if not has_probability else f"{float(probability):.1%}",
+    help="Calibrated: 0.30 means about 30 in 100 such customers go silent next month.",
+)
+b.metric("Risk band", str(subscriber.get("risk_band") or "-"))
+c.metric("Value tier", str(subscriber.get("value_tier") or "-"))
+d.metric(
+    "12-month value",
+    lyd(subscriber.get("value_12m_base_lyd"), digits=2),
+    help="The base hazard scenario of T10, not a measured lifetime value.",
+)
+
+st.divider()
+
+profile_column, reason_column = st.columns([1, 2])
+
+with profile_column:
+    st.subheader("In operator terms")
+    st.markdown(
+        f"**Monthly spend** {lyd(subscriber.get('monthly_spend_lyd'), digits=2)}  \n"
+        f"**Usual recharge card** {lyd(subscriber.get('usual_card_lyd'), digits=0)}  \n"
+        f"**Bundle held** `{subscriber.get('bundle_held') or '-'}`  \n"
+        f"**Value score** {subscriber.get('value_score', '-')}"
+    )
+    st.caption(
+        f"Spend is converted at the assumed {load_market()['arpu']['monthly_lyd']:.0f} LYD "
+        "monthly ARPU of T18 (decision 42). "
+        "The bundle held is inferred from the real monthly and short pack purchases in "
+        "the source data, not from an operator subscription record."
+    )
+
+with reason_column:
+    st.subheader("Why the model thinks so")
+    reasons = subscriber.get("reasons") or []
+    if not reasons:
+        st.info(
+            "No reasons in this export. They come from a bundle-backed scoring run "
+            "(`uv run churn tiers` with a gated bundle).",
+            icon=":material/info:",
+        )
+    else:
+        st.caption(
+            "Exact SHAP contributions from the model that scored this customer, each a short "
+            "label with the customer's value. Only factors that raise the risk are listed, and "
+            "only for high and medium risk; a low-risk customer gets one line instead "
+            "(decision 40)."
+        )
+        for position, reason in enumerate(reasons, start=1):
+            st.markdown(f"{position}. {reason}")
+
+st.divider()
+
+# --- Emergency credit (T19) ----------------------------------------------------
+# What `churn advance` advises for this customer, beside their risk: an employee with the
+# customer on the phone should not need a CSV to answer "can I get credit?".
+st.subheader("Emergency credit")
+advice = credit_advice(demo, subscriber_id)
+if advice is None:
+    st.info(
+        "No credit advice for this customer in this checkout. "
+        f"It is written by `{PRODUCED_BY['credit advice']}`.",
+        icon=":material/info:",
+    )
+else:
+    limit = advice.get("airtime_limit_lyd")
+    advised = str(advice.get("data_advance_advised")).strip().lower() == "true"
+    topup_column, card_column, airtime_column, data_column = st.columns(4)
+    topup_column.metric(
+        "Typical top-up",
+        lyd(advice.get("typical_topup_lyd"), digits=2),
+        help="Each window month's average airtime top-up, averaged over the two months and "
+        "converted at the T18 rate (decision 50).",
+    )
+    card_column.metric(
+        "Card the advice reads",
+        lyd(advice.get("typical_card_lyd"), digits=0),
+        help="The operator's card nearest that top-up, since nothing smaller can be topped "
+        "up (decision 49). The usual card above pools both months' recharges, so the two "
+        "can differ, and a window of recharges worth nothing reads as 0 here.",
+    )
+    airtime_column.metric(
+        "Airtime advance",
+        lyd(limit, digits=0) if limit and not pd.isna(limit) else "None",
+        help=f"The largest advance the operator sells within {MAX_DEBT_FRACTION:.0%} of that "
+        "card, so clearing it at the next recharge still leaves balance.",
+    )
+    data_column.metric("Data advance", "Advised" if advised else "Not advised")
+    reason_en, reason_ar = advice.get("advice_reason_en"), advice.get("advice_reason_ar")
+    st.markdown(f"**Why** {reason_en if isinstance(reason_en, str) else '-'}")
+    if isinstance(reason_ar, str) and reason_ar.strip():
+        st.markdown(rtl(reason_ar), unsafe_allow_html=True)
+    st.caption(
+        "Rule-based advice from recharge behaviour, with no repayment model (T19, decision "
+        "23). It grants nothing: like a retention offer, a limit reaches a customer only "
+        "after a person approves it (decision 14)."
+    )
+
+st.divider()
+
+# --- What the engine proposed ------------------------------------------------
+st.subheader("Proposed retention offer")
+
+offer_id = subscriber.get("recommended_offer_id")
+status = str(subscriber.get("status") or "")
+
+if offer_id is None:
+    st.info(
+        "This customer is not in the campaign the screens are reading.",
+        icon=":material/info:",
+    )
+    # One customer, the same decision path as a whole campaign: the policy chooses the
+    # package and the guardrails still apply. The screen only chooses who is considered,
+    # and a named person still has to approve whatever comes out (decision 14).
+    st.caption(
+        "Propose an offer for this one customer. It runs the same engine as a campaign, "
+        "writes its own campaign directory, and approves nothing."
+    )
+    budget = st.number_input("Budget for this customer (LYD)", min_value=0.0, value=5.0, step=1.0)
+    if st.button("Propose an offer for this customer", type="primary"):
+        directory = CAMPAIGNS_DIR / f"ui-{subscriber_id}-{utc_today()}"
+        try:
+            with st.spinner("Scoring this customer and asking the engine..."):
+                propose_offers(
+                    DemoPaths.from_environment(),
+                    directory,
+                    subscribers=[subscriber_id],
+                    budget_lyd=budget,
+                )
+        except (
+            BundleError,
+            InvalidCatalogueError,
+            RetentionError,
+            FileNotFoundError,
+            ValueError,
+        ) as error:
+            st.error(str(error), icon=":material/error:")
+        else:
+            use_campaign(directory)
+            st.rerun()
+elif str(offer_id) == NO_OFFER:
+    st.info(
+        f"**No offer.** {subscriber.get('offer_reason_en') or 'No reason recorded.'}\n\n"
+        "Not spending is a first-class outcome here, and on this base it is the usual one.",
+        icon=":material/do_not_disturb_on:",
+    )
+    if subscriber.get("offer_reason_ar"):
+        st.markdown(rtl(subscriber["offer_reason_ar"]), unsafe_allow_html=True)
+else:
+    offer = offer_row(demo, offer_id)
+    badge = {"approved": "success", "rejected": "error"}.get(status, "info")
+    getattr(st, badge)(
+        f"**{offer_id}** - status `{status or 'proposed'}`"
+        + (f", reviewed by {subscriber['reviewer']}" if subscriber.get("reviewer") else ""),
+        icon=":material/local_offer:",
+    )
+    if offer is not None:
+        st.metric(offer.get("name_en") or offer_id, lyd(offer.get("price_lyd"), digits=2))
+        st.markdown(rtl(str(offer.get("name_ar") or "")), unsafe_allow_html=True)
+    st.markdown(f"**Why** {subscriber.get('offer_reason_en') or '-'}")
+    st.markdown(rtl(subscriber.get("offer_reason_ar") or ""), unsafe_allow_html=True)
+
+    cost, value = subscriber.get("expected_cost_lyd"), subscriber.get("expected_net_value_lyd")
+    one, two = st.columns(2)
+    one.metric("Assumed delivery cost", lyd(cost, digits=2))
+    two.metric("Assumed net value", lyd(value, digits=2))
+    st.caption(
+        "Both figures are assumptions from `data/operator/retention.toml`, not measured "
+        "profit or causal uplift. An offer is sent only after a named reviewer approves "
+        "it on the campaign screen."
+    )
+    if status == "approved":
+        st.info(
+            "This one is approved, so it is on the **Released** screen and the chatbot "
+            "can be told about it.",
+            icon=":material/verified:",
+        )
+    elif status != "rejected":
+        st.info(
+            "Waiting for a review. Approve or reject it on the **Campaign builder** "
+            "screen, under your own name.",
+            icon=":material/how_to_reg:",
+        )
