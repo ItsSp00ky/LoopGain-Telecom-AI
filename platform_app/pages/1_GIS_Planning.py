@@ -2,14 +2,14 @@
 
 import pandas as pd
 import streamlit as st
-from _shared import GIS_API_URL, configure, get_json
+from _shared import GIS_API_URL, configure, get_json, hero
 
 configure("GIS Planning", icon="cell_tower")
 
-st.title(":material/cell_tower: GIS Antenna Planning")
-st.caption(
-    "Explainable planning-priority scoring over corrected terrain, population and road "
-    "features. Calls `antenna_cell_placement`'s own API - nothing here reimplements it."
+hero(
+    "GIS Antenna Planning",
+    "Explainable planning-priority scoring over corrected terrain, population and "
+    "road features, from antenna_cell_placement's own API.",
 )
 
 health, error = get_json(GIS_API_URL, "/health")
@@ -23,16 +23,29 @@ with st.expander("Source verification detail"):
     st.json(health["sources"])
 
 st.divider()
-st.subheader("Existing planning run")
+st.subheader("Shortlisted sites - latest completed run")
 shortlist, shortlist_error = get_json(GIS_API_URL, "/shortlist")
 if shortlist_error:
     st.info(f"No completed planning run to show yet ({shortlist_error}).")
 else:
     features = shortlist.get("features", [])
-    st.write(f"{len(features)} shortlisted sites from the most recent completed run.")
-    if features:
-        rows = [feature["properties"] for feature in features]
-        st.dataframe(pd.DataFrame(rows), width="stretch")
+    rows = [feature["properties"] for feature in features]
+    table = pd.DataFrame(rows)
+
+    top1, top2, top3 = st.columns(3)
+    top1.metric("Shortlisted candidates", len(features))
+    if not table.empty and "planning_priority_score" in table:
+        top2.metric("Top score", f"{table['planning_priority_score'].max():.1f}")
+        top3.metric("Median score", f"{table['planning_priority_score'].median():.1f}")
+
+    if not table.empty and {"canonical_latitude", "canonical_longitude"}.issubset(table.columns):
+        st.map(
+            table.rename(columns={"canonical_latitude": "latitude", "canonical_longitude": "longitude"}),
+            latitude="latitude",
+            longitude="longitude",
+            size=60,
+        )
+    st.dataframe(table, width="stretch")
 
 st.divider()
 st.subheader("Assess a coordinate")

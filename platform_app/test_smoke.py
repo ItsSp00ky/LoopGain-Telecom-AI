@@ -12,7 +12,13 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 
 APP_DIR = Path(__file__).resolve().parent
-PAGES = ["Home.py", "pages/1_GIS_Planning.py", "pages/2_Network_KPI.py"]
+PAGES = [
+    "Home.py",
+    "pages/1_GIS_Planning.py",
+    "pages/2_Network_KPI.py",
+    "pages/3_Customer_Churn.py",
+    "pages/4_Assistants.py",
+]
 
 
 class PlatformShellSmokeTests(unittest.TestCase):

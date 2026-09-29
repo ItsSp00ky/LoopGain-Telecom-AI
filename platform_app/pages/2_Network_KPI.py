@@ -2,14 +2,14 @@
 
 import pandas as pd
 import streamlit as st
-from _shared import KPI_API_URL, configure, get_json
+from _shared import KPI_API_URL, configure, get_json, hero
 
 configure("Network KPI", icon="monitoring")
 
-st.title(":material/monitoring: Network KPI Forecast")
-st.caption(
+hero(
+    "Network KPI Forecast",
     "4G macro traffic volume forecast: clean -> chronological split -> multi-model "
-    "benchmark -> champion retrain -> forecast, via `network_kpi_prediction`'s own API."
+    "benchmark -> champion retrain -> forecast, from network_kpi_prediction's own API.",
 )
 
 health, error = get_json(KPI_API_URL, "/health")

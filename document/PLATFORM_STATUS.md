@@ -24,20 +24,34 @@ connected.
   `traffic_volume_forecast` pipeline (clean, chronological split, four-model
   benchmark, champion retrain, recursive forecast) live and returns the actual held-out
   test metrics (WAPE/MAE/RMSE/R2) plus the forecast series with 80%/95% intervals.
-- **Home page** service-status cards call each backend's real `/health` endpoint
-  (GIS, KPI, churn) - "unreachable" means that process isn't running, not a bug in
-  the shell.
+- **Home page** is a real cross-module dashboard, not health pings: GIS shortlist
+  count and top score (from `/shortlist`), next-day traffic forecast and held-out
+  WAPE (from `/traffic/30day`), and subscribers monitored plus revenue at risk (from
+  churn's own `/portfolio/summary`, which needs `PREPAID_CHURN_COPILOT_KEY` - see
+  below). Module status pills still show live/degraded/offline per backend.
+- **Customer Churn page** and the **Assistants page** embed each module's own
+  already-running Streamlit app live via `st.iframe` (not a link to a new tab, and
+  not a re-implementation of their UI) - prepaid_churn's app, and the customer
+  chatbot / employee copilot, each still their own process on their own port.
 
-## What's a link-out, not embedded
+## Access this needs that isn't in git
 
-- **Customer Churn** and the **customer chatbot / employee copilot**: these already
-  have their own tested Streamlit apps and a key-protected FastAPI service
-  (`prepaid_churn/src/prepaid_churn/api.py` requires
-  `PREPAID_CHURN_CHATBOT_KEY`/`PREPAID_CHURN_COPILOT_KEY`, each at least 24
-  characters). `platform_app/Home.py` links to each one's own URL rather than
-  re-importing their page code or calling their key-protected routes without a key
-  provisioning story. This is a deliberate scope decision, not an oversight - see
-  the commit that added `platform_app/`.
+- Churn's FastAPI (`prepaid_churn/src/prepaid_churn/api.py`) requires
+  `PREPAID_CHURN_CHATBOT_KEY`/`PREPAID_CHURN_COPILOT_KEY` (each at least 24
+  characters, distinct) to start at all - see `assistants/README.md`. Without them,
+  `run_platform.py` skips churn's API/app and both assistants, and the Home
+  dashboard's churn tile and the Customer Churn/Assistants pages show a clear
+  "unreachable"/"not set" state, never a guessed number. This pass generated two
+  local demo keys to verify the fully-wired dashboard end to end; they are not
+  committed anywhere and are not shared secrets - anyone running this platform
+  generates their own the same way `assistants/README.md` already describes.
+- Churn's own pipeline (`churn build-dataset` -> `train` -> `evaluate` -> `bundle`
+  -> `score` -> `fit-tiers` -> `tiers`) was run once in this environment to produce
+  real artifacts under `prepaid_churn/artifacts/` (gitignored, not committed):
+  30,000 scored subscribers, champion `lightgbm-2026-09-19-ef9430fb`, release gate
+  passed. Without running that pipeline in a given checkout, churn's tile and app
+  show their own honest "not built yet" state (this is churn's own module
+  behavior, not something platform_app controls or changed).
 
 ## What's not connected at all
 
@@ -74,12 +88,14 @@ not a step this pass took unilaterally.
   data this version now ships).
 - `network_kpi_prediction/test_api.py`: 3 tests, all passing against the real
   pipeline (no mocking).
-- `platform_app/test_smoke.py`: every page runs through Streamlit's `AppTest`
-  harness without raising, with or without the backend APIs running.
-- Manual end-to-end check: all three always-on services (GIS API :8001, KPI API
-  :8002, platform shell :8510) started via `run_platform.py`, answered real
-  requests, and shut down cleanly with no orphaned ports.
-- Not verified in this pass: the churn API/app/chatbot/copilot path end-to-end
-  through `run_platform.py` (this environment has no
-  `PREPAID_CHURN_CHATBOT_KEY`/`PREPAID_CHURN_COPILOT_KEY` set) - the skip path was
-  verified, the enabled path was not.
+- `platform_app/test_smoke.py`: all 5 pages (Home, GIS, KPI, Churn, Assistants) run
+  through Streamlit's `AppTest` harness without raising, with or without the
+  backend APIs running.
+- Manual end-to-end check, all 7 services via `run_platform.py` with demo churn
+  keys set: GIS API :8001, KPI API :8002, churn API :8000, churn app :8501,
+  chatbot :8503, copilot :8502 and the platform shell :8510 all came up and
+  answered real requests. Home's three dashboard metrics rendered real numbers
+  (GIS: 20 shortlisted sites; KPI: 1,061,667 GB next-day forecast; churn: 30,000
+  subscribers monitored) with zero exceptions via `AppTest`. The Churn and
+  Assistants pages' `st.iframe` embeds were exercised against the live, reachable
+  apps (not just the offline-fallback path) with zero exceptions.

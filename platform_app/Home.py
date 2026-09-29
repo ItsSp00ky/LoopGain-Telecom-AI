@@ -1,91 +1,140 @@
-"""LoopGain Telecom AI - one landing page for four modules built on separate branches.
+"""LoopGain Telecom AI - one landing dashboard for four modules built on separate branches.
 
-Run: streamlit run platform_app/Home.py
+Run: streamlit run platform_app/Home.py (or `python3 run_platform.py` for everything)
 
-This shell does not reimplement any module. GIS and Network KPI have their own new
-FastAPI services (`antenna_cell_placement/src/antenna_cell_placement/api.py`,
-`network_kpi_prediction/api.py`) that this page and its two new pages call directly.
-Customer Churn and the Assistants already have their own working Streamlit apps and a
-key-protected FastAPI service; rather than re-import their page code into this process
-(and risk drifting from their own tested behaviour), this shell links out to them as
-already-running services, matching how `assistants/*_app.py` already calls churn's API
-as a separate process instead of importing it.
+Every number on this page comes from a real backend call - GIS's and KPI's own new
+FastAPI services, and churn's existing `/portfolio/summary` (needs
+PREPAID_CHURN_COPILOT_KEY, see assistants/README.md). A module that can't be reached
+or hasn't been built in this checkout shows that plainly instead of a placeholder
+number; see document/PLATFORM_STATUS.md for exactly what depends on what.
 """
 
 import streamlit as st
 from _shared import (
-    CHATBOT_APP_URL,
     CHURN_API_URL,
-    CHURN_APP_URL,
-    COPILOT_APP_URL,
     GIS_API_URL,
     KPI_API_URL,
+    churn_portfolio,
     configure,
+    get_json,
+    hero,
     service_status,
+    status_pill,
 )
 
-configure("Home", icon="home")
+configure("Dashboard", icon="hub")
 
-st.title("LoopGain Telecom AI")
-st.caption(
+hero(
+    "LoopGain Telecom AI",
     "Antenna planning, network KPI forecasting, customer churn/retention and the "
-    "customer/employee assistants - built separately by team, combined here."
+    "customer/employee assistants - four modules, one operating picture.",
+    badges=["GIS Planning", "KPI Forecasting", "Churn & Retention", "AI Assistants"],
 )
 
-st.markdown(
-    "Each module below is its own backend on its own port. This page shows whether "
-    "each one is currently reachable; a module reading \"unreachable\" simply is not "
-    "running yet in this environment (see `document/PLATFORM_STATUS.md` for how to "
-    "start it), it is not a bug in this shell."
-)
+# ---------------------------------------------------------------------------
+# Real cross-module numbers, not health pings
+# ---------------------------------------------------------------------------
+st.subheader("Network at a glance")
+
+gis_col, kpi_col, churn_col = st.columns(3)
+
+with gis_col:
+    with st.container():
+        st.markdown('<div class="lg-metric-row">', unsafe_allow_html=True)
+        shortlist, shortlist_error = get_json(GIS_API_URL, "/shortlist")
+        if shortlist_error:
+            st.metric("GIS shortlisted sites", "—", help=f"Unavailable: {shortlist_error}")
+        else:
+            features = shortlist.get("features", [])
+            top_score = max((f["properties"].get("planning_priority_score", 0) for f in features), default=0)
+            st.metric("GIS shortlisted sites", len(features), help="From the latest completed planning run.")
+            st.caption(f"Top candidate score: **{top_score:.1f}** / 100")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+with kpi_col:
+    forecast, forecast_error = get_json(KPI_API_URL, "/traffic/30day", timeout=30.0)
+    if forecast_error:
+        st.metric("Next-day traffic forecast", "—", help=f"Unavailable: {forecast_error}")
+    else:
+        next_day = forecast["forecast"][0]
+        st.metric(
+            "Next-day traffic forecast",
+            f"{next_day['predicted_kpi_volume_gb']:,.0f} GB",
+            help=f"Champion model: {forecast['champion_model']}",
+        )
+        st.caption(f"Held-out test WAPE: **{forecast['test_metrics']['WAPE (%)']:.2f}%**")
+
+with churn_col:
+    portfolio, portfolio_error = churn_portfolio()
+    if portfolio_error:
+        st.metric("Subscribers monitored", "—", help=f"Unavailable: {portfolio_error}")
+    else:
+        at_risk = sum(band.get("lyd_at_risk") or 0 for band in portfolio["by_risk_band"])
+        st.metric("Subscribers monitored", f"{portfolio['subscribers']:,}")
+        st.caption(f"Revenue at risk: **{at_risk:,.0f} LYD** (model `{portfolio['model_version']}`)")
 
 st.divider()
+
+# ---------------------------------------------------------------------------
+# Module cards
+# ---------------------------------------------------------------------------
+st.subheader("Modules")
 
 modules = [
     {
         "name": "GIS Antenna Planning",
-        "icon": ":material/cell_tower:",
+        "icon": "cell_tower",
         "status_url": GIS_API_URL,
         "description": "Explainable site scoring over corrected terrain/population/road features.",
-        "action": "Open the GIS Planning page in the sidebar for a live view.",
+        "page": "pages/1_GIS_Planning.py",
+        "page_label": "Open GIS Planning",
     },
     {
         "name": "Network KPI Forecast",
-        "icon": ":material/monitoring:",
+        "icon": "monitoring",
         "status_url": KPI_API_URL,
-        "description": "4G traffic volume forecast, chronological train/val/test split, real held-out metrics.",
-        "action": "Open the Network KPI page in the sidebar for a live view.",
+        "description": "4G traffic volume forecast, chronological split, real held-out metrics.",
+        "page": "pages/2_Network_KPI.py",
+        "page_label": "Open Network KPI",
     },
     {
         "name": "Customer Churn & Retention",
-        "icon": ":material/person:",
+        "icon": "person",
         "status_url": CHURN_API_URL,
         "description": "Prepaid subscriber churn risk, value tiers and reviewed retention offers.",
-        "action": f"[Open the Customer Churn app]({CHURN_APP_URL})",
+        "page": "pages/3_Customer_Churn.py",
+        "page_label": "Open Customer Churn",
+    },
+    {
+        "name": "AI Assistants",
+        "icon": "support_agent",
+        "status_url": CHURN_API_URL,
+        "description": "Customer chatbot and employee copilot, grounded only in the churn service.",
+        "page": "pages/4_Assistants.py",
+        "page_label": "Open Assistants",
     },
 ]
 
-columns = st.columns(3)
+columns = st.columns(4)
 for column, module in zip(columns, modules):
     with column:
-        status, detail = service_status(module["status_url"])
-        st.subheader(module["icon"] + " " + module["name"])
-        st.write(module["description"])
-        if status == "ok":
-            st.success("Reachable", icon=":material/check_circle:")
-        elif status == "unreachable":
-            st.warning("Unreachable - not running in this environment", icon=":material/warning:")
-        else:
-            st.info(f"Status: {status}", icon=":material/info:")
-        st.caption(module["action"])
+        status, _ = service_status(module["status_url"])
+        st.markdown(
+            f"""
+            <div class="lg-card">
+                <h3>:material/{module['icon']}: {module['name']}</h3>
+                {status_pill(status)}
+                <p class="lg-desc" style="margin-top:0.6rem;">{module['description']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.page_link(module["page"], label=module["page_label"], icon=":material/arrow_forward:")
 
 st.divider()
-st.subheader(":material/support_agent: Assistants")
-st.write(
-    "The customer chatbot and employee copilot both call the churn service directly "
-    "over its key-protected API; neither is embedded in this shell for the same reason "
-    "the churn app is linked rather than re-imported."
+st.caption(
+    "GIS and KPI pages call their own FastAPI services directly. The Customer Churn "
+    "and Assistants pages embed each module's own already-running Streamlit app - "
+    "same tested code, one shell. See document/PLATFORM_STATUS.md for exactly what's "
+    "wired versus still a standalone module."
 )
-left, right = st.columns(2)
-left.markdown(f"[Open the customer chatbot]({CHATBOT_APP_URL})")
-right.markdown(f"[Open the employee copilot]({COPILOT_APP_URL})")
