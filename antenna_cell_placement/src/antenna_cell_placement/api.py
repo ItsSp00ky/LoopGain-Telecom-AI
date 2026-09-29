@@ -4,9 +4,11 @@ This wraps `cli.py`'s public commands (`doctor`, `assess`, `map`) so the platfor
 shell can call GIS over HTTP the same way it already calls churn's API. It does not
 reimplement scoring: every route calls the same functions the CLI calls
 (`assess_coordinate`, `verify_sources`) or serves files an already-completed
-`recommend`/`all` run wrote under `integrated_release/`. Running a brand-new
-planning pass is a slow, data-heavy batch job (H3 grid + rooftops + maps), so it
-stays a CLI-only operation; this API only ever reads a run's finished output.
+`recommend`/`all` run wrote under `integrated_release_v3/` (the run that carries the
+real collected-data/reconciled-inventory integration; the earlier `integrated_release/`
+predates it and is not the default here). Running a brand-new planning pass is a
+slow, data-heavy batch job (H3 grid + rooftops + maps), so it stays a CLI-only
+operation; this API only ever reads a run's finished output.
 """
 
 import json
@@ -18,7 +20,7 @@ from fastapi.responses import FileResponse
 from antenna_cell_placement.placement import assess_coordinate
 from antenna_cell_placement.source_integrity import verify_sources, sha256
 
-DEFAULT_RUN_DIR = Path(__file__).resolve().parents[2] / "integrated_release"
+DEFAULT_RUN_DIR = Path(__file__).resolve().parents[2] / "integrated_release_v3"
 
 app = FastAPI(title="GIS Antenna Planning API", description=__doc__)
 
