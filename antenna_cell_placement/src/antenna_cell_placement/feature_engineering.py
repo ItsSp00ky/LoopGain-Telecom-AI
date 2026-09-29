@@ -148,10 +148,13 @@ class GeospatialFeatureExtractor:
         Vectorized feature extraction for an array of (lon, lat) coordinates.
         Supports both existing cell sites and arbitrary candidate points.
         """
-        self.load_layers()
-
         lons = np.asarray(lons, dtype=np.float64)
         lats = np.asarray(lats, dtype=np.float64)
+        if (lons.ndim != 1 or lats.ndim != 1 or lons.shape != lats.shape
+                or not len(lons) or not np.isfinite(lons).all() or not np.isfinite(lats).all()
+                or (np.abs(lons) > 180).any() or (np.abs(lats) > 90).any()):
+            raise ValueError("Expected non-empty, paired, finite longitude/latitude coordinates.")
+        self.load_layers()
         n = len(lons)
 
         # 1. Project to UTM Zone 33N (meters) for accurate Euclidean measurements
@@ -262,20 +265,16 @@ class GeospatialFeatureExtractor:
                 # k=2 because k=1 is self
                 dists, _ = self.site_tree_all.query(utm_coords, k=2)
                 dist_to_nearest_site_m = dists[:, 1].astype(np.float32)
-                # Query ball points minus self
-                for i in range(n):
-                    site_dens_1km[i] = max(0, len(self.site_tree_all.query_ball_point(utm_coords[i], 1000.0)) - 1)
-                    site_dens_3km[i] = max(0, len(self.site_tree_all.query_ball_point(utm_coords[i], 3000.0)) - 1)
-                    site_dens_5km[i] = max(0, len(self.site_tree_all.query_ball_point(utm_coords[i], 5000.0)) - 1)
-                    site_dens_10km[i] = max(0, len(self.site_tree_all.query_ball_point(utm_coords[i], 10000.0)) - 1)
             else:
                 dists, _ = self.site_tree_all.query(utm_coords, k=1)
                 dist_to_nearest_site_m = dists.astype(np.float32)
-                for i in range(n):
-                    site_dens_1km[i] = len(self.site_tree_all.query_ball_point(utm_coords[i], 1000.0))
-                    site_dens_3km[i] = len(self.site_tree_all.query_ball_point(utm_coords[i], 3000.0))
-                    site_dens_5km[i] = len(self.site_tree_all.query_ball_point(utm_coords[i], 5000.0))
-                    site_dens_10km[i] = len(self.site_tree_all.query_ball_point(utm_coords[i], 10000.0))
+
+            # Count in one batch per radius, without allocating lists of neighbor indices.
+            densities = []
+            for radius in (1000.0, 3000.0, 5000.0, 10000.0):
+                counts = self.site_tree_all.query_ball_point(utm_coords, radius, return_length=True)
+                densities.append(np.maximum(0, counts - int(is_existing_site)).astype(np.int32))
+            site_dens_1km, site_dens_3km, site_dens_5km, site_dens_10km = densities
 
             dist_to_libyana_m = nearest_operator_distance(self.site_tree_libyana, utm_coords, is_existing_site)
             dist_to_almadar_m = nearest_operator_distance(self.site_tree_almadar, utm_coords, is_existing_site)

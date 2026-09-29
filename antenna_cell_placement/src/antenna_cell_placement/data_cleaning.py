@@ -6,6 +6,7 @@ imputes operators, and clusters antennas into Physical Sites.
 
 import json
 import sqlite3
+from collections import deque
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
@@ -280,11 +281,11 @@ def consolidate_physical_sites(
             continue
         # Find all points within distance
         cluster = []
-        queue = [i]
+        queue = deque([i])
         visited.add(i)
 
         while queue:
-            curr = queue.pop(0)
+            curr = queue.popleft()
             cluster.append(curr)
             neighbors = tree.query_ball_point(coords[curr], threshold_m)
             for n in neighbors:
@@ -299,7 +300,7 @@ def consolidate_physical_sites(
 
     sites = []
     for site_idx, cluster in enumerate(site_clusters, start=1):
-        indices = cluster
+        indices = towers.index.take(cluster)
         towers.loc[indices, "physical_site_id"] = site_idx
 
         site_towers = towers.loc[indices]
@@ -307,9 +308,10 @@ def consolidate_physical_sites(
         centroid_lon = site_towers["longitude"].mean()
 
         # Compute distances to centroid
-        for idx in indices:
-            d_x = coords[idx, 0] - coords[cluster[0], 0]
-            d_y = coords[idx, 1] - coords[cluster[0], 1]
+        centroid = coords[cluster].mean(axis=0)
+        for position, idx in zip(cluster, indices):
+            d_x = coords[position, 0] - centroid[0]
+            d_y = coords[position, 1] - centroid[1]
             towers.loc[idx, "collocated_distance_m"] = round(float(np.sqrt(d_x**2 + d_y**2)), 2)
 
         rats = sorted(list(site_towers["rat"].unique()))

@@ -89,6 +89,8 @@ def load_regional_features(
         radar[column] = pd.to_numeric(radar[column], errors="coerce")
     if radar[list(numeric_columns)].isna().any().any():
         raise ValueError("Cloudflare regional features contain non-numeric values")
+    if not np.isfinite(radar[list(numeric_columns)].to_numpy()).all():
+        raise ValueError("Cloudflare regional features contain non-finite values")
     if (radar["http_requests_share_52w_pct"] < 0).any():
         raise ValueError("Cloudflare annual HTTP request shares cannot be negative")
 
@@ -132,6 +134,7 @@ def add_regional_features(
             on=municipality_column,
             validate="many_to_one",
         )
+        result.index = frame.index
     else:
         for column in OUTPUT_COLUMNS:
             result[column] = np.nan
