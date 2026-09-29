@@ -10,6 +10,8 @@ Both follow the same rule: the language model only picks a tool and phrases what
 Every package, price, offer and figure comes from the prepaid service or a teammate's published output, and code, not the prompt, stops anything else from reaching the reader.
 The reasons are in decisions 54 (both) and 55 (the copilot) of [../prepaid_churn/docs/decisions.md](../prepaid_churn/docs/decisions.md).
 
+**To start the copilot or the chatbot on your laptop, follow [TEAM_GUIDE.md](TEAM_GUIDE.md).**
+
 ## Run the chatbot
 
 The settings live in `.env` in this folder, which is git-ignored, so they survive a new terminal.

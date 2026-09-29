@@ -34,7 +34,7 @@ The repository is organized into four modular AI subsystems:
 ├── 1. customer_churn_prediction/     [✅ OPERATIONAL]
 │   └── Customer Churn Prediction & Retention Discount Engine
 │
-├── 2. assistants/                     [🚧 IN PROGRESS]
+├── 2. assistants/                     [✅ BUILT]
 │   └── Customer Chatbot & Employee Copilot, grounded on the team's outputs
 │
 ├── 3. antenna_cell_placement/         [✅ OPERATIONAL]
@@ -55,9 +55,10 @@ The repository is organized into four modular AI subsystems:
 - **Documentation**: See [`customer_churn_prediction/README.md`](customer_churn_prediction/README.md) and the comprehensive [`Technical Report`](customer_churn_prediction/TECHNICAL_REPORT.md).
 
 ### 2. [Customer Chatbot & Employee Copilot](assistants/)
-- **Status**: **Customer chatbot built; employee copilot next**
-- **Objective**: Two assistants in one look. The customer chatbot answers which of the operator's packages fit a prepaid customer and whether the operator approved an offer for them; the employee copilot will answer questions about customers at risk, the GIS shortlist and the network forecasts, with sources.
+- **Status**: **Customer chatbot and employee copilot built**
+- **Objective**: Two assistants in one look. The customer chatbot answers which of the operator's packages fit a prepaid customer and whether the operator approved an offer for them; the employee copilot alerts on towers in trouble, answers about towers, the GIS shortlist and customers at risk with sources, and drafts work orders that only an employee can confirm.
 - **Grounding**: The language model only picks a tool and phrases what came back; code checks every reply, so no price, offer or figure appears that a tool did not return.
+- **Start it on your laptop**: [`assistants/TEAM_GUIDE.md`](assistants/TEAM_GUIDE.md), step by step for every team member.
 - **Documentation**: See [`assistants/README.md`](assistants/README.md).
 
 ### 3. [AI Antenna Cell Site Placement Optimization](antenna_cell_placement/)
