@@ -25,39 +25,49 @@ An integrated suite of Artificial Intelligence systems engineered for telecommun
 
 ## 🌐 Platform Architecture
 
-The repository is organized into three modular AI subsystems:
+Four modules, each built independently, now run behind one Streamlit shell
+(`platform_app/`) and are started together with one command
+(`python3 run_platform.py`). See [`document/PLATFORM_STATUS.md`](document/PLATFORM_STATUS.md)
+for exactly what's wired up versus still a standalone module.
 
 ```
-├── 1. customer_churn_prediction/     [✅ OPERATIONAL]
-│   └── Customer Churn Prediction & Retention Discount Engine
-│
-├── 2. customer_support_chatbot/       [⏳ PLANNED]
-│   └── Intelligent AI Customer Support Chatbot for Telecom Users
-│
-└── 3. antenna_cell_placement/         [✅ OPERATIONAL]
-    └── Geospatial AI for Optimal Cellular Antenna Site Placement
+├── antenna_cell_placement/    [✅ OPERATIONAL] GIS antenna site planning, own FastAPI (api.py)
+├── network_kpi_prediction/    [✅ OPERATIONAL] Network KPI forecasting, own FastAPI (api.py)
+├── prepaid_churn/             [✅ OPERATIONAL] Customer churn/retention, own FastAPI + Streamlit
+├── assistants/                [✅ OPERATIONAL] Customer chatbot + employee copilot (call prepaid_churn's API)
+├── traffic_steering_son/      [✅ OPERATIONAL] Congestion detection & mobility load balancing
+└── platform_app/              [✅ NEW] Shared Streamlit shell landing on all of the above
 ```
+
+> **Superseded, not deleted**: `customer_churn_prediction/`, `customer_support_chatbot/`
+> and `kpi_prediction/` are earlier, unreviewed precursors to `prepaid_churn/`,
+> `assistants/` and `network_kpi_prediction/` respectively (nothing in the platform
+> imports them - verified by grep before writing this). They're kept in git history
+> rather than removed in this pass; ask before relying on anything inside them.
 
 ---
 
 ## 🚀 Subsystems Overview
 
-### 1. [Customer Churn Prediction & Retention Discount Engine](customer_churn_prediction/)
-- **Status**: **Operational & Production Ready**
-- **Objective**: Predicts customer churn risk with **0.9280 Test ROC-AUC** and **0.8561 PR-AUC** using CUDA-accelerated gradient boosting on NVIDIA GPUs.
-- **Business Retention Engine**: Translates churn risk and account telemetry into margin-preserving marketing offers (`Offer A` through `Offer E`), contract lock-in agreements, and overage fee waivers, projecting **+$917,265.70** in net saved revenue.
-- **Documentation**: See [`customer_churn_prediction/README.md`](customer_churn_prediction/README.md) and the comprehensive [`Technical Report`](customer_churn_prediction/TECHNICAL_REPORT.md).
+### 1. [GIS Antenna Site Planning](antenna_cell_placement/)
+- **Status**: **Operational**, explainable scoring (not black-box ML) is the default and requires no ML dependencies.
+- **Objective**: Explainable priority scoring over corrected terrain, population, road and rooftop features for new cell site candidates in Libya, with a source-integrity check before every run (`antenna-placement doctor`).
+- **API**: `antenna_cell_placement/src/antenna_cell_placement/api.py` — `/health`, `/shortlist`, `/rooftops`, `/map`, `/assess`.
+- **Documentation**: See [`antenna_cell_placement/document/`](antenna_cell_placement/document/), especially `INTEGRATED_PLANNING.md`.
 
-### 2. [Telecom Customer Support AI Chatbot](customer_support_chatbot/)
-- **Status**: **Planned / In Development**
-- **Objective**: A conversational AI assistant designed for telecommunications subscribers to query package details, troubleshoot connectivity, resolve billing questions, and receive personalized promotional offers.
+### 2. [Network KPI Forecasting](network_kpi_prediction/)
+- **Status**: **Operational** for 4G traffic volume forecasting; two further pipelines (`cellular_kpi_forecast/`, `erbs_node_analytics/`) ship in this module but are not yet wired to the platform API.
+- **Objective**: Chronological (not random) train/val/test split, a real multi-model benchmark (Ridge, Random Forest, XGBoost, seasonal-naive baseline), and a forecast with 80%/95% intervals from the retrained champion.
+- **API**: `network_kpi_prediction/api.py` — `/health`, `/traffic/{horizon_days}day`.
 
-### 3. [AI Antenna Cell Site Placement Optimization](antenna_cell_placement/)
-- **Status**: **Operational & Production Ready**
-- **Objective**: Geospatial machine learning system predicting optimal geographic locations for deploying new cellular antenna towers across Libya with **0.9862 ROC-AUC** and **0.9794 PR-AUC**.
-- **Geospatial & Demographic Intelligence**: Fuses crowdsourced cellular radio telemetry with WorldPop 1km gridded population density, SRTM 250m Digital Elevation Model (topography/prominence), UN OCHA road transportation networks, and Libyan administrative boundaries.
-- **Optimization Engine**: Identifies unserved coverage gaps, ranks the Top 50 prioritized new site deployments, and recommends equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
-- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md), the comprehensive [`Technical Report`](antenna_cell_placement/TECHNICAL_REPORT.md), and the [`Telecom GIS, RF & AI Planning Roadmap`](antenna_cell_placement/TELECOM_GIS_RF_AI_ROADMAP.md).
+### 3. [Customer Churn & Retention](prepaid_churn/)
+- **Status**: **Operational**, the only module with its own pre-existing FastAPI + Streamlit + key-protected access control.
+- **Objective**: Prepaid subscriber churn risk, value tiers and named-reviewer-approved retention offers, in Libyan dinar.
+- **Documentation**: See [`prepaid_churn/README.md`](prepaid_churn/README.md) and [`prepaid_churn/docs/`](prepaid_churn/docs/).
+
+### 4. [Customer Chatbot & Employee Copilot](assistants/)
+- **Status**: **Operational**, calls `prepaid_churn`'s API only; no language model sets an offer, a price or a limit.
+- **Documentation**: See [`assistants/README.md`](assistants/README.md).
 
 ---
 
@@ -65,81 +75,53 @@ The repository is organized into three modular AI subsystems:
 
 ```
 LoopGain-Telecom-AI/
-├── README.md                          # Master Project Documentation & Team Directory
-├── .gitignore                         # Global exclusion rules
-│
-├── customer_churn_prediction/         # Module 1: Customer Churn & Retention Engine
-│   ├── README.md                      # Detailed Churn Module Documentation
-│   ├── TECHNICAL_REPORT.md            # Churn Modeling & Value Engine Specification
-│   ├── pyproject.toml                 # uv Package Config & CLI entry points
-│   ├── uv.lock                        # Deterministic dependency lockfile
-│   ├── churn_datasets/                # Telecom datasets (Maven Telecom, IBM, Cell2Cell)
-│   ├── models/                        # Serialized champion model artifacts
-│   ├── eval_reports/                  # ROC, PR, and feature importance charts
-│   └── src/customer_churn_prediction/ # Feature engineering, trainers & discount engine
-│
-├── customer_support_chatbot/          # Module 2: Telecom Customer Chatbot (Planned)
-│   ├── README.md                      # Module Overview
-│   └── src/customer_support_chatbot/  # Chatbot source package
-│
-└── antenna_cell_placement/            # Module 3: Antenna Placement AI
-    ├── README.md                      # Detailed Antenna Module Documentation
-    ├── TECHNICAL_REPORT.md            # Comprehensive Engineering & Decisioning Report
-    ├── TELECOM_GIS_RF_AI_ROADMAP.md   # Telecom GIS, RF & AI Planning Roadmap
-    ├── pyproject.toml                 # uv Package Config & CLI entry points
-    ├── uv.lock                        # Deterministic dependency lockfile
-    ├── Libyan_cells_dataset/          # Raw crowdsourced telecom datasets
-    ├── data/                          # Geospatial data (DEM, WorldPop, Roads, Admin, Radar)
-    ├── models/                        # Champion AI Models (LightGBM & RF)
-    ├── eval_reports/                  # Coverage maps, ROC curves & recommendations
-    └── src/antenna_cell_placement/    # Geospatial AI pipeline package
+├── README.md                    # This file
+├── run_platform.py              # Starts every backend + the shared shell with one command
+├── platform_app/                # Shared Streamlit shell (Home + GIS/KPI pages, links to churn/assistants)
+├── antenna_cell_placement/      # GIS module: pipeline, api.py, document/ (INTEGRATED_PLANNING.md etc.)
+├── network_kpi_prediction/      # KPI module: three pipelines, api.py wraps traffic_volume_forecast
+├── prepaid_churn/                # Churn module: pipeline, its own api.py + app/, docs/
+├── assistants/                   # Customer chatbot + employee copilot, call prepaid_churn's API
+├── traffic_steering_son/         # Congestion detection & mobility load balancing
+└── customer_churn_prediction/, customer_support_chatbot/, kpi_prediction/
+                                   # Superseded precursors, kept in history, not part of the platform
 ```
+
+Each module keeps its own `pyproject.toml`/`uv.lock` (or `requirements.txt` for
+`network_kpi_prediction/`) and its own tests; see each module's own README for how to
+work on it directly.
 
 ---
 
-## ⚡ Quick Start: Customer Churn System
+## ⚡ Run the platform
 
-To run the operational Customer Churn and Retention engine:
-
-```bash
-# Navigate to the churn module
-cd customer_churn_prediction
-
-# Sync dependencies using uv
-uv sync
-
-# Train the champion model using CUDA GPU acceleration:
-uv run customer-churn-prediction train
-
-# Evaluate model performance and generate visualization charts:
-uv run customer-churn-prediction evaluate
-
-# Score an individual customer and generate tailored retention offers:
-uv run customer-churn-prediction recommend --customer-id 0004-TLHLJ
-
-# Export full batch retention campaign targets to CSV:
-uv run customer-churn-prediction batch-recommend --output retention_campaign_targets.csv
-```
-
----
-
-## 📡 Quick Start: Antenna Cell Placement AI
-
-To run the geospatial cell placement optimization engine:
+One command starts every backend and the shared shell:
 
 ```bash
-# Navigate to the antenna placement module
-cd antenna_cell_placement
-
-# Sync dependencies using uv
-uv sync
-
-# Run the end-to-end data cleaning, feature engineering, and model training:
-uv run antenna-placement all
-
-# Predict placement suitability and recommended equipment for any custom coordinate:
-uv run antenna-placement predict --lat 32.88 --lon 13.18
+python3 run_platform.py
 ```
+
+This starts, each in its own process on its own port:
+
+| Service | Port | Needs |
+|---|---|---|
+| GIS API | 8001 | nothing extra |
+| KPI API | 8002 | nothing extra |
+| Platform shell | 8510 | nothing extra — **open this one** |
+| Churn API | 8000 | `PREPAID_CHURN_CHATBOT_KEY` + `PREPAID_CHURN_COPILOT_KEY` env vars |
+| Churn demo app | 8501 | same as above |
+| Customer chatbot | 8503 | same as above, plus its own `.env` (see `assistants/README.md`) |
+| Employee copilot | 8502 | same as above |
+
+Without the two churn keys set, the launcher still starts GIS, KPI and the shell and
+prints which services it skipped — nothing crashes for their absence. Set the keys
+(see [`assistants/README.md`](assistants/README.md)) to bring up the full seven-service
+platform. Press Ctrl+C to stop everything the launcher started.
+
+Working on one module only? Each module's own Quick Start still works standalone —
+see [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md),
+[`network_kpi_prediction/README.md`](network_kpi_prediction/README.md) and
+[`prepaid_churn/README.md`](prepaid_churn/README.md).
 
 ---
 
