@@ -39,7 +39,13 @@ def main(argv=None):
         "--output-dir",
         type=str,
         default=os.path.join(_REPO_ROOT, "plots"),
-        help="Directory to save generated plots (default: ./plots)"
+        help="Directory to save core overview plots (default: ./plots)"
+    )
+    parser.add_argument(
+        "--artifacts-dir",
+        type=str,
+        default=os.path.join(_REPO_ROOT, "artifacts"),
+        help="Directory to save standalone artifacts and index manifest (default: ./artifacts)"
     )
     parser.add_argument(
         "--dpi",
@@ -102,6 +108,7 @@ def main(argv=None):
     if args.carrier is None and args.kpi is None:
         generate_all_plots(
             output_dir=args.output_dir,
+            artifacts_dir=args.artifacts_dir,
             dpi=args.dpi,
             clean_csv_path=clean_csv,
             forecast_csv_path=forecast_csv,
@@ -119,13 +126,15 @@ def main(argv=None):
         target_carriers = [args.carrier] if args.carrier else CARRIER_BANDS
         target_kpis = [args.kpi] if args.kpi else KPI_KEYS
 
+        # Save decoupled single plots into artifacts/plots/individual
+        indiv_base = os.path.join(args.artifacts_dir, "plots", "individual")
         for c in target_carriers:
-            c_dir = os.path.join(args.output_dir, f"carrier_{c}")
+            c_dir = os.path.join(indiv_base, f"carrier_{c}")
             os.makedirs(c_dir, exist_ok=True)
             for k in target_kpis:
                 out_p = os.path.join(c_dir, f"{k}.png")
                 plot_single_kpi(c, k, hist_df, fc_df, m_dict, out_path=out_p, dpi=args.dpi)
-                print(f"[+] Saved: {out_p}")
+                print(f"[+] Saved standalone artifact: {out_p}")
 
 
 if __name__ == "__main__":

@@ -62,7 +62,6 @@ Common Commands:
   train                Stage 2: Feature engineering, model benchmarking & forecasts
   plot                 Stage 3: Publication-grade 300-DPI visual figure generation
   predict              Live inference or precomputed lookup with 90% confidence ribbons
-  test                 Execute automated unit test suite across pipelines
 
 Examples:
   # ERBS node intelligence & Spatial GNN workflows:
@@ -81,39 +80,8 @@ Examples:
   python run_pipeline.py train --dataset summer --horizon-days 60
   python run_pipeline.py plot --carrier 3500 --kpi dl_throughput_mbps
   python run_pipeline.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7
-
-  # Run full automated test suite:
-  python run_pipeline.py test
 ================================================================================
 """)
-
-
-def run_all_tests() -> int:
-    print("=" * 80)
-    print("Running Full Network-ML Test Suite across All Pipelines...")
-    print("=" * 80)
-
-    # 1. Cellular tests
-    print("\n[1/3] Running 3GPP Cellular KPI Pipeline Tests...")
-    cellular_entry = os.path.join(_CELLULAR_PKG, "run_cellular.py")
-    res_cellular = subprocess.run([sys.executable, cellular_entry, "test"], cwd=_CELLULAR_PKG)
-
-    # 2. Traffic tests
-    print("\n[2/3] Running 4G Traffic Volume Prediction Tests...")
-    traffic_entry = os.path.join(_TRAFFIC_PKG, "run_traffic.py")
-    res_traffic = subprocess.run([sys.executable, traffic_entry, "test"], cwd=_TRAFFIC_PKG)
-
-    # 3. ERBS Node Intelligence tests
-    print("\n[3/3] Running Physical ERBS Node Intelligence Tests...")
-    erbs_test_entry = os.path.join(_ERBS_PKG, "tests", "test_erbs_analytics.py")
-    res_erbs = subprocess.run([sys.executable, erbs_test_entry], cwd=_ERBS_PKG)
-
-    exit_code = 0 if (res_cellular.returncode == 0 and res_traffic.returncode == 0 and res_erbs.returncode == 0) else 1
-    print("\n" + "=" * 80)
-    status_str = "ALL TEST SUITES PASSED" if exit_code == 0 else "ONE OR MORE TEST SUITES FAILED"
-    print(f"Test Execution Result: {status_str}")
-    print("=" * 80)
-    return exit_code
 
 
 def main() -> int:
@@ -205,9 +173,6 @@ def main() -> int:
             print("[!] Flag --pipeline requires an argument ('cellular', 'traffic', or 'all').", file=sys.stderr)
             return 1
 
-    # If test command is passed without explicit pipeline, run tests for both!
-    if args == ["test"] and not explicit_pipeline:
-        return run_all_tests()
 
     if target_pkg is None:
         # Run across all pipelines

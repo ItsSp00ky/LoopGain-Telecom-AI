@@ -33,6 +33,11 @@ network_kpi_prediction/
 │   ├── erbs_cell_kpi_summer_120d.csv      # Summer 120-day high-density ERBS telemetry (125,779 rows)
 │   └── erbs_cell_kpi_full_year.csv        # Full-year cell-level telemetry (1,067 ERBS, 378,631 rows)
 │
+├── artifacts/                             # Decoupled Standalone Artifacts & Manifests
+│   ├── individual_plots_index.csv         # Standalone series index manifest (60 KPIs)
+│   ├── individual_plots_index.json        # Machine-readable JSON manifest
+│   └── plots/individual/                  # 60 standalone carrier-KPI series plots
+│
 ├── erbs_node_analytics/                  # Physical ERBS Base Station Intelligence & ST-GNN
 │   ├── run_erbs_analytics.py              # Subsystem CLI orchestrator (audit, gnn, inspect)
 │   ├── src/
@@ -44,7 +49,7 @@ network_kpi_prediction/
 │   │   ├── gnn_visualizer.py              # Adjacency heatmap, spillover CDF, attention graphs
 │   │   ├── visualizer.py                  # 300-DPI publication figures
 │   │   └── export_synergy.py              # Cross-subsystem bridge dataset exports
-│   └── tests/                             # Unit tests for ERBS intelligence & GNN
+│   └── plots/                             # Generated ERBS publication figures
 │
 ├── cellular_kpi_forecast/                 # 3GPP Rel-17 Multi-Band Cellular Pipeline (60 Series)
 │   ├── run_cellular.py                    # Pipeline CLI orchestrator
@@ -60,10 +65,7 @@ network_kpi_prediction/
 │   │   ├── temporal_splitting.py          # Chronological train/val/test splitting
 │   │   ├── visualization.py              # 300-DPI publication plot engine
 │   │   └── report_export.py              # MD/JSON/CSV export generators
-│   ├── tests/                             # Unit & integration tests
-│   ├── data/                              # Runtime data (generated)
-│   ├── models/                            # Serialized model bundles (generated)
-│   └── plots/                             # Plot images (generated)
+│   └── plots/                             # Grids, multiband, and benchmark figures
 │
 ├── traffic_volume_forecast/               # 4G Network Traffic Volume Pipeline
 │   ├── run_traffic.py                     # Pipeline orchestrator
@@ -71,11 +73,9 @@ network_kpi_prediction/
 │   │   ├── data_cleaning.py              # Traffic data cleaning & anomaly treatment
 │   │   ├── feature_engineering.py         # Time features & dataset preparation
 │   │   ├── model_definitions.py           # Multi-model benchmarking & forecasting
-│   │   ├── visualization.py              # Traffic plot generation
+│   │   ├── visualization.py              # Consolidated 3-panel traffic diagnostic plots
 │   │   └── temporal_splitting.py          # Chronological splitting
-│   ├── tests/                             # Traffic pipeline tests
-│   ├── data/                              # Runtime data (generated)
-│   └── plots/                             # Plot images (generated)
+│   └── plots/                             # Plot images (traffic_diagnostic_overview.png)
 ```
 
 ---
@@ -97,18 +97,13 @@ python run_pipeline.py traffic-multi            # Benchmark multivariate exogeno
 ### Run the Cellular KPI Pipeline (Default)
 ```bash
 python run_pipeline.py train                    # Train models + generate 365-day forecasts
-python run_pipeline.py plot                     # Generate all 78 publication plots
+python run_pipeline.py plot                     # Generate master grids, multiband comparisons, and manifest
 python run_pipeline.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7
 ```
 
 ### Run the Traffic Volume Pipeline
 ```bash
 python run_pipeline.py --pipeline traffic       # Full end-to-end execution
-```
-
-### Run Full Automated Test Suite
-```bash
-python run_pipeline.py test                     # Runs all 57 automated tests across cellular, traffic, and ERBS/GNN engines
 ```
 
 ### Inspect & Profile All Datasets
