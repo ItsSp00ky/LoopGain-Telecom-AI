@@ -252,6 +252,11 @@ def test_bold_tower_names_lose_the_code_box_around_them(copilot_data):
     assert _answer("Status of DOWN1M1", complete).reply == "What is wrong with **DOWN1M1**:"
 
 
+def test_an_action_name_in_a_code_box_reads_as_words(copilot_data):
+    complete, _ = _scripted(("tower_status", {"tower": "DOWN1M1"}), "A `remote_check` would help.")
+    assert _answer("Status of DOWN1M1", complete).reply == "A remote check would help."
+
+
 def test_a_phone_number_is_removed_before_the_model_sees_it(copilot_data):
     complete, seen = _scripted(("portfolio_summary", {}), "I can only look up subscriber IDs.")
     turn = _answer("Who is 091 234 5678?", complete)

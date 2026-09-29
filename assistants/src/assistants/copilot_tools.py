@@ -495,6 +495,9 @@ def answer(
     if not drafts and _ASKS_FOR_WORK_ORDER.search(prompt):
         after.append(NO_DRAFT_NOTICE[arabic])
     reply = _BOLD_IN_CODE.sub(r"\1", turn.reply)
+    # An action's internal name in a code box ("`remote_check`") reads as plain words.
+    for action in work_orders.ACTIONS:
+        reply = reply.replace(f"`{action}`", action.replace("_", " "))
     return replace(turn, reply="\n\n".join([*before, reply, *after]))
 
 

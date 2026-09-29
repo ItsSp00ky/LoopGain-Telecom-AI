@@ -16,6 +16,12 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 Close and reopen the terminal afterwards so `uv` is found.
 
 **The code, on the `tahaDev` branch.**
+Some dataset paths in the repository are long, and Windows refuses paths over 260 characters unless Git is told to allow them; run this once:
+
+```powershell
+git config --global core.longpaths true
+```
+
 If you do not have the repository yet:
 
 ```powershell
