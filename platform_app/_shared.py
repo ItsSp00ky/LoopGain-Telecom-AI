@@ -15,7 +15,7 @@ KPI_API_URL = os.environ.get("PLATFORM_KPI_API_URL", "http://127.0.0.1:8002")
 CHURN_API_URL = os.environ.get("PLATFORM_CHURN_API_URL", "http://127.0.0.1:8000")
 CHURN_APP_URL = os.environ.get("PLATFORM_CHURN_APP_URL", "http://127.0.0.1:8501")
 CHATBOT_APP_URL = os.environ.get("PLATFORM_CHATBOT_APP_URL", "http://127.0.0.1:8503")
-COPILOT_APP_URL = os.environ.get("PLATFORM_COPILOT_APP_URL", "http://127.0.0.1:8504")
+COPILOT_APP_URL = os.environ.get("PLATFORM_COPILOT_APP_URL", "http://127.0.0.1:8502")
 
 
 def configure(title: str, icon: str = "satellite"):
