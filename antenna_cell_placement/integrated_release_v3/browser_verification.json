@@ -1,0 +1,40 @@
+{
+  "browser": "153.0.4234.48",
+  "externalRequests": [],
+  "results": [
+    {
+      "file": "index.html",
+      "info": null,
+      "jsErrors": [],
+      "missingLocalAssets": []
+    },
+    {
+      "file": "planning_map.html",
+      "info": {
+        "center": {
+          "lat": 32.703653630000005,
+          "lng": 13.17178168
+        },
+        "zoom": 10,
+        "paths": 4373,
+        "tooltipVerified": true
+      },
+      "jsErrors": [],
+      "missingLocalAssets": []
+    },
+    {
+      "file": "rooftop_candidates_map.html",
+      "info": {
+        "center": {
+          "lat": 32.85,
+          "lng": 13.25
+        },
+        "zoom": 11,
+        "paths": 4344,
+        "tooltipVerified": true
+      },
+      "jsErrors": [],
+      "missingLocalAssets": []
+    }
+  ]
+}

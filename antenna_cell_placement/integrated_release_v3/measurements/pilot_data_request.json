@@ -1,0 +1,410 @@
+{
+  "pilot_h3_r7": "87384b2d0ffffff",
+  "selection_basis": "training measurements only",
+  "source_sha256": {
+    "Libyan_cells_dataset/cells.sqlite3": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06",
+    "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134",
+    "data/new_data/2026-09-26-17-13-40.csv": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e",
+    "data/new_data/2026-09-26-17-13-48.csv": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d",
+    "data/new_data/2026-09-28-15-41-22.csv": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a"
+  },
+  "measured_cell_identities": [
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "LTE",
+      "lac": 2120,
+      "cell_id": 505603,
+      "training_samples": 4,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2107646,
+      "training_samples": 2,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2110185,
+      "training_samples": 3,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2110187,
+      "training_samples": 7,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2110188,
+      "training_samples": 10,
+      "training_days": 2
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2115363,
+      "training_samples": 4,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2115366,
+      "training_samples": 8,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2116903,
+      "training_samples": 12,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2116905,
+      "training_samples": 8,
+      "training_days": 2
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2116906,
+      "training_samples": 4,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2116908,
+      "training_samples": 25,
+      "training_days": 2
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2147648,
+      "training_samples": 13,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2159694,
+      "training_samples": 1,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2159697,
+      "training_samples": 2,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 0,
+      "net_type": "UMTS",
+      "lac": 2120,
+      "cell_id": 2159887,
+      "training_samples": 12,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1179905,
+      "training_samples": 12,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1190920,
+      "training_samples": 7,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1190921,
+      "training_samples": 8,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1198081,
+      "training_samples": 2,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1198083,
+      "training_samples": 1,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1201410,
+      "training_samples": 1,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1201413,
+      "training_samples": 4,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1201416,
+      "training_samples": 1,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1241857,
+      "training_samples": 19,
+      "training_days": 2
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1241859,
+      "training_samples": 4,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1241860,
+      "training_samples": 1,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1260546,
+      "training_samples": 13,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1260547,
+      "training_samples": 6,
+      "training_days": 2
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1260552,
+      "training_samples": 9,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1260555,
+      "training_samples": 4,
+      "training_days": 2
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "LTE",
+      "lac": 4081,
+      "cell_id": 1260562,
+      "training_samples": 11,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19955659,
+      "training_samples": 6,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19955667,
+      "training_samples": 27,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19955669,
+      "training_samples": 28,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19955676,
+      "training_samples": 14,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19955680,
+      "training_samples": 26,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19957811,
+      "training_samples": 1,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19959376,
+      "training_samples": 20,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19959597,
+      "training_samples": 30,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 1,
+      "net_type": "UMTS",
+      "lac": 308,
+      "cell_id": 19960326,
+      "training_samples": 3,
+      "training_days": 1
+    },
+    {
+      "mcc": 606,
+      "mnc": 3,
+      "net_type": "LTE",
+      "lac": 50354,
+      "cell_id": 25871875,
+      "training_samples": 2,
+      "training_days": 1
+    }
+  ],
+  "requested_asset_fields": [
+    "sites.latitude",
+    "sites.longitude",
+    "sites.coordinate_accuracy_m",
+    "sites.surveyed_at_utc",
+    "survey_checkpoints.csv",
+    "sectors.radio",
+    "sectors.mcc",
+    "sectors.mnc",
+    "sectors.area",
+    "sectors.cell",
+    "sectors.frequency_mhz",
+    "sectors.bandwidth_mhz",
+    "sectors.azimuth_deg",
+    "sectors.mechanical_tilt_deg",
+    "sectors.electrical_tilt_deg",
+    "sectors.height_m",
+    "sectors.tx_power_dbm",
+    "sectors.feeder_loss_db",
+    "antenna_catalog.gain_dbi",
+    "antenna_catalog.pattern_reference"
+  ],
+  "field_work": [
+    "repeat pilot routes on additional days for both operators",
+    "record serving-cell identities and explicit signal metric types",
+    "independently survey conflicting site locations"
+  ],
+  "limits": "These identities are a collection target, not a complete network inventory."
+}

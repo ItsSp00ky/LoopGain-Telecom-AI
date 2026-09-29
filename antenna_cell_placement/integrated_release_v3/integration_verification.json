@@ -1,0 +1,13 @@
+{
+  "artifact_hashes_match": true,
+  "strict_constraints_hold": true,
+  "batch_assess_score_matches": true,
+  "missing_optional_osm_assess_passed": true,
+  "primary_has_no_ml_columns": true,
+  "footprint_coordinates_inside_geometry": true,
+  "known_footprint_heights": 0,
+  "owner_confirmed_almadar_records": 645,
+  "candidate_count": 2223,
+  "eligible_count": 162,
+  "shortlist_count": 20
+}

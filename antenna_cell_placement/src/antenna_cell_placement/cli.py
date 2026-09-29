@@ -7,7 +7,13 @@ import sys
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in ('service-review', 'inventory-build', 'evidence-review'):
+        return evidence_command(argv)
     if argv and argv[0] == 'experimental':
+        if len(argv) > 1 and argv[1] == 'foreign-rf':
+            from antenna_cell_placement.foreign_rf import evaluate_foreign_rf_benchmark
+            print(json.dumps(evaluate_foreign_rf_benchmark(), indent=2))
+            return 0
         if len(argv) > 1 and argv[1] == 'compare':
             return experimental_compare(argv[2:])
         from antenna_cell_placement.legacy_cli import main as research_main
@@ -15,6 +21,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Integrated antenna planning priorities for engineering review')
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('doctor', help='Verify required input hashes and optional source availability')
+    sub.add_parser('service-review', help='Source-verified handset service map and chronological pilot; --output-dir DIR')
+    sub.add_parser('inventory-build', help='Build a new reconciled source inventory; --output-dir DIR')
+    sub.add_parser('evidence-review', help='Audit official population and technology statistics; --output-dir DIR')
     for command in ('recommend', 'all'):
         plan = sub.add_parser(command, help='Run corrected GIS, explainable ranking, comparisons and offline maps')
         plan.add_argument('--output-dir', type=Path)
@@ -56,6 +65,27 @@ def main(argv=None):
         from antenna_cell_placement.planning_pipeline import run_planning
         constraints = PlanningConstraints(args.min_gap_m, args.min_population, args.max_road_m, args.separation_m, args.top_k)
         run_planning(args.output_dir, args.scope, args.operator, args.resolution, constraints, not args.no_rooftops)
+    return 0
+
+
+def evidence_command(argv):
+    parser = argparse.ArgumentParser(description='Audited evidence; preserves historical releases')
+    parser.add_argument('command', choices=['service-review','inventory-build','evidence-review'])
+    parser.add_argument('--output-dir', required=True, type=Path)
+    parser.add_argument('--planning-run', type=Path)
+    args = parser.parse_args(argv)
+    from antenna_cell_placement.service_review import verify_collections, run_service_review
+    verify_collections()
+    if args.command == 'service-review':
+        report = run_service_review(args.output_dir, args.planning_run)
+    elif args.command == 'inventory-build':
+        from antenna_cell_placement.collected_inventory import build_inventory
+        report = build_inventory(args.output_dir)
+    else:
+        from antenna_cell_placement.public_evidence import evaluate_public_evidence
+        args.output_dir.mkdir(parents=True, exist_ok=False)
+        report = evaluate_public_evidence(output_path=args.output_dir/'public_evidence.json')
+    print(json.dumps(report, indent=2, allow_nan=False))
     return 0
 
 

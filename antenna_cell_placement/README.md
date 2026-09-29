@@ -6,7 +6,7 @@ The public planner combines **Mahalm’s corrected GIS and inventory provenance*
 
 ## Open the combined demo
 
-Open [integrated_release/index.html](integrated_release/index.html) locally in Chrome or Edge. Maps, assets, CSVs and screenshots work offline. GitHub’s HTML source view does not execute a map.
+Open [integrated_release_v3/index.html](integrated_release_v3/index.html) locally in Chrome or Edge. Maps, assets, CSVs and screenshots work offline. GitHub’s HTML source view does not execute a map.
 
 The earlier [submission demo](submission/index.html) is preserved as a historical release. Its experimental ML multiplier and old shortlist are not the integrated planner’s outputs.
 
@@ -26,7 +26,7 @@ uv run antenna-placement map --run-dir eval_reports/my_integrated_run
 
 Download scripts use portable exclusive locks, temporary files and the reviewed SHA256 hashes. WorldCover is required for water screening; OSM buildings/POIs are optional review context. The source lock also identifies the required inventory, WorldPop, terrain and OCHA files. `doctor` explains absent or changed inputs before processing. New run directories are required; an existing run is never silently overwritten.
 
-`recommend` and `all` now run the same integrated workflow, including maps, comparisons and footprint review. `predict` is an alias for explainable coordinate assessment. Add `--operator almadar` or `--operator libyana` for a scope-specific known-site gap; the default is all networks. Other operator labels include historical inference and are not all independently confirmed.
+`recommend` and `all` now run the same integrated workflow, including maps, comparisons, footprint review, operator/technology measurement layers, the chronological pilot and the official-statistics audit. `predict` is an alias for explainable coordinate assessment. Add `--operator almadar` or `--operator libyana` for a scope-specific known-site gap; the default is all networks. The new inventory uses explicit network identity and the source-scoped owner confirmation; remaining unknown identities are not inferred from nearby sites.
 
 `--scope national` generates geodesic settlement rings and sampled road locations. It is a proposal search, not an exhaustive national H3 search or a claim of nationwide deployment readiness. The release demonstration is Tripoli.
 
@@ -55,7 +55,7 @@ The default install contains no LightGBM or scikit-learn. To reproduce research 
 
 ```powershell
 uv sync --locked --extra research
-uv run --extra research antenna-placement experimental compare --run-dir integrated_release --model eval_reports/phase2_v2_run2/suitability_gis_v2.joblib --output-dir eval_reports/my_ml_comparison
+uv run --extra research antenna-placement experimental compare --run-dir integrated_release_v3 --model eval_reports/phase2_v2_run2/suitability_gis_v2.joblib --output-dir eval_reports/my_ml_comparison
 uv run --extra research antenna-placement experimental train-experiment --output-dir eval_reports/new_experiment
 uv run --extra research antenna-placement experimental phase2 --output-dir eval_reports/new_phase2
 uv run --extra research python -m unittest discover -s tests -v
@@ -63,9 +63,18 @@ uv run --extra research python -m unittest discover -s tests -v
 
 Comparison writes a separate artifact; it cannot change the primary shortlist. The current model supports all-network GIS-v2 features only. Source and model version mismatches fail explicitly. Historical commands and old feature/model behavior are retained under `experimental` for reproducibility.
 
+## September 29 evidence and inventory update
+
+The current release adds 4,874 eligible handset observations and a reconciled inventory of 2,670 radio-location groups / 2,344 physical references. All 645 owner-confirmed Al-Madar records remain traceable; 643 pass the boundary check and two remain in the review ledger. Six conflicting identities remain unresolved.
+
+The full rerun keeps 162 eligible candidates and the same 20 selected points. No supplied eligible handset observations lie within 5 km of those points, so measured-service evidence does not validate this shortlist. The later-day signal baseline scores 74/258 blocks with 7.676 dB MAE; it is not an RF propagation model.
+
+The historical [September 25 integration](integrated_release/index.html) remains available for comparison. See [the new implementation and reproduction guide](document/SEPT29_INTEGRATION.md).
+
 ## Documentation
 
-- [Integration result, architecture and validation](document/INTEGRATED_PLANNING.md)
+- [September 29 measurements, inventory and verification](document/SEPT29_INTEGRATION.md)
+- [Original integration result, architecture and validation](document/INTEGRATED_PLANNING.md)
 - [Model targets, baselines and limitations](document/ML_MODELS_AND_DATA.md)
 - [GIS corrections and footprint review](document/PHASE2_GIS_AND_ROOFTOPS.md)
 - [Data inventory and provenance](document/DATASETS_OVERVIEW.md)

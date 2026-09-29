@@ -122,3 +122,8 @@ BUILDINGS_EVALUATION_REPORT = REPORTS_DIR / "buildings_integration.json"
 OSM_CONTEXT_EVALUATION_REPORT = REPORTS_DIR / "osm_context_integration.json"
 PLANNING_OUTPUT_DIR = REPORTS_DIR / "integrated_planning"
 SOURCE_LOCK_PATH = MODULE_DIR / "sources" / "planning_sources.lock.json"
+
+# Versioned reconciled inventory; legacy cleaned artifacts remain frozen.
+INVENTORY_VERSION = "reconciled-geodesic-20260929-v1"
+PLANNING_INVENTORY_DIR = DATA_DIR / "inventory_v3"
+PLANNING_SITES_PATH = PLANNING_INVENTORY_DIR / "physical_sites.csv"

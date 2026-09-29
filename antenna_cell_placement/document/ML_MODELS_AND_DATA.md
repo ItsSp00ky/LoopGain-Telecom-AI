@@ -1,5 +1,7 @@
 # ML models and data: what the system learns and how to evaluate it
 
+> Current update (2026-09-29): see [measured service and reconciled inventory](SEPT29_INTEGRATION.md). The active demo is `integrated_release_v3/`; earlier metrics and source versions below remain historical evidence.
+
 **Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
 
 **Submission update (2026-09-23):** The public demo now describes planning priorities for engineering review and omits equipment, frequency-band and bandwidth advice. The coordinate response exposes an experimental site-pattern score, not an installation-suitability verdict. The controlled hard-negative comparison remains 0.876141 versus 0.885208; population-only baselines are 0.594538 and 0.571961 respectively. These are the same frozen examples and recipe, not demonstrated RF improvement. [Submission guide](SUBMISSION_READINESS.md) and [portable demo](../submission/index.html).
