@@ -42,10 +42,22 @@ connected.
   WAPE (from `/traffic/30day`), and subscribers monitored plus revenue at risk (from
   churn's own `/portfolio/summary`, which needs `PREPAID_CHURN_COPILOT_KEY` - see
   below). Module status pills still show live/degraded/offline per backend.
+- **Congestion & Steering page** (`platform_app/pages/3_Congestion_Steering.py`),
+  served by the network API's `/steering/*` and `/towers/*` routes from two modules
+  Mohamed Khalaf built as a pair: `tower_kpi_forecast/` trains per-tower XGBoost
+  next-day forecasts (connected users, DL throughput, availability, drop rate, 1,067
+  towers; chronological 70/30 split, leak-free lags), and `traffic_steering_son/`
+  turns them into congestion alerts and 3GPP CIO handover-offset proposals. Shows the
+  latest day's alerts and recommendations, cluster capacity, and any tower's
+  predicted-vs-actual. Everything is labelled as a backtest over 2026-06-03 to
+  2026-09-19, not live orders. "Estimated speed gain" is labelled as arithmetic
+  (equal sharing of fixed capacity), not a measurement.
 - **Customer Churn page** and the **Assistants page** embed each module's own
   already-running Streamlit app live via `st.iframe` (not a link to a new tab, and
   not a re-implementation of their UI) - prepaid_churn's app, and the customer
-  chatbot / employee copilot, each still their own process on their own port.
+  chatbot / employee copilot, each still their own process on their own port. The
+  copilot (Taha's latest) reads GIS `integrated_release_v3` and its measured-service
+  review, plus the network KPI files, as well as the churn service.
 
 ## Access this needs that isn't in git
 
@@ -70,8 +82,13 @@ connected.
 
 - `erbs_node_analytics` (per-tower ST-GNN, sleeping-cell detection, 1,067 towers) is
   the one `network_kpi_prediction` pipeline with no platform route yet.
-- `traffic_steering_son/` (congestion detection, mobility load balancing) has no
-  API route and is not reachable from the platform shell at all yet.
+- `tower_kpi_forecast/` and `traffic_steering_son/` have no tests. The forecaster's
+  committed outputs came from an older version of its code; the current (seeded)
+  code reproduces close numbers except network-level availability R² (0.13
+  committed vs 0.31 rerun). Committed outputs are kept because steering's committed
+  results are built on them - regenerating both together is Mohamed's call.
+- Tower IDs are anonymised (TWR_0001...) and the tower data carries no coordinates,
+  so steering can't yet be placed on the GIS map.
 - GIS's KPI-as-congestion-signal idea from `antenna_cell_placement`'s own pilot
   planning docs is still future work, not part of this pass.
 - No production deployment, reverse proxy, HTTPS or process manager - `run_platform.py`

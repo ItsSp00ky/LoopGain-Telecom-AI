@@ -110,38 +110,47 @@ modules = [
         "page_label": "Open Network KPI",
     },
     {
+        "name": "Congestion & Steering",
+        "icon": "alt_route",
+        "status_url": KPI_API_URL,
+        "description": "Per-tower forecasts on 1,067 towers drive congestion alerts and CIO load-balancing proposals.",
+        "page": "pages/3_Congestion_Steering.py",
+        "page_label": "Open Congestion & Steering",
+    },
+    {
         "name": "Customer Churn & Retention",
         "icon": "person",
         "status_url": CHURN_API_URL,
         "description": "Prepaid subscriber churn risk, value tiers and reviewed retention offers.",
-        "page": "pages/3_Customer_Churn.py",
+        "page": "pages/4_Customer_Churn.py",
         "page_label": "Open Customer Churn",
     },
     {
         "name": "AI Assistants",
         "icon": "support_agent",
         "status_url": CHURN_API_URL,
-        "description": "Customer chatbot and employee copilot, grounded only in the churn service.",
-        "page": "pages/4_Assistants.py",
+        "description": "Customer chatbot and employee copilot, grounded in the churn, GIS and network data.",
+        "page": "pages/5_Assistants.py",
         "page_label": "Open Assistants",
     },
 ]
 
-columns = st.columns(4)
-for column, module in zip(columns, modules):
-    with column:
-        status, _ = service_status(module["status_url"])
-        st.markdown(
-            f"""
-            <div class="lg-card">
-                <h3>:material/{module['icon']}: {module['name']}</h3>
-                {status_pill(status)}
-                <p class="lg-desc" style="margin-top:0.6rem;">{module['description']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.page_link(module["page"], label=module["page_label"], icon=":material/arrow_forward:")
+statuses = {url: service_status(url)[0] for url in {m["status_url"] for m in modules}}
+for row_start in range(0, len(modules), 3):
+    columns = st.columns(3)
+    for column, module in zip(columns, modules[row_start:row_start + 3]):
+        with column:
+            st.markdown(f"#### :material/{module['icon']}: {module['name']}")
+            st.markdown(
+                f"""
+                <div class="lg-card">
+                    {status_pill(statuses[module['status_url']])}
+                    <p class="lg-desc" style="margin-top:0.6rem;">{module['description']}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.page_link(module["page"], label=module["page_label"], icon=":material/arrow_forward:")
 
 st.divider()
 st.caption(

@@ -2,7 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from api import FORECAST_CSV, METRICS_CSV, app, kpi_config
+from api import ALERTS_CSV, FORECAST_CSV, METRICS_CSV, TOWER_PREDICTIONS_CSV, app, kpi_config
 
 HAS_KPI_RUN = METRICS_CSV.exists() and FORECAST_CSV.exists()
 
@@ -67,6 +67,36 @@ class KpiApiTests(unittest.TestCase):
     def test_unknown_band_or_kpi_is_404(self):
         self.assertEqual(self.client.get("/kpis/forecast/999/availability_pct").status_code, 404)
         self.assertEqual(self.client.get("/kpis/forecast/1700/not_a_kpi").status_code, 404)
+
+
+@unittest.skipUnless(ALERTS_CSV.exists() and TOWER_PREDICTIONS_CSV.exists(), "no steering/tower outputs")
+class SteeringApiTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_summary_counts_match_the_committed_outputs(self):
+        body = self.client.get("/steering/summary").json()
+        self.assertLessEqual(body["window_start"], body["window_end"])
+        self.assertEqual(set(body["alerts_by_category"]), {"HIGH", "CRITICAL"})
+        self.assertGreater(sum(body["recommendations_by_priority"].values()), 0)
+
+    def test_recommendations_default_to_the_latest_day_and_filter(self):
+        latest = self.client.get("/steering/summary").json()["window_end"]
+        body = self.client.get("/steering/recommendations", params={"priority": "LOW", "limit": 5}).json()
+        self.assertEqual(body["date"], latest)
+        self.assertLessEqual(body["count"], 5)
+        self.assertTrue(all(r["Priority"] == "LOW" for r in body["recommendations"]))
+        risks = [r["Risk_Score"] for r in body["recommendations"]]
+        self.assertEqual(risks, sorted(risks, reverse=True))
+
+    def test_tower_forecast_pairs_actual_and_predicted_per_kpi(self):
+        body = self.client.get("/towers/TWR_0001/forecast").json()
+        self.assertEqual(set(body["series"]), {"connected_users", "dl_throughput_mbps", "availability_pct", "erab_drop_rate"})
+        point = body["series"]["connected_users"][0]
+        self.assertEqual(set(point), {"date", "actual", "predicted"})
+
+    def test_unknown_tower_is_404(self):
+        self.assertEqual(self.client.get("/towers/TWR_9999/forecast").status_code, 404)
 
 
 if __name__ == "__main__":

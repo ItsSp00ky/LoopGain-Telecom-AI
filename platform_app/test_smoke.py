@@ -16,8 +16,9 @@ PAGES = [
     "Home.py",
     "pages/1_GIS_Planning.py",
     "pages/2_Network_KPI.py",
-    "pages/3_Customer_Churn.py",
-    "pages/4_Assistants.py",
+    "pages/3_Congestion_Steering.py",
+    "pages/4_Customer_Churn.py",
+    "pages/5_Assistants.py",
 ]
 
 

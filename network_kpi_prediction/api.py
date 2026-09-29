@@ -17,6 +17,14 @@ code and outputs, never a reimplementation.
   Only 21 of the 60 are, so a forecast without it should be read as a trend sketch,
   not a prediction.
 
+- Congestion and traffic steering (`/steering/...`, `/towers/...`): serves the
+  committed outputs of the sibling `traffic_steering_son/` module and the per-tower
+  XGBoost forecasts of `tower_kpi_forecast/` that it consumes. Both cover the
+  forecaster's backtest window (next-day predictions over held-out days), so the
+  recommendations are "what would have been recommended on each day", not live
+  orders. `Predicted_QoE_Boost` is a formula assuming a cell's capacity is shared
+  equally among its users, not a measurement.
+
 `erbs_node_analytics` (per-tower ST-GNN) is not wired up here yet.
 """
 
@@ -50,6 +58,21 @@ CELLULAR_OUTPUT = _MODULE_DIR / "cellular_kpi_forecast" / "data" / "output"
 METRICS_CSV = CELLULAR_OUTPUT / "model_metrics.csv"
 FORECAST_CSV = CELLULAR_OUTPUT / "carrier_kpi_forecast_2026_2027.csv"
 CELLULAR_RUN_HINT = "run `python run_cellular.py train` from network_kpi_prediction/cellular_kpi_forecast"
+
+_REPO = _MODULE_DIR.parent
+STEERING_OUTPUTS = _REPO / "traffic_steering_son" / "outputs"
+ALERTS_CSV = STEERING_OUTPUTS / "congestion_alerts_summary.csv"
+RECOMMENDATIONS_CSV = STEERING_OUTPUTS / "traffic_steering_recommendations.csv"
+CLUSTERS_CSV = STEERING_OUTPUTS / "cluster_capacity_breakdown.csv"
+TOWER_PREDICTIONS_CSV = _REPO / "tower_kpi_forecast" / "forecasts" / "tower_level_forecast_predictions.csv"
+TOWER_KPIS = {
+    "connected_users": "Avg RRC Connected users",
+    "dl_throughput_mbps": "E-UTRAN IP Throughput UE DL",
+    "availability_pct": "4G Cell Av. (%)",
+    "erab_drop_rate": "E-RAB Drop Rate",
+}
+STEERING_RUN_HINT = "run `python src/run_traffic_steering.py` from traffic_steering_son"
+_frames: dict = {}
 
 app = FastAPI(title="Network KPI Forecast API", description=__doc__)
 
@@ -240,3 +263,72 @@ def kpi_forecast(band: int, kpi: str, days: int = Query(30, ge=1, le=365), histo
         "history": _records(history),
         "forecast": _records(forecast),
     }
+
+
+def _frame(path: Path, hint: str) -> pd.DataFrame:
+    """Read a committed output once per file version; these are tens of thousands of rows."""
+    if not path.exists():
+        raise HTTPException(503, f"{path.name} not found: {hint}")
+    key = (path, path.stat().st_mtime)
+    if key not in _frames:
+        _frames[key] = pd.read_csv(path)
+    return _frames[key]
+
+
+@app.get("/steering/summary")
+def steering_summary():
+    """Congestion alerts and steering recommendations over the backtest window."""
+    alerts = _frame(ALERTS_CSV, STEERING_RUN_HINT)
+    recs = _frame(RECOMMENDATIONS_CSV, STEERING_RUN_HINT)
+    latest = alerts["Date"].max()
+    today = alerts[alerts["Date"] == latest]
+    return {
+        "window_start": alerts["Date"].min(),
+        "window_end": latest,
+        # The alerts file holds only HIGH and CRITICAL rows, so this is towers that
+        # were alerted at least once, not every tower.
+        "towers_with_alerts": int(alerts["ERBS Id"].nunique()),
+        "alerts_by_category": alerts["Congestion_Category"].value_counts().to_dict(),
+        "recommendations_by_priority": recs["Priority"].value_counts().to_dict(),
+        "latest_day": {
+            "alerts_by_category": today["Congestion_Category"].value_counts().to_dict(),
+            "recommendations": int((recs["Date"] == latest).sum()),
+        },
+    }
+
+
+@app.get("/steering/recommendations")
+def steering_recommendations(
+    date: str | None = Query(None, description="YYYY-MM-DD; defaults to the latest day"),
+    priority: str | None = Query(None, pattern="^(HIGH|MEDIUM|LOW)$"),
+    limit: int = Query(100, ge=1, le=1000),
+):
+    """CIO handover-offset recommendations for one day, highest risk first."""
+    recs = _frame(RECOMMENDATIONS_CSV, STEERING_RUN_HINT)
+    day = date or recs["Date"].max()
+    rows = recs[recs["Date"] == day]
+    if priority:
+        rows = rows[rows["Priority"] == priority]
+    rows = rows.sort_values("Risk_Score", ascending=False).head(limit)
+    return {"date": day, "count": len(rows), "recommendations": _records(rows)}
+
+
+@app.get("/steering/clusters")
+def steering_clusters():
+    """Per-cluster capacity: towers, load, speed, congestion risk and spare headroom."""
+    clusters = _frame(CLUSTERS_CSV, STEERING_RUN_HINT)
+    return {"clusters": _records(clusters.sort_values("Avg_Congestion_Risk", ascending=False))}
+
+
+@app.get("/towers/{tower_id}/forecast")
+def tower_forecast(tower_id: str):
+    """One tower's next-day predictions against what actually happened, per KPI."""
+    preds = _frame(TOWER_PREDICTIONS_CSV, "run `python src/train_and_evaluate.py` from tower_kpi_forecast")
+    rows = preds[preds["ERBS Id"] == tower_id].sort_values("Date")
+    if rows.empty:
+        raise HTTPException(404, f"No predictions for tower {tower_id}")
+    series = {}
+    for key, column in TOWER_KPIS.items():
+        frame = rows[["Date", f"{column} (Actual)", f"{column} (Predicted)"]]
+        series[key] = _records(frame.set_axis(["date", "actual", "predicted"], axis=1))
+    return {"tower": tower_id, "series": series}

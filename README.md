@@ -35,7 +35,8 @@ for exactly what's wired up versus still a standalone module.
 ├── network_kpi_prediction/    [✅ OPERATIONAL] Network KPI forecasting, own FastAPI (api.py)
 ├── prepaid_churn/             [✅ OPERATIONAL] Customer churn/retention, own FastAPI + Streamlit
 ├── assistants/                [✅ OPERATIONAL] Customer chatbot + employee copilot (call prepaid_churn's API)
-├── traffic_steering_son/      [✅ OPERATIONAL] Congestion detection & mobility load balancing
+├── tower_kpi_forecast/        [✅ OPERATIONAL] Per-tower XGBoost KPI forecasts (1,067 towers)
+├── traffic_steering_son/      [✅ OPERATIONAL] Congestion alerts & CIO load balancing, fed by tower_kpi_forecast
 └── platform_app/              [✅ NEW] Shared Streamlit shell landing on all of the above
 ```
 
@@ -85,6 +86,7 @@ LoopGain-Telecom-AI/
 │   └── erbs_node_analytics/     #   per-tower ERBS intelligence and ST-GNN
 ├── prepaid_churn/               # Churn module: pipeline, its own api.py + app/, docs/
 ├── assistants/                  # Customer chatbot + employee copilot (read churn, GIS and network data)
+├── tower_kpi_forecast/          # Per-tower next-day KPI forecasts that feed traffic steering
 ├── traffic_steering_son/        # Congestion detection & mobility load balancing
 └── customer_churn_prediction/, customer_support_chatbot/, kpi_prediction/
                                  # Superseded precursors, kept in history, not part of the platform
