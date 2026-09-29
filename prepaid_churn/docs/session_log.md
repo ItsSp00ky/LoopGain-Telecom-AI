@@ -41,6 +41,14 @@ This file is the narrative that connects them: what happened, in what order, wha
 - The first evaluation passed 16 of 22; reading every answer found six things to fix, each fixed in code or in the data given to the model, not by rewording the prompt (below).
 - The second passed 22 of 22; a browser test then found a draft described but not made, which led to a 23rd question and a guard in code; the third run passed 20 of 23, its failures were fixed and pass with `--only`, and the fourth stopped at Groq's daily limit (T25 has the details).
 
+### 5. The next morning (2026-09-29)
+
+- Taha judged the problems in Maher's and Mohamed's work not critical for us and asked for a push: `fbc3ac3..142d8d9`.
+- He asked for a start guide for the team and for `assistants/.env` to be pushed. The guide is `assistants/TEAM_GUIDE.md`; `.env` was not pushed, because a committed key stays in the history for good and one free key shared by the team runs out within hours, so each member makes their own.
+- The guide was followed from a fresh clone: it needed one more line, `git config --global core.longpaths true`, because some dataset paths pass Windows' 260 characters in a deep folder.
+- The copilot's part of the final report: `..._with_chatbot_and_copilot.docx` on the Desktop, 21 pages, with Tables 5 and 6 and Figures 9 and 10; the build scripts are in the scratchpad's `report2/`, the figure scripts in `assistants/report_figures/`.
+- The screenshot's question showed two more small things, fixed in code: the model quoting an action's internal name in a code box, and bold tower names inside code boxes.
+
 ## Mistakes caught this session, and the lesson from each
 
 - **The model added up a total itself** (the portfolio's LYD at risk). The tool now returns the total; give the model the number it needs rather than telling it not to compute.
@@ -50,6 +58,7 @@ This file is the narrative that connects them: what happened, in what order, wha
 - **The model picked "all" for "which towers need attention"** and listed warnings too. The option was removed; a choice the model should not make should not be offered.
 - **A running Streamlit app kept an old module after a code change** and raised `KeyError`. Restart the app after changing anything under `src/`; only the page script reloads by itself.
 - **The heredoc trap struck twice more**, once with `\n` and once with a line-continuation backslash. Use the Edit or Write tool for Python.
+- **A guide checked only on a set-up laptop hides missing steps.** Following it from a fresh clone found the long-path setting a teammate would have needed.
 
 ## Working on this machine (additions)
 

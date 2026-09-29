@@ -9,34 +9,34 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-28, evening, by Claude while Taha slept (Maher's and Mohamed's new work merged; the prepaid artifacts rebuilt on the 70 LYD anchor; the employee copilot, T25, built and waiting for Taha to test).
+**Last updated:** 2026-09-29 by Taha + Claude (`tahaDev` pushed; the copilot's part added to the final report; a start guide for every team member in `../assistants/TEAM_GUIDE.md`; the copilot, T25, waits for Taha's test and his answers to its open questions).
 
 **New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (session 3 first), then ticket T25 below.
 [docs/study_guide.md](docs/study_guide.md) explains the whole module and the chatbot in plain words.
 
-**Where things stand on 2026-09-28, evening**
+**Where things stand on 2026-09-29**
 - `tahaDev` carries Ali's work through `bf498d4`, the teammates' GIS and network ML branches (decision 53, merged again on 2026-09-28: Maher through `9c1a267`, Mohamed through `7d8a945`), the customer chatbot (decision 54) and the employee copilot (decision 55).
-- 54 commits are not pushed yet, Maher's 10 and Mohamed's 2 among them (they arrived with the merges); the last push was `fbc3ac3` on 2026-09-26. Push only when Taha asks.
+- `tahaDev` was pushed on 2026-09-29 on Taha's request (`fbc3ac3..142d8d9`, then the guide and the report figures); none of the issues in Maher's and Mohamed's work blocks our modules. Push only when Taha asks.
 - The churn module: 475 tests, lint and format green; the frozen champion is unchanged (`lightgbm-2026-09-19-ef9430fb`).
   Its artifacts on disk were rebuilt with the README commands on 2026-09-28: the tiers are now `tiers-v1-efc9739afad4` (the 70 LYD anchor of decision 42), every committed report came out unchanged, and the old artifacts are backed up in the session's scratchpad.
 - The chatbot (T24, closed): 21 of 21 evaluation questions on 2026-09-28; its approved demo offer (subscriber 70016) still works after the rebuild.
-- The copilot (T25): built, 111 tests green in `assistants/` (the chatbot's 64 included), browser-checked at desktop and phone width; the evaluation is in `../assistants/reports/copilot_eval.md` and summed up in T25. Taha tests it next.
-- Groq's free limit of 200K tokens a day was reached on 2026-09-28 at about 19:40 UTC, after three full evaluations of the copilot and one of the chatbot. Until the rolling day frees tokens, questions in either app get "the language model is unavailable"; the copilot's alerts and work orders work without the model.
-- The final report: the chatbot's part is in `SIC_AI_Capstone_Project_Final_Report_Prepaid_Churn_short,_credit_with_chatbot.docx` on Taha's Desktop (not in git); the copilot's part is not written yet.
+- The copilot (T25): built, 112 tests green in `assistants/` (the chatbot's 64 included), browser-checked at desktop and phone width; the evaluation is in `../assistants/reports/copilot_eval.md` and summed up in T25. Taha tests it next.
+- Groq's free limit of 200K tokens a day was reached on 2026-09-28 at about 19:40 UTC and had freed up by 2026-09-29 09:00 UTC. Each key has its own 200K a day, which is why every team member uses their own (the guide).
+- The final report, on Taha's Desktop (not in git): `..._with_chatbot_and_copilot.docx` (21 pages) adds the copilot's part under the same 14 subsections as the chatbot's, cloned from the report's own XML, with Tables 5 and 6 and Figures 9 and 10 (scripts in `../assistants/report_figures/`). The earlier files, `..._credit.docx` and `..._with_chatbot.docx`, are unchanged.
+- The start guide `../assistants/TEAM_GUIDE.md` was followed from a fresh clone on 2026-09-29: the service built in 1.4 minutes with the same model and tiers, and the copilot showed its alerts with "Prepaid service: ok". Taha asked for `assistants/.env` to be pushed so the team could use it; it was not, because a committed key stays in the history for good and one free key shared by the team runs out within hours. Each member makes their own free key instead.
 
 **Open right now, in order:**
-1. Taha tests the copilot: start the service and `uv run streamlit run copilot_app.py --server.port 8502` from `assistants/` (the README says how), then answer T25's open questions.
-2. Push when Taha says so.
-3. The copilot's part of the final report, in the report's own format, once Taha is happy with the copilot.
-4. Tell the owners what the merges found (decisions 53 and 55):
+1. Taha tests the copilot (the steps are in `../assistants/TEAM_GUIDE.md`), then answers T25's open questions.
+2. Team members start the copilot with the guide, each with their own free Groq key.
+3. Tell the owners what the merges found (decisions 53 and 55):
    - Maher: his MASE claim (17 of 60, not all); `xgboost` still missing from `requirements.txt`; `pytest` from his folder root fails because two packages are both named `src`; his forecasts are now git-ignored, so nobody else can read them without running his pipeline (a committed release folder, as the GIS team has, would fix it); "verified sleeping cells" are an IsolationForest that flags 5% of towers by construction, on yearly averages; the "churn risk targets" export is a formula with no link to customers.
    - Mohamed: his two new systems sit at the repository root, not in `KPI_forecasting/`; their input data (`Data_Cleaned.csv`, `tower_mapping.csv`) is not committed, so they cannot be rerun; two `__pycache__` files are committed; the README's "109 days in advance" is one day ahead of past days; steering "neighbours" are towers whose names share a prefix; the QoE boost is a formula, not a measurement; the capacity ceiling uses the test period; the old early-stopping-on-test issue is gone in the new model.
    - GIS: the local Claude settings in `antenna_cell_placement/.claude/`.
-5. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
-6. Ali's final report ("the brief"), which Taha will provide, so the chatbot's part can be checked against its style.
-7. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
-8. Ali's T22 and T23, after the presentation.
-9. Taha's "heavy and random" feedback on the demo app (session log, first session): ask Taha whether it still holds.
+4. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
+5. Ali's final report ("the brief"), which Taha will provide, so the chatbot's part can be checked against its style.
+6. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
+7. Ali's T22 and T23, after the presentation.
+8. Taha's "heavy and random" feedback on the demo app (session log, first session): ask Taha whether it still holds.
 
 **Merged on 2026-09-27 and 2026-09-28: Ali's recap, the outside review and the credit advice screen.**
 - Numbers that collided were renumbered on our side, so his stand: our decisions 37 and 38 are now 53 and 54, and our tickets T22 and T23 are now T24 (chatbot) and T25 (copilot).
@@ -1241,7 +1241,8 @@ What changed from the plan of 2026-09-28 morning, after reading the teammates' n
 
 Findings:
 - On 2026-09-19, the last day in the tower data, the rules find 15 critical, 34 major and 215 warning towers of the 1,052 that reported; reading the file takes 0.4 seconds.
-- 47 new tests (111 in `assistants/`), none calling Groq or the network; lint and format green.
+- 48 new tests (112 in `assistants/`), none calling Groq or the network; lint and format green.
+- The copilot's part of the final report was written on 2026-09-29, and `../assistants/TEAM_GUIDE.md` tells every team member how to start it.
 - Browser check at desktop and phone width: the alert banner, the toast, the alert table, drafting from the panel and confirming with a name all work; the Confirm button stays disabled until a name is typed.
 - The evaluation on the real model (`assistants/reports/copilot_eval.md`), every answer read:
   - First full run: 16 of 22. Reading the answers found six things, each fixed in code or in the data given to the model: the model added up a total, computed a share, picked "all" alert levels, wrote thousands with thin spaces, misread a GIS component, and listed today's alerts for "tomorrow".
