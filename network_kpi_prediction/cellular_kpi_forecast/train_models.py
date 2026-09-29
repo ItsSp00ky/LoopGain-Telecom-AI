@@ -315,6 +315,8 @@ def run_pipeline(
             summary_metrics[str(carrier)][kpi] = {
                 "best_model": champion_name,
                 "best_alpha": best_alpha,
+                "mase": test_metrics['mase'],
+                "wape": test_metrics['wape'],
                 "val_rmse": val_metrics['rmse'],
                 "val_mae": val_metrics['mae'],
                 "val_wape": val_metrics['wape'],

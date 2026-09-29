@@ -77,14 +77,17 @@ for exactly what's wired up versus still a standalone module.
 LoopGain-Telecom-AI/
 ├── README.md                    # This file
 ├── run_platform.py              # Starts every backend + the shared shell with one command
-├── platform_app/                # Shared Streamlit shell (Home + GIS/KPI pages, links to churn/assistants)
-├── antenna_cell_placement/      # GIS module: pipeline, api.py, document/ (INTEGRATED_PLANNING.md etc.)
-├── network_kpi_prediction/      # KPI module: three pipelines, api.py wraps traffic_volume_forecast
-├── prepaid_churn/                # Churn module: pipeline, its own api.py + app/, docs/
-├── assistants/                   # Customer chatbot + employee copilot, call prepaid_churn's API
-├── traffic_steering_son/         # Congestion detection & mobility load balancing
+├── platform_app/                # Shared Streamlit shell: dashboard, GIS, Network KPI, embedded churn + assistants
+├── antenna_cell_placement/      # GIS module: pipeline, api.py, integrated_release_v3/, document/
+├── network_kpi_prediction/      # Network module: run_pipeline.py launcher, api.py, artifacts/ (plot manifest)
+│   ├── cellular_kpi_forecast/   #   10 KPIs x 6 bands, SLA thresholds, forecasts (60 series)
+│   ├── traffic_volume_forecast/ #   4G traffic volume forecast
+│   └── erbs_node_analytics/     #   per-tower ERBS intelligence and ST-GNN
+├── prepaid_churn/               # Churn module: pipeline, its own api.py + app/, docs/
+├── assistants/                  # Customer chatbot + employee copilot (read churn, GIS and network data)
+├── traffic_steering_son/        # Congestion detection & mobility load balancing
 └── customer_churn_prediction/, customer_support_chatbot/, kpi_prediction/
-                                   # Superseded precursors, kept in history, not part of the platform
+                                 # Superseded precursors, kept in history, not part of the platform
 ```
 
 Each module keeps its own `pyproject.toml`/`uv.lock` (or `requirements.txt` for

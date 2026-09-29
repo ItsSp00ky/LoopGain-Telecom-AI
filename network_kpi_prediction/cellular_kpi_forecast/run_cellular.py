@@ -50,7 +50,7 @@ def run_train(
     )
 
 
-def run_plot(carrier=None, kpi=None, dpi=300, output_dir=None):
+def run_plot(carrier=None, kpi=None, dpi=300, output_dir=None, artifacts_dir=None):
     print("[*] Running Stage 3: Publication Plot Generator (plot.py)...")
     from src.visualization import generate_all_plots, plot_single_kpi
     from generate_plots import resolve_file
@@ -59,13 +59,22 @@ def run_plot(carrier=None, kpi=None, dpi=300, output_dir=None):
 
     if output_dir is None:
         output_dir = os.path.join(_REPO_ROOT, "plots")
+    if artifacts_dir is None:
+        artifacts_dir = os.path.join(_REPO_ROOT, "artifacts")
 
     clean_csv = resolve_file("carrier_ran_kpi_clean.csv")
     forecast_csv = resolve_file("carrier_kpi_forecast_2026_2027.csv")
     metrics_json = resolve_file("model_metrics.json")
 
     if carrier is None and kpi is None:
-        generate_all_plots(output_dir=output_dir, dpi=dpi, clean_csv_path=clean_csv, forecast_csv_path=forecast_csv, metrics_json_path=metrics_json)
+        generate_all_plots(
+            output_dir=output_dir,
+            artifacts_dir=artifacts_dir,
+            dpi=dpi,
+            clean_csv_path=clean_csv,
+            forecast_csv_path=forecast_csv,
+            metrics_json_path=metrics_json
+        )
     else:
         hist_df = pd.read_csv(clean_csv)
         hist_df['date'] = pd.to_datetime(hist_df['date'])
@@ -76,13 +85,14 @@ def run_plot(carrier=None, kpi=None, dpi=300, output_dir=None):
 
         target_carriers = [carrier] if carrier else CARRIER_BANDS
         target_kpis = [kpi] if kpi else KPI_KEYS
+        indiv_base = os.path.join(artifacts_dir, "plots", "individual")
         for c in target_carriers:
-            c_dir = os.path.join(output_dir, f"carrier_{c}")
+            c_dir = os.path.join(indiv_base, f"carrier_{c}")
             os.makedirs(c_dir, exist_ok=True)
             for k in target_kpis:
                 out_p = os.path.join(c_dir, f"{k}.png")
                 plot_single_kpi(c, k, hist_df, fc_df, m_dict, out_path=out_p, dpi=dpi)
-                print(f"[+] Saved: {out_p}")
+                print(f"[+] Saved standalone artifact: {out_p}")
 
 
 def run_predict(carrier: int, kpi: str, days: int = 7, live: bool = False):
@@ -130,7 +140,8 @@ def main(argv=None) -> int:
     plot_p.add_argument("--carrier", type=int, choices=CARRIER_BANDS, default=None, help="Filter by carrier band")
     plot_p.add_argument("--kpi", type=str, choices=KPI_KEYS, default=None, help="Filter by KPI key")
     plot_p.add_argument("--dpi", type=int, default=300, help="Plot resolution (default: 300)")
-    plot_p.add_argument("--output-dir", type=str, default=None, help="Directory to save generated plots")
+    plot_p.add_argument("--output-dir", type=str, default=None, help="Directory to save core overview plots")
+    plot_p.add_argument("--artifacts-dir", type=str, default=None, help="Directory to save standalone artifacts and index manifest")
 
     # predict
     pred_p = subparsers.add_parser("predict", help="Query point predictions and 90%% confidence ribbons")
@@ -168,7 +179,7 @@ def main(argv=None) -> int:
         )
         return 0
     elif args.command in ["plot", "plots"]:
-        run_plot(carrier=args.carrier, kpi=args.kpi, dpi=args.dpi, output_dir=args.output_dir)
+        run_plot(carrier=args.carrier, kpi=args.kpi, dpi=args.dpi, output_dir=args.output_dir, artifacts_dir=args.artifacts_dir)
         return 0
     elif args.command == "predict":
         run_predict(carrier=args.carrier, kpi=args.kpi, days=args.days, live=args.live)

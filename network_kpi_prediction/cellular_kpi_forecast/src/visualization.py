@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import zipfile
+import shutil
 from typing import Dict, Any, List, Optional, Tuple
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -217,10 +218,10 @@ def plot_single_kpi(
         carrier_summary = metrics_dict.get('metrics_summary', {}).get(str(carrier), {})
         k_metrics = carrier_summary.get(kpi, {})
         
-    champ_model = k_metrics.get('best_model', 'FourierRidge')
-    mase_val = k_metrics.get('mase', 0.850)
-    wape_val = k_metrics.get('wape', 1.20)
-    rmse_val = k_metrics.get('rmse', 0.150)
+    champ_model = k_metrics.get('best_model', 'N/A')
+    mase_val = k_metrics.get('test_mase', k_metrics.get('mase', k_metrics.get('val_mase', 1.0)))
+    wape_val = k_metrics.get('test_wape', k_metrics.get('wape', k_metrics.get('val_wape', 0.0)))
+    rmse_val = k_metrics.get('test_rmse', k_metrics.get('rmse', k_metrics.get('val_rmse', 0.0)))
     
     # Evaluate latest SLA status
     latest_val = float(h_sub[kpi].iloc[-1]) if not h_sub.empty and kpi in h_sub.columns else 0.0
@@ -293,8 +294,8 @@ def plot_carrier_grid(
         apply_noc_theme(fig, ax)
         kpi_meta = KPI_CONFIG.get(kpi, {})
         k_m = carrier_metrics.get(kpi, {})
-        champ = k_m.get('best_model', 'Ridge')
-        mase = k_m.get('mase', 0.85)
+        champ = k_m.get('best_model', 'N/A')
+        mase = k_m.get('test_mase', k_m.get('mase', k_m.get('val_mase', 1.0)))
         
         # 1. Historical
         if not h_sub.empty and kpi in h_sub.columns:
@@ -445,7 +446,7 @@ def plot_benchmark_mase_chart(metrics_dict: Dict[str, Any], out_path: Optional[s
         c_dict = summary.get(str(carrier), {})
         for kpi in KPI_KEYS:
             km = c_dict.get(kpi, {})
-            mase = km.get('mase', 1.0)
+            mase = km.get('test_mase', km.get('mase', km.get('val_mase', 1.0)))
             model = km.get('best_model', 'Ridge')
             records.append({
                 'series': f"B{carrier} : {kpi}",
@@ -492,7 +493,7 @@ def plot_benchmark_wape_matrix(metrics_dict: Dict[str, Any], out_path: Optional[
         c_row = []
         c_dict = summary.get(str(carrier), {})
         for kpi in KPI_KEYS:
-            wape = c_dict.get(kpi, {}).get('wape', 0.0)
+            wape = c_dict.get(kpi, {}).get('test_wape', c_dict.get(kpi, {}).get('wape', c_dict.get(kpi, {}).get('val_wape', 0.0)))
             c_row.append(wape)
         data_matrix.append(c_row)
         
@@ -528,8 +529,132 @@ def plot_benchmark_wape_matrix(metrics_dict: Dict[str, Any], out_path: Optional[
         
     return fig
 
+def generate_individual_plots_manifest(
+    hist_df: pd.DataFrame,
+    forecast_df: pd.DataFrame,
+    metrics_dict: Optional[Dict[str, Any]] = None,
+    artifacts_dir: str = "artifacts",
+    base_rel_path: str = "artifacts/plots/individual",
+    quiet: bool = False
+) -> Tuple[str, str]:
+    """
+    Generates a concise CSV and JSON artifact manifest for the 60 standalone carrier-KPI plots.
+    Lists carrier ID, KPI name, KPI title, category, latest status (COMPLIANT/BREACH),
+    latest observed value, SLA target, champion model, holdout MASE, and relative file path.
+    Enables referencing standalone figures in appendix tables without embedding all 60 plots.
+    """
+    records = []
+    summary = metrics_dict.get('metrics_summary', {}) if metrics_dict else {}
+
+    if not hist_df.empty and 'date' in hist_df.columns and not pd.api.types.is_datetime64_any_dtype(hist_df['date']):
+        hist_df = hist_df.copy()
+        hist_df['date'] = pd.to_datetime(hist_df['date'])
+
+    if not forecast_df.empty and 'date' in forecast_df.columns and not pd.api.types.is_datetime64_any_dtype(forecast_df['date']):
+        forecast_df = forecast_df.copy()
+        forecast_df['date'] = pd.to_datetime(forecast_df['date'])
+
+    for carrier in CARRIER_BANDS:
+        c_name = CARRIER_BAND_NAMES.get(carrier, f"Band {carrier} MHz")
+        h_sub = hist_df[hist_df['carrier_freq'] == carrier].sort_values('date') if not hist_df.empty else pd.DataFrame()
+        f_sub = forecast_df[forecast_df['carrier_freq'] == carrier].sort_values('date') if not forecast_df.empty else pd.DataFrame()
+        c_metrics = summary.get(str(carrier), {})
+
+        for kpi in KPI_KEYS:
+            meta = KPI_CONFIG.get(kpi, {})
+            k_metrics = c_metrics.get(kpi, {})
+
+            # Latest observed value
+            if not h_sub.empty and kpi in h_sub.columns:
+                series = h_sub[kpi].dropna()
+                latest_val = float(series.iloc[-1]) if not series.empty else 0.0
+                d_val = h_sub['date'].iloc[-1]
+                latest_date = d_val.strftime('%Y-%m-%d') if hasattr(d_val, 'strftime') else str(d_val)
+            else:
+                latest_val = 0.0
+                latest_date = "N/A"
+
+            # Forecast mean
+            if not f_sub.empty and kpi in f_sub.columns:
+                fc_mean = float(f_sub[kpi].dropna().mean())
+            else:
+                fc_mean = 0.0
+
+            fmt = meta.get('format', '{:.2f}')
+            latest_val_formatted = fmt.format(latest_val)
+            sla_target_desc = meta.get('sla_desc', 'N/A')
+            is_compliant = check_sla_compliance(latest_val, kpi)
+            latest_status = "COMPLIANT" if is_compliant else "BREACH"
+
+            best_model = k_metrics.get('best_model', 'N/A')
+            mase = k_metrics.get('test_mase', k_metrics.get('mase', k_metrics.get('val_mase', None)))
+            mase_str = f"{mase:.3f}" if mase is not None else "N/A"
+
+            file_path = f"{base_rel_path}/carrier_{carrier}/{kpi}.png"
+
+            records.append({
+                'carrier_id': carrier,
+                'carrier_name': c_name,
+                'kpi_name': kpi,
+                'kpi_title': meta.get('name', kpi),
+                'category': meta.get('category', 'Telemetry'),
+                'unit': meta.get('unit', ''),
+                'latest_date': latest_date,
+                'latest_value': round(latest_val, 4),
+                'formatted_value': latest_val_formatted,
+                'sla_target': sla_target_desc,
+                'sla_compliant': is_compliant,
+                'latest_status': latest_status,
+                'projected_mean': fmt.format(fc_mean),
+                'best_model': best_model,
+                'holdout_mase': mase_str,
+                'file_path': file_path
+            })
+
+    manifest_df = pd.DataFrame(records)
+
+    # Concise columns for appendix table referencing as requested
+    concise_cols = [
+        'carrier_id', 'kpi_name', 'kpi_title', 'latest_value',
+        'sla_target', 'latest_status', 'best_model', 'holdout_mase', 'file_path'
+    ]
+
+    os.makedirs(artifacts_dir, exist_ok=True)
+    manifest_csv = os.path.join(artifacts_dir, "individual_plots_index.csv")
+    manifest_df[concise_cols].to_csv(manifest_csv, index=False)
+
+    manifest_json = os.path.join(artifacts_dir, "individual_plots_index.json")
+    payload = {
+        'total_series': len(records),
+        'summary': {
+            'compliant': sum(1 for r in records if r['sla_compliant']),
+            'breach': sum(1 for r in records if not r['sla_compliant']),
+        },
+        'manifest': records
+    }
+    with open(manifest_json, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, indent=2)
+
+    # Also mirror manifest to parent repo-level artifacts directory if running inside subpackage
+    parent_artifacts = os.path.abspath(os.path.join(artifacts_dir, "..", "..", "artifacts"))
+    if parent_artifacts != os.path.abspath(artifacts_dir) and os.path.exists(os.path.join(artifacts_dir, "..", "..", "run_pipeline.py")):
+        try:
+            os.makedirs(parent_artifacts, exist_ok=True)
+            manifest_df[concise_cols].to_csv(os.path.join(parent_artifacts, "individual_plots_index.csv"), index=False)
+            with open(os.path.join(parent_artifacts, "individual_plots_index.json"), 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2)
+        except Exception:
+            pass
+
+    if not quiet:
+        print(f"    + Exported Artifact Manifest CSV: {manifest_csv}")
+        print(f"    + Exported Artifact Manifest JSON: {manifest_json}")
+
+    return manifest_csv, manifest_json
+
 def generate_all_plots(
     output_dir: str = "plots",
+    artifacts_dir: Optional[str] = None,
     dpi: int = 300,
     clean_csv_path: str = "data/carrier_ran_kpi_clean.csv",
     forecast_csv_path: str = "carrier_kpi_forecast_2026_2027.csv",
@@ -537,20 +662,27 @@ def generate_all_plots(
     quiet: bool = False
 ) -> Dict[str, Any]:
     """
-    Orchestrates the generation of all 78 publication-grade plots:
-    - 60 Single KPI plots in plots/carrier_{carrier}/
-    - 6 Multi-KPI Master Grid plots in plots/grids/
-    - 10 Multi-Band comparison plots in plots/multiband/
-    - 2 Model Benchmark plots in plots/benchmarks/
-    - 1 Zip archive bundle in archive/Network_ML_All_Plots_300DPI.zip
+    Orchestrates the decoupled publication-grade visualization pipeline:
+    - 60 Standalone Carrier-KPI Plots -> saved to artifacts/plots/individual/carrier_{carrier}/
+    - 1 Artifact Manifest -> artifacts/individual_plots_index.csv & .json (for appendix tables)
+    - 6 Multi-KPI Master Grid Dashboards (Figures 2–7) -> plots/grids/ (active document figures)
+    - 10 Multi-Band Cross-Carrier Comparisons (Figures 10–19) -> plots/multiband/ (active document figures)
+    - 2 Model Tournament Benchmark Plots -> plots/benchmarks/
+    - 1 Consolidated Zip archive bundle in archive/Network_ML_All_Plots_300DPI.zip
     """
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
-    
+
+    if artifacts_dir is None:
+        artifacts_dir = os.path.join(_REPO_ROOT, "artifacts")
+    artifacts_dir = os.path.abspath(artifacts_dir)
+    os.makedirs(artifacts_dir, exist_ok=True)
+
     if not quiet:
         print("=" * 75)
         print(f"Network-ML // Publication Plot Generator (DPI={dpi})")
-        print(f"Output Directory: {output_dir}")
+        print(f"Document Overview Output Directory: {output_dir}")
+        print(f"Standalone Artifacts Directory:     {artifacts_dir}")
         print("=" * 75)
 
     # 1. Load Data
@@ -588,20 +720,34 @@ def generate_all_plots(
 
     hist_df = pd.read_csv(clean_csv_path)
     hist_df['date'] = pd.to_datetime(hist_df['date'])
-    
+
     forecast_df = pd.read_csv(forecast_csv_path)
     forecast_df['date'] = pd.to_datetime(forecast_df['date'])
-    
+
     with open(metrics_json_path, 'r', encoding='utf-8') as f:
         metrics_dict = json.load(f)
 
     generated_files: List[str] = []
+    individual_files: List[str] = []
+    overview_files: List[str] = []
 
-    # 2. Generate 60 Individual KPI Plots
-    if not quiet:
-        print(f"[*] [Phase 1/5] Generating 60 Individual Carrier-KPI Trajectory Plots...")
+    # Clean up any legacy carrier directories in output_dir to ensure strict decoupling from document/LaTeX figure inputs
     for carrier in CARRIER_BANDS:
-        c_dir = os.path.join(output_dir, f"carrier_{carrier}")
+        legacy_dir = os.path.join(output_dir, f"carrier_{carrier}")
+        if os.path.exists(legacy_dir) and os.path.abspath(legacy_dir) != os.path.abspath(os.path.join(artifacts_dir, "plots", "individual", f"carrier_{carrier}")):
+            try:
+                shutil.rmtree(legacy_dir)
+            except Exception:
+                pass
+
+    # 2. Generate 60 Individual KPI Plots strictly to artifacts/plots/individual/ (Decoupled from LaTeX figure inputs)
+    if not quiet:
+        print(f"[*] [Phase 1/5] Decoupling 60 Standalone Carrier-KPI Plots -> {artifacts_dir}/plots/individual/...")
+    indiv_base_dir = os.path.join(artifacts_dir, "plots", "individual")
+    os.makedirs(indiv_base_dir, exist_ok=True)
+
+    for carrier in CARRIER_BANDS:
+        c_dir = os.path.join(indiv_base_dir, f"carrier_{carrier}")
         os.makedirs(c_dir, exist_ok=True)
         for kpi in KPI_KEYS:
             out_p = os.path.join(c_dir, f"{kpi}.png")
@@ -614,13 +760,45 @@ def generate_all_plots(
                 out_path=out_p,
                 dpi=dpi
             )
+            individual_files.append(out_p)
             generated_files.append(out_p)
             if not quiet:
-                print(f"    + [Carrier {carrier:4d}] {kpi:<22} -> {os.path.basename(out_p)}")
+                print(f"    + Standalone: [Carrier {carrier:4d}] {kpi:<22} -> {os.path.relpath(out_p, artifacts_dir)}")
 
-    # 3. Generate 6 Consolidated Master Grid Dashboards
+    # Mirror standalone plots to parent repository-level artifacts directory if applicable
+    parent_artifacts = os.path.abspath(os.path.join(artifacts_dir, "..", "..", "artifacts"))
+    if parent_artifacts != os.path.abspath(artifacts_dir) and os.path.exists(os.path.join(artifacts_dir, "..", "..", "run_pipeline.py")):
+        parent_indiv = os.path.join(parent_artifacts, "plots", "individual")
+        try:
+            os.makedirs(parent_indiv, exist_ok=True)
+            for carrier in CARRIER_BANDS:
+                p_cdir = os.path.join(parent_indiv, f"carrier_{carrier}")
+                os.makedirs(p_cdir, exist_ok=True)
+                for kpi in KPI_KEYS:
+                    src_f = os.path.join(indiv_base_dir, f"carrier_{carrier}", f"{kpi}.png")
+                    dst_f = os.path.join(p_cdir, f"{kpi}.png")
+                    if os.path.exists(src_f) and (not os.path.exists(dst_f) or os.path.getmtime(src_f) > os.path.getmtime(dst_f)):
+                        shutil.copy2(src_f, dst_f)
+        except Exception:
+            pass
+
+    # 3. Generate Artifact Manifest Index (CSV & JSON)
     if not quiet:
-        print(f"[*] [Phase 2/5] Generating 6 Carrier 10-KPI Master Grid Dashboards...")
+        print(f"[*] [Phase 2/5] Generating Artifact Manifest Index (individual_plots_index.csv & .json)...")
+    manifest_csv, manifest_json = generate_individual_plots_manifest(
+        hist_df=hist_df,
+        forecast_df=forecast_df,
+        metrics_dict=metrics_dict,
+        artifacts_dir=artifacts_dir,
+        base_rel_path="artifacts/plots/individual",
+        quiet=quiet
+    )
+    generated_files.append(manifest_csv)
+    generated_files.append(manifest_json)
+
+    # 4. Generate 6 Consolidated Master Grid Dashboards (Figures 2–7: Retained as Core Overview Figures)
+    if not quiet:
+        print(f"[*] [Phase 3/5] Retaining 6 Carrier Master Grid Dashboards (Figures 2–7 in {output_dir}/grids/)...")
     grid_dir = os.path.join(output_dir, "grids")
     os.makedirs(grid_dir, exist_ok=True)
     for carrier in CARRIER_BANDS:
@@ -633,13 +811,14 @@ def generate_all_plots(
             out_path=grid_p,
             dpi=dpi
         )
+        overview_files.append(grid_p)
         generated_files.append(grid_p)
         if not quiet:
             print(f"    + Master Grid: Carrier {carrier} MHz -> {os.path.basename(grid_p)}")
 
-    # 4. Generate 10 Multi-Band Overlays
+    # 5. Generate 10 Multi-Band Cross-Carrier Comparison Overlays (Figures 10–19: Retained as Core Overview Figures)
     if not quiet:
-        print(f"[*] [Phase 3/5] Generating 10 Cross-Band Multi-Carrier Comparison Plots...")
+        print(f"[*] [Phase 4/5] Retaining 10 Multi-Band Cross-Carrier Comparisons (Figures 10–19 in {output_dir}/multiband/)...")
     mb_dir = os.path.join(output_dir, "multiband")
     os.makedirs(mb_dir, exist_ok=True)
     for kpi in KPI_KEYS:
@@ -651,47 +830,63 @@ def generate_all_plots(
             out_path=mb_p,
             dpi=dpi
         )
+        overview_files.append(mb_p)
         generated_files.append(mb_p)
         if not quiet:
             print(f"    + Multi-Band: {kpi:<22} -> {os.path.basename(mb_p)}")
 
-    # 5. Generate 2 Model Benchmark Figures
+    # 6. Generate 2 Model Benchmark Figures
     if not quiet:
-        print(f"[*] [Phase 4/5] Generating Model Tournament Benchmark Figures...")
+        print(f"[*] [Phase 5/5] Generating Model Tournament Benchmark Figures...")
     bm_dir = os.path.join(output_dir, "benchmarks")
     os.makedirs(bm_dir, exist_ok=True)
     mase_p = os.path.join(bm_dir, "benchmark_mase_all_series.png")
     plot_benchmark_mase_chart(metrics_dict, out_path=mase_p, dpi=dpi)
+    overview_files.append(mase_p)
     generated_files.append(mase_p)
 
     wape_p = os.path.join(bm_dir, "benchmark_wape_matrix.png")
     plot_benchmark_wape_matrix(metrics_dict, out_path=wape_p, dpi=dpi)
+    overview_files.append(wape_p)
     generated_files.append(wape_p)
 
-    # 6. Build Consolidated Zip Archive
-    if not quiet:
-        print(f"[*] [Phase 5/5] Compiling Consolidated ZIP Bundle...")
+    # 7. Build Consolidated Zip Archive
     archive_dir = os.path.join(_REPO_ROOT, "archive")
     os.makedirs(archive_dir, exist_ok=True)
     zip_path = os.path.join(archive_dir, "Network_ML_All_Plots_300DPI.zip")
     with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
         for f in generated_files:
-            rel_name = os.path.relpath(f, output_dir)
-            zf.write(f, arcname=rel_name)
+            if f.endswith('.zip') or not os.path.exists(f):
+                continue
+            if f.startswith(artifacts_dir):
+                arcname = os.path.join("artifacts", os.path.relpath(f, artifacts_dir))
+            elif f.startswith(output_dir):
+                arcname = os.path.join("plots", os.path.relpath(f, output_dir))
+            else:
+                arcname = os.path.basename(f)
+            zf.write(f, arcname=arcname)
     generated_files.append(zip_path)
 
     if not quiet:
         print("=" * 75)
         print(f"[+] Successfully generated {len(generated_files)} artifacts:")
-        print(f"    - 60 Individual KPI Trajectory Plots (300 DPI)")
-        print(f"    - 6 Master Grid Dashboards (24x11, 300 DPI)")
-        print(f"    - 10 Multi-Band Cross-Carrier Comparisons (300 DPI)")
-        print(f"    - 2 Holdout Model Benchmark Charts (300 DPI)")
+        print(f"    - Core Document Figures in {output_dir}:")
+        print(f"        * 6 Master Carrier Grids (Figures 2–7)")
+        print(f"        * 10 Multi-Band Cross-Carrier Comparisons (Figures 10–19)")
+        print(f"        * 2 Holdout Model Benchmark Charts")
+        print(f"    - Standalone Artifacts in {artifacts_dir}:")
+        print(f"        * 60 Decoupled Carrier-KPI Trajectory Plots (plots/individual/)")
+        print(f"        * 1 Artifact Manifest CSV ({os.path.basename(manifest_csv)})")
+        print(f"        * 1 Artifact Manifest JSON ({os.path.basename(manifest_json)})")
         print(f"    - 1 Consolidated Zip Bundle ({os.path.getsize(zip_path):,} bytes)")
         print("=" * 75)
 
     return {
         'total_files': len(generated_files),
         'zip_path': zip_path,
-        'files': generated_files
+        'files': generated_files,
+        'manifest_csv': manifest_csv,
+        'manifest_json': manifest_json,
+        'overview_files': overview_files,
+        'individual_files': individual_files,
     }
