@@ -32,6 +32,7 @@ def compare_rankings(pool, constraints, experimental_model=None):
         pool['experimental_combined_score'] = pool.planning_priority_score * (.75 + .5 * pool.experimental_site_pattern_score)
         scores.update(ml_only='experimental_site_pattern_score', experimental_combination='experimental_combined_score')
         eligible = pool.loc[pool.eligible].copy()
+        report['model_inventory_note'] = 'Historical GIS-v2 model evaluated on the current inventory snapshot; no retraining or transfer-accuracy claim. Historical AUC does not describe this run.'
         report['ml_interpretation'] = 'Existing-site pattern recognition, not a deployment-success probability. Combination multiplier is an unvalidated research assumption; primary rank is unchanged.'
     for name, column in scores.items():
         selected = select_spatially_separated(pool, constraints, column)

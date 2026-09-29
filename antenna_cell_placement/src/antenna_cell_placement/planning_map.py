@@ -39,7 +39,7 @@ def localize_maps(output):
     shutil.copy2(source / 'vendor_manifest.json', output / 'vendor_manifest.json')
 
 
-def generate_planning_map(shortlist, output, scope='Tripoli'):
+def generate_planning_map(shortlist, output, scope='Tripoli', service_summary=None):
     output = Path(output)
     center = [float(shortlist.canonical_latitude.mean()), float(shortlist.canonical_longitude.mean())] if len(shortlist) else [32.8, 13.25]
     m = folium.Map(location=center, zoom_start=10 if scope != 'national' else 6, tiles=None)
@@ -62,6 +62,9 @@ def generate_planning_map(shortlist, output, scope='Tripoli'):
                             color='#c35419', fill=True, fill_opacity=.8,
                             tooltip=folium.Tooltip(content), popup=folium.Popup(content, max_width=430)).add_to(layer)
     layer.add_to(m)
+    if service_summary is not None:
+        from antenna_cell_placement.service_review import add_service_layers
+        add_service_layers(m, service_summary)
     folium.LayerControl().add_to(m)
     notice = 'No candidates met all constraints.' if shortlist.empty else f'{len(shortlist)} locations for engineering review.'
     m.get_root().html.add_child(folium.Element(
@@ -78,6 +81,10 @@ def write_overview(output, report, inventory):
     comparisons = ''.join(f'<tr><td>{escape(name.replace("_", " "))}</td><td>{value["overlap_with_explainable"]:.0%}</td></tr>'
                           for name, value in report['comparisons'].items() if value['overlap_with_explainable'] is not None)
     roofs = '<a href="rooftop_candidates_map.html">Building footprints for review</a>' if (output / 'rooftop_candidates_map.html').exists() else 'Footprint review unavailable for this run.'
+    evidence = ''
+    if (output / 'measurements/index.html').exists():
+        evidence = '<h2>Measured service and source review</h2><ul><li><a href="measurements/index.html">Measured-service map and chronological pilot</a></li><li><a href="public_evidence/public_evidence.json">Official-statistics cross-check</a></li><li><a href="source_crosswalk.csv">Source-to-site crosswalk</a> · <a href="reconciliation.json">Conflicting location alternatives</a></li></ul>'
+        evidence += f'<p>All 645 owner-confirmed Al-Madar source records remain traceable; {inventory.get("owner_confirmed_almadar_retained_records",645)} pass the boundary check and enter this inventory. Excluded records remain in the <a href="rejected_records.csv">review ledger</a>. A boundary exclusion does not establish that a source coordinate is false.</p>'
     html = f'''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Integrated antenna planning</title><style>
 body{{font:17px/1.6 system-ui,sans-serif;background:#f2f5f8;color:#183042;margin:0}}main{{max-width:1040px;margin:40px auto;padding:32px;background:white;border-radius:14px}}
@@ -87,6 +94,7 @@ h1{{font-size:36px;line-height:1.2}}h2{{font-size:24px}}a{{color:#075a93}}.cards
 <p>Your corrected GIS measurements and inventory provenance, combined with Ahmed’s explainable scoring and source checks.</p>
 <div class="cards"><div class="card"><b class="num">{report['candidate_count']:,}</b>candidate locations</div><div class="card"><b class="num">{report['eligible_count']:,}</b>passed strict checks</div><div class="card"><b class="num">{report['selected_count']}</b>spatially separated priorities</div><div class="card"><b class="num">{inventory['owner_confirmed_almadar_records']}</b>owner-confirmed Al-Madar records</div></div>
 <h2>Explore the combined result</h2><ul><li><a href="planning_map.html">Open the offline planning map</a></li><li>{roofs}</li><li><a href="shortlist.csv">Shortlist CSV</a> · <a href="candidates.csv">All candidates and rejection reasons</a></li><li><a href="comparison.json">Matched ranking comparison</a> · <a href="manifest.json">Source and run evidence</a></li></ul>
+{evidence}
 <h2>How the ranking works</h2><p>40% population, 30% known-site gap, 20% road access and 10% terrain. These are provisional planning assumptions. Every selected location must meet the same population, distance, terrain and land-cover checks. No machine-learning prediction changes this primary ranking.</p>
 <h2>Same candidates, different ranking methods</h2><table><tr><th>Method</th><th>Shortlist overlap with explainable score</th></tr>{comparisons}</table>
 <p>Overlap and weight sensitivity describe how the ranking changes. They do not establish which method improves coverage.</p>

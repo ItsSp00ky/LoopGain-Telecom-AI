@@ -4,7 +4,7 @@ import h3
 import numpy as np
 import pandas as pd
 
-from antenna_cell_placement.config import CLEANED_PHYSICAL_SITES_CSV, ADMIN0_GEOJSON_PATH
+from antenna_cell_placement.config import PLANNING_SITES_PATH, INVENTORY_VERSION, ADMIN0_GEOJSON_PATH
 from antenna_cell_placement.gis_v2 import FeatureExtractorV2, FEATURE_VERSION, MIN_VALID_FRACTION
 from antenna_cell_placement.source_integrity import verify_sources, require_sources, group_ready
 
@@ -15,7 +15,7 @@ class PlanningFeatureExtractor:
             raise ValueError('operator must be all, almadar or libyana')
         self.verification = verification or verify_sources()
         require_sources(self.verification)
-        sites = pd.read_csv(CLEANED_PHYSICAL_SITES_CSV)
+        sites = pd.read_csv(PLANNING_SITES_PATH)
         if operator != 'all':
             sites = sites.loc[sites[f'has_{operator}'].eq(True)].copy()
         self.operator = operator
@@ -35,6 +35,7 @@ class PlanningFeatureExtractor:
         result['population_radius_m'] = 5000
         result['population_source_units'] = 'people_per_km2'
         result['operator_scope'] = self.operator
+        result['inventory_version'] = INVENTORY_VERSION
         result['source_lock_sha256'] = self.verification['source_lock_sha256']
         result['h3_r7'] = [h3.latlng_to_cell(lat, lon, 7) for lon, lat in zip(lons, lats)]
         result['h3_r6'] = result.h3_r7.map(lambda cell: h3.cell_to_parent(cell, 6))

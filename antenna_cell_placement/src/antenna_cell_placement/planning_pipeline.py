@@ -48,22 +48,13 @@ def run_planning(output_dir=None, scope='Tripoli', operator='all', resolution=8,
     comparison_pool.to_parquet(output / 'comparison_candidates.parquet', index=False)
     write_json(output / 'comparison.json', comparison)
 
-    from antenna_cell_placement.data_cleaning import load_raw_records_from_sqlite
-    from antenna_cell_placement.inventory_audit_v2 import audit_inventory
-    raw = load_raw_records_from_sqlite()
-    towers, sites = pd.read_csv(CLEANED_RADIO_TOWERS_CSV), pd.read_csv(CLEANED_PHYSICAL_SITES_CSV)
-    scoped, clusters, inventory = audit_inventory(raw, towers, sites)
-    owner = raw.owner_confirmed_almadar.fillna(False).astype(bool)
-    inventory['owner_confirmed_almadar_records'] = int(owner.sum())
-    # Raw operator text is intentionally preserved; attribution lives in the
-    # cleaned inventory and source-scoped identity, not a rewritten raw field.
-    owner_towers = towers.owner_confirmed_almadar.fillna(False).astype(bool)
-    inventory['owner_confirmed_almadar_radio_groups'] = int(owner_towers.sum())
-    inventory['owner_attribution_correct'] = bool(towers.loc[owner_towers, 'operator'].eq('Al-Madar').all())
-    if inventory['owner_confirmed_almadar_records'] != 645 or inventory['owner_confirmed_almadar_radio_groups'] != 645 or not inventory['owner_attribution_correct']:
-        raise ValueError('Owner-confirmed attribution differs from reviewed inventory')
-    scoped.to_csv(output / 'radio_inventory_scoped.csv', index=False)
-    clusters.to_csv(output / 'cluster_audit.csv', index=False)
+    from antenna_cell_placement.config import PLANNING_INVENTORY_DIR
+    import shutil
+    inventory = json.loads((PLANNING_INVENTORY_DIR / 'inventory_manifest.json').read_text(encoding='utf-8'))
+    if inventory['owner_confirmed_almadar_records'] != 645 or not inventory['owner_attribution_correct']:
+        raise ValueError('Historical owner attribution changed')
+    for name in ('radio_references.csv', 'physical_sites.csv', 'source_crosswalk.csv', 'rejected_records.csv', 'reconciliation.json'):
+        shutil.copy2(PLANNING_INVENTORY_DIR / name, output / name)
     write_json(output / 'inventory_audit.json', inventory)
 
     roof_report = {'status': 'not_requested'}
@@ -83,7 +74,13 @@ def run_planning(output_dir=None, scope='Tripoli', operator='all', resolution=8,
         from antenna_cell_placement.rooftop_candidates import export_rooftops
         export_rooftops(roofs, output)
     from antenna_cell_placement.planning_map import generate_planning_map, write_overview, localize_maps
-    generate_planning_map(shortlist, output, scope)
+    from antenna_cell_placement.service_review import run_service_review
+    from antenna_cell_placement.public_evidence import evaluate_public_evidence
+    print('Building measured-service review and official-statistics audit...', flush=True)
+    measurement_review = run_service_review(output / 'measurements', shortlist=shortlist)
+    evaluate_public_evidence(output_path=output / 'public_evidence/public_evidence.json')
+    summary = pd.read_csv(output / 'measurements/measured_service_summary.csv')
+    generate_planning_map(shortlist, output, scope, summary)
     write_overview(output, comparison, inventory)
     localize_maps(output)
     after = verify_sources()
@@ -91,14 +88,18 @@ def run_planning(output_dir=None, scope='Tripoli', operator='all', resolution=8,
         raise ValueError('Source bytes changed during the run; outputs are incomplete')
     manifest = {
         'status': 'completed', 'created_utc': datetime.now(timezone.utc).isoformat(),
-        'base_commit': '8a2be6c928945ce8c52dba93e975e72aea0123d2',
-        'ahmed_source_commit': '15dc13a021f12f259319d611dc291ab6de9e4bbe',
+        'base_commit': '2eca2dd45c1e8ac0dba496f5825d350dba088368',
+        'ahmed_source_commit': '2c48a27494545988561acc4782e6b23530d33af0',
+        'inventory_version': inventory['inventory_version'],
         'scope': scope, 'operator_scope': operator, 'h3_resolution': resolution,
         'feature_version': FEATURE_VERSION, 'score_version': SCORE_VERSION,
         'primary_uses_ml': False, 'constraints': asdict(constraints),
         'sources': verification, 'sources_unchanged_during_run': True,
         'candidate_count': len(pool), 'eligible_count': int(pool.eligible.sum()),
         'shortlist_count': len(shortlist), 'rooftop_review': roof_report,
+        'measurement_review': {'eligible_measurements': measurement_review['eligible_measurements'],
+                               'primary_ranking_modified': False,
+                               'planning_support': measurement_review['planning_support']},
         'source_code_sha256': {p.name: sha256(p) for p in sorted(Path(__file__).parent.glob('*.py'))},
         'packages': {n: importlib.metadata.version(n) for n in ('numpy', 'pandas', 'geopandas', 'rasterio', 'shapely', 'pyproj', 'h3', 'folium')},
         'artifacts': {p.relative_to(output).as_posix(): sha256(p) for p in sorted(output.rglob('*')) if p.is_file()},

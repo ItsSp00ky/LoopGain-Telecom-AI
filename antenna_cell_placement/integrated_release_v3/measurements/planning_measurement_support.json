@@ -1,0 +1,129 @@
+{
+  "shortlist_count": 20,
+  "measurement_source_available": true,
+  "with_observations_1km": 0,
+  "with_observations_5km": 0,
+  "interpretation": "Observed support only; proximity is not validation of the planning point or a coverage radius.",
+  "rows": [
+    {
+      "candidate_id": "candidate-0380ac960cab",
+      "nearest_measurement_m": 8034.971549547602,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-64581136f4df",
+      "nearest_measurement_m": 18642.4683703271,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-c3950471aa65",
+      "nearest_measurement_m": 7101.392815982066,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-ccfe3893535f",
+      "nearest_measurement_m": 15814.685212621154,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-6be36134271d",
+      "nearest_measurement_m": 18797.500083616178,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-19eb32a24d1e",
+      "nearest_measurement_m": 26678.903160505954,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-22f81c181380",
+      "nearest_measurement_m": 35687.343799349204,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-2bbb3561ef05",
+      "nearest_measurement_m": 6952.444081363253,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-479d4b6f0fa4",
+      "nearest_measurement_m": 10539.857071924784,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-22ae66fbdb6d",
+      "nearest_measurement_m": 16430.777744139028,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-106242330329",
+      "nearest_measurement_m": 20974.888342869395,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-1d8a5c39b11a",
+      "nearest_measurement_m": 20953.165665167482,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-c5037f11e1c2",
+      "nearest_measurement_m": 33215.36129458387,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-6d9c7b03ec7b",
+      "nearest_measurement_m": 26832.151822263542,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-d4dd7dc1283f",
+      "nearest_measurement_m": 24413.776394251225,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-5d8ea8b9e3fd",
+      "nearest_measurement_m": 27512.40376296053,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-79151bc2c1e9",
+      "nearest_measurement_m": 27235.3446652606,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-b3b6ac714454",
+      "nearest_measurement_m": 20147.266835791805,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-8657a0f31d4e",
+      "nearest_measurement_m": 26779.979291355634,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    },
+    {
+      "candidate_id": "candidate-36a5779089a2",
+      "nearest_measurement_m": 9585.251449959731,
+      "observations_within_1km": 0,
+      "observations_within_5km": 0
+    }
+  ]
+}

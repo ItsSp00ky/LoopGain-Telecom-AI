@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "reviewed_utc": "2026-09-29",
+  "ahmed_commit": "2c48a27494545988561acc4782e6b23530d33af0",
+  "sources": [
+    {
+      "path": "pilot_snapshot.json",
+      "sha256": "93af8a09147467a98478c6afaef510e02cb2ce889bce8b6d853105d0e2935bc1",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "Libyan_cells_dataset/cells.sqlite3",
+      "sha256": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/new_data/2026-09-26-17-13-40.csv",
+      "sha256": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/new_data/2026-09-26-17-13-48.csv",
+      "sha256": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/new_data/2026-09-28-15-41-22.csv",
+      "sha256": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/new_data/libya_antennas/opencellid_libya.csv",
+      "sha256": "f5ca5e20da533bcfd2350fca435e6284365b4fa8769a664aa42fd522c8d4da67",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/new_data/libya_collected_antennas/beacondb/beacondb_libya_antennas.csv",
+      "sha256": "655ac05f80f3cb53d31e53d223d6d3233b578764b93262aee49f1d80292ed210",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv",
+      "sha256": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/external/libya_official_2022_2025/manifest.json",
+      "sha256": "e478115e1bf628cfc14ce1b2f225581b7094a326ff26ac7b51664b49fed584cd",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/external/libya_official_2022_2025/mobile_users_by_technology_2019_2025.csv",
+      "sha256": "150c714b18023c4c2be2d026256e5f2a63c9bd9fe9825f869993c170a786c1a5",
+      "group": "collected_evidence",
+      "required": true
+    },
+    {
+      "path": "data/external/libya_official_2022_2025/population_by_region_2022.csv",
+      "sha256": "a72d23dcf8d8e98568622cc2f4da57d88473bcb535e26ef665c8dd9fdd3d1161",
+      "group": "collected_evidence",
+      "required": true
+    }
+  ]
+}

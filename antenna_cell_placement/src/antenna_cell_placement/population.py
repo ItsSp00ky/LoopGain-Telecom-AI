@@ -28,3 +28,11 @@ def pixel_areas_km2_by_row(transform: Affine, height: int) -> np.ndarray:
         )
         areas[row] = abs(area_m2) / 1_000_000.0
     return areas
+
+
+def density_to_population_counts(density, transform):
+    """Convert people/km2 to source-pixel counts using ellipsoidal pixel areas."""
+    values = np.asarray(density, dtype=np.float64)
+    if values.ndim != 2:
+        raise ValueError('Population density raster must be two-dimensional')
+    return values * pixel_areas_km2_by_row(transform, values.shape[0])[:, np.newaxis]

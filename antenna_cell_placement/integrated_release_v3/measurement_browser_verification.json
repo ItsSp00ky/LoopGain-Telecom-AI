@@ -1,0 +1,21 @@
+{
+  "browser": "153.0.4234.48",
+  "offline": true,
+  "external_requests": [],
+  "js_errors": [],
+  "missing_assets": [],
+  "results": [
+    {
+      "page": "measurements/index.html",
+      "passed": true
+    },
+    {
+      "page": "measurements/measured_service_map.html",
+      "passed": true
+    },
+    {
+      "page": "planning_map.html",
+      "passed": true
+    }
+  ]
+}
