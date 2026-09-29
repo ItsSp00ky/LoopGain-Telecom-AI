@@ -31,6 +31,11 @@ COMPONENT_MEANING = {
     "terrain": "how suitable the ground is (1 = flat and prominent)",
 }
 
+MEASUREMENT_NOTE = (
+    "Distance to the nearest handset signal reading is context only: no reading within 5 km "
+    "neither supports nor rules out a site."
+)
+
 LIMITS = (
     "A planning heuristic for Tripoli, not a coverage or traffic prediction; every site needs "
     "engineering review. It cannot tell whether an area needs a new site or more capacity."
@@ -88,17 +93,23 @@ def expansion_priorities(
     eligible_total: int,
     municipality: str | None = None,
     top_n: int | None = None,
+    support: dict[str, dict] | None = None,
 ) -> dict:
-    """The ranked sites, best first, optionally in one municipality."""
+    """The ranked sites, best first, optionally in one municipality.
+
+    `support` gives each site's distance to the nearest handset measurement, from the same
+    release; it is context, never validation of a site.
+    """
     rows = shortlist.sort_values("recommendation_rank")
     if municipality:
         wanted = municipality.strip().casefold()
         rows = rows[rows["municipality_name"].str.casefold().str.contains(wanted, regex=False)]
     count = min(max(int(top_n or 5), 1), 20)
-    sites = [site_view(row) for _, row in rows.head(count).iterrows()]
+    sites = [_with_support(site_view(row), support) for _, row in rows.head(count).iterrows()]
     return {
         "scope": manifest.get("scope"),
         "score_version": manifest.get("score_version"),
+        "inventory_version": manifest.get("inventory_version"),
         "weights_pct": WEIGHTS,
         "component_meaning": COMPONENT_MEANING,
         "constraints": manifest.get("constraints"),
@@ -110,7 +121,14 @@ def expansion_priorities(
         "shown_ranges": _ranges(sites),
         "sites": sites,
         "limits": LIMITS,
+        "measurement_note": MEASUREMENT_NOTE if support is not None else None,
     }
+
+
+def _with_support(view: dict, support: dict[str, dict] | None) -> dict:
+    if support is not None and view["candidate"] in support:
+        view["measurements"] = support[view["candidate"]]
+    return view
 
 
 def _ranges(sites: list[dict]) -> dict:
@@ -130,7 +148,10 @@ def _ranges(sites: list[dict]) -> dict:
 
 
 def explain_location(
-    candidates: pd.DataFrame, shortlist: pd.DataFrame, site: str | int | None
+    candidates: pd.DataFrame,
+    shortlist: pd.DataFrame,
+    site: str | int | None,
+    support: dict[str, dict] | None = None,
 ) -> dict | None:
     """One candidate by its ID or its shortlist rank, with why it passed or failed."""
     if site is None or str(site).strip() == "":
@@ -145,7 +166,7 @@ def explain_location(
     if found.empty:
         return None
     return {
-        **site_view(found.iloc[0]),
+        **_with_support(site_view(found.iloc[0]), support),
         "weights_pct": WEIGHTS,
         "component_meaning": COMPONENT_MEANING,
         "limits": LIMITS,

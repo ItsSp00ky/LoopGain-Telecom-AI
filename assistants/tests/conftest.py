@@ -114,6 +114,51 @@ MANIFEST = {
 }
 
 
+def _area(mnc, net_type, readings, median, lon):
+    """One hand-made measured area: a small square around (lon, 32.8)."""
+    ring = [[lon, 32.8], [lon + 0.02, 32.8], [lon + 0.02, 32.82], [lon, 32.82], [lon, 32.8]]
+    return {
+        "type": "Feature",
+        "geometry": {"type": "Polygon", "coordinates": [ring]},
+        "properties": {
+            "mcc": 606,
+            "mnc": mnc,
+            "net_type": net_type,
+            "sample_count": readings,
+            "day_count": 2,
+            "device_count": 1,
+            "median_dbm": median,
+            "p10_dbm": median - 5,
+        },
+    }
+
+
+MEASURED_AREAS = {
+    "type": "FeatureCollection",
+    "features": [
+        _area(1, "LTE", 20, -80.0, 13.0),
+        _area(1, "LTE", 10, -95.0, 13.1),
+        _area(1, "LTE", 3, -120.0, 13.2),
+        _area(0, "UMTS", 12, -90.0, 13.3),
+    ],
+}
+MEASUREMENT_MANIFEST = {
+    "eligible_measurements": 45,
+    "planning_support": {
+        "with_observations_5km": 0,
+        "rows": [
+            {
+                "candidate_id": "candidate-aaa111",
+                "nearest_measurement_m": 8034.97,
+                "observations_within_1km": 0,
+                "observations_within_5km": 0,
+            }
+        ],
+    },
+}
+MEASUREMENT_PILOT = {"training_days": ["2026-09-23"], "holdout_days": ["2026-09-26"]}
+
+
 @pytest.fixture
 def copilot_data(monkeypatch, tmp_path):
     """The teammates' files, hand-made, with every copilot path pointed at them."""
@@ -127,6 +172,13 @@ def copilot_data(monkeypatch, tmp_path):
         "CANDIDATES": ("candidates.csv", "\n".join([SITE_COLUMNS, *SITES, *REJECTED]) + "\n"),
         "MANIFEST": ("manifest.json", json.dumps(MANIFEST)),
     }
+    files.update(
+        {
+            "MEASURED_AREAS": ("areas.geojson", json.dumps(MEASURED_AREAS)),
+            "MEASUREMENT_MANIFEST": ("measurements.json", json.dumps(MEASUREMENT_MANIFEST)),
+            "MEASUREMENT_PILOT": ("pilot.json", json.dumps(MEASUREMENT_PILOT)),
+        }
+    )
     for name, (filename, text) in files.items():
         path = folder / filename
         path.write_text(text, encoding="utf-8")

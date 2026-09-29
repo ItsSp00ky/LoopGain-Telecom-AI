@@ -1,9 +1,10 @@
 """The employee copilot's tools, its system prompt and its safe answers (T25, decision 55).
 
-Eight tools: seven that read, and one that drafts.
+Nine tools: eight that read, and one that drafts.
 - network: `tower_alerts`, `tower_status` and `network_overview` over the network team's
   daily tower KPIs, with the alert rules in `network`;
-- planning: `expansion_priorities` and `explain_location` over the GIS team's release;
+- planning: `expansion_priorities` and `explain_location` over the GIS team's release, and
+  `measured_service` over that release's review of handset signal readings;
 - customers: `portfolio_summary` and `subscriber_risk` over the prepaid service, with the
   copilot key;
 - `draft_work_order`, which prepares a work order and saves nothing: only an employee
@@ -15,7 +16,7 @@ import re
 from collections.abc import Callable
 from dataclasses import replace
 
-from assistants import network, planning, service_client, sources, work_orders
+from assistants import measurements, network, planning, service_client, sources, work_orders
 from assistants.grounding import PHONE_MASK, has_phone_number, mask_phone_numbers
 from assistants.language import is_arabic
 from assistants.llm import Complete, Tool, ToolCall, Turn, run_turn
@@ -31,6 +32,8 @@ fixed rules in code.
 - network_overview: network-wide KPIs, 4G traffic, and how many towers are in each alert level.
 - expansion_priorities and explain_location: the GIS team's ranked places for a new site in \
 Tripoli.
+- measured_service: the GIS team's review of handset signal readings collected in Libya, by \
+network code and technology, with the weakest measured areas.
 - portfolio_summary and subscriber_risk: prepaid customers at risk of leaving, from the churn \
 model.
 - draft_work_order: prepare a work order for a tower, for the employee to confirm.
@@ -54,7 +57,9 @@ a tower name are a naming group, not a verified area.
 so, and offer the latest status instead.
 6. The GIS score is a planning heuristic for Tripoli only, not a coverage or traffic \
 prediction, and every site needs engineering review. It cannot tell whether an area needs a \
-new site or more capacity; say so when asked.
+new site or more capacity; say so when asked. Measured service is volunteer phone readings: \
+never call it coverage, never use it to compare networks, and never present it as supporting \
+or ruling out a planning site. Name a network only by a code measured_service returned.
 7. Customers: give portfolio figures, or one subscriber by the ID the employee gives. Never \
 list customers, never ask for or repeat a phone number. Offers and prices are set only by a \
 reviewed campaign in the prepaid dashboard; you cannot create, change or approve one.
@@ -264,6 +269,11 @@ def build_tools(
             network.load_network(sources.TRAFFIC_VOLUME),
         )
 
+    def support() -> dict[str, dict] | None:
+        if not sources.MEASUREMENT_MANIFEST.exists():
+            return None
+        return measurements.support_by_site(measurements.load(sources.MEASUREMENT_MANIFEST))
+
     def priorities(municipality: str | None = None, count: int | None = None) -> dict:
         candidates = planning.load(sources.CANDIDATES)
         return planning.expansion_priorities(
@@ -273,15 +283,24 @@ def build_tools(
             int(candidates["eligible"].sum()),
             municipality,
             count,
+            support(),
         )
 
     def location(site: str) -> dict:
         found = planning.explain_location(
-            planning.load(sources.CANDIDATES), planning.load(sources.SHORTLIST), site
+            planning.load(sources.CANDIDATES), planning.load(sources.SHORTLIST), site, support()
         )
         if found is None:
             return {"error": f"No candidate site {site!r}: give a shortlist rank or an ID."}
         return found
+
+    def service(**arguments) -> dict:
+        return measurements.measured_service(
+            measurements.areas(measurements.load(sources.MEASURED_AREAS)),
+            measurements.load(sources.MEASUREMENT_MANIFEST),
+            measurements.load(sources.MEASUREMENT_PILOT),
+            **arguments,
+        )
 
     def portfolio() -> dict:
         return portfolio_view(client.portfolio_summary(base_url, copilot_key))
@@ -375,6 +394,31 @@ def build_tools(
                 "required": ["site"],
             },
             location,
+        ),
+        Tool(
+            "measured_service",
+            "Handset signal readings collected in Libya, by network code and technology, "
+            "with the weakest measured areas.",
+            {
+                "type": "object",
+                "properties": {
+                    "network": {
+                        "type": ["string", "null"],
+                        "description": "A network code such as 606-01; all networks by default.",
+                    },
+                    "technology": {
+                        "type": ["string", "null"],
+                        "enum": [*measurements.TECHNOLOGIES, None],
+                    },
+                    "count": {
+                        "type": ["integer", "null"],
+                        "minimum": 1,
+                        "maximum": measurements.MAX_WEAKEST,
+                        "description": "How many weakest areas to show; 5 by default.",
+                    },
+                },
+            },
+            service,
         ),
         Tool(
             "portfolio_summary",
@@ -550,6 +594,17 @@ def fallback(calls: list[ToolCall], user_text: str) -> str:
                 f"Rank {result['rank']}, {result['municipality']}: score {result['score']}; "
                 f"{', '.join(result['reason_codes']) or 'no reason codes'}"
             )
+        if call.name == "measured_service":
+            lines = [
+                f"{result['eligible_readings']} eligible readings on "
+                f"{', '.join(result['collection_days'])}."
+            ]
+            lines += [
+                f"- {g['network']} {g['technology']}: {g['areas']} areas, {g['readings']} "
+                f"readings, median {g['median_of_area_medians_dbm']} dBm"
+                for g in result["by_network_and_technology"]
+            ]
+            return "\n".join([*lines, *result["caveats"]])
         if call.name == "portfolio_summary":
             total = result["total"]
             lines = [

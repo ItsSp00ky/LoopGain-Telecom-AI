@@ -309,3 +309,31 @@ def test_every_fallback_is_built_from_its_tool_data(copilot_data):
     assert replies["subscriber_risk"].startswith("Risk band medium, churn probability 11.3%")
     assert replies["draft_work_order"] == "This tower has no alert."
     assert copilot_tools.fallback([], "hello") == "I can't answer that from the data I have."
+
+
+def test_measured_service_reads_the_gis_release_review(copilot_data):
+    result = _tools()["measured_service"].run(technology="LTE", count=2)
+    assert result["areas_matched"] == 3 and len(result["weakest_areas"]) == 2
+    assert result["weakest_areas"][0]["network"] == "606-01"
+
+
+def test_ranked_sites_carry_their_distance_to_a_reading(copilot_data):
+    tools = _tools()
+    first = tools["expansion_priorities"].run(count=2)
+    assert first["sites"][0]["measurements"] == {
+        "nearest_measurement_m": 8035,
+        "readings_within_5km": 0,
+    }
+    assert "measurements" not in first["sites"][1]
+    assert "context only" in first["measurement_note"]
+    assert tools["explain_location"].run(site="1")["measurements"]["readings_within_5km"] == 0
+
+
+def test_the_measured_service_fallback_keeps_the_caveats(copilot_data):
+    tools = _tools()
+    reply = copilot_tools.fallback(
+        [ToolCall("measured_service", {}, tools["measured_service"].run())], "question"
+    )
+    assert reply.splitlines()[0] == "45 eligible readings on 2026-09-23, 2026-09-26."
+    assert "- 606-01 LTE: 3 areas, 33 readings, median -95.0 dBm" in reply
+    assert "do not validate them" in reply

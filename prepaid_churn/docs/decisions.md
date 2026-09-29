@@ -1400,7 +1400,7 @@ It is `assistants/copilot_app.py`, built the same way as the chatbot (decision 5
 Committed files at fixed paths, all listed in one module, `assistants/src/assistants/sources.py`, and the prepaid service with the copilot key:
 
 - Maher's daily KPIs for each of 1,067 base stations, 2025-09-20 to 2026-09-19 (`network_kpi_prediction/data/erbs_cell_kpi_full_year.csv`), and his network-wide KPIs and 4G traffic volume.
-- The GIS release: `shortlist.csv`, `candidates.csv` and `manifest.json` in `antenna_cell_placement/integrated_release/`.
+- The GIS release: `shortlist.csv`, `candidates.csv` and `manifest.json` in `antenna_cell_placement/integrated_release/` (version 3 since 2026-09-29, below).
 - `/portfolio/summary` and `/subscribers/{id}/risk` from the prepaid service.
 
 Files rather than endpoints, because that is what the teammates publish, and asking each for a service before the presentation is not realistic.
@@ -1459,3 +1459,10 @@ The caveat of decision 54 holds: an operator deployment needs a model it control
 
 **Not built.**
 The document search planned in T25 (`search_docs`) was left out: the tools answer the questions the demo needs, and it can be added later without changing the rest.
+
+**After Mahmoud's release 3 (merged 2026-09-29).**
+Mahmoud's `integrated_release_v3/` reruns the same 2,223 Tripoli candidates on a reconciled antenna inventory (`reconciled-geodesic-20260929-v1`) and gives the same 162 eligible places and the same 20 priorities.
+The copilot now reads it instead of `integrated_release/`, which stays in his folder as a historical comparison.
+The release also reviews 4,874 handset signal readings collected in Libya on four days; a ninth tool, `measured_service`, passes on its summary by network and technology and its weakest measured areas, and every ranked site carries its distance to the nearest reading.
+The rules come from the release's own caveats and are in the prompt and the tool's data: networks are named only by their MCC-MNC code, never by operator (decision 45); the readings are never called coverage, never used to compare networks (the sample is uneven), and never presented as supporting or ruling out a site, because no reading lies within 5 km of any priority.
+

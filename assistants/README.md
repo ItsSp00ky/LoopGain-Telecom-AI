@@ -74,7 +74,8 @@ Type your name in the sidebar before confirming a work order: it is saved with t
 | Alert on towers in trouble, worst first | `tower_alerts`, and the alert panel on the page | Maher's daily tower KPIs |
 | Explain one tower: every KPI against its limits, and its last 7 days | `tower_status` | the same file |
 | Sum up the network: alert counts, network KPIs, 4G traffic | `network_overview` | the tower file, the network KPIs, the traffic volume |
-| Say where to build next in Tripoli, and why | `expansion_priorities`, `explain_location` | the GIS release |
+| Say where to build next in Tripoli, and why, with each site's distance to the nearest signal reading | `expansion_priorities`, `explain_location` | the GIS release (version 3) |
+| Show the measured handset signal by network code and technology, and the weakest measured areas | `measured_service` | the same release's measurement review |
 | Give customers and LYD at risk, or one subscriber's risk | `portfolio_summary`, `subscriber_risk` | the prepaid service, copilot key |
 | Draft a work order for a tower | `draft_work_order` | nothing; it saves nothing |
 
@@ -114,9 +115,12 @@ All paths are in `src/assistants/sources.py`; if an owner moves a file, that is 
 | `network_kpi_prediction/data/erbs_cell_kpi_full_year.csv` | Maher |
 | `network_kpi_prediction/data/macro_network_kpis_daily.csv` | Maher |
 | `network_kpi_prediction/data/4g_traffic_volume_daily.csv` | Maher |
-| `antenna_cell_placement/integrated_release/shortlist.csv` | Mahmoud and Ahmed |
-| `antenna_cell_placement/integrated_release/candidates.csv` | Mahmoud and Ahmed |
-| `antenna_cell_placement/integrated_release/manifest.json` | Mahmoud and Ahmed |
+| `antenna_cell_placement/integrated_release_v3/shortlist.csv` | Mahmoud and Ahmed |
+| `antenna_cell_placement/integrated_release_v3/candidates.csv` | Mahmoud and Ahmed |
+| `antenna_cell_placement/integrated_release_v3/manifest.json` | Mahmoud and Ahmed |
+| `antenna_cell_placement/integrated_release_v3/measurements/measured_service_areas.geojson` | Mahmoud and Ahmed |
+| `antenna_cell_placement/integrated_release_v3/measurements/manifest.json` | Mahmoud and Ahmed |
+| `antenna_cell_placement/integrated_release_v3/measurements/pilot_review.json` | Mahmoud and Ahmed |
 
 ## The service-point list (waiting for Taha)
 
