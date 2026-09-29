@@ -6,7 +6,7 @@ This roadmap evolves the current Libya GIS screening pipeline into a telecom pla
 
 The dataset-only refactor and Steps 0-7 established the current baseline. Steps 8-11 evaluated land cover and selected OpenStreetMap evidence. Step 12 rejected Ookla runtime integration because shortlist coverage failed. Step 13 rejected VIIRS runtime integration because independent incremental validation was unavailable. Later sources remain **proposed** until their own gate is run; downloading a source does not by itself make it accepted evidence.
 
-**Current position (2026-09-21):** Step 7 is accepted. Steps 8, 9, and selected Step 11 families are reversible `review-only` layers. Step 10, the Step 11 port proxy, and Step 12 have `remove` decisions. Step 13 is next; Steps 14-20 remain pending in the order below.
+**Current position (2026-09-26):** Step 7 is accepted. Steps 8, 9, and selected Step 11 families are reversible `review-only` layers. Step 10, the Step 11 port proxy, Step 12, Step 13, and Step 14 have `remove` decisions. A measured-service pilot, frozen temporal split, targeted asset request, and Step 15 validator are implemented. Two official public CSVs now support a separate population and mobile-technology audit; they do not supply RF engineering inputs. Step 15 still awaits authorized operator assets, independent location surveys, and engineer-approved thresholds; Steps 16-20 remain pending.
 
 ## Non-Negotiable Rules
 
@@ -363,24 +363,30 @@ Build reproducible hexagonal planning units and aggregate active evidence with a
 
 ## Step 14: Download and Test FABDEM
 
-**Dataset:** FABDEM.
-**Status:** proposed; not downloaded.
+**Dataset:** official University of Bristol FABDEM V1-2, derived from Copernicus GLO-30.
+**Status:** evaluated on 2026-09-22; `remove` from runtime.
 
 **Question:** does a bare-earth DEM improve terrain and RF results over the accepted elevation source?
 
-**Before:** RF/terrain run using the selected current DEM.
-**After:** identical run with FABDEM.
+**Before:** fixed shortlisted candidates sampled against the supplied SRTM 250 m source with metric slope and a 3 km prominence window.
+**After:** the same candidates sampled against selected 1° FABDEM tiles with identical physical-distance calculations.
 
-**Improvement metric:** coverage, voids, tile seams, agreement with independent elevation checkpoints, line-of-sight changes, and geographic-holdout RF error.
+**Improvement metric:** shortlist and municipality support, elevation/slope/prominence differences, within-shortlist score sensitivity, national voids and seams, agreement with independent elevation checkpoints, line-of-sight changes, and geographic-holdout RF error.
 
-**Acceptance criterion:** better checkpoint error and RF error without worse coverage or artifacts. Define the minimum error reduction before the test.
+**Acceptance criterion, set before results:** at least 95% shortlist and municipality support, at least 10% lower median absolute elevation-checkpoint error, and at least 5% lower RF holdout error, without worse coverage or seam artifacts. Independent checkpoints and RF references must be supplied before replacement can be accepted. A sample of shortlist tiles cannot establish national completeness.
 
-**Decision:** replace the active DEM only if it wins the controlled comparison. Otherwise remove from runtime and retain the report.
+**Implementation:** retrieve only 1° members containing the frozen shortlist from the official ZIPs via checked HTTP byte ranges. Record archive ETags, tile ZIP CRCs, local SHA-256 hashes, release, units, horizontal CRS, EGM2008 vertical datum, and the non-commercial CC BY-NC-SA 4.0 license. A shared terrain sampler uses geodesic pixel dimensions, a circular 3 km window, and explicit missingness. The supplied SRTM raster does not declare a vertical datum in its metadata, so raw elevation differences cannot be interpreted as error.
+
+**Measured result:** 13 verified 1° tiles covered 46 of the 50 current shortlisted candidates (92%) in 10 of 11 shortlisted municipalities (90.91%). Four candidates lacked a complete 3 km sample window or valid terrain pixels. Among the 46 supported points, median absolute elevation difference was 1.74 m, median absolute prominence difference was 1.89 m, and median absolute slope difference was 0.50°. These are paired differences, not ground-truth errors. Within the supported subset, the score-change median absolute value was 0.1672 points. The selected tiles cannot establish national coverage or a full-grid rank claim. Independent elevation checkpoints and measured RF references are unavailable; the national seam and void audit was not performed.
+
+**Tests and pipeline validation:** all 53 automated tests passed. The complete `all` workflow passed with the corrected active SRTM sampler. The corrected score version is `dataset-priority-v2-metric-terrain`; 49 of the previous 50 shortlisted candidate IDs remain in the shortlist (rank Spearman 0.9944 among the shared 49).
+
+**Decision:** `remove` FABDEM from runtime. Neither the 95% shortlist/municipality coverage thresholds nor independent validation criteria pass. Retain `eval_reports/step_14_fabdem_evaluation.json` and the point difference GeoJSON for audit. The active SRTM terrain calculation is corrected independently of FABDEM selection. Reconsider FABDEM only after a sufficiently complete snapshot, documented datum alignment, independent checkpoints, and measured RF validation are available.
 
 ## Step 15: Acquire Operator Asset and Configuration Data
 
 **Datasets:** verified site/sector inventory, antenna catalogue, azimuth, tilt, height, bands, bandwidth, power, feeder loss, and backhaul endpoints.
-**Status:** proposed; requires operator authorization.
+**Status:** data contract and aggregate validator implemented; an authorized operator export and engineer-approved thresholds are still required.
 
 **Question:** can the system progress from site-gap screening to engineering simulation?
 
@@ -391,12 +397,16 @@ Build reproducible hexagonal planning units and aggregate active evidence with a
 
 **Acceptance criterion:** thresholds are agreed with RF engineers before ingestion; records below completeness/confidence thresholds remain excluded or explicitly uncertain.
 
+**Preparation:** `data/operator_assets/` contains header-only templates and a source manifest contract. `operator-assets-evaluate` audits identifiers, site/sector links, ranges, dates, file hashes, optional survey checkpoints, and exact OpenCellID identities. The frozen pilot snapshot and `pilot_data_request.json` identify 41 cell identities observed on its training routes. An explicitly selected private export can be compared with those identities through `pilot-review --assets`; missing, ambiguous, and complete matches stay separate. The aggregate report remains under review until operator data and thresholds are supplied. No asset fields enter the runtime screening score.
+
 **Decision:** keep secured authoritative fields. Never fill missing antenna or spectrum values with generic assumptions in production outputs.
 
 ## Step 16: Integrate RF Simulation
 
 **Tools:** GRASS-RaPlaT for area coverage; SPLAT! or an accepted equivalent for terrain profile, LOS, and backhaul checks.
 **Status:** proposed.
+
+An isolated, real-measurement method benchmark is recorded in [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md). Its foreign 5G data and weaker-than-baseline distance model do not satisfy this RF gate or enter Libya outputs.
 
 Start with a reproducible link budget and propagation configuration based on supplied operator parameters. Record frequency, EIRP, antenna pattern, height, receiver assumptions, clutter, DEM, resolution, and software version.
 

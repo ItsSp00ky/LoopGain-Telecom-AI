@@ -1,5 +1,6 @@
 """Interactive review map for source sites and proposed placements."""
 
+import json
 from html import escape
 from pathlib import Path
 
@@ -87,11 +88,18 @@ def generate_interactive_map(
     add_local_basemap(map_)
     _add_source_sites(map_, sites)
     _add_opencellid(map_)
+    _add_collected_context(map_)
+    _add_pilot_context(map_)
     _add_building_h3_context(map_, recommendations)
     _add_proposed_placements(map_, recommendations)
     folium.LayerControl(collapsed=False).add_to(map_)
     output_html.parent.mkdir(parents=True, exist_ok=True)
     map_.save(output_html)
+    rendered = output_html.read_text(encoding="utf-8")
+    output_html.write_text(
+        "\n".join(line.rstrip() for line in rendered.splitlines()) + "\n",
+        encoding="utf-8",
+    )
     print(f"Saved placement-review map to: {output_html}")
     return output_html
 
@@ -118,7 +126,8 @@ def _add_source_sites(map_: folium.Map, sites: pd.DataFrame) -> None:
             f"<b>Source-derived physical site #{site['physical_site_id']}</b><br>"
             f"Technologies: {escape(technologies)}<br>"
             f"Operators: {escape(str(site['operators']))}<br>"
-            f"Observed bandwidth: {bandwidth}"
+            f"Observed bandwidth: {bandwidth}<br>"
+            f"Conflicting source locations: {bool(site['location_conflict'])}"
         )
         folium.CircleMarker(
             [site["canonical_latitude"], site["canonical_longitude"]],
@@ -133,12 +142,9 @@ def _add_source_sites(map_: folium.Map, sites: pd.DataFrame) -> None:
 
 
 def _add_opencellid(map_: folium.Map) -> None:
-    from antenna_cell_placement.config import OPENCELLID_RAW_PATH
-    from antenna_cell_placement.opencellid import load_cells
+    from antenna_cell_placement.opencellid import import_pipeline
 
-    if not OPENCELLID_RAW_PATH.exists():
-        return
-    cells, _, _ = load_cells(OPENCELLID_RAW_PATH)
+    cells, _ = import_pipeline()
     for operator, subset in cells.groupby("operator"):
         layer = folium.FeatureGroup(name=f"OpenCellID estimates: {operator}", show=False)
         cluster = MarkerCluster().add_to(layer)
@@ -249,6 +255,79 @@ def _add_building_h3_context(
             ),
         ).add_to(layer)
     layer.add_to(map_)
+
+
+
+
+def _add_collected_context(map_: folium.Map) -> None:
+    from antenna_cell_placement.collected_data import load_measurements, load_beacon
+
+    measurements, _ = load_measurements()
+    if not measurements.empty:
+        layer = folium.FeatureGroup(name="Phone signal measurements (receiver locations)", show=False)
+        cluster = MarkerCluster().add_to(layer)
+        for _, row in measurements.iterrows():
+            popup = (f"<b>Phone measurement — not an antenna location</b><br>"
+                     f"{escape(str(row.net_type))}; MNC {int(row.mnc)}; cell {int(row.cell_id)}<br>"
+                     f"Signal: {row.dbm} dBm; GPS accuracy: {row.accuracy} m<br>"
+                     f"Measured: {row.measured_at}<br>Review eligible: {bool(row.review_eligible)}")
+            folium.Marker([row.lat, row.lon], popup=folium.Popup(popup, max_width=340)).add_to(cluster)
+        layer.add_to(map_)
+    beacon, _ = load_beacon()
+    if not beacon.empty:
+        layer = folium.FeatureGroup(name="BeaconDB geolocation estimates", show=False)
+        cluster = MarkerCluster().add_to(layer)
+        for _, row in beacon.iterrows():
+            popup = (f"<b>BeaconDB estimate — not a surveyed mast</b><br>"
+                     f"{escape(str(row.radio_type))}; MNC {int(row.mnc)}; cell {int(row.cell_id)}<br>"
+                     f"Reported accuracy: {row.beacondb_accuracy_m} m")
+            folium.Marker([row.beacondb_lat, row.beacondb_lon], popup=folium.Popup(popup, max_width=340)).add_to(cluster)
+        layer.add_to(map_)
+
+
+def _add_pilot_context(map_: folium.Map) -> None:
+    from antenna_cell_placement.config import REPORTS_DIR
+    from antenna_cell_placement.pilot import _cell_geometry
+
+    areas = REPORTS_DIR / 'measured_service_areas.geojson'
+    report = REPORTS_DIR / 'pilot_review.json'
+    if areas.exists():
+        features = json.loads(areas.read_text())['features']
+        pairs = sorted({(feature['properties']['mnc'], feature['properties']['net_type']) for feature in features})
+        for mnc, radio in pairs:
+            layer = folium.FeatureGroup(name=f"Measured service by operator and technology: MNC {int(mnc)} / {radio}", show=False)
+            subset = {'type': 'FeatureCollection', 'features': [feature for feature in features
+                      if feature['properties']['mnc'] == mnc and feature['properties']['net_type'] == radio]}
+            folium.GeoJson(
+                subset,
+                style_function=lambda _: {"color": "#0891b2", "weight": 1, "fillOpacity": 0.18},
+                tooltip=folium.GeoJsonTooltip(
+                    fields=['mnc', 'net_type', 'sample_count', 'day_count', 'spatial_bins_r9', 'median_dbm', 'median_lte_rsrp_dbm'],
+                    aliases=['MNC', 'Technology', 'Samples', 'Days', 'Spatial bins', 'Block median dBm', 'LTE RSRP dBm'],
+                ),
+            ).add_to(layer)
+            layer.add_to(map_)
+    if report.exists():
+        data = json.loads(report.read_text())
+        pilot = data['pilot']
+        if 'h3_r7' in pilot:
+            layer = folium.FeatureGroup(name="Measured pilot area (review only)", show=False)
+            folium.GeoJson(_cell_geometry(pilot['h3_r7']),
+                           style_function=lambda _: {"color": "#e11d48", "weight": 3, "fillOpacity": .05}).add_to(layer)
+            folium.Marker([pilot['latitude'], pilot['longitude']], popup=folium.Popup(
+                f"<b>Measured pilot — review only</b><br>Training samples: {pilot['training_samples']}<br>"
+                f"Held-out samples: {pilot['holdout_samples']}<br>RF validation ready: False", max_width=320)).add_to(layer)
+            layer.add_to(map_)
+        conflicts = folium.FeatureGroup(name="Location conflicts requiring survey", show=False)
+        for decision in data['reconciliation']['decisions']:
+            for alternative in decision['alternatives']:
+                label = (f"<b>Unresolved location</b><br>MNC {escape(str(decision['mnc']))}; "
+                         f"{escape(decision['rat'])}; site {escape(str(decision['site_id']))}<br>"
+                         f"Source verified: {alternative['source_verified']}<br>Last seen: {escape(str(alternative['last_seen_utc']))}<br>"
+                         f"Decision: {escape(decision['status'])}<br>Independent survey required")
+                folium.CircleMarker([alternative['latitude'], alternative['longitude']], radius=7,
+                                    color='#dc2626', popup=folium.Popup(label, max_width=340)).add_to(conflicts)
+        conflicts.add_to(map_)
 
 
 if __name__ == "__main__":

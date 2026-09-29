@@ -21,8 +21,8 @@
     "municipality_count": 22,
     "municipality_coverage_pct": 90.9090909090909,
     "shortlist_count": 50,
-    "shortlist_coverage_pct": 6.0,
-    "shortlist_with_supported_observation": 3,
+    "shortlist_coverage_pct": 8.0,
+    "shortlist_with_supported_observation": 4,
     "supported_h3_units_any_quarter": 490
   },
   "decision": "exclude Ookla observations from runtime because geographic coverage failed",
@@ -48,8 +48,8 @@
   },
   "question": "Can supported mobile speed, latency, and test density add independent service-quality context?",
   "runtime_seconds": {
-    "load_validate_aggregate_and_join": 0.3642866029999823,
-    "source_hash_verification": 0.3976112270001977
+    "load_validate_aggregate_and_join": 0.38001450800038583,
+    "source_hash_verification": 0.5300293580003199
   },
   "source": {
     "aggregation_warning": "Device counts are not unique across tiles or quarters and must not be summed as people or national unique devices.",

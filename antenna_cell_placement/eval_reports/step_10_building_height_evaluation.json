@@ -89,8 +89,8 @@
   },
   "question": "Does independently supported vertical form improve planning context beyond mapped footprints?",
   "runtime_seconds": {
-    "height_and_levels_profile": 8.082102855999892,
-    "source_hash_verification": 0.053789290000167966
+    "height_and_levels_profile": 8.053348198000094,
+    "source_hash_verification": 0.07116120599994247
   },
   "source": {
     "attribution": "OpenStreetMap contributors",

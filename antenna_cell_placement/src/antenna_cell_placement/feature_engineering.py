@@ -23,6 +23,7 @@ from antenna_cell_placement.population import (
     circular_population_sum,
     density_to_population_counts,
 )
+from antenna_cell_placement.terrain import TerrainSampler
 
 
 class GeospatialFeatureExtractor:
@@ -31,8 +32,9 @@ class GeospatialFeatureExtractor:
     across Libya. Caches rasters and KD-trees in memory for sub-second vector extraction.
     """
 
-    def __init__(self):
+    def __init__(self, dem_path=DEM_RASTER_PATH):
         self._loaded = False
+        self.dem_path = dem_path
         self.pop_arr = None
         self.pop_count_arr = None
         self.pop_transform = None
@@ -42,6 +44,7 @@ class GeospatialFeatureExtractor:
         self.dem_arr = None
         self.inv_dem = None
         self.dem_shape = None
+        self.terrain_sampler = None
 
         self.road_tree = None
         self.place_tree = None
@@ -68,12 +71,13 @@ class GeospatialFeatureExtractor:
             self.inv_pop = ~src.transform
             self.pop_shape = self.pop_arr.shape
 
-        print("Loading SRTM DEM 250m raster...")
-        with rasterio.open(DEM_RASTER_PATH) as src:
+        print("Loading terrain raster...")
+        with rasterio.open(self.dem_path) as src:
             arr = src.read(1, masked=True).astype(np.float32)
             self.dem_arr = arr.filled(np.nan)
             self.inv_dem = ~src.transform
             self.dem_shape = self.dem_arr.shape
+            self.terrain_sampler = TerrainSampler(self.dem_arr, src.transform, src.crs)
 
         print("Loading UN OCHA Highway & Road Network...")
         roads_gdf = gpd.read_file(ROADS_SHP_PATH).to_crs(CRS_PROJECTED_LIBYA)
@@ -156,32 +160,16 @@ class GeospatialFeatureExtractor:
                     c,
                 )
 
-        # 3. Extract Topography & Elevation (SRTM DEM)
+        # 3. Extract terrain with physical 3 km windows and metre-based gradients.
         elevation_m = np.full(n, np.nan, dtype=np.float32)
         prominence_3km = np.full(n, np.nan, dtype=np.float32)
         terrain_slope_deg = np.full(n, np.nan, dtype=np.float32)
 
         for i in range(n):
-            col, row = self.inv_dem * (lons[i], lats[i])
-            c, r = int(np.floor(col)), int(np.floor(row))
-            if 0 <= r < self.dem_shape[0] and 0 <= c < self.dem_shape[1]:
-                elev = float(self.dem_arr[r, c])
-                elevation_m[i] = elev
-
-                # 3km window (~12 pixels radius at 250m)
-                r0, r1 = max(0, r - 12), min(self.dem_shape[0], r + 13)
-                c0, c1 = max(0, c - 12), min(self.dem_shape[1], c + 13)
-                window = self.dem_arr[r0:r1, c0:c1]
-                if np.isfinite(elev) and np.isfinite(window).any():
-                    prominence_3km[i] = elev - float(np.nanmean(window))
-
-                # Local slope gradient
-                if 0 < r < self.dem_shape[0] - 1 and 0 < c < self.dem_shape[1] - 1:
-                    neighbors = self.dem_arr[[r, r, r + 1, r - 1], [c + 1, c - 1, c, c]]
-                    if np.isfinite(neighbors).all():
-                        dz_dx = (float(neighbors[0]) - float(neighbors[1])) / 500.0
-                        dz_dy = (float(neighbors[2]) - float(neighbors[3])) / 500.0
-                        terrain_slope_deg[i] = np.degrees(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2)))
+            sample = self.terrain_sampler.sample(float(lons[i]), float(lats[i]))
+            elevation_m[i] = sample["elevation_m"]
+            prominence_3km[i] = sample["elevation_prominence_3km"]
+            terrain_slope_deg[i] = sample["terrain_slope_deg"]
 
         # 4. Extract Transportation & Infrastructure (UN OCHA Roads)
         dist_to_road_m, _ = self.road_tree.query(utm_coords)

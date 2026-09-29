@@ -1,0 +1,259 @@
+{
+  "status": "review_only",
+  "source_manifest": {
+    "retrieved_on": "2026-09-26",
+    "license": "Other (Open), as declared by the Libya Open Data Portal; retain source attribution",
+    "sources": {
+      "population_by_region_2022.csv": {
+        "publisher": "Libya Bureau of Statistics and Census",
+        "dataset_page": "https://opendata.gia.gov.ly/dashboard/dataset/groups/population_number",
+        "url": "https://opendata.gia.gov.ly/dashboard/dataset/dfda9f93-48e0-4da8-890f-3b1495e270e3/resource/a676cb46-2491-4ce8-8ff7-c591f8b4f151/download/population-distribution-by-region-and-sex-for-the-year-2022.csv",
+        "reference_year": 2022,
+        "unit": "reported people by region and sex",
+        "bytes": 1487,
+        "sha256": "a72d23dcf8d8e98568622cc2f4da57d88473bcb535e26ef665c8dd9fdd3d1161"
+      },
+      "mobile_users_by_technology_2019_2025.csv": {
+        "publisher": "Libya General Authority for Communications and Informatics",
+        "dataset_page": "https://opendata.gia.gov.ly/dashboard/dataset/comm",
+        "url": "https://opendata.gia.gov.ly/dashboard/dataset/b9d9e949-f02d-4e82-9a85-4479edc071a7/resource/b3909bf8-269f-4319-a008-25f21c8e616e/download/distribution-of-mobile-phone-users-by-network-for-the-years-2019-2025-csv.csv",
+        "reference_years": [
+          2019,
+          2025
+        ],
+        "unit": "provider-reported mobile users by technology; uniqueness across lines or people is not documented",
+        "bytes": 416,
+        "sha256": "150c714b18023c4c2be2d026256e5f2a63c9bd9fe9825f869993c170a786c1a5"
+      }
+    }
+  },
+  "population_comparison": {
+    "official_regions": 22,
+    "matched_municipalities": 19,
+    "unmatched_official_regions_ar": [
+      "المنطقة الغربية",
+      "الواحات",
+      "وادي الحياة"
+    ],
+    "official_total_all_regions_2022": 7124585,
+    "official_total_matched_2022": 6445537,
+    "worldpop_total_matched_2020": 6276063.5,
+    "matched_worldpop_to_official_ratio": 0.9737,
+    "raster_method": "WorldPop people/km2 times ellipsoidal source-pixel area; pixel-center municipality mask",
+    "rows": [
+      {
+        "source_region_ar": "درنة",
+        "municipality": "Derna",
+        "adm2_pcode": "LY0101",
+        "official_2022": 209097,
+        "worldpop_2020": 201994.4,
+        "worldpop_to_official_ratio": 0.966
+      },
+      {
+        "source_region_ar": "المرج",
+        "municipality": "Almarj",
+        "adm2_pcode": "LY0102",
+        "official_2022": 235831,
+        "worldpop_2020": 225115.6,
+        "worldpop_to_official_ratio": 0.9546
+      },
+      {
+        "source_region_ar": "بنغازي",
+        "municipality": "Benghazi",
+        "adm2_pcode": "LY0103",
+        "official_2022": 836579,
+        "worldpop_2020": 824277.1,
+        "worldpop_to_official_ratio": 0.9853
+      },
+      {
+        "source_region_ar": "طبرق",
+        "municipality": "Tobruk",
+        "adm2_pcode": "LY0104",
+        "official_2022": 202174,
+        "worldpop_2020": 194459.9,
+        "worldpop_to_official_ratio": 0.9618
+      },
+      {
+        "source_region_ar": "الجبل الأخضر",
+        "municipality": "Al Jabal Al Akhdar",
+        "adm2_pcode": "LY0106",
+        "official_2022": 258839,
+        "worldpop_2020": 252877.0,
+        "worldpop_to_official_ratio": 0.977
+      },
+      {
+        "source_region_ar": "الكفرة",
+        "municipality": "Alkufra",
+        "adm2_pcode": "LY0107",
+        "official_2022": 57421,
+        "worldpop_2020": 59232.4,
+        "worldpop_to_official_ratio": 1.0315
+      },
+      {
+        "source_region_ar": "سرت",
+        "municipality": "Sirt",
+        "adm2_pcode": "LY0208",
+        "official_2022": 177289,
+        "worldpop_2020": 176278.2,
+        "worldpop_to_official_ratio": 0.9943
+      },
+      {
+        "source_region_ar": "نالوت",
+        "municipality": "Nalut",
+        "adm2_pcode": "LY0209",
+        "official_2022": 118021,
+        "worldpop_2020": 115251.9,
+        "worldpop_to_official_ratio": 0.9765
+      },
+      {
+        "source_region_ar": "المرقب",
+        "municipality": "Almargeb",
+        "adm2_pcode": "LY0210",
+        "official_2022": 551563,
+        "worldpop_2020": 526344.7,
+        "worldpop_to_official_ratio": 0.9543
+      },
+      {
+        "source_region_ar": "طرابلس",
+        "municipality": "Tripoli",
+        "adm2_pcode": "LY0211",
+        "official_2022": 1340715,
+        "worldpop_2020": 1302143.8,
+        "worldpop_to_official_ratio": 0.9712
+      },
+      {
+        "source_region_ar": "الجفارة",
+        "municipality": "Aljfara",
+        "adm2_pcode": "LY0212",
+        "official_2022": 568782,
+        "worldpop_2020": 556718.5,
+        "worldpop_to_official_ratio": 0.9788
+      },
+      {
+        "source_region_ar": "الزاوية",
+        "municipality": "Azzawya",
+        "adm2_pcode": "LY0213",
+        "official_2022": 364068,
+        "worldpop_2020": 356243.8,
+        "worldpop_to_official_ratio": 0.9785
+      },
+      {
+        "source_region_ar": "مصراتة",
+        "municipality": "Misrata",
+        "adm2_pcode": "LY0214",
+        "official_2022": 687518,
+        "worldpop_2020": 664962.5,
+        "worldpop_to_official_ratio": 0.9672
+      },
+      {
+        "source_region_ar": "الجبل الغربي",
+        "municipality": "Al Jabal Al Gharbi",
+        "adm2_pcode": "LY0216",
+        "official_2022": 388532,
+        "worldpop_2020": 371792.8,
+        "worldpop_to_official_ratio": 0.9569
+      },
+      {
+        "source_region_ar": "الجفرة",
+        "municipality": "Aljufra",
+        "adm2_pcode": "LY0317",
+        "official_2022": 62772,
+        "worldpop_2020": 63963.6,
+        "worldpop_to_official_ratio": 1.019
+      },
+      {
+        "source_region_ar": "وادي الشاطي",
+        "municipality": "Wadi Ashshati",
+        "adm2_pcode": "LY0318",
+        "official_2022": 98756,
+        "worldpop_2020": 96223.4,
+        "worldpop_to_official_ratio": 0.9744
+      },
+      {
+        "source_region_ar": "سبها",
+        "municipality": "Sebha",
+        "adm2_pcode": "LY0319",
+        "official_2022": 161356,
+        "worldpop_2020": 163350.3,
+        "worldpop_to_official_ratio": 1.0124
+      },
+      {
+        "source_region_ar": "غات",
+        "municipality": "Ghat",
+        "adm2_pcode": "LY0321",
+        "official_2022": 28722,
+        "worldpop_2020": 28298.0,
+        "worldpop_to_official_ratio": 0.9852
+      },
+      {
+        "source_region_ar": "مرزق",
+        "municipality": "Murzuq",
+        "adm2_pcode": "LY0322",
+        "official_2022": 97502,
+        "worldpop_2020": 96535.6,
+        "worldpop_to_official_ratio": 0.9901
+      }
+    ]
+  },
+  "mobile_technology": {
+    "rows": [
+      {
+        "year": 2019,
+        "reported_2g_3g": 10920522,
+        "reported_lte_4g": 1008981,
+        "reported_total": 11929503,
+        "lte_4g_share_pct": 8.46
+      },
+      {
+        "year": 2020,
+        "reported_2g_3g": 13916059,
+        "reported_lte_4g": 2573602,
+        "reported_total": 16489661,
+        "lte_4g_share_pct": 15.61
+      },
+      {
+        "year": 2021,
+        "reported_2g_3g": 14538649,
+        "reported_lte_4g": 3833563,
+        "reported_total": 18372212,
+        "lte_4g_share_pct": 20.87
+      },
+      {
+        "year": 2022,
+        "reported_2g_3g": 15331110,
+        "reported_lte_4g": 4849121,
+        "reported_total": 20180231,
+        "lte_4g_share_pct": 24.03
+      },
+      {
+        "year": 2023,
+        "reported_2g_3g": 15600341,
+        "reported_lte_4g": 5826310,
+        "reported_total": 21426651,
+        "lte_4g_share_pct": 27.19
+      },
+      {
+        "year": 2024,
+        "reported_2g_3g": 16665613,
+        "reported_lte_4g": 7381115,
+        "reported_total": 24046728,
+        "lte_4g_share_pct": 30.69
+      },
+      {
+        "year": 2025,
+        "reported_2g_3g": 17291357,
+        "reported_lte_4g": 8177187,
+        "reported_total": 25468544,
+        "lte_4g_share_pct": 32.11
+      }
+    ],
+    "interpretation": "National provider-reported figures; not spatial coverage, unique subscribers, traffic, or RF measurements."
+  },
+  "decision": "Use for source-quality and national context review only. Leave placement scores unchanged.",
+  "limitations": [
+    "Official 2022 population and WorldPop 2020 refer to different years.",
+    "Unmatched official regions have no safe one-to-one crosswalk to supplied boundaries.",
+    "Population comparison uses center-of-pixel assignment at municipality edges.",
+    "National technology totals cannot identify local service gaps or sector settings."
+  ]
+}

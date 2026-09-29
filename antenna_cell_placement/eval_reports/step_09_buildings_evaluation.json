@@ -7,7 +7,7 @@
   "after": {
     "building_context_fields": 7,
     "shortlist_count": 50,
-    "shortlist_h3_with_observed_buildings": 43,
+    "shortlist_h3_with_observed_buildings": 44,
     "shortlist_review_required_count": 0
   },
   "before": {
@@ -22,7 +22,7 @@
     "rank_stability_spearman": 1.0,
     "scores_and_ranks_unchanged": true,
     "shortlist_h3_context_available_pct": 100.0,
-    "shortlist_h3_with_observed_buildings_pct": 86.0,
+    "shortlist_h3_with_observed_buildings_pct": 88.0,
     "shortlist_review_required_count": 0,
     "valid_geometry_pct_after_repair": 100.0
   },
@@ -32,49 +32,42 @@
       "candidate_id": "candidate-d6ad298b6eac",
       "mapped_building_count_h3": 0,
       "municipality_name": "Derna",
-      "recommendation_rank": 5,
+      "recommendation_rank": 6,
       "worldcover_class_name": "Shrubland"
     },
     {
       "candidate_id": "candidate-6758c251d40c",
       "mapped_building_count_h3": 0,
       "municipality_name": "Ubari",
-      "recommendation_rank": 29,
+      "recommendation_rank": 32,
       "worldcover_class_name": "Bare / sparse vegetation"
     },
     {
       "candidate_id": "candidate-38399d560724",
       "mapped_building_count_h3": 0,
       "municipality_name": "Murzuq",
-      "recommendation_rank": 34,
+      "recommendation_rank": 33,
       "worldcover_class_name": "Bare / sparse vegetation"
     },
     {
       "candidate_id": "candidate-4caf7477545b",
       "mapped_building_count_h3": 0,
       "municipality_name": "Murzuq",
-      "recommendation_rank": 41,
-      "worldcover_class_name": "Bare / sparse vegetation"
-    },
-    {
-      "candidate_id": "candidate-7894c0df088d",
-      "mapped_building_count_h3": 0,
-      "municipality_name": "Derna",
-      "recommendation_rank": 46,
-      "worldcover_class_name": "Grassland"
-    },
-    {
-      "candidate_id": "candidate-47fb4ab18631",
-      "mapped_building_count_h3": 0,
-      "municipality_name": "Aljufra",
-      "recommendation_rank": 47,
+      "recommendation_rank": 42,
       "worldcover_class_name": "Bare / sparse vegetation"
     },
     {
       "candidate_id": "candidate-0d43921d9b14",
       "mapped_building_count_h3": 0,
       "municipality_name": "Ejdabia",
-      "recommendation_rank": 50,
+      "recommendation_rank": 47,
+      "worldcover_class_name": "Bare / sparse vegetation"
+    },
+    {
+      "candidate_id": "candidate-47fb4ab18631",
+      "mapped_building_count_h3": 0,
+      "municipality_name": "Aljufra",
+      "recommendation_rank": 48,
       "worldcover_class_name": "Bare / sparse vegetation"
     }
   ],
@@ -130,10 +123,10 @@
   },
   "question": "Do observed building footprints improve built-up demand and constructability context?",
   "runtime_seconds": {
-    "national_streamed_quality_profile": 11.961770446999708,
-    "shortlist_h3_context": 0.08990043199992215,
-    "shortlist_spatial_index_load": 3.813653707999947,
-    "source_hash_verification": 0.3272991300000285
+    "national_streamed_quality_profile": 12.354762376000053,
+    "shortlist_h3_context": 0.10458343500022238,
+    "shortlist_spatial_index_load": 4.044041256999662,
+    "source_hash_verification": 0.4216387320002468
   },
   "settlement_coverage": {
     "populated_place_1km_observation_coverage_pct": 89.74358974358974,

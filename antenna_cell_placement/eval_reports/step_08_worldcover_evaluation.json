@@ -6,14 +6,14 @@
     "zero_water_candidates_after_screening": true
   },
   "after": {
-    "eligible_candidate_count": 3720,
+    "eligible_candidate_count": 3716,
     "generated_candidate_count": 22317,
     "shortlist_count": 50,
     "shortlist_review_required_count": 5,
     "water_candidates_remaining": 0
   },
   "before": {
-    "eligible_candidate_count": 3725,
+    "eligible_candidate_count": 3721,
     "generated_candidate_count": 22317,
     "shortlist_count": 50,
     "water_candidates_not_screened": 5
@@ -41,11 +41,11 @@
   ],
   "question": "Does land cover improve clutter and buildability screening?",
   "runtime_seconds": {
-    "baseline_feature_extraction": 4.29716111200014,
-    "baseline_selection": 0.058208729999932984,
-    "source_hash_verification": 0.17761332800000673,
-    "worldcover_point_extraction_incremental": 3.2781308690000515,
-    "worldcover_selection_and_h3_context": 0.19422880000001896
+    "baseline_feature_extraction": 4.486804708999898,
+    "baseline_selection": 0.5478891949996978,
+    "source_hash_verification": 0.20508447799966234,
+    "worldcover_point_extraction_incremental": 4.177183562999744,
+    "worldcover_selection_and_h3_context": 0.6769108620001134
   },
   "software_and_dataset": {
     "dataset": "ESA WorldCover 10 m 2021 v200",

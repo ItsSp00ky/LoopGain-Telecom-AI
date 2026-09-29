@@ -2,3 +2,8 @@
 eval_reports/*.html linguist-generated=true
 eval_reports/*.csv linguist-generated=true
 eval_reports/*.geojson linguist-generated=true
+
+# Preserve exact source bytes for the hashes pinned in the pilot and manifests.
+data/new_data/**/*.csv -text -diff
+data/new_data/*.csv -text -diff
+data/external/libya_official_2022_2025/*.csv -text -diff

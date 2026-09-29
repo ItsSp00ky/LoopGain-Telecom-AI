@@ -1,0 +1,55 @@
+{
+  "status": "evaluated",
+  "decision": "method_review_only",
+  "distance_model_decision": "do_not_use",
+  "dataset_country": "China",
+  "dataset_city": "Chongqing",
+  "source_doi": "10.5281/zenodo.20564635",
+  "source_sha256": {
+    "raw_datas.csv": "17f0cfadbfc02166851ab54dc437c63ef52d6a95fe445b9cde5c2ae152ed78d3",
+    "base_station_data.csv": "9512e2abeaf18d1e04f502d719a766179ad147745f012512ca327e8d3b195133",
+    "Data_Dictionary.xlsx": "3d693b285fe6b0d8c1912792f225738129c4e7d5edf64811a70a6c68851a1e5b",
+    "LICENSE.txt": "0493476f1bc2ca29e36138b5e1fd8dbb7cbdc4326f8f228e4935c47decbba782"
+  },
+  "source_quality": {
+    "raw_rows": 81419,
+    "eligible_sa_outdoor_rows": 80136,
+    "rows_with_exact_nci_eci_match_and_valid_distance": 79795,
+    "raw_cells": 197,
+    "matched_cells": 189,
+    "base_station_rows": 189,
+    "measured_blocks": 4786
+  },
+  "evaluation": {
+    "holdout_policy": "SHA-256(H3-8 ID) first byte modulo 5 equals zero; complete H3-8 areas held out",
+    "training_areas": 19,
+    "holdout_areas": 10,
+    "training_blocks": 3660,
+    "holdout_blocks": 1126,
+    "eligible_fitted_cells": 60,
+    "scored_holdout_blocks": 436,
+    "scored_holdout_support_pct": 38.72,
+    "scored_holdout_cells": 27,
+    "baseline": {
+      "mae_db": 7.101,
+      "p90_absolute_error_db": 14.5,
+      "bias_db": 1.468
+    },
+    "distance_model": {
+      "mae_db": 7.793,
+      "p90_absolute_error_db": 16.335,
+      "bias_db": 5.0
+    },
+    "distance_model_mae_improvement_pct": -9.75,
+    "baseline_method": "Per-cell median SS-RSRP from training blocks",
+    "treatment_method": "Per-cell least-squares SS-RSRP versus log10(measured distance to source base coordinate)",
+    "sample_weight": "One median per cell/day/H3-10 block; equal block weight"
+  },
+  "limitations": [
+    "Foreign 5G NR data evaluates only the measurement and geographic holdout method.",
+    "Operator base-station coordinates are anonymized/processed, not independently surveyed.",
+    "No antenna pattern, receiver height, or full calibrated RF simulator is used.",
+    "This result cannot validate Libya coverage, RF errors, frequency bands, or site placement.",
+    "The source grid includes interpolated values; this audit uses raw_datas.csv only."
+  ]
+}

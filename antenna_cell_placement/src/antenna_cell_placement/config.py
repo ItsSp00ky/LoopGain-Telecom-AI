@@ -30,6 +30,8 @@ OOKLA_MANIFEST = OOKLA_DIR / "manifest.json"
 VIIRS_DIR = EXTERNAL_DATA_DIR / "viirs_nightlights_2024"
 VIIRS_MANIFEST = VIIRS_DIR / "manifest.json"
 VIIRS_FLARES_CSV = VIIRS_DIR / "libya_gas_flares_2024.csv"
+FABDEM_DIR = EXTERNAL_DATA_DIR / "fabdem_v1_2"
+FABDEM_MANIFEST = FABDEM_DIR / "manifest.json"
 DEM_RASTER_PATH = EXTERNAL_DATA_DIR / "dem" / "DEM" / "lyb_strm_250m"
 ROADS_SHP_PATH = EXTERNAL_DATA_DIR / "roads" / "LYB_Roads.shp"
 ADMIN1_GEOJSON_PATH = EXTERNAL_DATA_DIR / "admin_boundaries" / "lby_admin1.geojson"
@@ -49,6 +51,7 @@ BUILDING_HEIGHT_EVALUATION_REPORT = REPORTS_DIR / "step_10_building_height_evalu
 OSM_CONTEXT_EVALUATION_REPORT = REPORTS_DIR / "step_11_osm_context_evaluation.json"
 OOKLA_EVALUATION_REPORT = REPORTS_DIR / "step_12_ookla_evaluation.json"
 VIIRS_EVALUATION_REPORT = REPORTS_DIR / "step_13_viirs_evaluation.json"
+FABDEM_EVALUATION_REPORT = REPORTS_DIR / "step_14_fabdem_evaluation.json"
 
 # Coordinate Reference Systems
 CRS_WGS84 = "EPSG:4326"

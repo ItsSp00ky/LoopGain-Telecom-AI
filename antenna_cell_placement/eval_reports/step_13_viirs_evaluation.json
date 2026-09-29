@@ -39,8 +39,8 @@
   ],
   "question": "Does night activity identify demand missed by population and buildings?",
   "redundancy": {
-    "spearman_log_radiance_vs_log_building_density": 0.5036792401390449,
-    "spearman_log_radiance_vs_log_population_5km": 0.3652644201295723
+    "spearman_log_radiance_vs_log_building_density": 0.4845144281196196,
+    "spearman_log_radiance_vs_log_population_5km": 0.30857930059277183
   },
   "source": {
     "crs": "EPSG:4326",
@@ -149,11 +149,11 @@
   "status": "remove",
   "step": 13,
   "temporal_stability": {
-    "median_spearman": 0.9660007683442183,
+    "median_spearman": 0.9699152443430554,
     "selected_month_spearman": {
-      "202401_to_202404": 0.9652804456396465,
-      "202404_to_202407": 0.9660007683442183,
-      "202407_to_202410": 0.9816793529374437
+      "202401_to_202404": 0.9675142263107179,
+      "202404_to_202407": 0.9699152443430554,
+      "202407_to_202410": 0.9832160782722444
     }
   },
   "thresholds": {

@@ -31,7 +31,7 @@ def cmd_opencellid(args):
     from antenna_cell_placement.config import OPENCELLID_RAW_PATH
     from antenna_cell_placement.opencellid import import_pipeline
 
-    _, report = import_pipeline(getattr(args, "path", OPENCELLID_RAW_PATH))
+    _, report = import_pipeline(getattr(args, "path", None))
     table = Table(title="OpenCellID source validation")
     table.add_column("Measure")
     table.add_column("Count", justify="right")
@@ -293,6 +293,81 @@ def cmd_viirs_evaluate(_args):
     console.print(table)
 
 
+def cmd_fabdem_evaluate(args):
+    """Run the roadmap Step 14 FABDEM terrain comparison."""
+    import pandas as pd
+    from antenna_cell_placement.config import RECOMMENDATIONS_CSV
+    from antenna_cell_placement.fabdem import evaluate_fabdem_gate
+
+    recommendations = pd.read_csv(getattr(args, "recommendations", None) or RECOMMENDATIONS_CSV)
+    report = evaluate_fabdem_gate(recommendations)
+    table = Table(title="Step 14: FABDEM terrain gate")
+    table.add_column("Measure")
+    table.add_column("Result", justify="right")
+    table.add_row("Decision", report["status"].upper())
+    table.add_row("Shortlist coverage", f"{report['coverage']['shortlist_coverage_pct']:.2f}%")
+    table.add_row("Shortlist municipality coverage", f"{report['coverage']['shortlist_municipality_coverage_pct']:.2f}%")
+    table.add_row("Independent elevation/RF validation", "Unavailable")
+    console.print(table)
+
+
+def cmd_operator_assets_evaluate(args):
+    """Audit a locally supplied operator export for roadmap Step 15."""
+    from antenna_cell_placement.config import REPORTS_DIR
+    from antenna_cell_placement.operator_assets import evaluate_operator_assets
+
+    report = evaluate_operator_assets(args.directory, output_path=args.output or
+                                      REPORTS_DIR / "step_15_operator_assets_evaluation.json",
+                                      observed_path=None if args.no_observed_match else args.observed)
+    table = Table(title="Step 15: operator asset audit")
+    table.add_column("Measure")
+    table.add_column("Result", justify="right")
+    table.add_row("Decision", report["status"].upper())
+    for name in ("sites", "sectors"):
+        item = report["metrics"][name]
+        table.add_row(name.title(), f"{item['valid_rows']}/{item['rows']} valid")
+    table.add_row("Engineering fields complete",
+                  f"{report['metrics']['sectors']['engineering_complete_pct']:.2f}%")
+    table.add_row("Engineer thresholds", "Supplied" if report["thresholds"] else "Pending")
+    console.print(table)
+
+
+def cmd_public_evidence_evaluate(_args):
+    """Compare official public population and mobile statistics with planning inputs."""
+    from antenna_cell_placement.public_evidence import evaluate_public_evidence
+
+    report = evaluate_public_evidence()
+    population = report['population_comparison']
+    table = Table(title='Official Libya public-data review')
+    table.add_column('Measure')
+    table.add_column('Result', justify='right')
+    table.add_row('Decision', report['status'].upper())
+    table.add_row('Matched population regions', f"{population['matched_municipalities']}/{population['official_regions']}")
+    table.add_row('2020 WorldPop / 2022 official, matched areas',
+                  f"{population['matched_worldpop_to_official_ratio']:.2%}")
+    table.add_row('2025 reported LTE/4G share',
+                  f"{report['mobile_technology']['rows'][-1]['lte_4g_share_pct']:.2f}%")
+    console.print(table)
+
+
+def cmd_foreign_rf_benchmark(_args):
+    """Exercise RF measurement evaluation with isolated observed foreign data."""
+    from antenna_cell_placement.foreign_rf import evaluate_foreign_rf_benchmark
+
+    report = evaluate_foreign_rf_benchmark()
+    evaluation = report['evaluation']
+    table = Table(title='External RF method benchmark')
+    table.add_column('Measure')
+    table.add_column('Result', justify='right')
+    table.add_row('Distance model decision', report['distance_model_decision'].upper())
+    table.add_row('Scored holdout blocks', str(evaluation['scored_holdout_blocks']))
+    table.add_row('Measured median MAE',
+                  f"{evaluation['baseline']['mae_db']:.3f} dB" if evaluation['baseline'] else 'Unavailable')
+    table.add_row('Distance model MAE',
+                  f"{evaluation['distance_model']['mae_db']:.3f} dB" if evaluation['distance_model'] else 'Unavailable')
+    console.print(table)
+
+
 def cmd_assess(args):
     """Assess one coordinate through the shared placement API."""
     from antenna_cell_placement.placement import evaluate_candidate
@@ -333,7 +408,30 @@ def _display_number(value, suffix="", precision=1):
     return "Missing" if value is None else f"{value:,.{precision}f}{suffix}"
 
 
+def cmd_collected_data(_args):
+    from antenna_cell_placement.collected_data import audit_collections
+    report = audit_collections()
+    for source, result in report['sources'].items():
+        console.print(f"{source}: {result['retained_rows']:,} retained; {result['rejected_rows']:,} rejected; {result['duplicate_rows']:,} duplicates")
+
+
+def cmd_pilot_review(args):
+    from antenna_cell_placement.pilot import build_pilot_review
+    from antenna_cell_placement.config import REPORTS_DIR
+
+    assets = getattr(args, 'assets', None)
+    output_dir = REPORTS_DIR / 'private_pilot_review' if assets else REPORTS_DIR
+    report = build_pilot_review(output_dir=output_dir, asset_directory=assets)
+    console.print(f"Measured service review: {report['eligible_measurements']:,} eligible samples; "
+                  f"{report['service_area_operator_radio_groups']} operator/radio/area groups")
+    console.print(f"Pilot: {report['pilot']['status']}; RF inputs: {report['rf_readiness']['status']}")
+    console.print(f"Reports: {output_dir / 'pilot_review.md'} and {output_dir / 'pilot_review.json'}")
+
+
 def cmd_all(args):
+    cmd_collected_data(args)
+    cmd_pilot_review(args)
+    cmd_public_evidence_evaluate(args)
     cmd_clean(args)
     cmd_opencellid(args)
     cmd_features(args)
@@ -358,7 +456,10 @@ def main():
     from antenna_cell_placement.config import OPENCELLID_RAW_PATH
 
     open_cell = subparsers.add_parser("opencellid", help="Validate the OpenCellID source export")
-    open_cell.add_argument("--path", type=Path, default=OPENCELLID_RAW_PATH)
+    open_cell.add_argument("--path", type=Path, help="Single export; default merges declared exports")
+    subparsers.add_parser("collected-data", help="Validate collected antennas and phone measurements")
+    pilot = subparsers.add_parser("pilot-review", help="Reconcile locations, summarize measured service, and validate a pilot")
+    pilot.add_argument("--assets", type=Path, help="Explicit private Step 15 operator export to compare with pilot identities")
     subparsers.add_parser("features", help="Audit source feature coverage")
     subparsers.add_parser("recommend", help="Generate dataset-only proposed placements")
     subparsers.add_parser("h3-evaluate", help="Run the Step 7 H3 acceptance gate")
@@ -381,6 +482,16 @@ def main():
     subparsers.add_parser(
         "viirs-evaluate", help="Run the Step 13 VIIRS night-light gate"
     )
+    fabdem = subparsers.add_parser("fabdem-evaluate", help="Run the Step 14 FABDEM terrain gate")
+    fabdem.add_argument("--recommendations", type=Path, help="Frozen shortlist CSV")
+    assets = subparsers.add_parser("operator-assets-evaluate", help="Audit a Step 15 operator asset export")
+    assets.add_argument("--directory", type=Path, required=True, help="Authorized asset export directory")
+    assets.add_argument("--output", type=Path, help="Aggregate JSON report path")
+    assets.add_argument("--observed", type=Path, default=OPENCELLID_RAW_PATH,
+                        help="Observed OpenCellID CSV for exact identity matching")
+    assets.add_argument("--no-observed-match", action="store_true", help="Skip observed identity matching")
+    subparsers.add_parser("public-evidence-evaluate", help="Audit official Libya population and mobile technology statistics")
+    subparsers.add_parser("foreign-rf-benchmark", help="Evaluate RF methods on isolated real-world observations")
     subparsers.add_parser("map", help="Generate the placement-review map")
     subparsers.add_parser("all", help="Run validation, placement, and map generation")
     assess = subparsers.add_parser("assess", help="Assess one planning coordinate")
@@ -390,6 +501,8 @@ def main():
     args = parser.parse_args()
     commands = {
         "clean": cmd_clean,
+        "collected-data": cmd_collected_data,
+        "pilot-review": cmd_pilot_review,
         "opencellid": cmd_opencellid,
         "features": cmd_features,
         "recommend": cmd_recommend,
@@ -400,6 +513,10 @@ def main():
         "osm-evaluate": cmd_osm_evaluate,
         "ookla-evaluate": cmd_ookla_evaluate,
         "viirs-evaluate": cmd_viirs_evaluate,
+        "fabdem-evaluate": cmd_fabdem_evaluate,
+        "operator-assets-evaluate": cmd_operator_assets_evaluate,
+        "public-evidence-evaluate": cmd_public_evidence_evaluate,
+        "foreign-rf-benchmark": cmd_foreign_rf_benchmark,
         "map": cmd_map,
         "all": cmd_all,
         "assess": cmd_assess,

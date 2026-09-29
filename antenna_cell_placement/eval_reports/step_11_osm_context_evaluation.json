@@ -120,8 +120,8 @@
   },
   "question": "Do selected OSM POI, transport, and land-use families add useful local context beyond supplied roads, settlements, and mapped buildings?",
   "runtime_seconds": {
-    "selected_family_profile_and_load": 0.08326644699991448,
-    "source_hash_verification": 0.3300929559999304
+    "selected_family_profile_and_load": 0.06258547400011594,
+    "source_hash_verification": 0.36353663999989294
   },
   "source": {
     "attribution": "OpenStreetMap contributors",

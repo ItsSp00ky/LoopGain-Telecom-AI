@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "eligible_measurements": 4874,
+  "service_groups": 209,
+  "training_samples": 2975,
+  "holdout_samples": 1899,
+  "pilot_area": "87384b2d0ffffff",
+  "chronological_mae_db": 7.675675675675675,
+  "rf_validation_ready": false,
+  "checks": [
+    "frozen source hashes and evaluation split",
+    "pilot data-request identities",
+    "measurement conservation",
+    "operator/radio isolation",
+    "temporal separation",
+    "block-weighted statistics",
+    "pilot sample accounting",
+    "GeoJSON geometry validity",
+    "independent temporal-error recomputation",
+    "runtime map layers",
+    "conflict alternatives retained"
+  ]
+}

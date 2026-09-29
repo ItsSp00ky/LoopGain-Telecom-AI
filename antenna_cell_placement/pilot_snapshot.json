@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "pilot_h3_r7": "87384b2d0ffffff",
+  "training_days": ["2026-09-23", "2026-09-24"],
+  "holdout_days": ["2026-09-26", "2026-09-28"],
+  "source_sha256": {
+    "Libyan_cells_dataset/cells.sqlite3": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06",
+    "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134",
+    "data/new_data/2026-09-26-17-13-40.csv": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e",
+    "data/new_data/2026-09-26-17-13-48.csv": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d",
+    "data/new_data/2026-09-28-15-41-22.csv": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a"
+  }
+}

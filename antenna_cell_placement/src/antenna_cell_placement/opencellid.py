@@ -31,11 +31,19 @@ def load_cells(path: Path, as_of=None):
     raw = pd.read_csv(path, header=None, dtype=str)
     if raw.empty:
         raise ValueError("OpenCellID input is empty")
+    # Named collected exports may append provider/country provenance columns.
+    if set(COLUMNS).issubset(raw.iloc[0].str.strip().tolist()):
+        raw.columns = raw.iloc[0].str.strip().tolist()
+        raw = raw.iloc[1:][COLUMNS].copy()
     if raw.shape[1] != len(COLUMNS):
         raise ValueError(f'Expected 14 OpenCellID columns, found {raw.shape[1]}')
-    if raw.iloc[0].str.strip().tolist() == COLUMNS:
+    if not raw.empty and raw.iloc[0].str.strip().tolist() == COLUMNS:
         raw = raw.iloc[1:].copy()
     raw.columns = COLUMNS
+    return _validate_cells(raw, str(path), as_of)
+
+
+def _validate_cells(raw, source, as_of=None):
     df = raw.copy()
     df['radio'] = df['radio'].str.strip().str.upper()
     for col in COLUMNS[1:]:
@@ -81,7 +89,7 @@ def load_cells(path: Path, as_of=None):
     df['range_is_estimated'] = True
     df['source'] = 'OpenCellID'
     report = {
-        'source': str(path), 'as_of_utc': now.isoformat(),
+        'source': source, 'as_of_utc': now.isoformat(),
         'input_rows': len(raw), 'rejected_rows': len(rejected),
         'duplicate_identity_rows': before - len(df), 'retained_cells': len(df),
         'operator_counts': df['operator'].value_counts().to_dict(),
@@ -127,9 +135,7 @@ def annotate_candidates(candidates, cells=None):
         result[column] = np.nan
     result['opencellid_review_required'] = False
     if cells is None:
-        if not OPENCELLID_RAW_PATH.exists():
-            return result
-        cells, _, _ = load_cells(OPENCELLID_RAW_PATH)
+        cells, _ = import_pipeline()
     if result.empty:
         return result
     coords = projected(result['canonical_longitude'], result['canonical_latitude'])
@@ -147,8 +153,27 @@ def annotate_candidates(candidates, cells=None):
     return result
 
 
-def import_pipeline(path: Path = OPENCELLID_RAW_PATH):
+def import_pipeline(path: Path | None = None):
     """Validate the supplied export and return its in-memory cells and report."""
-    cells, rejected, report = load_cells(path)
+    if path is not None:
+        cells, rejected, report = load_cells(path)
+    else:
+        from antenna_cell_placement.config import DATA_DIR
+        paths = [OPENCELLID_RAW_PATH, DATA_DIR / 'new_data/libya_antennas/opencellid_libya.csv']
+        frames, reports, rejects = [], [], []
+        for source_path in paths:
+            if source_path.exists():
+                frame, bad, summary = load_cells(source_path)
+                frames.append(frame[COLUMNS])
+                reports.append(summary)
+                rejects.append(bad)
+        if not frames:
+            raise FileNotFoundError('No declared OpenCellID exports found')
+        cells, _, report = _validate_cells(pd.concat(frames, ignore_index=True), 'Merged declared OpenCellID exports')
+        rejected = pd.concat(rejects, ignore_index=True)
+        report['sources'] = reports
+        report['input_rows'] = sum(r['input_rows'] for r in reports)
+        report['rejected_rows'] = len(rejected)
+        report['duplicate_identity_rows'] = report['input_rows'] - len(rejected) - len(cells)
     report['rejected_preview'] = rejected.head(5).to_dict(orient='records')
     return cells, report

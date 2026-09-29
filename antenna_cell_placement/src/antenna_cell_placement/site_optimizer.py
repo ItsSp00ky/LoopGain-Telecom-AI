@@ -25,7 +25,7 @@ SCORE_COMPONENT_COLUMNS = [
     "road_access_component",
     "terrain_component",
 ]
-SCORE_VERSION = "dataset-priority-v1"
+SCORE_VERSION = "dataset-priority-v2-metric-terrain"
 
 REQUIRED_CANDIDATE_FIELDS = [
     "population_sum_5km",
@@ -321,6 +321,8 @@ class CellSiteOptimizer:
         from antenna_cell_placement.opencellid import annotate_candidates
 
         result = annotate_candidates(result)
+        from antenna_cell_placement.collected_data import annotate_measurements
+        result = annotate_measurements(result)
         result = add_reason_codes(result)
         output_columns = [
             "recommendation_rank",
@@ -385,6 +387,9 @@ class CellSiteOptimizer:
             "cloudflare_http_requests_share_52w_pct",
             "cloudflare_regional_demand_score",
             "cloudflare_data_available",
+            "measurement_nearest_distance_m",
+            "measurement_count_1km",
+            *[column for column in result if column.startswith("measurement_mnc_")],
             "opencellid_any_distance_m",
             "opencellid_recent_distance_m",
             "opencellid_libyana_distance_m",

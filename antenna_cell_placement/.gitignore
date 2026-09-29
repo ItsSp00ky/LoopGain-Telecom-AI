@@ -5,6 +5,17 @@ dist/
 models/
 data/cleaned/
 
+# Keep the canonical collected inputs; provider copies and crawler caches stay local.
+data/new_data/**
+!data/new_data/*.csv
+!data/new_data/libya_antennas/
+!data/new_data/libya_antennas/opencellid_libya.csv
+!data/new_data/libya_collected_antennas/
+!data/new_data/libya_collected_antennas/cellmapper/
+!data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv
+!data/new_data/libya_collected_antennas/beacondb/
+!data/new_data/libya_collected_antennas/beacondb/beacondb_libya_antennas.csv
+
 # Retain proposed-placement artifacts and compact accepted-gate evidence.
 eval_reports/*
 !eval_reports/recommended_cell_placements.csv
@@ -49,3 +60,37 @@ data/external/viirs_nightlights_2024/*.part
 data/external/viirs_nightlights_2024/.download.lock
 !data/external/viirs_nightlights_2024/manifest.json
 !eval_reports/step_13_viirs_evaluation.json
+
+# FABDEM source TIFFs stay local; keep the source and evaluation records.
+data/external/fabdem_v1_2/*.tif
+data/external/fabdem_v1_2/*.part
+!data/external/fabdem_v1_2/manifest.json
+!eval_reports/step_14_fabdem_evaluation.json
+!eval_reports/step_14_fabdem_difference.geojson
+
+# Operator exports contain restricted site coordinates and configurations.
+data/operator_assets/*
+!data/operator_assets/README.md
+!data/operator_assets/templates/
+!data/operator_assets/templates/**
+# Step 15 aggregate reports stay local until an operator approves disclosure.
+
+# Reproducible audits for the supplied antenna and receiver collections.
+!eval_reports/collected_data_validation.json
+!eval_reports/collected_data_integration_checks.json
+
+# Measured service summaries, reconciliation, and chronological pilot evidence.
+!eval_reports/pilot_review.json
+!eval_reports/pilot_review.md
+!eval_reports/pilot_data_request.json
+!eval_reports/measured_service_summary.csv
+!eval_reports/measured_service_areas.geojson
+!eval_reports/pilot_integration_checks.json
+!eval_reports/public_evidence_review.json
+!eval_reports/foreign_rf_benchmark.json
+
+# Downloaded foreign benchmark measurements stay local; keep provenance only.
+data/external/chongqing_5g_2026/*.csv
+data/external/chongqing_5g_2026/*.xlsx
+data/external/chongqing_5g_2026/LICENSE.txt
+!data/external/chongqing_5g_2026/manifest.json

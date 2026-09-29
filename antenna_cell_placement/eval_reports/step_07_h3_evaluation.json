@@ -10,7 +10,7 @@
     "area_weighted_population_total": 6933931.297761452,
     "candidate_count": 50,
     "candidate_spatial_unit_id_coverage_pct": 100.0,
-    "parent_candidate_unit_count": 35,
+    "parent_candidate_unit_count": 36,
     "parent_national_unit_count": 38498,
     "parent_populated_unit_count": 38445,
     "population_allocation_digest": "555965826a6fc6f5cc23600a8f1f23792b5adc63bfe21e70bc482dbdbc91ea7b",
@@ -64,18 +64,18 @@
   },
   "question": "Does H3 improve reproducible aggregation and reporting without changing dataset-only placement scores?",
   "resolution_sensitivity": {
-    "candidate_unit_count_change": 15,
+    "candidate_unit_count_change": 14,
     "direct_point_resolution_agreement_pct": 92.0,
     "hierarchical_parent_consistency_pct": 100.0,
-    "parent_candidates_per_unit": 1.4285714285714286,
+    "parent_candidates_per_unit": 1.3888888888888888,
     "parent_population_conservation_error_pct": 0.0,
     "primary_candidates_per_unit": 1.0
   },
   "runtime_seconds": {
-    "exact_parent_grid_topology": 1.8822957579996,
-    "national_grid_generation": 4.877950091000002,
-    "primary_population_allocation": 4.1218356090003,
-    "repeat_population_allocation": 4.108711668000069
+    "exact_parent_grid_topology": 1.9549190439997801,
+    "national_grid_generation": 5.123921265000263,
+    "primary_population_allocation": 4.204385980000097,
+    "repeat_population_allocation": 4.208166222999807
   },
   "software": {
     "documentation": "https://uber.github.io/h3-py/",
@@ -103,9 +103,9 @@
       "sha256": "0c814253b963898a4ca698f167bae1d1a6b8a45b7fc6d0203721f01b3b7c9eda"
     },
     "recommendations": {
-      "bytes": 24609,
+      "bytes": 30224,
       "path": "eval_reports/recommended_cell_placements.csv",
-      "sha256": "d17cba2a7aae9e35d74b6719bfa10e069651df973ebc13990b9b2f9c7d4b50d1"
+      "sha256": "af1eabe084a21e9a6a1cacb0504228e52fb58d181da7c013cbd2eef93a9ff0c3"
     }
   },
   "status": "accepted",

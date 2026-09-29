@@ -15,6 +15,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 from scipy.spatial import cKDTree
+from scipy.cluster.hierarchy import fclusterdata
 
 from antenna_cell_placement.config import (
     RAW_SQLITE_PATH,
@@ -63,6 +64,7 @@ def load_raw_records_from_sqlite(db_path: Path = RAW_SQLITE_PATH) -> pd.DataFram
             "latitude": float(lat),
             "longitude": float(lon),
             "visible": bool(raw_visible) if raw_visible is not None else pd.NA,
+            "source_verified": str(data.get("verified", "")).lower() == "true",
             "first_seen_ms": int(first_seen) if first_seen else pd.NA,
             "last_seen_ms": int(last_seen) if last_seen else pd.NA,
             "channels": [int(c) for c in data.get("channels", []) if c is not None],
@@ -76,15 +78,40 @@ def load_raw_records_from_sqlite(db_path: Path = RAW_SQLITE_PATH) -> pd.DataFram
     return pd.DataFrame(records)
 
 
+def _location_groups(grouped):
+    """Keep conflicting locations apart instead of inventing a median between them.
+
+    A 1 km complete-linkage threshold is a screening assumption, not a source
+    accuracy bound. Every cluster has a maximum pairwise distance of 1 km.
+    """
+    from antenna_cell_placement.opencellid import projected
+
+    for identity, group in grouped:
+        if len(group) == 1:
+            yield identity, group, 1, False
+            continue
+        group = group.sort_values(["latitude", "longitude"], kind="stable")
+        coords = projected(group.longitude, group.latitude)
+        labels = fclusterdata(coords, t=1000.0, criterion='distance', method='complete')
+        unique = sorted(set(labels), key=lambda label: tuple(coords[labels == label].mean(axis=0)))
+        for number, label in enumerate(unique, start=1):
+            yield identity, group.loc[labels == label], number, len(unique) > 1
+
+
 def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
     """
-    Deduplicates raw observations by grouping strictly on (rat, region_id, site_id).
+    Deduplicates on (mcc, mnc, rat, region_id, site_id), retaining unknown networks.
     This fixes the regional scoping collision where distinct towers were collapsed.
     """
-    grouped = df_raw.groupby(["rat", "region_id", "site_id"])
+    df_raw = df_raw.copy()
+    for name in ['mcc', 'mnc']:
+        df_raw[name] = df_raw[name].map(
+            lambda value: str(int(float(value))) if pd.notna(value) else None
+        )
+    grouped = df_raw.groupby(["mcc", "mnc", "rat", "region_id", "site_id"], dropna=False)
     towers = []
 
-    for (rat, region_id, site_id), group in grouped:
+    for (_, _, rat, region_id, site_id), group, location_group, conflict in _location_groups(grouped):
         all_channels = sorted(list(set(c for sublist in group["channels"] for c in sublist)))
         all_bands = sorted(list(set(b for sublist in group["bands"] for b in sublist)))
         all_bws = [bw for sublist in group["bandwidths"] for bw in sublist]
@@ -116,6 +143,9 @@ def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
 
         towers.append({
             "tower_id": len(towers) + 1,
+            "location_group": location_group,
+            "location_conflict": conflict,
+            "source_verified": bool(group["source_verified"].fillna(False).any()) if "source_verified" in group else False,
             "rat": rat,
             "rat_subtype": group["rat_subtype"].iloc[-1],
             "region_id": region_id,
@@ -130,6 +160,7 @@ def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
             "last_seen_ms": last_seen,
             "active_days": max(0.0, active_days) if np.isfinite(active_days) else np.nan,
             "observation_count": len(group),
+            "source_files": "|".join(sorted(group["source_file"].dropna().unique())) if "source_file" in group else "",
             "channels_str": ",".join(map(str, all_channels)),
             "channel_count": len(all_channels),
             "bands_str": ",".join(map(str, all_bands)),
@@ -255,6 +286,7 @@ def consolidate_physical_sites(
             "canonical_latitude": centroid_lat,
             "canonical_longitude": centroid_lon,
             "radio_tower_count": len(site_towers),
+            "location_conflict": bool(site_towers["location_conflict"].any()),
             "technologies": ",".join(rats),
             "rat_subtypes": ",".join(subtypes),
             "has_gsm": int("GSM" in rats),
@@ -310,9 +342,14 @@ def clean_pipeline() -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Build the cleaned tower and physical-site inventory in memory."""
     print("Loading raw source records from SQLite...")
     df_raw = load_raw_records_from_sqlite()
-    print(f"Loaded {len(df_raw)} raw observations.")
+    df_raw['source_file'] = str(RAW_SQLITE_PATH)
+    from antenna_cell_placement.collected_data import cellmapper_raw_records
+    collected = cellmapper_raw_records()
+    if not collected.empty:
+        df_raw = pd.concat([df_raw, collected], ignore_index=True)
+    print(f"Loaded {len(df_raw)} raw observations, including {len(collected)} collected CellMapper sectors.")
 
-    print("Deduplicating radio towers using strictly scoped (rat, region_id, site_id)...")
+    print("Deduplicating radio towers using network-scoped (mcc, mnc, rat, region_id, site_id)...")
     df_towers = deduplicate_radio_towers(df_raw)
     print(f"Identified {len(df_towers)} unique radio antenna towers.")
 

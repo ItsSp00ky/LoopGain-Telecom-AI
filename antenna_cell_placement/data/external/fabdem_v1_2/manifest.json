@@ -1,0 +1,135 @@
+{
+  "attribution": "FABDEM is produced using Copernicus WorldDEM-30 \u00a9 DLR e.V. 2010-2014 and \u00a9 Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
+  "dataset": "FABDEM V1-2",
+  "doi": "https://doi.org/10.5523/bris.s5hqmjcdj8yo2ibzi9b4ew3sn",
+  "elevation_unit": "metres",
+  "horizontal_crs": "EPSG:4326",
+  "license": "CC BY-NC-SA 4.0 (dataset license.txt)",
+  "license_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/license.txt",
+  "nominal_spacing": "1 arc-second",
+  "release": "V1-2 (2023-01-18)",
+  "repository_license": "Non-Commercial Government Licence for public sector information",
+  "retrieved_utc": "2026-09-22T19:43:20.120794+00:00",
+  "selection": "One-degree tiles containing frozen shortlisted candidates",
+  "source_role": "experimental terrain comparison only",
+  "tiles": [
+    {
+      "bytes": 24385886,
+      "filename": "N25E013_FABDEM_V1-2.tif",
+      "sha256": "849dadf4323c099bc022482cd8cf6d20b4adbe392309bdf039d82b49d8784500",
+      "source_archive_bytes": 1984493153,
+      "source_archive_etag": "\"63976ef8-7648f661\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N20E010-N30E020_FABDEM_V1-2.zip",
+      "zip_crc32": "37a8b7df"
+    },
+    {
+      "bytes": 19827734,
+      "filename": "N26E013_FABDEM_V1-2.tif",
+      "sha256": "e2a2f8f3c5ad6368f559f89b3b54e5054daeaf5deef175efc6d39a96c8f5b3e3",
+      "source_archive_bytes": 1984493153,
+      "source_archive_etag": "\"63976ef8-7648f661\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N20E010-N30E020_FABDEM_V1-2.zip",
+      "zip_crc32": "11c751ab"
+    },
+    {
+      "bytes": 22029228,
+      "filename": "N29E015_FABDEM_V1-2.tif",
+      "sha256": "caf420e44cc82c1bb50e377f93843f694c6f35187c65f509439d3bbdea9f5087",
+      "source_archive_bytes": 1984493153,
+      "source_archive_etag": "\"63976ef8-7648f661\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N20E010-N30E020_FABDEM_V1-2.zip",
+      "zip_crc32": "36d09d71"
+    },
+    {
+      "bytes": 22904541,
+      "filename": "N29E016_FABDEM_V1-2.tif",
+      "sha256": "f9a10a7603ca07b91b733376e5dcd71ea30fe8e1e16f7260bcc8b2538711bf67",
+      "source_archive_bytes": 1984493153,
+      "source_archive_etag": "\"63976ef8-7648f661\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N20E010-N30E020_FABDEM_V1-2.zip",
+      "zip_crc32": "0f91b6db"
+    },
+    {
+      "bytes": 8120476,
+      "filename": "N30E019_FABDEM_V1-2.tif",
+      "sha256": "677e7601e654e63d5e418f5b6e78b3c9904bf68c63b57e076cf70c32146fa88b",
+      "source_archive_bytes": 554516213,
+      "source_archive_etag": "\"63977912-210d3ef5\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E010-N40E020_FABDEM_V1-2.zip",
+      "zip_crc32": "81426cae"
+    },
+    {
+      "bytes": 21411746,
+      "filename": "N31E012_FABDEM_V1-2.tif",
+      "sha256": "73b6faf920c46401b0183217ec53766493e58510d8a270380dfa64c7a7d6f321",
+      "source_archive_bytes": 554516213,
+      "source_archive_etag": "\"63977912-210d3ef5\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E010-N40E020_FABDEM_V1-2.zip",
+      "zip_crc32": "28dbf128"
+    },
+    {
+      "bytes": 11805698,
+      "filename": "N31E023_FABDEM_V1-2.tif",
+      "sha256": "c25ae977f3af9bb899c274fc27f7ef00aee604f429a8d8c150561a55474962bf",
+      "source_archive_bytes": 838090212,
+      "source_archive_etag": "\"63977958-31f43de4\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E020-N40E030_FABDEM_V1-2.zip",
+      "zip_crc32": "1d848e55"
+    },
+    {
+      "bytes": 9162140,
+      "filename": "N31E025_FABDEM_V1-2.tif",
+      "sha256": "c72d5f01dd62e1d2684a00881b9f13d9ec69a3479eafdb8dbbde64f05cacd262",
+      "source_archive_bytes": 838090212,
+      "source_archive_etag": "\"63977958-31f43de4\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E020-N40E030_FABDEM_V1-2.zip",
+      "zip_crc32": "18f556ad"
+    },
+    {
+      "bytes": 17331423,
+      "filename": "N32E011_FABDEM_V1-2.tif",
+      "sha256": "2a777b0cf1086229f9676dd1a4fb64e0a44544a405f633dcc47ab0cdcd725659",
+      "source_archive_bytes": 554516213,
+      "source_archive_etag": "\"63977912-210d3ef5\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E010-N40E020_FABDEM_V1-2.zip",
+      "zip_crc32": "6c485a7b"
+    },
+    {
+      "bytes": 10623376,
+      "filename": "N32E020_FABDEM_V1-2.tif",
+      "sha256": "b8820d8aafb9e5b97759ed547c2ae3cde6128491865597199fe7fdfd158f76ed",
+      "source_archive_bytes": 838090212,
+      "source_archive_etag": "\"63977958-31f43de4\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E020-N40E030_FABDEM_V1-2.zip",
+      "zip_crc32": "fd4fe480"
+    },
+    {
+      "bytes": 20310629,
+      "filename": "N32E021_FABDEM_V1-2.tif",
+      "sha256": "ee3857f94a60d329978c92b04513ad7e990014a712ed0d5614c2f45a99065457",
+      "source_archive_bytes": 838090212,
+      "source_archive_etag": "\"63977958-31f43de4\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E020-N40E030_FABDEM_V1-2.zip",
+      "zip_crc32": "4ba947ef"
+    },
+    {
+      "bytes": 16304160,
+      "filename": "N32E022_FABDEM_V1-2.tif",
+      "sha256": "12a0428fe10e5e47732b758a9fbe5cf358c863297a926e467a3e7ab3c033872d",
+      "source_archive_bytes": 838090212,
+      "source_archive_etag": "\"63977958-31f43de4\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E020-N40E030_FABDEM_V1-2.zip",
+      "zip_crc32": "38bbfc18"
+    },
+    {
+      "bytes": 3392089,
+      "filename": "N33E011_FABDEM_V1-2.tif",
+      "sha256": "95d6e0d673207d70375f6941a236c1569187693e2c02ff09a1047e96b3ddf5b9",
+      "source_archive_bytes": 554516213,
+      "source_archive_etag": "\"63977912-210d3ef5\"",
+      "source_archive_url": "https://data.bris.ac.uk/datasets/s5hqmjcdj8yo2ibzi9b4ew3sn/N30E010-N40E020_FABDEM_V1-2.zip",
+      "zip_crc32": "4fa8722f"
+    }
+  ],
+  "vertical_crs": "EPSG:3855 (EGM2008)"
+}

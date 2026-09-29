@@ -1,0 +1,17 @@
+{
+  "title": "A Real-time 5G Macro-cells Signal Dataset for Signal Model Simulation and Prediction within Complex Terrain Area",
+  "country": "China",
+  "city": "Chongqing",
+  "release": "1.0",
+  "record": "https://zenodo.org/records/20564635",
+  "doi": "10.5281/zenodo.20564635",
+  "retrieved_on": "2026-09-26",
+  "license": "CC BY 4.0, Xu Nuo, Tingting Xu, and contributors",
+  "notice": "These are real foreign measurements and anonymized operator-supplied base-station records. They are for method evaluation only and must never be merged into Libya evidence or planning scores.",
+  "files": {
+    "raw_datas.csv": {"bytes": 14875475, "zenodo_md5": "dd59c720cfeee86fd1e99388e6d114ad", "sha256": "17f0cfadbfc02166851ab54dc437c63ef52d6a95fe445b9cde5c2ae152ed78d3"},
+    "base_station_data.csv": {"bytes": 17896, "zenodo_md5": "2209f2173c9f5464f500ef41fbba4fd0", "sha256": "9512e2abeaf18d1e04f502d719a766179ad147745f012512ca327e8d3b195133"},
+    "Data_Dictionary.xlsx": {"bytes": 12393, "zenodo_md5": "00df6e9b0420282fdde840c2f098dce2", "sha256": "3d693b285fe6b0d8c1912792f225738129c4e7d5edf64811a70a6c68851a1e5b"},
+    "LICENSE.txt": {"bytes": 620, "zenodo_md5": "d62c0bfa8e9c61f939350b7accc4028c", "sha256": "0493476f1bc2ca29e36138b5e1fd8dbb7cbdc4326f8f228e4935c47decbba782"}
+  }
+}

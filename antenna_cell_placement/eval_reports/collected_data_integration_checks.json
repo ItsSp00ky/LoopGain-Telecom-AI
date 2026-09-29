@@ -1,0 +1,203 @@
+{
+  "status": "passed",
+  "baseline_network_scoped_towers": 2338,
+  "runtime_towers": 2689,
+  "runtime_site_references": 2350,
+  "location_conflict_references": 16,
+  "location_conflicts": [
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "1610",
+      "site_id": "1169",
+      "location_group": 1,
+      "latitude": 32.83740098832827,
+      "longitude": 13.068900723036386,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "1610",
+      "site_id": "1169",
+      "location_group": 2,
+      "latitude": 32.82758856,
+      "longitude": 13.12972132,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "1810",
+      "site_id": "1091",
+      "location_group": 1,
+      "latitude": 32.66910057907455,
+      "longitude": 15.12200091356449,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "1810",
+      "site_id": "1091",
+      "location_group": 2,
+      "latitude": 32.1174618,
+      "longitude": 20.0666668,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "2120",
+      "site_id": "1130",
+      "location_group": 1,
+      "latitude": 32.88610054219486,
+      "longitude": 13.368000266956205,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "2120",
+      "site_id": "1130",
+      "location_group": 2,
+      "latitude": 31.96910285949707,
+      "longitude": 20.032306671142575,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6330",
+      "site_id": "1200",
+      "location_group": 1,
+      "latitude": 32.530100864024945,
+      "longitude": 16.44220034988407,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6330",
+      "site_id": "1200",
+      "location_group": 2,
+      "latitude": 32.163916112018455,
+      "longitude": 20.122425158270477,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6390",
+      "site_id": "1138",
+      "location_group": 1,
+      "latitude": 32.23550022123307,
+      "longitude": 20.18570025250913,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6390",
+      "site_id": "1138",
+      "location_group": 2,
+      "latitude": 32.25914764404297,
+      "longitude": 20.207199096679688,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6390",
+      "site_id": "1196",
+      "location_group": 1,
+      "latitude": 32.09576416015625,
+      "longitude": 20.149452209472656,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6390",
+      "site_id": "1196",
+      "location_group": 2,
+      "latitude": 32.09150091717926,
+      "longitude": 20.15980097583546,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6410",
+      "site_id": "2003",
+      "location_group": 1,
+      "latitude": 32.75740031018911,
+      "longitude": 12.73410038389652,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6410",
+      "site_id": "2003",
+      "location_group": 2,
+      "latitude": 32.757200943796256,
+      "longitude": 21.74974200600072,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    },
+    {
+      "mcc": "606",
+      "mnc": "1",
+      "rat": "GSM",
+      "region_id": "1114",
+      "site_id": "1649",
+      "location_group": 1,
+      "latitude": 32.0207005462683,
+      "longitude": 20.16220049668788,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/Libyan_cells_dataset/cells.sqlite3"
+    },
+    {
+      "mcc": "606",
+      "mnc": "1",
+      "rat": "GSM",
+      "region_id": "1114",
+      "site_id": "1649",
+      "location_group": 2,
+      "latitude": 32.02819084398674,
+      "longitude": 20.169767090768524,
+      "source_files": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+    }
+  ],
+  "new_radio_site_identities": 343,
+  "retained_cellmapper_sectors": 2494,
+  "retained_phone_measurements": 7713,
+  "recommendations": 50,
+  "minimum_known_site_gap_m": 19863.139005514673,
+  "minimum_candidate_separation_m": 2565.444308497068,
+  "recommendations_with_phone_measurements_within_1km": 0,
+  "checks": [
+    "collected identities present",
+    "network-scoped identity uniqueness",
+    "priority ordering and range",
+    "population, road and land-cover constraints",
+    "independently recomputed site gaps",
+    "candidate separation",
+    "CSV/GeoJSON identity and coordinate agreement",
+    "new map layers present"
+  ],
+  "limitations": "Checks validate software and supplied-data consistency, not RF performance or surveyed tower accuracy."
+}
