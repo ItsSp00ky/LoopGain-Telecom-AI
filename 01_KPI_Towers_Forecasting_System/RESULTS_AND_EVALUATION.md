@@ -68,6 +68,28 @@ Analysis of feature weights across the gradient-boosted ensembles shows that rol
 
 ---
 
+### 2.4. Comprehensive Multi-KPI Site Visualizations & Interactive Dashboard
+
+To enable engineers and radio planners to audit all 4 operational pillars for any individual base station simultaneously, the system provides automated multi-panel visualizers and a live web dashboard:
+
+#### Sample 4-Panel Performance Forecast: Tower `TWR_0001`
+Evaluates active subscribers, user download throughput, hardware uptime, and session drop rate side-by-side across all 109 out-of-time test days:
+
+![Multi-KPI Forecast TWR_0001](assets/multi_kpi_forecast_TWR_0001.png)
+
+#### Sample 4-Panel Performance Forecast: Tower `TWR_0015`
+Demonstrates site-level fidelity under fluctuating operational traffic:
+
+![Multi-KPI Forecast TWR_0015](assets/multi_kpi_forecast_TWR_0015.png)
+
+#### 🌐 Live Interactive Web Visual Dashboard
+The repository includes an interactive hardware-accelerated dashboard (`dashboard/index.html`) served locally via `python src/serve_dashboard.py` at `http://localhost:8050`:
+* **Countrywide Macro vs. Micro Site Explorer**: Toggle between network totals and any of the **1,060 towers**.
+* **Real-time Recalculated Scorecards**: Displays site $R^2$, MAE, RMSE, and MAPE on the fly.
+* **Synchronized Residual Error Tracking**: Bar charts highlight transient anomaly events, power dips, and interference.
+
+---
+
 ## 3. Residual Error Analysis & Operational Interpretation
 
 1. **Unbiased Predictions**: Mean residual error on connected users is $+0.04$ users across all 114,233 test points, confirming the absence of systematic under-forecasting or over-forecasting bias.

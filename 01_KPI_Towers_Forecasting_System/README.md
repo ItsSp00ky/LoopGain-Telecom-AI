@@ -31,6 +31,14 @@
 ├── requirements.txt               # Dependencies
 ├── .gitignore                     # Git ignore rules
 │
+├── dashboard/                     # 🚀 Interactive Visual Web Dashboard (Chart.js)
+│   ├── index.html                 # Modern glassmorphism UI
+│   ├── style.css                  # Tailored dark-mode responsive design system
+│   ├── app.js                     # Real-time chart rendering & dynamic API queries
+│   └── data/                      # Pre-bundled JSON & JS data for zero-CORS viewing
+│       ├── forecast_dashboard_data.json
+│       └── forecast_data.js
+│
 ├── data/                          # Cleaned dataset & tower mapping
 │   ├── Data_Cleaned.csv           # 378,631 rows, 0 NaNs, ISO dates
 │   └── tower_mapping.csv          # Anonymization lookup table
@@ -38,7 +46,10 @@
 ├── src/                           # Modular production source code
 │   ├── data_loader.py             # Data loading and 70/30 chronological split
 │   ├── feature_engineering.py     # Lags, rolling stats, cyclical calendar encodings
-│   └── train_and_evaluate.py      # End-to-end training and inference CLI
+│   ├── train_and_evaluate.py      # End-to-end training and inference CLI
+│   ├── plot_tower_forecasts.py    # 📊 Publication-quality plot generator CLI
+│   ├── serve_dashboard.py         # 🌐 Local web server with sub-millisecond tower API
+│   └── prepare_dashboard_data.py  # Pre-computes optimized dashboard payloads
 │
 ├── models/                        # Saved Model Checkpoints ("save the training")
 │   ├── xgb_connected_users.joblib / .json
@@ -52,12 +63,14 @@
 │   └── model_evaluation_metrics.json         # Performance summary JSON
 │
 └── assets/                        # High-resolution visual forecast plots
-    ├── forecast_connected_users.png
-    ├── forecast_dl_throughput.png
-    ├── forecast_cell_availability.png
-    ├── forecast_drop_rate.png
-    ├── visual_micro_tower_forecasts.png
-    └── visual_feature_importance.png
+    ├── forecast_connected_users.png          # Countrywide total users
+    ├── forecast_dl_throughput.png            # Countrywide download speed
+    ├── forecast_cell_availability.png        # Countrywide availability
+    ├── forecast_drop_rate.png                # Countrywide session drop rate
+    ├── visual_micro_tower_forecasts.png      # 4 sample tower tracking comparison
+    ├── visual_feature_importance.png         # ML feature importance rankings
+    ├── multi_kpi_forecast_TWR_0001.png       # 4-panel multi-KPI plot for TWR_0001
+    └── multi_kpi_forecast_TWR_0015.png       # 4-panel multi-KPI plot for TWR_0015
 ```
 
 ---
@@ -76,7 +89,22 @@ pip install -r requirements.txt
 python src/train_and_evaluate.py
 ```
 
-### 3. Load Model in Python
+### 3. Launch Interactive Visual Dashboard (Humans Love Graphs!)
+```bash
+python src/serve_dashboard.py
+```
+> Opens the high-performance dark-mode visual dashboard at `http://localhost:8050` with interactive Chart.js graphs, countrywide macro views, and micro tower explorer for all 1,060 towers.
+
+### 4. Generate High-Resolution Visual Plots via CLI
+```bash
+# Generate 4-panel comparison plot for any tower
+python src/plot_tower_forecasts.py --tower TWR_0001 --kpi all
+
+# Generate specific KPI plot
+python src/plot_tower_forecasts.py --tower TWR_0015 --kpi connected_users
+```
+
+### 5. Load Model in Python
 ```python
 import joblib
 import pandas as pd
