@@ -8,13 +8,17 @@ connected.
 ## What's fully wired (real data, no stub)
 
 - **GIS Planning page** (`platform_app/pages/1_GIS_Planning.py`) calls
-  `antenna_cell_placement`'s new `api.py` directly: source-verification status from
-  `verify_sources()`, the shortlist from the most recent completed
-  `recommend`/`all` run in `integrated_release/` (hash-checked against its manifest,
-  same rule the CLI's `map` command already enforces), and an on-demand coordinate
-  assessment via `assess_coordinate`. If required local source data isn't
-  present/verified in a given checkout, `/assess` returns a clean 503 and the page
-  shows that instead of crashing - it is not silently returning fake numbers.
+  `antenna_cell_placement`'s `api.py` directly: source-verification status from
+  `verify_sources()`, the shortlist from `integrated_release_v3/` - the completed
+  run behind the real collected-data/reconciled-inventory integration (CellMapper,
+  BeaconDB, OpenCellID Libya exports, Chongqing 5G, Libya official statistics;
+  `inventory_version: "reconciled-geodesic-20260929-v1"`), hash-checked against its
+  manifest, same rule the CLI's `map` command already enforces - and an on-demand
+  coordinate assessment via `assess_coordinate`. If required local source data isn't
+  present/verified in a given checkout (the large gitignored DEM/WorldCover/OSM/cleaned
+  files - true of this checkout right now), `/assess` returns a clean 503 and the page
+  shows that instead of crashing; `/shortlist`, `/rooftops` and `/map` don't need that
+  data, only the completed run, so they work regardless.
 - **Network KPI page** (`platform_app/pages/2_Network_KPI.py`) calls
   `network_kpi_prediction`'s new `api.py`, which runs the real
   `traffic_volume_forecast` pipeline (clean, chronological split, four-model
@@ -60,12 +64,14 @@ not a step this pass took unilaterally.
 
 ## Verification behind this document
 
-- `antenna_cell_placement`: 129 tests, 122 passing; 5 failures are missing external
-  datasets (FABDEM raster, Chongqing 5G measurements, Libya official statistics) not
-  downloaded in this checkout, not code defects; 1 is a documented, deliberate
-  divergence in `deduplicate_radio_towers`'s grouping key (see the commit that ported
-  Ahmed's GIS modules). `test_improvement_regressions.py`'s 8 tests, including the
-  Al-Madar attribution guarantee, pass unchanged.
+- `antenna_cell_placement`: 126 tests, all pass (1 skip: `/assess` needs locally
+  regenerated cleaned CSVs and downloaded DEM/WorldCover/OSM data this checkout
+  doesn't have - unrelated to code correctness). This module's GIS integration is
+  `dc897a4` on `mahalm_antenna_cell_placement` (the user's own commit, cherry-picked
+  here), not the author's own earlier from-source port - that port covered the same
+  ground with copied code only and no real collected data, so it was reverted in
+  favor of this commit once it existed (129 tests, 5 errors from exactly the missing
+  data this version now ships).
 - `network_kpi_prediction/test_api.py`: 3 tests, all passing against the real
   pipeline (no mocking).
 - `platform_app/test_smoke.py`: every page runs through Streamlit's `AppTest`
