@@ -95,6 +95,63 @@ def run_train_stage(
     }
 
 
+def run_enriched_stage(
+    clean_csv=None,
+    macro_csv=None,
+    carrier_csv=None,
+    output_dir=None,
+    train_ratio=0.70,
+    val_ratio=0.15,
+    horizon_days=30,
+):
+    """Same shape as `run_train_stage`, but trains and forecasts with every exogenous
+    network KPI this module has (see `prepare_multivariate_datasets`), not just the
+    traffic series' own history."""
+    out_dir = Path(output_dir) if output_dir else _PKG_ROOT / "data"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    datasets, scaler, feature_cols = prepare_multivariate_datasets(
+        clean_csv=clean_csv,
+        macro_csv=macro_csv,
+        carrier_csv=carrier_csv,
+        train_ratio=train_ratio,
+        val_ratio=val_ratio,
+    )
+
+    results, metrics_df, champion_name = train_and_benchmark(datasets, feature_cols)
+    champion_model, test_pred, final_metrics = retrain_champion(
+        datasets, feature_cols, champion_name
+    )
+
+    test_y = datasets["test"]["y"]
+    res_std = float(np.std(test_y - test_pred))
+    forecast_df = forecast_future(
+        champion_model,
+        datasets["full_df"],
+        feature_cols,
+        horizon_days=horizon_days,
+        residual_std=res_std,
+        exo_cols=datasets["exo_cols"],
+    )
+
+    forecast_path = out_dir / f"future_{horizon_days}d_enriched_forecast.csv"
+    forecast_df.to_csv(forecast_path, index=False)
+    print(f"Exported enriched future forecast to: {forecast_path.resolve()}")
+
+    return {
+        "datasets": datasets,
+        "results": results,
+        "metrics_df": metrics_df,
+        "champion_name": champion_name,
+        "champion_model": champion_model,
+        "feature_cols": feature_cols,
+        "final_metrics": final_metrics,
+        "forecast_path": forecast_path,
+        "forecast_df": forecast_df,
+        "exo_cols": datasets["exo_cols"],
+    }
+
+
 def run_multivariate_stage(
     clean_csv=None,
     macro_csv=None,
@@ -342,6 +399,16 @@ def main(argv=None) -> int:
     multi_p.add_argument("--train-ratio", type=float, default=0.70, help="Train ratio (default: 0.70)")
     multi_p.add_argument("--val-ratio", type=float, default=0.15, help="Val ratio (default: 0.15)")
 
+    # enriched
+    enriched_p = subparsers.add_parser("enriched", help="Train and forecast with every exogenous network KPI this module has")
+    enriched_p.add_argument("--data-path", "-d", type=str, default=None, help="Path to clean traffic CSV")
+    enriched_p.add_argument("--macro-path", "-m", type=str, default=None, help="Path to macro radio KPIs CSV")
+    enriched_p.add_argument("--carrier-path", "-c", type=str, default=None, help="Path to per-band carrier KPIs CSV")
+    enriched_p.add_argument("--output-dir", "-o", type=str, default=None, help="Output directory")
+    enriched_p.add_argument("--train-ratio", type=float, default=0.70, help="Train ratio (default: 0.70)")
+    enriched_p.add_argument("--val-ratio", type=float, default=0.15, help="Val ratio (default: 0.15)")
+    enriched_p.add_argument("--horizon-days", "--horizon", type=int, default=30, help="Future forecast horizon in days (default: 30)")
+
     # test
     subparsers.add_parser("test", help="Execute all unit tests for the traffic volume prediction pipeline")
 
@@ -402,6 +469,17 @@ def main(argv=None) -> int:
             output_dir=getattr(args, "output_dir", None),
             train_ratio=getattr(args, "train_ratio", 0.70),
             val_ratio=getattr(args, "val_ratio", 0.15),
+        )
+        return 0
+    elif args.command == "enriched":
+        run_enriched_stage(
+            clean_csv=args.data_path,
+            macro_csv=args.macro_path,
+            carrier_csv=args.carrier_path,
+            output_dir=args.output_dir,
+            train_ratio=args.train_ratio,
+            val_ratio=args.val_ratio,
+            horizon_days=args.horizon_days,
         )
         return 0
     elif args.command == "test":
