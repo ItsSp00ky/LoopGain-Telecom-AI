@@ -47,6 +47,7 @@ This file is the narrative that connects them: what happened, in what order, wha
 - He asked for a start guide for the team and for `assistants/.env` to be pushed. The guide is `assistants/TEAM_GUIDE.md`; `.env` was not pushed, because a committed key stays in the history for good and one free key shared by the team runs out within hours, so each member makes their own.
 - The guide was followed from a fresh clone: it needed one more line, `git config --global core.longpaths true`, because some dataset paths pass Windows' 260 characters in a deep folder.
 - The copilot's part of the final report: `..._with_chatbot_and_copilot.docx` on the Desktop, 21 pages, with Tables 5 and 6 and Figures 9 and 10; the build scripts are in the scratchpad's `report2/`, the figure scripts in `assistants/report_figures/`.
+- In the evening Mahmoud pushed release 3 of the GIS, with Ahmed's measurements; it and Maher's and Mohamed's updates were merged (committed, not pushed), and the copilot moved to release 3 and gained `measured_service`.
 - The screenshot's question showed two more small things, fixed in code: the model quoting an action's internal name in a code box, and bold tower names inside code boxes.
 
 ## Mistakes caught this session, and the lesson from each
@@ -78,11 +79,11 @@ Anything on these branches after the commit shown is new since this session.
 | Branch | Owner | Last merged | Notes |
 |---|---|---|---|
 | `Ali_Branch` | Ali | `bf498d4` | the prepaid module |
-| `integration/antenna-planning-v2` | Mahmoud, with Ahmed | `2eca2dd` | the team's final GIS; the copilot reads `antenna_cell_placement/integrated_release/` |
-| `mahalm_antenna_cell_placement` | Mahmoud | `8a2be6c` | contained in the GIS integration |
-| `maher_kpi_prediction` | Maher | `9c1a267` | `network_kpi_prediction/`; the copilot reads `data/` |
-| `MNK_forecasting` | Mohamed | `7d8a945` | `KPI_forecasting/`, `01_KPI_Towers_Forecasting_System/`, `02_Traffic_Steering_SON_System/`; the copilot reads none of it (decision 55) |
-| `ahmed_cell_placement` | Ahmed | not merged (`15dc13a`) | superseded by the GIS integration (decision 53) |
+| `integration/antenna-planning-v2` | Mahmoud, with Ahmed | `dc897a4` (2026-09-29, evening) | the team's final GIS; the copilot reads `antenna_cell_placement/integrated_release_v3/` |
+| `mahalm_antenna_cell_placement` | Mahmoud | `dc897a4` | the same commit as the GIS integration |
+| `maher_kpi_prediction` | Maher | `dc99925` (2026-09-29, evening) | `network_kpi_prediction/`; the copilot reads `data/` |
+| `MNK_forecasting` | Mohamed | `b1e4ac2` (2026-09-29, evening) | `KPI_forecasting/`, `01_KPI_Towers_Forecasting_System/`, `02_Traffic_Steering_SON_System/`; the copilot reads none of it (decision 55) |
+| `ahmed_cell_placement` | Ahmed | not merged (`2c48a27`) | its kept parts arrive through the GIS integration (decision 53) |
 | `main` | team | `a4368a0` | at `674d9f6` now with no net change; never merge `main` itself |
 
 ## Starting the next session
