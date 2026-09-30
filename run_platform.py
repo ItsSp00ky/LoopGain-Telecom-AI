@@ -10,7 +10,9 @@ Docker. GIS and the KPI forecast start unconditionally: neither needs a secret.
 Churn's API and the two assistants need PREPAID_CHURN_CHATBOT_KEY and
 PREPAID_CHURN_COPILOT_KEY (matching keys of at least 24 characters, see
 prepaid_churn/src/prepaid_churn/api.py) and are skipped with an explanatory
-message if those are not set, rather than crashing the whole launch.
+message if those are not set, rather than crashing the whole launch. Keys not set
+in the terminal are read from assistants/.env (git-ignored), the same file and the
+same rule the assistants use: a variable already set in the terminal wins.
 
 Ports (fixed so they never collide): GIS API 8001, KPI API 8002, churn API 8000,
 churn's own demo app 8501, chatbot 8503, copilot 8502, this shell 8510.
@@ -26,6 +28,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 CHATBOT_KEY_VAR = "PREPAID_CHURN_CHATBOT_KEY"
 COPILOT_KEY_VAR = "PREPAID_CHURN_COPILOT_KEY"
+
+
+def load_assistants_env():
+    """Fill missing keys from assistants/.env so every service sees the same ones."""
+    env_file = ROOT / "assistants" / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        name, _, value = line.partition("=")
+        name, value = name.strip(), value.strip().strip('"').strip("'")
+        if name and not name.startswith("#") and value and name not in os.environ:
+            os.environ[name] = value
 
 
 def churn_keys_present() -> bool:
@@ -90,6 +104,7 @@ def churn_services() -> list[dict]:
 
 
 def main():
+    load_assistants_env()
     services = always_on_services()
     if churn_keys_present():
         services += churn_services()

@@ -17,6 +17,7 @@ from _shared import (
     churn_portfolio,
     configure,
     get_json,
+    groq_key_configured,
     hero,
     service_status,
     status_pill,
@@ -143,7 +144,9 @@ with right:
          "Shortlist and map live; point assessment needs local source data"
          if gis_status == "degraded" else "Shortlist, map and point assessment"),
         ("Churn service", churn_health, "Scores, value tiers, approved offers"),
-        ("Chatbot and copilot", assistants_status, "LLM answers need a GROQ_API_KEY"),
+        ("Chatbot and copilot", assistants_status,
+         "Conversation on (Groq key configured)" if groq_key_configured()
+         else "Conversation off: no GROQ_API_KEY configured"),
     ]
     with st.container(border=True):
         for name, status, note in modules:

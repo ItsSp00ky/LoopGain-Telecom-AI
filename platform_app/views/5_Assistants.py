@@ -5,11 +5,8 @@ also reads the GIS release and network KPI files (assistants/src/assistants/sour
 this page only frames their existing, already-running UI.
 """
 
-import os
-from pathlib import Path
-
 import streamlit as st
-from _shared import CHATBOT_APP_URL, COPILOT_APP_URL, app_reachable, configure, hero
+from _shared import CHATBOT_APP_URL, COPILOT_APP_URL, app_reachable, configure, groq_key_configured, hero
 
 configure("AI Assistants", icon="support_agent")
 
@@ -20,23 +17,6 @@ hero(
     "outputs, never from the prompt.",
     badges=["Grounded answers", "No LLM sets a price or offer", "Arabic & English"],
 )
-
-
-def groq_key_configured() -> bool:
-    """Whether the assistants will find a Groq key: their process env or assistants/.env.
-
-    Checks only that a non-empty value is set; the value itself is never read out.
-    """
-    if os.environ.get("GROQ_API_KEY"):
-        return True
-    env_file = Path(__file__).resolve().parents[2] / "assistants" / ".env"
-    if not env_file.exists():
-        return False
-    for line in env_file.read_text(encoding="utf-8").splitlines():
-        name, _, value = line.partition("=")
-        if name.strip() == "GROQ_API_KEY":
-            return bool(value.strip().strip('"').strip("'"))
-    return False
 
 
 if not groq_key_configured():

@@ -151,3 +151,20 @@ def churn_portfolio():
     if not CHURN_COPILOT_KEY:
         return None, "PREPAID_CHURN_COPILOT_KEY is not set for this shell"
     return get_json(CHURN_API_URL, "/portfolio/summary", headers=(("X-API-Key", CHURN_COPILOT_KEY),))
+
+
+def groq_key_configured() -> bool:
+    """Whether the assistants will find a Groq key: their process env or assistants/.env.
+
+    Checks only that a non-empty value is set; the value itself is never read out.
+    """
+    if os.environ.get("GROQ_API_KEY"):
+        return True
+    env_file = Path(__file__).resolve().parents[1] / "assistants" / ".env"
+    if not env_file.exists():
+        return False
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        name, _, value = line.partition("=")
+        if name.strip() == "GROQ_API_KEY":
+            return bool(value.strip().strip('"').strip("'"))
+    return False

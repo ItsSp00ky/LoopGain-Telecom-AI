@@ -70,7 +70,9 @@ connected.
 
 - Churn's FastAPI (`prepaid_churn/src/prepaid_churn/api.py`) requires
   `PREPAID_CHURN_CHATBOT_KEY`/`PREPAID_CHURN_COPILOT_KEY` (each at least 24
-  characters, distinct) to start at all - see `assistants/README.md`. Without them,
+  characters, distinct) to start at all - see `assistants/README.md`. `run_platform.py`
+  reads them (and `GROQ_API_KEY`) from `assistants/.env` when they aren't set in the
+  terminal, so one command starts all seven services. Without them,
   `run_platform.py` skips churn's API/app and both assistants, and the Home
   dashboard's churn tile and the Customer Churn/Assistants pages show a clear
   "unreachable"/"not set" state, never a guessed number. This pass generated two
