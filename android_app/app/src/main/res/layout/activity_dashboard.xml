@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F4F7FB">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/brand_navy"
+        android:title="@string/app_name"
+        app:titleTextColor="#FFFFFF" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:padding="12dp"
+            android:alignmentMode="alignMargins"
+            android:useDefaultMargins="true">
+
+            <include layout="@layout/item_dashboard_card"
+                android:id="@+id/cardOverview"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal" />
+
+            <include layout="@layout/item_dashboard_card"
+                android:id="@+id/cardNetwork"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal" />
+
+            <include layout="@layout/item_dashboard_card"
+                android:id="@+id/cardSteering"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal" />
+
+            <include layout="@layout/item_dashboard_card"
+                android:id="@+id/cardGis"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal" />
+
+            <include layout="@layout/item_dashboard_card"
+                android:id="@+id/cardChurn"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal" />
+
+            <include layout="@layout/item_dashboard_card"
+                android:id="@+id/cardAssistants"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill_horizontal" />
+
+        </GridLayout>
+    </ScrollView>
+
+</LinearLayout>

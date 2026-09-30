@@ -6,40 +6,12 @@
     android:orientation="vertical"
     android:background="#0B1F3A">
 
-    <LinearLayout
-        android:id="@+id/addressBar"
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:gravity="center_vertical"
-        android:visibility="gone">
-
-        <EditText
-            android:id="@+id/serverUrlInput"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:singleLine="true"
-            android:inputType="textUri"
-            android:hint="@string/default_server_url"
-            android:textColorHint="#8FA3C2"
-            android:textColor="#FFFFFF"
-            android:background="#16233B"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp" />
-
-        <Button
-            android:id="@+id/connectButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/connect"
-            android:backgroundTint="#12B3A8"
-            android:textColor="#FFFFFF" />
-    </LinearLayout>
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/brand_navy"
+        app:titleTextColor="#FFFFFF" />
 
     <LinearLayout
         android:id="@+id/statusBar"
@@ -48,6 +20,7 @@
         android:orientation="horizontal"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
+        android:paddingTop="6dp"
         android:paddingBottom="6dp"
         android:gravity="center_vertical">
 

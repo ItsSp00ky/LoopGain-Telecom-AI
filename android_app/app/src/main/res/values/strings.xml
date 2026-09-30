@@ -1,8 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LoopGain KPI Monitor</string>
-    <string name="default_server_url">http://10.0.2.2:8510/network</string>
-    <string name="connect">Go</string>
+    <string name="app_name">LoopGain Telecom AI</string>
+    <string name="default_server_host">http://10.0.2.2:8510</string>
     <string name="live_tracking">Live tracking</string>
     <string name="last_updated_prefix">Last updated: </string>
+    <string name="settings">Server settings</string>
+    <string name="server_host_label">Platform server address</string>
+    <string name="server_host_hint">e.g. http://192.168.1.23:8510 for a real phone</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="page_overview_title">Overview</string>
+    <string name="page_overview_subtitle">Platform status at a glance</string>
+    <string name="page_network_title">Network KPIs</string>
+    <string name="page_network_subtitle">Live KPI forecasts &amp; alerts</string>
+    <string name="page_steering_title">Congestion &amp; Steering</string>
+    <string name="page_steering_subtitle">Traffic steering recommendations</string>
+    <string name="page_gis_title">Site Planning (GIS)</string>
+    <string name="page_gis_subtitle">Cell-site suitability map</string>
+    <string name="page_churn_title">Churn &amp; Retention</string>
+    <string name="page_churn_subtitle">At-risk customers &amp; retention</string>
+    <string name="page_assistants_title">AI Assistants</string>
+    <string name="page_assistants_subtitle">Chatbot &amp; employee copilot</string>
 </resources>

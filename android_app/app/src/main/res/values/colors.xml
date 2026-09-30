@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_navy">#0B1F3A</color>
+    <color name="brand_blue">#1454A3</color>
+    <color name="brand_teal">#12B3A8</color>
+    <color name="card_overview">#1454A3</color>
+    <color name="card_network">#12B3A8</color>
+    <color name="card_steering">#7C5CBF</color>
+    <color name="card_gis">#D98236</color>
+    <color name="card_churn">#C24B4B</color>
+    <color name="card_assistants">#2E9E5B</color>
+</resources>

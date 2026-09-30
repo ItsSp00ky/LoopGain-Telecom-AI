@@ -4,42 +4,30 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * Wraps the LoopGain Telecom AI Streamlit platform (Network KPI page by default)
- * in a native shell so it can be demoed, refreshed and "tracked" from a phone.
- *
- * Default target is the Android emulator's alias for the host machine
- * (10.0.2.2). For a physical phone on the same WiFi as the laptop running
- * `python run_platform.py`, type the laptop's LAN IP instead, e.g.
- * http://192.168.1.23:8510/network - no rebuild needed, it's saved on device.
+ * Loads one page of the existing `platform_app` Streamlit shell (chosen via
+ * [EXTRA_PATH]) inside a pull-to-refresh WebView with an auto-refresh "live
+ * tracking" toggle, so it can be checked/tracked from a phone.
  */
-class MainActivity : AppCompatActivity() {
+class DetailActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
-    private lateinit var addressBar: LinearLayout
-    private lateinit var statusBar: LinearLayout
-    private lateinit var serverUrlInput: EditText
     private lateinit var statusLabel: TextView
     private lateinit var liveTrackingSwitch: Switch
 
-    private val prefs by lazy { getSharedPreferences("kpi_monitor", MODE_PRIVATE) }
     private val autoRefreshHandler = Handler(Looper.getMainLooper())
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
@@ -55,26 +43,21 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_detail)
+
+        val title = intent.getStringExtra(EXTRA_TITLE) ?: getString(R.string.app_name)
+        val urlPath = intent.getStringExtra(EXTRA_PATH).orEmpty()
+
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        toolbar.title = title
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         webView = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
-        addressBar = findViewById(R.id.addressBar)
-        statusBar = findViewById(R.id.statusBar)
-        serverUrlInput = findViewById(R.id.serverUrlInput)
         statusLabel = findViewById(R.id.statusLabel)
         liveTrackingSwitch = findViewById(R.id.liveTrackingSwitch)
-
-        statusBar.setOnLongClickListener {
-            addressBar.visibility = if (addressBar.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-            if (addressBar.visibility == View.VISIBLE) {
-                Toast.makeText(this, "Server address bar shown - long-press again to hide", Toast.LENGTH_SHORT).show()
-            }
-            true
-        }
-
-        val savedUrl = prefs.getString(PREF_SERVER_URL, getString(R.string.default_server_url))
-        serverUrlInput.setText(savedUrl)
 
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
@@ -84,15 +67,11 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 swipeRefresh.isRefreshing = false
-                updateStatusLabel()
+                statusLabel.text = getString(R.string.last_updated_prefix) + timeFormat.format(Date())
             }
         }
 
         swipeRefresh.setOnRefreshListener { webView.reload() }
-
-        findViewById<Button>(R.id.connectButton).setOnClickListener {
-            loadServer(serverUrlInput.text.toString())
-        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -103,18 +82,12 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        loadServer(savedUrl ?: getString(R.string.default_server_url))
+        val prefs = getSharedPreferences("kpi_monitor", MODE_PRIVATE)
+        val host = prefs.getString(DashboardActivity.PREF_SERVER_HOST, getString(R.string.default_server_host))
+            ?: getString(R.string.default_server_host)
+        webView.loadUrl("$host/$urlPath".trimEnd('/'))
+
         autoRefreshHandler.postDelayed(autoRefreshRunnable, AUTO_REFRESH_INTERVAL_MS)
-    }
-
-    private fun loadServer(url: String) {
-        val target = if (url.startsWith("http")) url else "http://$url"
-        prefs.edit().putString(PREF_SERVER_URL, target).apply()
-        webView.loadUrl(target)
-    }
-
-    private fun updateStatusLabel() {
-        statusLabel.text = getString(R.string.last_updated_prefix) + timeFormat.format(Date())
     }
 
     override fun onDestroy() {
@@ -123,7 +96,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val PREF_SERVER_URL = "server_url"
+        const val EXTRA_TITLE = "extra_title"
+        const val EXTRA_PATH = "extra_path"
         private const val AUTO_REFRESH_INTERVAL_MS = 20_000L
     }
 }
