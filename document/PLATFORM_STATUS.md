@@ -14,11 +14,26 @@ connected.
   BeaconDB, OpenCellID Libya exports, Chongqing 5G, Libya official statistics;
   `inventory_version: "reconciled-geodesic-20260929-v1"`), hash-checked against its
   manifest, same rule the CLI's `map` command already enforces - and an on-demand
-  coordinate assessment via `assess_coordinate`. If required local source data isn't
-  present/verified in a given checkout (the large gitignored DEM/WorldCover/OSM/cleaned
-  files - true of this checkout right now), `/assess` returns a clean 503 and the page
-  shows that instead of crashing; `/shortlist`, `/rooftops` and `/map` don't need that
-  data, only the completed run, so they work regardless.
+  coordinate assessment via `assess_coordinate`. Assessment first checks all 62
+  planning sources against `sources/planning_sources.lock.json` and refuses to run on
+  anything missing or changed (`/assess` then returns a clean 503 and the service shows
+  "Partial"); `/shortlist`, `/rooftops` and `/map` only need the completed run, so they
+  work regardless. In this checkout all 62 now verify and assessment works (the
+  rank-1 site re-assessed live scores 66.68, as in the release). Two things had broken
+  it, worth knowing for any other machine:
+  - 29 files are too large for git: 27 ESA WorldCover tiles
+    (`data/external/worldcover_2021/`, ~227 MB) and the OSM extract
+    (`data/external/osm_libya_2026_09_19/`, ~562 MB). They were copied from
+    `Desktop/GIS/antenna_integration/antenna_cell_placement`, the working copy the
+    release was built in, which verifies 62/62.
+  - 7 committed files (cleaned inventory CSVs, admin boundaries, two DEM text
+    files) had been checked out with Windows line endings by `core.autocrlf = true`,
+    which changes their fingerprints without changing the data. The module's
+    `.gitattributes` prevents this, but git doesn't rewrite files already checked out
+    when a rule arrives; a fresh clone is unaffected. Copying the verified originals
+    over them left them byte-identical to what is committed.
+  A health check re-fingerprints about 800 MB and takes a few seconds, so the shell
+  waits up to 20 s for it.
 - **Network KPI page** (`platform_app/views/2_Network_KPI.py`) covers every KPI the
   operator data holds - RRC setup, E-RAB establishment, E-RAB drop, intra-4G and
   overall handover, availability, DL/UL throughput, connected users, downtime - on

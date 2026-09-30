@@ -17,7 +17,26 @@ CHURN_API_URL = os.environ.get("PLATFORM_CHURN_API_URL", "http://127.0.0.1:8000"
 CHURN_APP_URL = os.environ.get("PLATFORM_CHURN_APP_URL", "http://127.0.0.1:8501")
 CHATBOT_APP_URL = os.environ.get("PLATFORM_CHATBOT_APP_URL", "http://127.0.0.1:8503")
 COPILOT_APP_URL = os.environ.get("PLATFORM_COPILOT_APP_URL", "http://127.0.0.1:8502")
-CHURN_COPILOT_KEY = os.environ.get("PREPAID_CHURN_COPILOT_KEY", "")
+ASSISTANTS_ENV = Path(__file__).resolve().parents[1] / "assistants" / ".env"
+
+
+def env_setting(name: str) -> str:
+    """A setting from the environment, else from assistants/.env (git-ignored).
+
+    The same rule the assistants and run_platform.py use: the environment wins, so the
+    shell sees the same keys however it was started.
+    """
+    if os.environ.get(name):
+        return os.environ[name]
+    if ASSISTANTS_ENV.exists():
+        for line in ASSISTANTS_ENV.read_text(encoding="utf-8").splitlines():
+            key, _, value = line.partition("=")
+            if key.strip() == name:
+                return value.strip().strip('"').strip("'")
+    return ""
+
+
+CHURN_COPILOT_KEY = env_setting("PREPAID_CHURN_COPILOT_KEY")
 
 LOGO = Path(__file__).resolve().parent / "static" / "logo.svg"
 
@@ -126,7 +145,9 @@ def get_json(base_url: str, path: str, timeout: float = 5.0, headers: tuple | No
 
 
 def service_status(base_url: str, path: str = "/health"):
-    data, error = get_json(base_url, path)
+    # GIS re-fingerprints every planning source (about 800 MB) per health check, which
+    # takes a few seconds, so a short timeout would wrongly report it offline.
+    data, error = get_json(base_url, path, timeout=20.0)
     if error:
         return "unreachable", error
     return data.get("status", "ok"), data
@@ -154,17 +175,5 @@ def churn_portfolio():
 
 
 def groq_key_configured() -> bool:
-    """Whether the assistants will find a Groq key: their process env or assistants/.env.
-
-    Checks only that a non-empty value is set; the value itself is never read out.
-    """
-    if os.environ.get("GROQ_API_KEY"):
-        return True
-    env_file = Path(__file__).resolve().parents[1] / "assistants" / ".env"
-    if not env_file.exists():
-        return False
-    for line in env_file.read_text(encoding="utf-8").splitlines():
-        name, _, value = line.partition("=")
-        if name.strip() == "GROQ_API_KEY":
-            return bool(value.strip().strip('"').strip("'"))
-    return False
+    """Whether the assistants will find a Groq key (checks presence only, never the value)."""
+    return bool(env_setting("GROQ_API_KEY"))

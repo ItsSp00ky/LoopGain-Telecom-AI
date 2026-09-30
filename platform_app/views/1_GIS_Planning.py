@@ -15,7 +15,7 @@ hero(
     badges=["Explainable score", "Reconciled antenna inventory", "Engineering review"],
 )
 
-health, error = get_json(GIS_API_URL, "/health")
+health, error = get_json(GIS_API_URL, "/health", timeout=20.0)
 if error:
     st.error(f"GIS API is unreachable at {GIS_API_URL}: {error}")
     st.stop()
