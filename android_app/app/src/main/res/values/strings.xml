@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LoopGain KPI Monitor</string>
+    <string name="default_server_url">http://10.0.2.2:8510/network</string>
+    <string name="connect">Go</string>
+    <string name="live_tracking">Live tracking</string>
+    <string name="last_updated_prefix">Last updated: </string>
+</resources>

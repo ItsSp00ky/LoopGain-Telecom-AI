@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.KpiMonitor" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#1454A3</item>
+        <item name="colorPrimaryDark">#0B1F3A</item>
+        <item name="colorAccent">#12B3A8</item>
+    </style>
+</resources>
