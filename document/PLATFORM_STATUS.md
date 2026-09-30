@@ -7,7 +7,7 @@ connected.
 
 ## What's fully wired (real data, no stub)
 
-- **GIS Planning page** (`platform_app/pages/1_GIS_Planning.py`) calls
+- **GIS Planning page** (`platform_app/views/1_GIS_Planning.py`) calls
   `antenna_cell_placement`'s `api.py` directly: source-verification status from
   `verify_sources()`, the shortlist from `integrated_release_v3/` - the completed
   run behind the real collected-data/reconciled-inventory integration (CellMapper,
@@ -19,7 +19,7 @@ connected.
   files - true of this checkout right now), `/assess` returns a clean 503 and the page
   shows that instead of crashing; `/shortlist`, `/rooftops` and `/map` don't need that
   data, only the completed run, so they work regardless.
-- **Network KPI page** (`platform_app/pages/2_Network_KPI.py`) covers every KPI the
+- **Network KPI page** (`platform_app/views/2_Network_KPI.py`) covers every KPI the
   operator data holds - RRC setup, E-RAB establishment, E-RAB drop, intra-4G and
   overall handover, availability, DL/UL throughput, connected users, downtime - on
   all 6 bands, in four tabs:
@@ -37,12 +37,19 @@ connected.
     only. Using every KPI as input (`run_traffic.py enriched`) was tried and did not
     improve held-out accuracy once a same-day leak in the old multivariate code was
     fixed (2.22% vs 2.34% test WAPE); the previously reported 1.74% relied on that leak.
-- **Home page** is a real cross-module dashboard, not health pings: GIS shortlist
-  count and top score (from `/shortlist`), next-day traffic forecast and held-out
-  WAPE (from `/traffic/30day`), and subscribers monitored plus revenue at risk (from
-  churn's own `/portfolio/summary`, which needs `PREPAID_CHURN_COPILOT_KEY` - see
-  below). Module status pills still show live/degraded/offline per backend.
-- **Congestion & Steering page** (`platform_app/pages/3_Congestion_Steering.py`),
+- **Navigation and Overview**: `platform_app/Home.py` is the entry point and groups
+  pages by team (Network operations, Planning, Customers) with `st.navigation`;
+  pages live in `platform_app/views/` (not `pages/`, which Streamlit would also
+  auto-register and then report "Page not found" on deep links). The Overview
+  (`views/0_Overview.py`) shows five live headline figures - KPI SLA breaches,
+  critically congested towers, next-day 4G traffic, candidate sites, revenue at risk
+  - and a "Needs attention" briefing that takes the most urgent item from each
+  module with a link to act on it, plus per-service status. Revenue at risk comes
+  from churn's own `/portfolio/summary`, which needs `PREPAID_CHURN_COPILOT_KEY`
+  (see below). Theme, colours and the hidden developer toolbar are set in
+  `platform_app/.streamlit/config.toml`, so run the shell from `platform_app/` (as
+  `run_platform.py` does) for them to apply.
+- **Congestion & Steering page** (`platform_app/views/3_Congestion_Steering.py`),
   served by the network API's `/steering/*` and `/towers/*` routes from two modules
   Mohamed Khalaf built as a pair: `tower_kpi_forecast/` trains per-tower XGBoost
   next-day forecasts (connected users, DL throughput, availability, drop rate, 1,067

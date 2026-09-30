@@ -43,9 +43,12 @@ with health_tab:
     else:
         rows = pd.DataFrame(status["status"])
         c1, c2, c3 = st.columns(3)
-        c1.metric("Latest observed day", status["as_of"])
-        c2.metric("KPI readings checked", status["checked"])
-        c3.metric("SLA breaches", status["breaches"])
+        with c1.container(border=True):
+            st.metric("Latest observed day", status["as_of"])
+        with c2.container(border=True):
+            st.metric("KPI readings checked", status["checked"])
+        with c3.container(border=True):
+            st.metric("SLA breaches", status["breaches"])
 
         rows["kpi_name"] = rows["kpi"].map(lambda k: kpis[k]["name"])
         rows["band_label"] = rows["band"].map(lambda b: f"{b} MHz")
@@ -55,8 +58,10 @@ with health_tab:
             alt.Chart(rows)
             .mark_rect(stroke="white", strokeWidth=2)
             .encode(
-                x=alt.X("band_label:N", title="Band", sort=[f"{b} MHz" for b in bands]),
-                y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis]),
+                x=alt.X("band_label:N", title=None, sort=[f"{b} MHz" for b in bands],
+                        axis=alt.Axis(orient="top", labelAngle=0, labelFontSize=12)),
+                y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis],
+                        axis=alt.Axis(labelLimit=260, labelOverlap=False, labelFontSize=12)),
                 color=alt.Color(
                     "result:N",
                     scale=alt.Scale(domain=["Meets SLA", "Breach", "No data"],
@@ -70,7 +75,7 @@ with health_tab:
                     alt.Tooltip("result:N", title="SLA"),
                 ],
             )
-            .properties(height=380)
+            .properties(height=36 * len(kpis))
         )
         st.altair_chart(grid, width="stretch")
 
@@ -79,10 +84,20 @@ with health_tab:
             st.subheader("Breaches to review")
             table = breaches.assign(
                 SLA=breaches["kpi"].map(lambda k: kpis[k]["sla_description"]),
-            )[["band_label", "kpi_name", "value", "sla_value", "SLA"]]
+                note=breaches.apply(
+                    lambda r: f"{r['sla_value']:,.0f} cell-sec per cell" if r["kpi"] == "downtime_sec" else "",
+                    axis=1),
+            )[["band_label", "kpi_name", "value", "SLA", "note"]]
             st.dataframe(
-                table.rename(columns={"band_label": "Band", "kpi_name": "KPI",
-                                      "value": "Observed", "sla_value": "Compared to SLA"}),
+                table,
+                column_config={
+                    "band_label": "Band",
+                    "kpi_name": "KPI",
+                    "value": st.column_config.NumberColumn("Observed", format="localized"),
+                    "SLA": "SLA target",
+                    "note": st.column_config.TextColumn(
+                        "Note", help="Downtime is a band-cluster total; its SLA is per cell."),
+                },
                 hide_index=True, width="stretch",
             )
         st.caption(
@@ -120,9 +135,12 @@ with forecast_tab:
             )
 
         m1, m2, m3 = st.columns(3)
-        m1.metric("SLA", meta["sla_description"])
-        m2.metric("Forecast days breaching SLA", f"{forecast['forecast_breach_days']} / {len(forecast['forecast'])}")
-        m3.metric("Held-out R²", f"{forecast['test_r2']:.2f}")
+        with m1.container(border=True):
+            st.metric("SLA", meta["sla_description"])
+        with m2.container(border=True):
+            st.metric("Forecast days breaching SLA", f"{forecast['forecast_breach_days']} / {len(forecast['forecast'])}")
+        with m3.container(border=True):
+            st.metric("Held-out R²", f"{forecast['test_r2']:.2f}")
 
         history = pd.DataFrame(forecast["history"]).assign(series="Observed")
         future = pd.DataFrame(forecast["forecast"]).assign(series="Forecast")
@@ -160,8 +178,10 @@ with scorecard_tab:
     else:
         frame = pd.DataFrame(scorecard["scorecard"])
         s1, s2 = st.columns(2)
-        s1.metric("Band x KPI forecasts", scorecard["series"])
-        s2.metric("Beat a naive baseline on held-out data", f"{scorecard['beat_naive']} / {scorecard['series']}")
+        with s1.container(border=True):
+            st.metric("Band × KPI forecasts", scorecard["series"])
+        with s2.container(border=True):
+            st.metric("Beat a naive baseline on held-out data", f"{scorecard['beat_naive']} / {scorecard['series']}")
 
         frame["kpi_name"] = frame["kpi"].map(lambda k: kpis[k]["name"])
         frame["band_label"] = frame["carrier"].map(lambda b: f"{b} MHz")
@@ -170,8 +190,10 @@ with scorecard_tab:
             alt.Chart(frame)
             .mark_rect(stroke="white", strokeWidth=2)
             .encode(
-                x=alt.X("band_label:N", title="Band", sort=[f"{b} MHz" for b in bands]),
-                y=alt.Y("kpi_name:N", title=None),
+                x=alt.X("band_label:N", title=None, sort=[f"{b} MHz" for b in bands],
+                        axis=alt.Axis(orient="top", labelAngle=0, labelFontSize=12)),
+                y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis],
+                        axis=alt.Axis(labelLimit=260, labelOverlap=False, labelFontSize=12)),
                 color=alt.Color("verdict:N", scale=alt.Scale(domain=["Beats naive", "Trend only"],
                                                              range=["#12b3a8", "#f0a63c"]),
                                 legend=alt.Legend(title=None, orient="top")),
@@ -179,7 +201,7 @@ with scorecard_tab:
                          alt.Tooltip("test_mase:Q", format=".2f", title="Test MASE"),
                          alt.Tooltip("test_r2_bench:Q", format=".2f", title="Test R²")],
             )
-            .properties(height=380)
+            .properties(height=36 * len(kpis))
         )
         st.altair_chart(chart, width="stretch")
         st.caption(

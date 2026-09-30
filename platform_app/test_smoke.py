@@ -14,11 +14,11 @@ from streamlit.testing.v1 import AppTest
 APP_DIR = Path(__file__).resolve().parent
 PAGES = [
     "Home.py",
-    "pages/1_GIS_Planning.py",
-    "pages/2_Network_KPI.py",
-    "pages/3_Congestion_Steering.py",
-    "pages/4_Customer_Churn.py",
-    "pages/5_Assistants.py",
+    "views/1_GIS_Planning.py",
+    "views/2_Network_KPI.py",
+    "views/3_Congestion_Steering.py",
+    "views/4_Customer_Churn.py",
+    "views/5_Assistants.py",
 ]
 
 

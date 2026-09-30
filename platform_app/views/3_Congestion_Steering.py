@@ -34,10 +34,14 @@ st.info(
 
 latest = summary["latest_day"]
 a1, a2, a3, a4 = st.columns(4)
-a1.metric("Critical alerts, latest day", latest["alerts_by_category"].get("CRITICAL", 0))
-a2.metric("High alerts, latest day", latest["alerts_by_category"].get("HIGH", 0))
-a3.metric("Recommendations, latest day", latest["recommendations"])
-a4.metric("Towers alerted in the window", summary["towers_with_alerts"])
+for column, label, value in [
+    (a1, "Critical towers, latest day", latest["alerts_by_category"].get("CRITICAL", 0)),
+    (a2, "High-risk towers, latest day", latest["alerts_by_category"].get("HIGH", 0)),
+    (a3, "Steering proposals, latest day", latest["recommendations"]),
+    (a4, "Towers alerted in the window", summary["towers_with_alerts"]),
+]:
+    with column.container(border=True):
+        st.metric(label, f"{value:,}")
 
 recs_tab, clusters_tab, tower_tab = st.tabs([
     ":material/alt_route: Steering recommendations",
@@ -46,31 +50,52 @@ recs_tab, clusters_tab, tower_tab = st.tabs([
 ])
 
 with recs_tab:
-    left, right = st.columns([1, 3])
-    priority = left.selectbox("Priority", ["All", "HIGH", "MEDIUM", "LOW"])
+    left, right = st.columns([1, 3], vertical_alignment="bottom")
+    priority = left.selectbox("Change size", ["All", "HIGH", "MEDIUM", "LOW"],
+                              help="HIGH moves 10+ users (+3 dB), MEDIUM 6-9 (+2 dB), LOW up to 5 (+1 dB).")
     query = "/steering/recommendations?limit=200" + ("" if priority == "All" else f"&priority={priority}")
     recs, recs_error = get_json(KPI_API_URL, query, timeout=15.0)
     if recs_error:
         st.error(f"Recommendations unavailable: {recs_error}")
     else:
-        right.caption(f"{recs['count']} recommendations on {recs['date']}, highest congestion risk first.")
+        shown = f"top {recs['count']} of {recs['total']}" if recs["count"] < recs["total"] else f"all {recs['total']}"
+        right.caption(f"Showing {shown} proposals for {recs['date']}, most congested towers first.")
         frame = pd.DataFrame(recs["recommendations"])
         if frame.empty:
             st.info("No recommendations at this priority on the latest day.")
         else:
+            offset = frame["Recommended_3GPP_Action"].str.extract(r"([+-]\d+ dB)", expand=False).fillna("")
+            frame["change"] = "CIO " + offset + " → " + frame["Acceptor_Original_Name"]
             st.dataframe(
                 frame[[
-                    "Priority", "Cluster", "Donor_Tower_Id", "Donor_Original_Name", "Risk_Score",
-                    "Donor_Current_Users", "Users_To_Offload", "Acceptor_Tower_Id",
-                    "Recommended_3GPP_Action", "Donor_Current_Speed_Mbps",
-                    "Estimated_Donor_Speed_After", "Predicted_QoE_Boost",
-                ]].rename(columns={"Predicted_QoE_Boost": "Estimated speed gain"}),
-                hide_index=True, width="stretch",
+                    "Risk_Score", "Donor_Original_Name", "Cluster", "change",
+                    "Users_To_Offload", "Donor_Current_Users",
+                    "Donor_Current_Speed_Mbps", "Estimated_Donor_Speed_After",
+                    "Predicted_QoE_Boost", "Priority",
+                ]],
+                column_config={
+                    "Risk_Score": st.column_config.ProgressColumn(
+                        "Congestion risk", min_value=0, max_value=100, format="%.0f", width="small"),
+                    "Donor_Original_Name": st.column_config.TextColumn("Tower", width="small", help="The congested tower users are moved away from."),
+                    "Cluster": st.column_config.TextColumn("Cluster", width="small"),
+                    "change": st.column_config.TextColumn(
+                        "Proposed change", width="medium",
+                        help="3GPP Cell Individual Offset raised towards the named neighbour, so it takes the users."),
+                    "Users_To_Offload": st.column_config.NumberColumn("To move", width="small", help="Users the change moves to the neighbour."),
+                    "Donor_Current_Users": st.column_config.NumberColumn("Users now", format="%.1f", width="small"),
+                    "Donor_Current_Speed_Mbps": st.column_config.NumberColumn("Speed now", format="%.2f Mbps"),
+                    "Estimated_Donor_Speed_After": st.column_config.NumberColumn("Speed after (est.)", format="%.2f Mbps"),
+                    "Predicted_QoE_Boost": st.column_config.TextColumn("Speed gain (est.)"),
+                    "Priority": st.column_config.TextColumn("Change size", width="small"),
+                },
+                hide_index=True, width="stretch", height=460,
             )
         st.caption(
-            "\"Estimated speed gain\" is arithmetic, not a measurement: it assumes the donor "
+            "\"Change size\" is how many users a proposal moves, not how urgent it is - "
+            "urgency is the congestion risk, which is why a small (+1 dB) change can top the "
+            "list. The speed figures are arithmetic, not measurements: they assume the "
             "tower's capacity is shared equally, so moving users raises the remaining users' "
-            "speed in proportion. Real gains depend on radio conditions it does not model."
+            "speed in proportion. Real gains depend on radio conditions this does not model."
         )
     totals = summary["recommendations_by_priority"]
     st.caption(

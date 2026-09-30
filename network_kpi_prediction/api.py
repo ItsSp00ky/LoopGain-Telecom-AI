@@ -309,8 +309,9 @@ def steering_recommendations(
     rows = recs[recs["Date"] == day]
     if priority:
         rows = rows[rows["Priority"] == priority]
+    total = len(rows)
     rows = rows.sort_values("Risk_Score", ascending=False).head(limit)
-    return {"date": day, "count": len(rows), "recommendations": _records(rows)}
+    return {"date": day, "total": total, "count": len(rows), "recommendations": _records(rows)}
 
 
 @app.get("/steering/clusters")

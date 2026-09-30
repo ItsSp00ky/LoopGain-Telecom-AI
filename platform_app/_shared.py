@@ -1,11 +1,12 @@
 """Shared config, theme and HTTP helpers for the unified platform shell.
 
-Each backend (GIS, KPI, churn) stays its own process on its own port - this shell
-calls them over HTTP, the same way `assistants/chatbot_app.py` already calls
+Each backend (GIS, network KPI, churn) stays its own process on its own port - this
+shell calls them over HTTP, the same way `assistants/chatbot_app.py` already calls
 churn's API. Nothing here writes to any module's data; every page is read-only.
 """
 
 import os
+from pathlib import Path
 
 import requests
 import streamlit as st
@@ -18,6 +19,8 @@ CHATBOT_APP_URL = os.environ.get("PLATFORM_CHATBOT_APP_URL", "http://127.0.0.1:8
 COPILOT_APP_URL = os.environ.get("PLATFORM_COPILOT_APP_URL", "http://127.0.0.1:8502")
 CHURN_COPILOT_KEY = os.environ.get("PREPAID_CHURN_COPILOT_KEY", "")
 
+LOGO = Path(__file__).resolve().parent / "static" / "logo.svg"
+
 BRAND_CSS = """
 <style>
 :root {
@@ -25,87 +28,97 @@ BRAND_CSS = """
     --lg-blue: #1454a3;
     --lg-teal: #12b3a8;
     --lg-amber: #f0a63c;
-    --lg-bg: #f4f7fb;
+    --lg-red: #e0533d;
     --lg-card: #ffffff;
+    --lg-line: #e3e9f3;
     --lg-text: #16233b;
+    --lg-muted: #5b6b85;
 }
-.stApp { background: var(--lg-bg); }
-[data-testid="stSidebar"] {
-    background: var(--lg-navy);
+.block-container { padding-top: 2.2rem; max-width: 1320px; }
+
+/* Bordered st.container() becomes the platform's card. */
+[data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stVerticalBlock"][class*="border"] {
+    background: var(--lg-card);
+    border-color: var(--lg-line) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 10px rgba(16, 30, 54, 0.05);
 }
-[data-testid="stSidebar"] * { color: #dce6f5 !important; }
-[data-testid="stSidebar"] a { color: #9fd6ff !important; }
+
+[data-testid="stMetricLabel"] p { color: var(--lg-muted); font-weight: 600; font-size: 0.86rem; }
+[data-testid="stMetricValue"] { color: var(--lg-navy); font-weight: 700; }
 
 .lg-hero {
     background: linear-gradient(120deg, var(--lg-navy) 0%, var(--lg-blue) 100%);
     border-radius: 16px;
-    padding: 2rem 2.25rem;
+    padding: 1.7rem 2rem;
     color: white;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 8px 24px rgba(11, 31, 58, 0.18);
+    margin-bottom: 1.2rem;
+    box-shadow: 0 8px 24px rgba(11, 31, 58, 0.16);
 }
-.lg-hero h1 { color: white; margin: 0 0 0.25rem 0; font-size: 2.1rem; }
-.lg-hero p { color: #cfe0f7; margin: 0; font-size: 1.02rem; }
+.lg-hero h1 { color: white; margin: 0 0 0.3rem 0; font-size: 1.9rem; padding: 0; }
+.lg-hero p { color: #cfe0f7; margin: 0; font-size: 0.98rem; max-width: 60rem; }
 .lg-badge {
     display: inline-block; background: rgba(255,255,255,0.14); color: white;
-    border-radius: 999px; padding: 0.2rem 0.75rem; font-size: 0.78rem;
-    margin-right: 0.4rem; margin-top: 0.6rem; letter-spacing: 0.02em;
+    border-radius: 999px; padding: 0.18rem 0.7rem; font-size: 0.76rem;
+    margin-right: 0.4rem; margin-top: 0.7rem;
 }
 
-.lg-card {
-    background: var(--lg-card); border-radius: 14px; padding: 1.25rem 1.4rem;
-    box-shadow: 0 2px 10px rgba(16, 30, 54, 0.06); border: 1px solid #e7edf6;
-    height: 100%;
-}
-.lg-card h3 { margin: 0 0 0.35rem 0; font-size: 1.05rem; color: var(--lg-text); }
-.lg-card p.lg-desc { color: #55647e; font-size: 0.88rem; margin-bottom: 0.75rem; }
 .lg-pill {
-    display: inline-block; border-radius: 999px; padding: 0.15rem 0.65rem;
-    font-size: 0.76rem; font-weight: 600; letter-spacing: 0.02em;
+    display: inline-block; border-radius: 999px; padding: 0.12rem 0.6rem;
+    font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em;
 }
 .lg-pill-ok { background: #e3f8f0; color: #0a8f6c; }
-.lg-pill-degraded { background: #fdf1de; color: #b5720b; }
+.lg-pill-partial { background: #fdf1de; color: #a8680a; }
 .lg-pill-down { background: #fbe6e6; color: #b3261e; }
+.lg-muted { color: var(--lg-muted); font-size: 0.86rem; }
 
-.lg-metric-row [data-testid="stMetric"] {
-    background: var(--lg-card); border-radius: 12px; padding: 0.9rem 1rem;
-    border: 1px solid #e7edf6; box-shadow: 0 2px 8px rgba(16, 30, 54, 0.05);
-}
+.lg-alert { display: flex; gap: 0.8rem; align-items: baseline; padding: 0.55rem 0;
+            border-bottom: 1px solid var(--lg-line); }
+.lg-alert:last-child { border-bottom: none; }
+.lg-alert b { color: var(--lg-navy); font-size: 1.15rem; min-width: 4.5rem; display: inline-block; }
+.lg-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; flex: none; }
 </style>
 """
 
 
+def apply_brand():
+    """Theme CSS and sidebar logo; called once per run by the Home.py router."""
+    st.logo(str(LOGO), size="large")
+    st.sidebar.markdown(BRAND_CSS, unsafe_allow_html=True)
+    st.sidebar.caption("Team Loop Gain · SIC AI Capstone · read-only views over each module's own outputs")
+
+
 def configure(title: str, icon: str = "satellite"):
-    st.set_page_config(page_title=f"LoopGain Telecom AI - {title}", page_icon=":material/" + icon + ":", layout="wide")
-    st.markdown(BRAND_CSS, unsafe_allow_html=True)
+    """Per-page title and wide layout, so a page also renders correctly on its own."""
+    st.set_page_config(page_title=f"{title} · LoopGain Telecom AI", page_icon=f":material/{icon}:", layout="wide")
 
 
 def hero(title: str, subtitle: str, badges: list[str] | None = None):
     badge_html = "".join(f'<span class="lg-badge">{b}</span>' for b in (badges or []))
     st.markdown(
-        f"""
-        <div class="lg-hero">
-            <h1>{title}</h1>
-            <p>{subtitle}</p>
-            {badge_html}
-        </div>
-        """,
+        f'<div class="lg-hero"><h1>{title}</h1><p>{subtitle}</p>{badge_html}</div>',
         unsafe_allow_html=True,
     )
 
 
-def status_pill(status: str) -> str:
-    label, css = {
+def status_pill(status: str, label: str | None = None) -> str:
+    default, css = {
         "ok": ("Live", "lg-pill-ok"),
-        "degraded": ("Degraded", "lg-pill-degraded"),
+        "degraded": ("Partial", "lg-pill-partial"),
     }.get(status, ("Offline", "lg-pill-down"))
-    return f'<span class="lg-pill {css}">{label}</span>'
+    return f'<span class="lg-pill {css}">{label or default}</span>'
 
 
-def get_json(base_url: str, path: str, timeout: float = 5.0, headers: dict | None = None):
-    """GET a JSON endpoint; return (data, error) so a page can degrade, not crash."""
+@st.cache_data(ttl=30, show_spinner=False)
+def get_json(base_url: str, path: str, timeout: float = 5.0, headers: tuple | None = None):
+    """GET a JSON endpoint; return (data, error) so a page can degrade, not crash.
+
+    Cached for 30 s so moving between pages doesn't refetch everything; `headers`
+    is a tuple of pairs because cached arguments must be hashable.
+    """
     try:
-        response = requests.get(f"{base_url}{path}", timeout=timeout, headers=headers)
+        response = requests.get(f"{base_url}{path}", timeout=timeout, headers=dict(headers or ()))
         response.raise_for_status()
         return response.json(), None
     except requests.RequestException as error:
@@ -137,7 +150,4 @@ def churn_portfolio():
     """
     if not CHURN_COPILOT_KEY:
         return None, "PREPAID_CHURN_COPILOT_KEY is not set for this shell"
-    data, error = get_json(CHURN_API_URL, "/portfolio/summary", headers={"X-API-Key": CHURN_COPILOT_KEY})
-    if error:
-        return None, error
-    return data, None
+    return get_json(CHURN_API_URL, "/portfolio/summary", headers=(("X-API-Key", CHURN_COPILOT_KEY),))
