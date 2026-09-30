@@ -6,6 +6,7 @@ churn's API. Nothing here writes to any module's data; every page is read-only.
 """
 
 import os
+from html import escape
 from pathlib import Path
 
 import requests
@@ -53,7 +54,7 @@ BRAND_CSS = """
     --lg-text: #16233b;
     --lg-muted: #5b6b85;
 }
-.block-container { padding-top: 2.2rem; max-width: 1320px; }
+.block-container { padding-top: 4.8rem; max-width: 1320px; }
 
 /* Bordered st.container() becomes the platform's card. */
 [data-testid="stVerticalBlockBorderWrapper"],
@@ -97,15 +98,67 @@ div[data-testid="stVerticalBlock"][class*="border"] {
 .lg-alert:last-child { border-bottom: none; }
 .lg-alert b { color: var(--lg-navy); font-size: 1.15rem; min-width: 4.5rem; display: inline-block; }
 .lg-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; flex: none; }
+
+.stMain [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] > [data-testid="stMetric"]) {
+    background: var(--lg-card); border: 1px solid var(--lg-line);
+    border-radius: 14px; padding: 1rem;
+    box-shadow: 0 2px 10px rgba(16,30,54,.04);
+}
+/* Keep cards content-sized and touch targets usable inside a phone WebView. */
+.stMain .block-container { padding-bottom: 3rem; }
+.stMain h2 { font-size: 1.35rem; letter-spacing: -.02em; }
+.stMain h3 { font-size: 1.15rem; }
+.stMain [data-testid="stColumn"] { min-width: 0; }
+.stMain [data-testid="stMetric"] {
+    background: var(--lg-card); border-radius: 12px; padding: .25rem;
+}
+.stMain [data-testid="stMetricValue"] {
+    font-size: clamp(1.35rem, 2.2vw, 2rem); line-height: 1.3;
+    overflow-wrap: anywhere; white-space: normal;
+}
+.stMain [data-testid="stMetricValue"] > div { white-space: normal; overflow: visible; }
+.stMain [data-testid="stMetricLabel"] { height: auto; min-height: 1.5rem; }
+.stMain [data-testid="stMetricLabel"] p { white-space: normal; }
+.stMain [data-testid="stButton"] button, .stMain [data-testid="stFormSubmitButton"] button,
+.stMain [data-testid="stLinkButton"] a { min-height: 44px; }
+.stMain [data-baseweb="tab-list"] { gap: .3rem; overflow-x: auto; padding-bottom: .25rem; }
+.stMain [data-baseweb="tab"] { padding: .6rem .8rem; white-space: nowrap; }
+.stMain [data-testid="stAlert"] { border-radius: 12px; }
+.stMain [data-testid="stDataFrame"] { border-radius: 12px; }
+.lg-alert { align-items: center; }
+.lg-alert b { min-width: 2.8rem; }
+.lg-status { display: flex; justify-content: space-between; gap: .75rem; align-items: center; }
+.lg-note { margin-top: .4rem; line-height: 1.5; }
+.lg-pill-ok { color: #076749; }
+.lg-pill-partial { color: #825007; }
+@media (max-width: 1100px) {
+    .st-key-overview_metrics [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+    .st-key-overview_metrics [data-testid="stColumn"] { flex: 1 1 28%; }
+}
+@media (max-width: 768px) {
+    .stMain .block-container { padding: 4.8rem 1rem 2rem; }
+    .lg-hero { padding: 1.3rem; margin-bottom: .5rem; border-radius: 14px; }
+    .lg-hero h1 { font-size: 1.55rem; line-height: 1.25; }
+    .lg-hero p { font-size: .92rem; line-height: 1.55; }
+    .lg-badge { font-size: .72rem; }
+    .stMain [data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: .75rem; }
+    .stMain [data-testid="stColumn"] { flex: 1 1 100%; width: 100%; }
+    .st-key-overview_metrics [data-testid="stColumn"] { flex: 1 1 calc(50% - .75rem); min-width: 0; }
+    .stMain [data-testid="stMetricValue"] { font-size: 1.65rem; }
+    .lg-alert { gap: .6rem; font-size: .9rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .stMain * { scroll-behavior: auto !important; }
+}
 </style>
 """
 
 
 def apply_brand():
     """Theme CSS and sidebar logo; called once per run by the Home.py router."""
-    st.logo(str(LOGO), size="large")
+    st.logo(str(LOGO), icon_image=str(LOGO.with_name("logo-mark.svg")), size="large")
     st.sidebar.markdown(BRAND_CSS, unsafe_allow_html=True)
-    st.sidebar.caption("Team Loop Gain · SIC AI Capstone · read-only views over each module's own outputs")
+    st.sidebar.caption("Team Loop Gain · SIC AI Capstone")
 
 
 def configure(title: str, icon: str = "satellite"):
@@ -114,9 +167,9 @@ def configure(title: str, icon: str = "satellite"):
 
 
 def hero(title: str, subtitle: str, badges: list[str] | None = None):
-    badge_html = "".join(f'<span class="lg-badge">{b}</span>' for b in (badges or []))
+    badge_html = "".join(f'<span class="lg-badge">{escape(b)}</span>' for b in (badges or []))
     st.markdown(
-        f'<div class="lg-hero"><h1>{title}</h1><p>{subtitle}</p>{badge_html}</div>',
+        f'<div class="lg-hero"><h1>{escape(title)}</h1><p>{escape(subtitle)}</p>{badge_html}</div>',
         unsafe_allow_html=True,
     )
 
@@ -126,7 +179,7 @@ def status_pill(status: str, label: str | None = None) -> str:
         "ok": ("Live", "lg-pill-ok"),
         "degraded": ("Partial", "lg-pill-partial"),
     }.get(status, ("Offline", "lg-pill-down"))
-    return f'<span class="lg-pill {css}">{label or default}</span>'
+    return f'<span class="lg-pill {css}">{escape(label or default)}</span>'
 
 
 @st.cache_data(ttl=30, show_spinner=False)
@@ -177,3 +230,39 @@ def churn_portfolio():
 def groq_key_configured() -> bool:
     """Whether the assistants will find a Groq key (checks presence only, never the value)."""
     return bool(env_setting("GROQ_API_KEY"))
+
+
+def load_json(base_url: str, path: str, timeout: float = 5.0, headers: tuple | None = None):
+    """UI-only loading feedback; keep the shared HTTP/cache contract unchanged."""
+    with st.spinner("Loading the latest available data…", show_time=True):
+        return get_json(base_url, path, timeout=timeout, headers=headers)
+
+
+def unavailable(title: str, key: str, message: str | None = None):
+    """A retryable state without exposing raw URLs or request exceptions."""
+    with st.container(border=True):
+        st.markdown(f"**{title}**")
+        st.caption(message or "We can’t reach this service right now. Check that the platform is running, then try again.")
+        if st.button("Try again", key=f"retry_{key}", icon=":material/refresh:"):
+            get_json.clear()
+            st.rerun()
+
+
+def empty_state(message: str):
+    st.info(message, icon=":material/inbox:")
+
+
+def show_chart(chart, **kwargs):
+    """Shared visual defaults; individual charts retain their data and encodings."""
+    chart = (chart.configure_view(stroke=None)
+             .configure_axis(labelColor="#5b6b85", titleColor="#16233b", gridColor="#e3e9f3",
+                             labelFontSize=11, titleFontSize=12, titlePadding=12)
+             .configure_legend(labelColor="#16233b", labelFontSize=12)
+             .configure_title(color="#0b1f3a", anchor="start", fontSize=15))
+    st.altair_chart(chart, **kwargs)
+
+
+def app_available(base_url: str) -> bool:
+    """Show feedback while checking an embedded application."""
+    with st.spinner("Connecting to the workspace…"):
+        return app_reachable(base_url)

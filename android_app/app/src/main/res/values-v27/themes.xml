@@ -12,6 +12,7 @@
         <item name="android:statusBarColor">@color/brand_navy</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/brand_navy</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="android:fontFamily">sans</item>
     </style>
     <style name="ThemeOverlay.KpiMonitor.Toolbar" parent="ThemeOverlay.MaterialComponents.Dark.ActionBar">

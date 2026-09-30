@@ -15,7 +15,7 @@ in the terminal are read from assistants/.env (git-ignored), the same file and t
 same rule the assistants use: a variable already set in the terminal wins.
 
 Ports (fixed so they never collide): GIS API 8001, KPI API 8002, churn API 8000,
-churn's own demo app 8501, chatbot 8503, copilot 8502, this shell 8510.
+churn's own demo app 8501, chatbot 8503, copilot 8502, this shell 8510, mobile summary 8511.
 """
 
 import os
@@ -60,6 +60,13 @@ def always_on_services() -> list[dict]:
             "url": "http://127.0.0.1:8002",
             "cwd": ROOT / "network_kpi_prediction",
             "cmd": [sys.executable, "-m", "uvicorn", "api:app", "--port", "8002"],
+        },
+        {
+            "name": "Mobile summary API",
+            "url": "http://127.0.0.1:8511",
+            "cwd": ROOT / "platform_app",
+            "cmd": [sys.executable, "-m", "uvicorn", "mobile_summary:app",
+                    "--host", "0.0.0.0", "--port", "8511"],
         },
         {
             "name": "Platform shell",

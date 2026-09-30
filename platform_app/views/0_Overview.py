@@ -6,6 +6,7 @@ assistants/README.md). A module that can't be reached, or hasn't been built in t
 checkout, says so instead of showing a placeholder number.
 """
 
+from html import escape
 import streamlit as st
 from _shared import (
     CHATBOT_APP_URL,
@@ -16,7 +17,7 @@ from _shared import (
     app_reachable,
     churn_portfolio,
     configure,
-    get_json,
+    load_json as get_json,
     groq_key_configured,
     hero,
     service_status,
@@ -32,61 +33,68 @@ hero(
     badges=["Network KPIs", "Congestion & steering", "Site planning", "Churn & retention", "AI assistants"],
 )
 
+if st.button("Refresh", icon=":material/refresh:", help="Reload the latest available outputs from all services"):
+    from _shared import get_json as cached_get_json
+    cached_get_json.clear()
+
 shortlist, shortlist_error = get_json(GIS_API_URL, "/shortlist")
 kpi_status, kpi_error = get_json(KPI_API_URL, "/kpis/status")
 steering, steering_error = get_json(KPI_API_URL, "/steering/summary", timeout=15.0)
 traffic, traffic_error = get_json(KPI_API_URL, "/traffic/30day", timeout=30.0)
-portfolio, portfolio_error = churn_portfolio()
+with st.spinner("Loading customer summary…"):
+    portfolio, portfolio_error = churn_portfolio()
 
 
 def tile(column, label, value, note, help_text=None):
-    with column.container(border=True, height=158):
+    with column.container(border=True):
         st.metric(label, value, help=help_text)
-        st.markdown(f'<span class="lg-muted">{note}</span>', unsafe_allow_html=True)
+        st.markdown(f'<span class="lg-muted">{escape(note)}</span>', unsafe_allow_html=True)
 
 
-def unavailable(error):
-    return f"Unavailable: {error.split(':')[0]}" if error else ""
+def unavailable_note(error):
+    return "Service unavailable · use Refresh to try again" if error else ""
 
 
 # ---------------------------------------------------------------------------
-t1, t2, t3, t4, t5 = st.columns(5)
+st.subheader("At a glance")
+with st.container(key="overview_metrics"):
+    t1, t2, t3, t4, t5 = st.columns(5)
 
-if kpi_error:
-    tile(t1, "KPI SLA breaches", "—", unavailable(kpi_error))
-else:
-    tile(t1, "KPI SLA breaches", f"{kpi_status['breaches']} / {kpi_status['checked']}",
-         f"10 KPIs × 6 bands, {kpi_status['as_of']}")
+    if kpi_error:
+        tile(t1, "KPI SLA breaches", "—", unavailable_note(kpi_error))
+    else:
+        tile(t1, "KPI SLA breaches", f"{kpi_status['breaches']} / {kpi_status['checked']}",
+             f"10 KPIs × 6 bands, {kpi_status['as_of']}")
 
-if steering_error:
-    tile(t2, "Critical towers", "—", unavailable(steering_error))
-else:
-    critical = steering["latest_day"]["alerts_by_category"].get("CRITICAL", 0)
-    tile(t2, "Critical towers", f"{critical}",
-         f"{steering['latest_day']['recommendations']} steering proposals, {steering['window_end']}")
+    if steering_error:
+        tile(t2, "Critical towers", "—", unavailable_note(steering_error))
+    else:
+        critical = steering["latest_day"]["alerts_by_category"].get("CRITICAL", 0)
+        tile(t2, "Critical towers", f"{critical}",
+             f"{steering['latest_day']['recommendations']} steering proposals, {steering['window_end']}")
 
-if traffic_error:
-    tile(t3, "Next-day 4G traffic", "—", unavailable(traffic_error))
-else:
-    next_day = traffic["forecast"][0]
-    tile(t3, "Next-day 4G traffic", f"{next_day['predicted_kpi_volume_gb'] / 1e6:,.2f} PB",
-         f"Held-out error {traffic['test_metrics']['WAPE (%)']:.1f}% WAPE",
-         help_text=f"{next_day['predicted_kpi_volume_gb']:,.0f} GB forecast for {next_day['date']}")
+    if traffic_error or not traffic.get("forecast"):
+        tile(t3, "4G traffic forecast", "—", "Forecast unavailable")
+    else:
+        next_day = traffic["forecast"][0]
+        tile(t3, "4G traffic forecast", f"{next_day['predicted_kpi_volume_gb'] / 1e6:,.2f} PB",
+             f"Forecast for {next_day['date']} · held-out WAPE {traffic['test_metrics']['WAPE (%)']:.1f}%",
+             help_text=f"{next_day['predicted_kpi_volume_gb']:,.0f} GB forecast for {next_day['date']}")
 
-if shortlist_error:
-    tile(t4, "Candidate sites", "—", unavailable(shortlist_error))
-else:
-    features = shortlist.get("features", [])
-    top = max((f["properties"].get("planning_priority_score", 0) for f in features), default=0)
-    tile(t4, "Candidate sites", f"{len(features)}", f"For engineering review, top score {top:.0f}/100")
+    if shortlist_error:
+        tile(t4, "Candidate sites", "—", unavailable_note(shortlist_error))
+    else:
+        features = shortlist.get("features", [])
+        top = max((f["properties"].get("planning_priority_score", 0) for f in features), default=0)
+        tile(t4, "Candidate sites", f"{len(features)}", f"For engineering review, top score {top:.0f}/100")
 
-if portfolio_error:
-    tile(t5, "Revenue at risk", "—", unavailable(portfolio_error))
-else:
-    at_risk = sum(band.get("lyd_at_risk") or 0 for band in portfolio["by_risk_band"])
-    tile(t5, "Revenue at risk", f"{at_risk / 1000:,.0f}k LYD",
-         f"Across {portfolio['subscribers']:,} prepaid subscribers",
-         help_text="12-month value weighted by each customer's churn probability.")
+    if portfolio_error:
+        tile(t5, "Revenue at risk", "—", unavailable_note(portfolio_error))
+    else:
+        at_risk = sum(band.get("lyd_at_risk") or 0 for band in portfolio["by_risk_band"])
+        tile(t5, "Revenue at risk", f"{at_risk / 1000:,.0f}k LYD",
+             f"Across {portfolio['subscribers']:,} prepaid subscribers",
+             help_text="12-month value weighted by each customer's churn probability.")
 
 # ---------------------------------------------------------------------------
 left, right = st.columns([3, 2], gap="large")
@@ -120,7 +128,7 @@ with left:
 
     with st.container(border=True):
         if not items:
-            st.info("No module is reachable yet - start the platform with `python3 run_platform.py`.")
+            st.info("No services are available yet. Start the platform, then select Refresh.")
         for colour, number, text, page, label in items:
             row_text, row_link = st.columns([5, 1], vertical_alignment="center")
             row_text.markdown(
@@ -132,10 +140,11 @@ with left:
 
 with right:
     st.subheader("Platform status")
-    gis_status, _ = service_status(GIS_API_URL)
-    kpi_health, _ = service_status(KPI_API_URL)
-    churn_health, _ = service_status(CHURN_API_URL)
-    assistants_up = [app_reachable(CHATBOT_APP_URL), app_reachable(COPILOT_APP_URL)]
+    with st.spinner("Checking service availability…"):
+        gis_status, _ = service_status(GIS_API_URL)
+        kpi_health, _ = service_status(KPI_API_URL)
+        churn_health, _ = service_status(CHURN_API_URL)
+        assistants_up = [app_reachable(CHATBOT_APP_URL), app_reachable(COPILOT_APP_URL)]
     assistants_status = "ok" if all(assistants_up) else ("degraded" if any(assistants_up) else "unreachable")
 
     modules = [
@@ -145,13 +154,13 @@ with right:
          if gis_status == "degraded" else "Shortlist, map and point assessment"),
         ("Churn service", churn_health, "Scores, value tiers, approved offers"),
         ("Chatbot and copilot", assistants_status,
-         "Conversation on (Groq key configured)" if groq_key_configured()
-         else "Conversation off: no GROQ_API_KEY configured"),
+         "Conversation available" if groq_key_configured()
+         else "Conversation setup required"),
     ]
     with st.container(border=True):
         for name, status, note in modules:
             st.markdown(
-                f"{status_pill(status)} &nbsp;**{name}**<br><span class='lg-muted'>{note}</span>",
+                f"{status_pill(status)} &nbsp;**{name}**<br><span class='lg-muted'>{escape(note)}</span>",
                 unsafe_allow_html=True,
             )
 

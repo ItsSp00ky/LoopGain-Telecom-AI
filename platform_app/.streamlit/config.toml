@@ -6,7 +6,7 @@ toolbarMode = "minimal"
 base = "light"
 primaryColor = "#1454a3"
 backgroundColor = "#f4f7fb"
-secondaryBackgroundColor = "#e9eef6"
+secondaryBackgroundColor = "#edf2f8"
 textColor = "#16233b"
 font = "sans serif"
 

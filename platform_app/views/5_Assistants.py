@@ -6,12 +6,13 @@ this page only frames their existing, already-running UI.
 """
 
 import streamlit as st
-from _shared import CHATBOT_APP_URL, COPILOT_APP_URL, app_reachable, configure, groq_key_configured, hero
+from _shared import unavailable
+from _shared import CHATBOT_APP_URL, COPILOT_APP_URL, app_available, configure, groq_key_configured, hero
 
 configure("AI Assistants", icon="support_agent")
 
 hero(
-    "Customer Chatbot & Employee Copilot",
+    "AI Assistants",
     "The language model only picks a tool and phrases what came back - every package, "
     "price, offer, tower and site figure comes from the platform's own services and "
     "outputs, never from the prompt.",
@@ -21,24 +22,18 @@ hero(
 
 if not groq_key_configured():
     st.info(
-        "**Conversation is switched off on this machine.** Both assistants use Groq's API "
-        "to understand questions, and no `GROQ_API_KEY` is set (neither in the environment "
-        "nor in `assistants/.env`). The chatbot shows a setup message until one is added; "
-        "the copilot's tower alerts and work orders still work without it. "
-        "See `assistants/README.md` to add a key.",
+        "Conversation is not configured yet. The employee copilot’s tower alerts and "
+        "work orders remain available. Ask your platform administrator to enable conversation.",
         icon=":material/key:",
     )
 
 
 def embed(url: str, name: str, command: str):
-    if not app_reachable(url):
-        st.warning(
-            f"The {name} isn't reachable at {url} yet. Start the full platform with the "
-            f"churn keys set (see assistants/README.md), or run it directly from "
-            f"`assistants/` with `{command}`."
-        )
+    if not app_available(url):
+        unavailable(f"The {name} is offline", name)
         return
     st.link_button(f"Open the {name} full screen", url, icon=":material/open_in_new:")
+    st.caption("Loading the assistant below. If it stays blank, try opening it full screen.")
     st.iframe(f"{url}/?embed=true&embed_options=light_theme", height=900)
 
 

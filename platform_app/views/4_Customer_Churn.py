@@ -7,7 +7,8 @@ port, its code). The summary strip above it reads churn's own `/portfolio/summar
 """
 
 import streamlit as st
-from _shared import CHURN_APP_URL, app_reachable, churn_portfolio, configure, hero
+from _shared import unavailable
+from _shared import CHURN_APP_URL, app_available, churn_portfolio, configure, hero
 
 configure("Churn & Retention", icon="group")
 
@@ -18,9 +19,10 @@ hero(
     badges=["Calibrated LightGBM", "Value tiers", "Human-approved offers"],
 )
 
-portfolio, portfolio_error = churn_portfolio()
+with st.spinner("Loading customer summary…"):
+    portfolio, portfolio_error = churn_portfolio()
 if portfolio_error:
-    st.info(f"Portfolio summary unavailable: {portfolio_error}", icon=":material/info:")
+    unavailable("Customer summary unavailable", "portfolio")
 else:
     bands = {band["name"]: band for band in portfolio["by_risk_band"]}
     high = bands.get("high", {})
@@ -37,16 +39,12 @@ else:
         st.metric("Release gate", "Passed" if portfolio.get("release_gate_passed") else "Not passed",
                   help=f"Model {portfolio.get('model_version') or 'not loaded'}")
 
-if not app_reachable(CHURN_APP_URL):
-    st.warning(
-        f"The churn app isn't reachable at {CHURN_APP_URL} yet. Start it with "
-        "`python3 run_platform.py` after setting `PREPAID_CHURN_CHATBOT_KEY` and "
-        "`PREPAID_CHURN_COPILOT_KEY` (see assistants/README.md), or run it directly "
-        "from `prepaid_churn/` with `uv run streamlit run app/Home.py --server.port 8501`."
-    )
+if not app_available(CHURN_APP_URL):
+    unavailable("Churn workbench is offline", "churn_app")
 else:
     head, link = st.columns([4, 1], vertical_alignment="bottom")
     head.subheader("Churn workbench")
     link.link_button("Open full screen", CHURN_APP_URL, icon=":material/open_in_new:", width="stretch")
+    st.caption("Loading the workbench below. If it stays blank, try Open full screen.")
     st.iframe(f"{CHURN_APP_URL}/?embed=true&embed_options=light_theme", height=1150)
     st.caption("prepaid_churn's own app, embedded. Use its sidebar for subscribers, campaigns and approvals.")

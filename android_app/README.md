@@ -13,8 +13,7 @@ vs. wrapped.
   Network KPIs, Congestion & Steering, Site Planning/GIS, Churn & Retention,
   AI Assistants). Fully native UI, no WebView here.
 - **DetailActivity** - opened when a card is tapped. Loads that module's page
-  from `platform_app` in a WebView, with pull-to-refresh and a "Live
-  tracking" switch that auto-reloads every 20s, so KPIs/statuses can be
+  from `platform_app` in a WebView, with pull-to-refresh and a "Auto-refresh" switch that auto-reloads every 20s, so KPIs/statuses can be
   checked from a phone without a laptop.
 - Server address is set once via the gear icon (top-right of the dashboard),
   not per-screen - saved on device, no rebuild needed to switch between the
@@ -61,9 +60,70 @@ pinned in `gradle/wrapper/gradle-wrapper.properties`.
   website.
 - Each module screen still renders through the existing Streamlit page inside
   a WebView - so no model or backend work had to be redone to get here.
-  "Live tracking" auto-refreshes that page, standing in for what a native
+  "Auto-refresh" auto-refreshes that page, standing in for what a native
   screen's push/poll loop would do.
 - Honest next step for a full rebuild: replace each `DetailActivity` page
   with a real native screen calling a small FastAPI layer directly (faster,
   works offline-ish, real push notifications) - this app is the fast,
   low-risk way to prove the mobile concept today.
+
+
+## Native operations dashboard (September 30 UI update)
+
+The home screen now contains five native summary cards from the same sources as
+the web Overview: KPI SLA breaches, critical towers, dated 4G traffic forecasts,
+candidate planning sites, and revenue at risk. Tapping a card or attention note
+opens the corresponding existing module. All six original navigation cards remain directly below the summaries, including
+Overview and AI Assistants; Needs attention follows the navigation grid.
+"Ask AI" stays visible below the scrollable content on home and module screens;
+it opens the existing Assistants page, and Back returns to the previous screen.
+The button is hidden inside Assistants to avoid stacking copies of that screen.
+The server address appears only in Settings.
+
+### Enable the summary feed
+
+Install the platform requirements in the Python environment used by the launcher:
+
+```powershell
+python -m pip install -r platform_app/requirements.txt
+python run_platform.py
+```
+
+The launcher now starts `platform_app/mobile_summary.py` on port **8511**, alongside
+the existing web shell on **8510**. To start only the new feed from the repo root:
+
+```powershell
+python -m uvicorn mobile_summary:app --app-dir platform_app --host 0.0.0.0 --port 8511
+```
+
+Android requests `GET /dashboard/summary` from the configured platform computer
+on port 8511. Server settings has an optional **Summary API address** override for
+different ports or proxy prefixes; enter the base address, without the endpoint.
+The phone must be able to reach that port on the computer.
+
+The summary service uses `PLATFORM_KPI_API_URL`, `PLATFORM_GIS_API_URL`,
+`PLATFORM_CHURN_API_URL`, and `PREPAID_CHURN_COPILOT_KEY` on the server, following
+the shell's environment / `assistants/.env` lookup. It exposes aggregates and
+review notes only. The Android app never receives or stores service API keys.
+Missing services, missing authorization and malformed results show unavailable
+values, not zeroes. "Checked" is fetch time; source dates remain on the cards.
+The traffic card says **4G traffic forecast**, rather than implying an old export
+predicts tomorrow. Congestion is labeled a backtest; GIS results require review.
+
+Refresh fetches the summaries again; returning home refreshes after 30 seconds.
+The module WebView keeps the original page routes, back behavior and pull-to-refresh.
+Its loading overlay has a 30-second timeout. Connection errors and main-frame HTTP
+errors show a native retry screen; a failed image does not hide the whole page.
+Auto-refresh runs every 20 seconds on a successfully loaded, foreground page and
+pauses during loading/errors. "Page loaded" does not claim all embedded services
+are healthy. Streamlit's own in-page/WebSocket errors retain their web UI.
+
+### Validation
+
+- Java 17: `gradlew.bat :app:assembleDebug :app:lintDebug`.
+- Summary service: from `platform_app`, run `python -m unittest test_mobile_summary -v`
+  (test environment also needs `httpx`). Eight tests cover valid data, partial and
+  full outages, missing/nonfinite values, source dates and credential redaction.
+- Emulator checks should cover summary loading/unavailable/data states, card links,
+  attention notes, Ask AI and Back, WebView retry/recovery, refresh controls, dark
+  mode, larger text, and rotation. UI fixtures are test data, not project results.

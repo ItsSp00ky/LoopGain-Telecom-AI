@@ -4,7 +4,8 @@ their held-out accuracy, and the 4G traffic volume forecast. Read-only."""
 import altair as alt
 import pandas as pd
 import streamlit as st
-from _shared import KPI_API_URL, configure, get_json, hero
+from _shared import unavailable, empty_state, show_chart
+from _shared import KPI_API_URL, configure, load_json as get_json, hero
 
 configure("Network KPI", icon="monitoring")
 
@@ -17,16 +18,19 @@ hero(
 
 health, error = get_json(KPI_API_URL, "/health")
 if error:
-    st.error(f"KPI API is unreachable at {KPI_API_URL}: {error}")
+    unavailable('KPI API is unreachable', 'error')
     st.stop()
 
 catalog, catalog_error = get_json(KPI_API_URL, "/kpis/catalog")
 if catalog_error:
-    st.error(f"KPI catalogue unavailable: {catalog_error}")
+    unavailable('KPI catalogue unavailable', 'catalog_error')
     st.stop()
 
 kpis = {k["key"]: k for k in catalog["kpis"]}
 bands = {b["band"]: b for b in catalog["bands"]}
+if not kpis or not bands:
+    empty_state("No KPI series or carrier bands are available yet.")
+    st.stop()
 
 health_tab, forecast_tab, scorecard_tab, traffic_tab = st.tabs([
     ":material/health_and_safety: KPI health",
@@ -39,7 +43,9 @@ health_tab, forecast_tab, scorecard_tab, traffic_tab = st.tabs([
 with health_tab:
     status, status_error = get_json(KPI_API_URL, "/kpis/status")
     if status_error:
-        st.error(f"KPI status unavailable: {status_error}")
+        unavailable('KPI status unavailable', 'status_error')
+    elif not status.get("status"):
+        empty_state('No KPI observations are available for this run.')
     else:
         rows = pd.DataFrame(status["status"])
         c1, c2, c3 = st.columns(3)
@@ -59,9 +65,9 @@ with health_tab:
             .mark_rect(stroke="white", strokeWidth=2)
             .encode(
                 x=alt.X("band_label:N", title=None, sort=[f"{b} MHz" for b in bands],
-                        axis=alt.Axis(orient="top", labelAngle=0, labelFontSize=12)),
+                        axis=alt.Axis(orient="top", labelAngle=-45, labelOverlap=False, labelFontSize=11)),
                 y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis],
-                        axis=alt.Axis(labelLimit=260, labelOverlap=False, labelFontSize=12)),
+                        axis=alt.Axis(labelLimit=125, labelOverlap=False, labelFontSize=12)),
                 color=alt.Color(
                     "result:N",
                     scale=alt.Scale(domain=["Meets SLA", "Breach", "No data"],
@@ -77,7 +83,7 @@ with health_tab:
             )
             .properties(height=36 * len(kpis))
         )
-        st.altair_chart(grid, width="stretch")
+        show_chart(grid, width="stretch")
 
         breaches = rows[rows["sla_met"] == False]  # noqa: E712
         if not breaches.empty:
@@ -100,6 +106,8 @@ with health_tab:
                 },
                 hide_index=True, width="stretch",
             )
+        else:
+            st.success("All checked readings meet their SLA targets.", icon=":material/check_circle:")
         st.caption(
             "Straight from the per-band carrier export, no model involved. Cell downtime "
             "is recorded per band cluster, so it is divided by the band's cell count "
@@ -117,12 +125,14 @@ with forecast_tab:
         KPI_API_URL, f"/kpis/forecast/{band}/{kpi}?days={days}&history_days=120", timeout=15.0
     )
     if forecast_error:
-        st.info(f"No forecast available: {forecast_error}")
+        unavailable('No forecast available', 'forecast_error')
+    elif not forecast.get("forecast") or not forecast.get("history"):
+        empty_state('No forecast series is available for this selection.')
     else:
         meta = kpis[kpi]
         if forecast["beats_naive"]:
             st.success(
-                f"Trustworthy forecast: {forecast['model']} beat a naive baseline on held-out "
+                f"Beat the baseline: {forecast['model']} beat a naive baseline on held-out "
                 f"data (MASE {forecast['test_mase']:.2f}).",
                 icon=":material/verified:",
             )
@@ -163,7 +173,7 @@ with forecast_tab:
         if kpi != "downtime_sec":
             layers.append(alt.Chart(pd.DataFrame({"sla": [meta["sla_target"]]}))
                           .mark_rule(color="#e0533d", strokeDash=[4, 4]).encode(y="sla:Q"))
-        st.altair_chart(alt.layer(*layers).properties(height=360), width="stretch")
+        show_chart(alt.layer(*layers).properties(height=360), width="stretch")
         st.caption(
             "Shaded band: the pipeline's 5th-95th percentile range. Red dashed line: SLA "
             "target. The gap between the last observed day and the first forecast day "
@@ -174,7 +184,9 @@ with forecast_tab:
 with scorecard_tab:
     scorecard, scorecard_error = get_json(KPI_API_URL, "/kpis/scorecard")
     if scorecard_error:
-        st.info(f"No forecast accuracy available: {scorecard_error}")
+        unavailable('No forecast accuracy available', 'scorecard_error')
+    elif not scorecard.get("scorecard"):
+        empty_state('No forecast accuracy results are available yet.')
     else:
         frame = pd.DataFrame(scorecard["scorecard"])
         s1, s2 = st.columns(2)
@@ -191,9 +203,9 @@ with scorecard_tab:
             .mark_rect(stroke="white", strokeWidth=2)
             .encode(
                 x=alt.X("band_label:N", title=None, sort=[f"{b} MHz" for b in bands],
-                        axis=alt.Axis(orient="top", labelAngle=0, labelFontSize=12)),
+                        axis=alt.Axis(orient="top", labelAngle=-45, labelOverlap=False, labelFontSize=11)),
                 y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis],
-                        axis=alt.Axis(labelLimit=260, labelOverlap=False, labelFontSize=12)),
+                        axis=alt.Axis(labelLimit=125, labelOverlap=False, labelFontSize=12)),
                 color=alt.Color("verdict:N", scale=alt.Scale(domain=["Beats naive", "Trend only"],
                                                              range=["#12b3a8", "#f0a63c"]),
                                 legend=alt.Legend(title=None, orient="top")),
@@ -203,7 +215,7 @@ with scorecard_tab:
             )
             .properties(height=36 * len(kpis))
         )
-        st.altair_chart(chart, width="stretch")
+        show_chart(chart, width="stretch")
         st.caption(
             "MASE below 1 means the model's held-out error is smaller than a naive "
             "baseline's. Availability, connected users and downtime don't beat it on any "
@@ -213,15 +225,18 @@ with scorecard_tab:
 # ---------------------------------------------------------------------------
 with traffic_tab:
     horizon = st.selectbox("Forecast horizon (days)", [7, 14, 30, 60, 90], index=2)
-    with st.spinner("Running the traffic pipeline (clean, split, benchmark, retrain, forecast)..."):
-        result, traffic_error = get_json(KPI_API_URL, f"/traffic/{horizon}day", timeout=30.0)
+    result, traffic_error = get_json(KPI_API_URL, f"/traffic/{horizon}day", timeout=30.0)
     if traffic_error:
-        st.error(f"Traffic forecast unavailable: {traffic_error}")
+        unavailable('Traffic forecast unavailable', 'traffic_error')
+    elif not result.get("forecast"):
+        empty_state('No traffic forecast is available for this horizon.')
     else:
         st.subheader(f"Champion model: {result['champion_model']}")
-        metric_cols = st.columns(len(result["test_metrics"]))
-        for column, (name, value) in zip(metric_cols, result["test_metrics"].items()):
-            column.metric(name, f"{value:,.2f}")
+        metrics = list(result["test_metrics"].items())
+        for offset in range(0, len(metrics), 3):
+            for column, (name, value) in zip(st.columns(3), metrics[offset:offset + 3]):
+                with column.container(border=True):
+                    st.metric(name, f"{value:,.2f}")
         st.caption(
             "Held-out metrics from a chronological split. Uses traffic history only: "
             "adding the other KPIs as inputs did not improve held-out accuracy."
@@ -232,4 +247,4 @@ with traffic_tab:
             x=alt.X("date:T", title=None), y=alt.Y("lower_95:Q", title="GB"), y2="upper_95:Q"
         )
         band_line = alt.Chart(traffic).mark_line(color="#1454a3").encode(x="date:T", y="predicted_kpi_volume_gb:Q")
-        st.altair_chart((band_area + band_line).properties(height=340), width="stretch")
+        show_chart((band_area + band_line).properties(height=340), width="stretch")

@@ -8,7 +8,8 @@ recommended on that day - a backtest, not a live order sent to the network.
 import altair as alt
 import pandas as pd
 import streamlit as st
-from _shared import KPI_API_URL, configure, get_json, hero
+from _shared import unavailable, empty_state, show_chart
+from _shared import KPI_API_URL, configure, load_json as get_json, hero
 
 configure("Congestion & Steering", icon="alt_route")
 
@@ -22,7 +23,7 @@ hero(
 
 summary, error = get_json(KPI_API_URL, "/steering/summary", timeout=15.0)
 if error:
-    st.error(f"Steering data unavailable from {KPI_API_URL}: {error}")
+    unavailable('Steering data unavailable', 'error')
     st.stop()
 
 st.info(
@@ -56,7 +57,7 @@ with recs_tab:
     query = "/steering/recommendations?limit=200" + ("" if priority == "All" else f"&priority={priority}")
     recs, recs_error = get_json(KPI_API_URL, query, timeout=15.0)
     if recs_error:
-        st.error(f"Recommendations unavailable: {recs_error}")
+        unavailable('Recommendations unavailable', 'recs_error')
     else:
         shown = f"top {recs['count']} of {recs['total']}" if recs["count"] < recs["total"] else f"all {recs['total']}"
         right.caption(f"Showing {shown} proposals for {recs['date']}, most congested towers first.")
@@ -106,7 +107,9 @@ with recs_tab:
 with clusters_tab:
     clusters, clusters_error = get_json(KPI_API_URL, "/steering/clusters")
     if clusters_error:
-        st.error(f"Cluster capacity unavailable: {clusters_error}")
+        unavailable('Cluster capacity unavailable', 'clusters_error')
+    elif not clusters.get("clusters"):
+        empty_state("No cluster capacity results are available yet.")
     else:
         frame = pd.DataFrame(clusters["clusters"])
         chart = (
@@ -120,14 +123,16 @@ with clusters_tab:
             )
             .properties(height=max(260, 18 * len(frame)))
         )
-        st.altair_chart(chart, width="stretch")
+        show_chart(chart, width="stretch")
         st.dataframe(frame, hide_index=True, width="stretch")
 
 with tower_tab:
     tower = st.text_input("Tower ID", value="TWR_0029", help="Anonymised ERBS ID, e.g. TWR_0001 to TWR_1067")
     result, tower_error = get_json(KPI_API_URL, f"/towers/{tower.strip()}/forecast", timeout=15.0)
     if tower_error:
-        st.warning(f"No forecast for {tower}: {tower_error}")
+        unavailable('No forecast for {tower}', 'tower_error')
+    elif not result.get("series"):
+        empty_state("No forecast observations are available for this tower.")
     else:
         names = {
             "connected_users": "Connected users",
@@ -137,6 +142,9 @@ with tower_tab:
         }
         charts = []
         for key, label in names.items():
+            if not result["series"].get(key):
+                empty_state(f"No observations for {label.lower()}.")
+                continue
             frame = pd.DataFrame(result["series"][key]).melt("date", var_name="series", value_name="value")
             frame["date"] = pd.to_datetime(frame["date"])
             charts.append(
@@ -146,14 +154,15 @@ with tower_tab:
                     x=alt.X("date:T", title=None),
                     y=alt.Y("value:Q", title=None),
                     color=alt.Color("series:N", scale=alt.Scale(domain=["actual", "predicted"],
-                                                                range=["#0b1f3a", "#12b3a8"]),
+                                                                range=["#0b1f3a", "#1454a3"]),
                                     legend=alt.Legend(title=None, orient="top")),
                 )
-                .properties(height=200)
+                .properties(height=260)
             )
-        top = alt.hconcat(charts[0], charts[1])
-        bottom = alt.hconcat(charts[2], charts[3])
-        st.altair_chart(alt.vconcat(top, bottom), width="stretch")
+        for offset in range(0, len(charts), 2):
+            for column, chart in zip(st.columns(2), charts[offset:offset + 2]):
+                with column:
+                    show_chart(chart, width="stretch")
         st.caption(
             "Next-day predictions against what happened. Load and speed track well "
             "(site-level R² about 0.9); availability and drop rate much less so (about 0.4). "

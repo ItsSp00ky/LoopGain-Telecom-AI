@@ -3,7 +3,8 @@
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-from _shared import GIS_API_URL, configure, get_json, hero
+from _shared import unavailable, empty_state
+from _shared import GIS_API_URL, configure, load_json as get_json, hero
 
 configure("Site Planning", icon="cell_tower")
 
@@ -17,17 +18,17 @@ hero(
 
 health, error = get_json(GIS_API_URL, "/health", timeout=20.0)
 if error:
-    st.error(f"GIS API is unreachable at {GIS_API_URL}: {error}")
+    unavailable('GIS API is unreachable', 'error')
     st.stop()
 
 shortlist, shortlist_error = get_json(GIS_API_URL, "/shortlist")
 if shortlist_error:
-    st.info(f"No completed planning run to show yet ({shortlist_error}).")
+    unavailable("Planning shortlist unavailable", "shortlist")
     st.stop()
 
 table = pd.DataFrame([f["properties"] for f in shortlist.get("features", [])])
 if table.empty:
-    st.info("The latest planning run has no shortlisted sites.")
+    empty_state("The latest planning run has no shortlisted sites. A completed planning run is needed to populate the map.")
     st.stop()
 
 table = table.sort_values("recommendation_rank")
@@ -65,7 +66,7 @@ table["score_label"] = table["planning_priority_score"].round(1)
 heading, button = st.columns([3, 2], vertical_alignment="bottom")
 heading.subheader("Shortlisted sites")
 button.link_button(
-    "Open full map: all existing sites and candidates",
+    "Open full planning map",
     f"{GIS_API_URL}/full-map",
     icon=":material/map:",
     type="primary",
@@ -114,7 +115,7 @@ st.pydeck_chart(
     ),
     height=460,
 )
-st.caption("Darker = higher priority. Numbers are the rank; hover a site for its score and reasons.")
+st.caption("Darker = higher priority. Numbers are the rank; tap or hover a site for its score and reasons. Swipe tables sideways to see more columns.")
 
 st.dataframe(
     table[[
@@ -163,12 +164,12 @@ with st.form("assess"):
 if submitted:
     result, assess_error = get_json(GIS_API_URL, f"/assess?lat={lat}&lon={lon}&operator={operator}", timeout=60.0)
     if assess_error:
-        st.error(f"Assessment unavailable: {assess_error}")
+        unavailable('Assessment unavailable', 'assess_error')
     else:
         r1, r2, r3 = st.columns(3)
-        r1.metric("Priority score", f"{result.get('planning_priority_score') or 0:.1f}")
+        r1.metric("Priority score", f"{result['planning_priority_score']:.1f}" if result.get("planning_priority_score") is not None else "—")
         r2.metric("Eligible", "Yes" if result.get("eligible") else "No")
-        r3.metric("Nearest existing site", f"{(result.get('dist_to_nearest_site_m') or 0) / 1000:.1f} km")
+        r3.metric("Nearest existing site", f"{result['dist_to_nearest_site_m'] / 1000:.1f} km" if result.get("dist_to_nearest_site_m") is not None else "—")
         if result.get("rejection_reasons"):
             st.warning(f"Not eligible: {result['rejection_reasons'].replace(';', ', ')}")
         with st.expander("Full assessment"):
