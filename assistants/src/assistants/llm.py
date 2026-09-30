@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from assistants.grounding import has_phone_number, ungrounded
+from assistants.language import is_arabic
 from assistants.service_client import ServiceError
 
 # Groq shut down Llama 3.3 70B for free accounts on 2026-08-16 and named GPT-OSS 120B as
@@ -81,6 +82,31 @@ class ModelUnavailable(RuntimeError):
     """The language model could not be reached, refused the key, or hit its rate limit."""
 
 
+class ModelRateLimited(ModelUnavailable):
+    """The model refused because of the plan's rate limit; trying again shortly works."""
+
+
+def unavailable_reply(user_text: str, rate_limited: bool) -> str:
+    """What to say when the model failed before any tool returned data.
+
+    Saying "I can't answer that from the data I have" here would be false: nothing was
+    looked up, so the reader should try again rather than conclude the data is missing.
+    """
+    if is_arabic(user_text):
+        if rate_limited:
+            return (
+                "المساعد مشغول الآن بسبب كثرة الأسئلة خلال الدقيقة الأخيرة. "
+                "حاول مرة أخرى بعد دقيقة تقريبًا."
+            )
+        return "المساعد غير متاح الآن. حاول مرة أخرى لاحقًا."
+    if rate_limited:
+        return (
+            "The assistant is busy right now - too many questions in the last minute. "
+            "Please try again in about a minute."
+        )
+    return "The assistant is not available right now. Please try again later."
+
+
 Complete = Callable[[list[dict], list[dict]], ModelReply]
 Fallback = Callable[[list[ToolCall], str], str]
 
@@ -107,6 +133,8 @@ def groq_complete(api_key: str | None = None) -> Complete:
                 include_reasoning=False,
                 max_completion_tokens=1500,
             )
+        except groq.RateLimitError as error:
+            raise ModelRateLimited(str(error)) from error
         except groq.GroqError as error:
             raise ModelUnavailable(str(error)) from error
         message = response.choices[0].message
@@ -172,6 +200,10 @@ def run_turn(
             # The first line of Groq's own message says which: key, rate limit or request.
             detail = (str(error).splitlines() or [""])[0][:200]
             reason = f"the language model is unavailable ({detail})"
+            if not calls:
+                reply = unavailable_reply(user_text, isinstance(error, ModelRateLimited))
+                return Turn(reply, calls, reason)
+            # Data already came back: answer from it rather than ask the reader to retry.
             return Turn(fallback(calls, user_text), calls, reason)
         if not reply.tool_requests:
             text = (reply.content or "").strip()

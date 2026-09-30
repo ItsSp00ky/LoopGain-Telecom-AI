@@ -2,6 +2,7 @@ import json
 
 from assistants.llm import (
     MAX_TOOL_ROUNDS,
+    ModelRateLimited,
     ModelReply,
     ModelUnavailable,
     Tool,
@@ -113,9 +114,27 @@ def test_a_model_that_keeps_calling_tools_is_stopped():
     assert len(turn.calls) == MAX_TOOL_ROUNDS + 1
 
 
-def test_an_unavailable_model_gets_the_fallback():
-    turn = run_turn("rules", [], "q", [], scripted(ModelUnavailable("429")), fallback)
-    assert turn.reply == "fallback after 0 calls"
+def test_an_unavailable_model_says_so_instead_of_claiming_no_data():
+    turn = run_turn("rules", [], "q", [], scripted(ModelUnavailable("bad key")), fallback)
+    assert turn.reply == "The assistant is not available right now. Please try again later."
+    assert turn.replaced_because == "the language model is unavailable (bad key)"
+
+
+def test_a_rate_limit_asks_the_reader_to_try_again_shortly():
+    turn = run_turn("rules", [], "q", [], scripted(ModelRateLimited("429")), fallback)
+    assert "try again in about a minute" in turn.reply
+    assert turn.replaced_because == "the language model is unavailable (429)"
+
+
+def test_a_rate_limit_is_explained_in_the_readers_language():
+    turn = run_turn("rules", [], "وين نبنوا؟", [], scripted(ModelRateLimited("429")), fallback)
+    assert "حاول مرة أخرى بعد دقيقة" in turn.reply
+
+
+def test_data_that_came_back_before_the_model_failed_is_still_used():
+    complete = scripted(call("price", '{"offer_id": "WK_1"}'), ModelRateLimited("429"))
+    turn = run_turn("rules", [], "price of WK_1?", [price_tool()], complete, fallback)
+    assert turn.reply == "fallback after 1 calls"
     assert turn.replaced_because == "the language model is unavailable (429)"
 
 
