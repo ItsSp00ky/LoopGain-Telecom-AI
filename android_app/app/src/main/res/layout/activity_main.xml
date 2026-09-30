@@ -7,11 +7,13 @@
     android:background="#0B1F3A">
 
     <LinearLayout
+        android:id="@+id/addressBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:visibility="gone">
 
         <EditText
             android:id="@+id/serverUrlInput"
@@ -40,6 +42,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/statusBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"

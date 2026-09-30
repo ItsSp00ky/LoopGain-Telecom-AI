@@ -4,12 +4,15 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -30,6 +33,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var addressBar: LinearLayout
+    private lateinit var statusBar: LinearLayout
     private lateinit var serverUrlInput: EditText
     private lateinit var statusLabel: TextView
     private lateinit var liveTrackingSwitch: Switch
@@ -54,9 +59,19 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webView)
         swipeRefresh = findViewById(R.id.swipeRefresh)
+        addressBar = findViewById(R.id.addressBar)
+        statusBar = findViewById(R.id.statusBar)
         serverUrlInput = findViewById(R.id.serverUrlInput)
         statusLabel = findViewById(R.id.statusLabel)
         liveTrackingSwitch = findViewById(R.id.liveTrackingSwitch)
+
+        statusBar.setOnLongClickListener {
+            addressBar.visibility = if (addressBar.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            if (addressBar.visibility == View.VISIBLE) {
+                Toast.makeText(this, "Server address bar shown - long-press again to hide", Toast.LENGTH_SHORT).show()
+            }
+            true
+        }
 
         val savedUrl = prefs.getString(PREF_SERVER_URL, getString(R.string.default_server_url))
         serverUrlInput.setText(savedUrl)

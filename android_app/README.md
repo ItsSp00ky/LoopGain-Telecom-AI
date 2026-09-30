@@ -8,8 +8,10 @@ phone, for the demo of "tracking from your phone."
 Features:
 - Loads `platform_app`'s Network KPI page in a WebView.
 - Pull-to-refresh, plus a "Live tracking" switch that auto-reloads every 20s.
-- Editable server address at the top (saved on device) - no rebuild needed to
-  switch between the emulator and a real phone.
+- Editable server address (saved on device) - no rebuild needed to switch
+  between the emulator and a real phone. Hidden by default for a clean demo;
+  long-press the status bar (where "Last updated" and "Live tracking" are) to
+  show or hide it.
 
 ## 1. Start the backend on your laptop
 
