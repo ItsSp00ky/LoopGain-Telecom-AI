@@ -4,17 +4,20 @@ The long working sessions, written down so the next session can start without th
 The sources of truth stay where they were: [../CLAUDE.md](../CLAUDE.md), the Handoff at the top of [../TICKETS.md](../TICKETS.md), and [decisions.md](decisions.md).
 This file is the narrative that connects them: what happened, in what order, what went wrong, and what is still open.
 
-# Session 3: 2026-09-28, evening (the copilot)
+# Session 3: 2026-09-28 to 2026-09-30 (the copilot, the report, GIS release 3)
 
-## Where things stand
+## Where things stand on 2026-09-30
 
-- Maher's and Mohamed's new work is merged into `tahaDev` (decision 53); the GIS branches and Ali's had not moved.
-- The prepaid artifacts are rebuilt on the 70 LYD anchor; the model is unchanged and every committed report came out the same.
-- The employee copilot (T25, decision 55) is built and waiting for Taha to test it in the browser.
+- The employee copilot (T25, decision 55) is built, tried by Taha, and reads GIS release 3 with its measured-service review: nine tools, 120 tests in `assistants/`, lint and format green.
+- `tahaDev` carries every teammate branch as merged on 2026-09-29, evening (table below); GitHub has it through `40e237a`, and the last local commits (the report's Figure 9 and this record) are not pushed.
+- A new branch, `final-project` (`9003203`, Mahmoud, 2026-09-30 14:28), appeared at the end of the session; it has not been read yet and is the first job of the next session.
+- The final report is on Taha's Desktop; the newest is `..._with_chatbot_and_copilot_v2.docx` (22 pages), and its build kit is `C:\Users\LOQ\Desktop\SIC_report_build\`.
+- Deployment for SIC (a live link) is planned and paused: one private Streamlit Community Cloud app (the Handoff has the plan).
+- The churn module is unchanged since session 2: 475 tests, the frozen champion `lightgbm-2026-09-19-ef9430fb`, its artifacts rebuilt on the 70 LYD anchor.
 
 ## Timeline
 
-### 1. What was new on the branches
+### 1. What was new on the branches (2026-09-28, evening)
 
 - `git fetch origin`: `maher_kpi_prediction` moved from `732e88c` to `9c1a267`, `MNK_forecasting` from `2425707` to `7d8a945`, and `main` from `a4368a0` to `674d9f6` (a folder added, then deleted: no net change, and `main` stays unmerged).
   No new branch appeared.
@@ -41,14 +44,41 @@ This file is the narrative that connects them: what happened, in what order, wha
 - The first evaluation passed 16 of 22; reading every answer found six things to fix, each fixed in code or in the data given to the model, not by rewording the prompt (below).
 - The second passed 22 of 22; a browser test then found a draft described but not made, which led to a 23rd question and a guard in code; the third run passed 20 of 23, its failures were fixed and pass with `--only`, and the fourth stopped at Groq's daily limit (T25 has the details).
 
-### 5. The next morning (2026-09-29)
+### 5. Push, team guide and the report (2026-09-29, morning)
 
 - Taha judged the problems in Maher's and Mohamed's work not critical for us and asked for a push: `fbc3ac3..142d8d9`.
 - He asked for a start guide for the team and for `assistants/.env` to be pushed. The guide is `assistants/TEAM_GUIDE.md`; `.env` was not pushed, because a committed key stays in the history for good and one free key shared by the team runs out within hours, so each member makes their own.
 - The guide was followed from a fresh clone: it needed one more line, `git config --global core.longpaths true`, because some dataset paths pass Windows' 260 characters in a deep folder.
-- The copilot's part of the final report: `..._with_chatbot_and_copilot.docx` on the Desktop, 21 pages, with Tables 5 and 6 and Figures 9 and 10; the build scripts are in the scratchpad's `report2/`, the figure scripts in `assistants/report_figures/`.
-- In the evening Mahmoud pushed release 3 of the GIS, with Ahmed's measurements; it and Maher's and Mohamed's updates were merged (committed, not pushed), and the copilot moved to release 3 and gained `measured_service`.
+- The copilot's part of the final report: `..._with_chatbot_and_copilot.docx` on the Desktop, 21 pages, with Tables 5 and 6 and Figures 9 and 10, cloned from the report's own XML.
 - The screenshot's question showed two more small things, fixed in code: the model quoting an action's internal name in a code box, and bold tower names inside code boxes.
+- Pushed on request: `142d8d9..0de3aef`.
+
+### 6. Deployment, planned and paused (2026-09-29)
+
+- SIC wants the project deployed; nothing in the action plans said how. Taha chose a live link for the evaluators, behind a login, with every part included.
+- Hugging Face Docker Spaces turned out to be paid for Taha, and Render's free plan is too small, so the plan is one private Streamlit Community Cloud app (free, up to 2.7 GB, one private app per account, viewers invited by email).
+  It would be a `platform_app.py` at the repository root with the copilot, the chatbot, the prepaid dashboard and the GIS map as pages, the prepaid service running inside it on localhost, the model built from committed data on first start, and the keys in the app's secret settings.
+- Taha paused it until the teammates finish their branches; the plan is in the Handoff (pushed `0fd5a51`). Docker Desktop is installed on C if a container is ever needed.
+
+### 7. The study guide made private (2026-09-29)
+
+- At Taha's request `prepaid_churn/docs/study_guide.md` left git (`git rm --cached`, then git-ignored) and stays on his laptop; the mentions in CLAUDE.md, the Handoff and this log say so (pushed `ddc23b6`).
+- It stays readable in the history (`c94b436`). Removing it for good would mean rewriting `tahaDev` and force-pushing, which would break the teammates' merges, so it was left.
+
+### 8. GIS release 3 and the copilot's measured service (2026-09-29, evening)
+
+- Mahmoud pushed `dc897a4`: release 3 of the GIS (`integrated_release_v3/`), which selectively integrates Ahmed's `2c48a27` (Libya handset, CellMapper and BeaconDB measurements, a reconciled antenna inventory, an official-population audit) and keeps the same 162 eligible places and 20 priorities.
+- Merged together with Maher's `dc99925` (plots reorganised, and every test of his deleted) and Mohamed's `b1e4ac2` (his input data, a dashboard, predictions still for past days); no conflicts.
+- The copilot moved to release 3 and gained a ninth tool, `measured_service`: 4,874 readings by network code and technology, and the weakest measured areas. Each ranked site shows its distance to the nearest reading, as context only, because no reading lies within 5 km of a priority.
+- Two evaluation questions were added (the weakest signal, and a trap asking which network has better coverage); both pass on the real model. Pushed on request: `ddc23b6..40e237a`.
+- Taha then started the copilot himself; `uv` was not on his PowerShell PATH (machine notes below).
+
+### 9. The report brought up to date (2026-09-30)
+
+- `..._with_chatbot_and_copilot_v2.docx` (22 pages): the ninth tool and the readings in 2.1, 2.2, 2.4 and 3.2, a 29 Sep row in Table 5, Figure 9 redrawn with `measured_service`, a sentence under Table 6 for the two new questions, and 120 tests in 3.5.
+- Windows' Temp cleanup had deleted part of the unpacked working copy, so the first build came out incomplete (1 MB, "corrupted"); the base report was unpacked again, the rebuild validated, and every page was checked.
+- The build kit moved out of the scratchpad to `C:\Users\LOQ\Desktop\SIC_report_build\`, with a README.
+- Committed, not pushed (`2225913`), like this record.
 
 ## Mistakes caught this session, and the lesson from each
 
@@ -57,22 +87,33 @@ This file is the narrative that connects them: what happened, in what order, wha
 - **The model wrote numbers with thin spaces ("68 900")**, which the number check read as two numbers. The check now accepts those spaces as thousands separators, for both assistants.
 - **The model described a work order without making one**, in the browser, when asked for a tower's status and a draft in one message. The tower's result now tells it to draft, and a line in code says so when no draft was made; a test in the browser caught what the evaluation's single-request questions could not.
 - **The model picked "all" for "which towers need attention"** and listed warnings too. The option was removed; a choice the model should not make should not be offered.
+- **The model kept stating thresholds of its own** ("all score above 60", "400 m", "39 k"), which the number check refused. Giving the tool the real ranges of the sites shown (`shown_ranges`) lets a summary quote real numbers.
+- **A prompt's own example became an invention.** "Name networks by their code, such as 606-01" led the model to offer "606-02", a code no tool returned. Examples in a prompt get copied; the rule now says "only a code the tool returned".
 - **A running Streamlit app kept an old module after a code change** and raised `KeyError`. Restart the app after changing anything under `src/`; only the page script reloads by itself.
-- **The heredoc trap struck twice more**, once with `\n` and once with a line-continuation backslash. Use the Edit or Write tool for Python.
+- **The heredoc trap struck again**, with `\n` and with the prompt's line-continuation backslashes. Use the Edit or Write tool for Python, and for any text with a backslash.
 - **A guide checked only on a set-up laptop hides missing steps.** Following it from a fresh clone found the long-path setting a teammate would have needed.
+- **Windows cleans the Temp folder.** The scratchpad lives under `%TEMP%`, and part of the report's working copy vanished between two days. Anything worth keeping leaves the scratchpad the same day.
+- **What works in Claude's shell may not work in Taha's.** `uv` is found in Claude's shell because the session adds its folder to PATH; Taha's PowerShell does not. Give him the full path, or the one-time PATH command below.
 
 ## Working on this machine (additions)
 
 - Start the copilot from `assistants/`: `uv run streamlit run copilot_app.py --server.port 8502 --server.headless true`.
+- `uv` is `C:\Users\LOQ\AppData\Roaming\Python\Python314\Scripts\uv.exe` and is not on Taha's PowerShell PATH. He runs it by that full path, or adds the folder once (it changes his user settings, so it is his to run) and reopens the terminal:
+  `[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";C:\Users\LOQ\AppData\Roaming\Python\Python314\Scripts", "User")`
 - `uv run python -m assistants.evaluate copilot --only id1,id2` asks a few questions without writing the report. The free plan's 200K tokens a day ran out on 2026-09-28 after one chatbot run, three full copilot runs and some reruns; plan at most two full runs a day, and use `--only` while fixing.
-- Maher's tests: from `network_kpi_prediction/`, `uv run --no-project --python 3.12 --with-requirements requirements.txt --with pytest --with xgboost python run_pipeline.py test` (retry once on uv's path error).
+- Maher's tests: from `network_kpi_prediction/`, `uv run --no-project --python 3.12 --with-requirements requirements.txt --with pytest --with xgboost python run_pipeline.py test` (retry once on uv's path error). His commit `dc99925` deleted his tests, so this runs nothing on the current code.
+- The report build kit is `C:\Users\LOQ\Desktop\SIC_report_build\` (build scripts, figures, `pack.py`, the Word export script and a README).
+- Before touching a Word process, check its window title: on 2026-09-30 it was Taha's own window with a report open.
+- `git fetch` over this connection sometimes drops ("RPC failed; curl 56"); retrying works.
 
 ## What is on disk but not in git (additions)
 
-- `assistants/runtime/work_orders.jsonl`, the confirmed work orders; the browser test's record was deleted.
-- The prepaid artifacts from before the rebuild, in the session's scratchpad (`artifacts_backup_2026-09-28`).
+- `assistants/runtime/work_orders.jsonl`, the confirmed work orders; the browser tests' records were deleted.
+- `prepaid_churn/docs/study_guide.md`, Taha's study guide, git-ignored.
+- On the Desktop: `..._with_chatbot_and_copilot.docx` (21 pages), `..._with_chatbot_and_copilot_v2.docx` (22 pages, the newest) and `SIC_report_build\`.
+- The prepaid artifacts from before the 2026-09-28 rebuild were backed up in the scratchpad (`artifacts_backup_2026-09-28`); Windows may clean it, and the README rebuild reproduces them anyway.
 
-## Branches as last merged into `tahaDev` (2026-09-28, evening)
+## Branches as last merged into `tahaDev` (2026-09-29, evening)
 
 Anything on these branches after the commit shown is new since this session.
 
@@ -84,13 +125,14 @@ Anything on these branches after the commit shown is new since this session.
 | `maher_kpi_prediction` | Maher | `dc99925` (2026-09-29, evening) | `network_kpi_prediction/`; the copilot reads `data/` |
 | `MNK_forecasting` | Mohamed | `b1e4ac2` (2026-09-29, evening) | `KPI_forecasting/`, `01_KPI_Towers_Forecasting_System/`, `02_Traffic_Steering_SON_System/`; the copilot reads none of it (decision 55) |
 | `ahmed_cell_placement` | Ahmed | not merged (`2c48a27`) | its kept parts arrive through the GIS integration (decision 53) |
+| `final-project` | Mahmoud | not read yet (`9003203`, 2026-09-30) | appeared at the end of this session; read it first next session |
 | `main` | team | `a4368a0` | at `674d9f6` now with no net change; never merge `main` itself |
 
 ## Starting the next session
 
 Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
 
-> I am Taha. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md`, session 3 of `prepaid_churn/docs/session_log.md` and ticket T25. I tested the copilot; here is what I found: <your notes>. Confirm the tests in `prepaid_churn/` and `assistants/` pass, then walk me through what you would change, and wait for my answers before writing code.
+> I am Taha. Read `prepaid_churn/CLAUDE.md`, the Handoff at the top of `prepaid_churn/TICKETS.md` and session 3 of `prepaid_churn/docs/session_log.md`. Then fetch the new `final-project` branch (Mahmoud, `9003203`) and study it: what it contains, how it differs from `tahaDev` and from the branches we merged, what it changes for the copilot, the chatbot and the prepaid module, and whether it is meant to replace `tahaDev` or to be merged into it. Confirm the tests in `prepaid_churn/` and `assistants/` pass. Explain it to me, and wait for my answer before merging or changing anything.
 
 # Session 2: 2026-09-26 to 2026-09-28
 

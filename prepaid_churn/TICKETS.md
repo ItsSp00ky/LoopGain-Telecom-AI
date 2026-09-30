@@ -9,40 +9,40 @@ The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
 
 Update this section at the end of every working session.
 
-**Last updated:** 2026-09-29, evening, by Taha + Claude (Mahmoud's GIS release 3, Maher's and Mohamed's updates merged; the copilot reads release 3 and its measured-service review; committed, not pushed).
+**Last updated:** 2026-09-30 by Taha + Claude (session 3 written up in full in the session log; the copilot reads GIS release 3; the report's copilot part updated as `_v2`; a new `final-project` branch appeared and is not read yet).
 
 **New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (session 3 first), then ticket T25 below.
 Taha keeps a personal study guide of the module and the chatbot on his laptop (`docs/study_guide.md`, git-ignored).
 
-**Where things stand on 2026-09-29**
-- `tahaDev` carries Ali's work through `bf498d4`, the teammates' GIS and network ML branches (decision 53, merged again on 2026-09-28: Maher through `9c1a267`, Mohamed through `7d8a945`), the customer chatbot (decision 54) and the employee copilot (decision 55).
-- `tahaDev` was pushed on 2026-09-29 on Taha's request (`fbc3ac3..142d8d9`, then the guide and the report figures); none of the issues in Maher's and Mohamed's work blocks our modules. Push only when Taha asks.
-- Merged on 2026-09-29, evening, committed and not pushed: `integration/antenna-planning-v2` through `dc897a4` (Mahmoud's release 3, carrying the parts of Ahmed's `2c48a27` the GIS team kept), `maher_kpi_prediction` through `dc99925` and `MNK_forecasting` through `b1e4ac2`. No conflicts. Maher's commit deletes all his tests; tell him.
+**Where things stand on 2026-09-30**
+- `tahaDev` carries Ali's work through `bf498d4`, the teammates' branches as last merged on 2026-09-29, evening (GIS `dc897a4`, Maher `dc99925`, Mohamed `b1e4ac2`; decision 53), the customer chatbot (decision 54) and the employee copilot (decision 55).
+- GitHub has `tahaDev` through `40e237a` (pushed on 2026-09-29, evening, on Taha's request). The local commits after it, the report's Figure 9 (`2225913`) and this record, are not pushed. Push only when Taha asks.
+- A new branch, `final-project` (`9003203`, Mahmoud, 2026-09-30), is not read yet; reading it is the first job of the next session.
 - The churn module: 475 tests, lint and format green; the frozen champion is unchanged (`lightgbm-2026-09-19-ef9430fb`).
-  Its artifacts on disk were rebuilt with the README commands on 2026-09-28: the tiers are now `tiers-v1-efc9739afad4` (the 70 LYD anchor of decision 42), every committed report came out unchanged, and the old artifacts are backed up in the session's scratchpad.
+  Its artifacts on disk were rebuilt with the README commands on 2026-09-28: the tiers are now `tiers-v1-efc9739afad4` (the 70 LYD anchor of decision 42), and every committed report came out unchanged.
 - The chatbot (T24, closed): 21 of 21 evaluation questions on 2026-09-28; its approved demo offer (subscriber 70016) still works after the rebuild.
-- The copilot (T25): built, 120 tests green in `assistants/` (the chatbot's 64 included), browser-checked at desktop and phone width; the evaluation is in `../assistants/reports/copilot_eval.md` and summed up in T25. Taha tests it next.
-- Groq's free limit of 200K tokens a day was reached on 2026-09-28 at about 19:40 UTC and had freed up by 2026-09-29 09:00 UTC. Each key has its own 200K a day, which is why every team member uses their own (the guide).
-- The final report, on Taha's Desktop (not in git): `..._with_chatbot_and_copilot.docx` (21 pages) adds the copilot's part under the same 14 subsections as the chatbot's, cloned from the report's own XML, with Tables 5 and 6 and Figures 9 and 10 (scripts in `../assistants/report_figures/`). The earlier files, `..._credit.docx` and `..._with_chatbot.docx`, are unchanged.
-  On 2026-09-30 `..._with_chatbot_and_copilot_v2.docx` (22 pages) brought the copilot's part up to date with GIS release 3: the ninth tool and the handset readings in 2.1, 2.2, 2.4 and 3.2, a 29 Sep row in Table 5, Figure 9 with `measured_service`, the two new evaluation questions under Table 6, and 120 tests in 3.5; the first copilot version is kept beside it.
-- The start guide `../assistants/TEAM_GUIDE.md` was followed from a fresh clone on 2026-09-29: the service built in 1.4 minutes with the same model and tiers, and the copilot showed its alerts with "Prepaid service: ok". Taha asked for `assistants/.env` to be pushed so the team could use it; it was not, because a committed key stays in the history for good and one free key shared by the team runs out within hours. Each member makes their own free key instead.
+- The copilot (T25): built and tried by Taha; nine tools on GIS release 3, including the measured-service review; 120 tests green in `assistants/` (the chatbot's 64 included); the evaluation is in `../assistants/reports/copilot_eval.md` and summed up in T25.
+- Groq's free plan gives each key 200K tokens a day; it ran out once, on 2026-09-28, after three full copilot evaluations and one of the chatbot. That is why every team member uses their own key (the guide).
+- The final report, on Taha's Desktop (not in git): the newest is `..._with_chatbot_and_copilot_v2.docx` (22 pages); the first copilot version (21 pages), `..._with_chatbot.docx` and `..._credit.docx` are unchanged beside it. The build kit is `C:\Users\LOQ\Desktop\SIC_report_build\` (README inside), moved out of the scratchpad after Windows' Temp cleanup deleted part of it.
+- The start guide `../assistants/TEAM_GUIDE.md` was followed from a fresh clone on 2026-09-29: the service built in 1.4 minutes with the same model and tiers, and the copilot showed its alerts with "Prepaid service: ok". `assistants/.env` stays out of git: a committed key stays in the history for good, and one free key shared by the team runs out within hours, so each member makes their own.
 
 **Open right now, in order:**
-1. Taha tests the copilot (the steps are in `../assistants/TEAM_GUIDE.md`), then answers T25's open questions.
-2. Team members start the copilot with the guide, each with their own free Groq key.
-   **Deployment (SIC wants a live link), paused on 2026-09-29 until the teammates finish adding data to their branches:**
+1. Read the new `final-project` branch and explain it to Taha before merging or changing anything (the prompt at the end of session 3 in the session log).
+2. Deployment (SIC wants a live link), paused on 2026-09-29 until the teammates finish their branches.
    Taha chose a link evaluators can open, behind a login, with every part included.
    Hugging Face Docker Spaces turned out to be paid, and Render's free plan is too small, so the plan is one private Streamlit Community Cloud app (free, up to 2.7 GB, one private app per account, viewers invited by email): a `platform_app.py` at the repository root with the copilot, the chatbot, the prepaid dashboard and the GIS map as pages, the prepaid service running inside it on localhost, the prepaid model built from committed data on first start, and the keys in the app's secret settings.
-   Merge the teammates' branches again before building it. Docker Desktop is installed on C if a container is ever needed.
-3. Tell the owners what the merges found (decisions 53 and 55):
-   - Maher: his MASE claim (17 of 60, not all); `xgboost` still missing from `requirements.txt`; `pytest` from his folder root fails because two packages are both named `src`; his forecasts are now git-ignored, so nobody else can read them without running his pipeline (a committed release folder, as the GIS team has, would fix it); "verified sleeping cells" are an IsolationForest that flags 5% of towers by construction, on yearly averages; the "churn risk targets" export is a formula with no link to customers.
-   - Mohamed: his two new systems sit at the repository root, not in `KPI_forecasting/`; their input data (`Data_Cleaned.csv`, `tower_mapping.csv`) is not committed, so they cannot be rerun; two `__pycache__` files are committed; the README's "109 days in advance" is one day ahead of past days; steering "neighbours" are towers whose names share a prefix; the QoE boost is a formula, not a measurement; the capacity ceiling uses the test period; the old early-stopping-on-test issue is gone in the new model.
+   Merge the teammates' final work before building it. Docker Desktop is installed on C if a container is ever needed.
+3. Taha's answers to T25's open questions: who uses the copilot first and in which language, whether Maher agrees with the severe limits, asking Maher for a committed forecast release, and linking the GIS map.
+4. Team members start the copilot with the guide, each with their own free Groq key.
+5. Tell the owners what the merges found (decisions 53 and 55):
+   - Maher: his commit `dc99925` deletes all his tests; his MASE claim (17 of 60, not all); `xgboost` missing from `requirements.txt`; his forecasts are git-ignored, so nobody else can read them without running his pipeline (a committed release folder, as the GIS team has, would fix it); "verified sleeping cells" are an IsolationForest that flags 5% of towers by construction, on yearly averages; the "churn risk targets" export is a formula with no link to customers.
+   - Mohamed: his two systems sit at the repository root, not in `KPI_forecasting/`; the README's "109 days in advance" is one day ahead of past days; steering "neighbours" are towers whose names share a prefix; the QoE boost is a formula, not a measurement; the capacity ceiling uses the test period. Fixed since: his input data is committed, the `__pycache__` files are gone, and the model no longer early-stops on the test set.
    - GIS: the local Claude settings in `antenna_cell_placement/.claude/`.
-4. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
-5. Ali's final report ("the brief"), which Taha will provide, so the chatbot's part can be checked against its style.
-6. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
-7. Ali's T22 and T23, after the presentation.
-8. Taha's "heavy and random" feedback on the demo app (session log, first session): ask Taha whether it still holds.
+6. T24 follow-ups: Taha's list of the operator's shops, and Ali reading the chatbot's Arabic answers.
+7. Ali's final report ("the brief"), which Taha will provide, so the chatbot's part can be checked against its style.
+8. Taha to confirm with the instructor that removing the three graded experiments (decision 44) does not cost syllabus coverage (decision 8).
+9. Ali's T22 and T23, after the presentation.
+10. Taha's "heavy and random" feedback on the demo app (session log, first session): ask Taha whether it still holds.
 
 **Merged on 2026-09-27 and 2026-09-28: Ali's recap, the outside review and the credit advice screen.**
 - Numbers that collided were renumbered on our side, so his stand: our decisions 37 and 38 are now 53 and 54, and our tickets T22 and T23 are now T24 (chatbot) and T25 (copilot).
