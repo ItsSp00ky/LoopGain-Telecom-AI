@@ -2,7 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from antenna_cell_placement.api import DEFAULT_RUN_DIR, app
+from antenna_cell_placement.api import DEFAULT_RUN_DIR, FULL_MAP, app
 
 
 class ApiTests(unittest.TestCase):
@@ -34,6 +34,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body.get("type"), "FeatureCollection")
+
+    def test_full_map_is_served_when_built(self):
+        response = self.client.get("/full-map")
+        if FULL_MAP.exists():
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("Existing sites: Libyana", response.text)
+        else:
+            self.assertEqual(response.status_code, 404)
 
     def test_shortlist_404s_on_a_missing_run(self):
         response = self.client.get("/shortlist", params={"run_dir": "no/such/run"})

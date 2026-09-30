@@ -21,6 +21,8 @@ from antenna_cell_placement.placement import assess_coordinate
 from antenna_cell_placement.source_integrity import verify_sources, sha256
 
 DEFAULT_RUN_DIR = Path(__file__).resolve().parents[2] / "integrated_release_v3"
+# Built from DEFAULT_RUN_DIR by tools/build_full_map.py; derived, so not part of the run.
+FULL_MAP = Path(__file__).resolve().parents[2] / "eval_reports" / "tripoli_full_map_v3.html"
 
 app = FastAPI(title="GIS Antenna Planning API", description=__doc__)
 
@@ -70,6 +72,14 @@ def planning_map(run_dir: Path = DEFAULT_RUN_DIR):
     if not path.exists() or sha256(path) != manifest["artifacts"].get(path.name):
         raise HTTPException(409, "planning_map.html missing or changed since the run completed")
     return FileResponse(path)
+
+
+@app.get("/full-map")
+def full_map():
+    """Every candidate, existing site and shortlisted pick of the default run on one map."""
+    if not FULL_MAP.exists():
+        raise HTTPException(404, "Full map not built yet: run `uv run python tools/build_full_map.py`")
+    return FileResponse(FULL_MAP, media_type="text/html")
 
 
 @app.get("/assess")

@@ -389,5 +389,162 @@ def generate_h3_expansion_map(city: str = None, top_n: int = 20,
     return out_path
 
 
+def generate_release_map(run_dir: Path, output_html: Path, city: str = "Tripoli") -> Path:
+    """Full planning map for a completed integrated run: the H3 map's layout, current data.
+
+    Draws every candidate hexagon (eligible ones by explainable score, rejected ones grey
+    with their rejection reason), every reconciled existing site by operator, the ranked
+    shortlist and the rooftop footprints, on the same embedded offline basemap as
+    `generate_h3_expansion_map`. Reads only the run's own outputs, so it shows exactly
+    what that run decided; it never rescores anything.
+    """
+    import json
+
+    import h3
+    import numpy as np
+    from shapely.geometry import Polygon
+
+    from antenna_cell_placement.config import PILOT_CITY_BBOXES
+
+    run_dir = Path(run_dir)
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("status") != "completed":
+        raise ValueError(f"{run_dir} is not a completed planning run")
+    candidates = pd.read_csv(run_dir / "candidates.csv", low_memory=False)
+    shortlist = pd.read_csv(run_dir / "shortlist.csv").sort_values("recommendation_rank")
+    sites = pd.read_csv(run_dir / "physical_sites.csv")
+    bbox = PILOT_CITY_BBOXES[city]
+    center = [(bbox["min_lat"] + bbox["max_lat"]) / 2, (bbox["min_lon"] + bbox["max_lon"]) / 2]
+    m = folium.Map(location=center, zoom_start=11, tiles=None, control_scale=True)
+    add_local_basemap(m)
+
+    candidates["geometry"] = [
+        Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(cell)]) for cell in candidates["h3_index"]
+    ]
+    rank_by_id = dict(zip(shortlist["candidate_id"], shortlist["recommendation_rank"]))
+    candidates["rank"] = candidates["candidate_id"].map(rank_by_id)
+    eligible = candidates["eligible"].fillna(False).astype(bool)
+
+    scores = candidates.loc[eligible, "planning_priority_score"]
+    bins = np.quantile(scores, [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    colors = ["#fef0d9", "#fdcc8a", "#fc8d59", "#e34a33", "#b30000"]
+
+    def color_for(value):
+        return colors[min(int(np.searchsorted(bins[1:-1], value, side="right")), len(colors) - 1)]
+
+    def hex_layer(rows, name, fields, style, show=True):
+        layer = gpd.GeoDataFrame(rows[[f for f, _ in fields] + ["geometry"]].copy(), crs="EPSG:4326")
+        for field, _ in fields:
+            if layer[field].dtype.kind == "f":
+                layer[field] = layer[field].round(1)
+            layer[field] = layer[field].astype(object).where(layer[field].notna(), "-")
+        group = folium.FeatureGroup(name=name, show=show)
+        folium.GeoJson(
+            layer.to_json(), style_function=style,
+            tooltip=folium.GeoJsonTooltip(fields=[f for f, _ in fields], aliases=[a for _, a in fields], localize=True),
+        ).add_to(group)
+        group.add_to(m)
+
+    candidates["nearest_site_km"] = (candidates["dist_to_nearest_site_m"] / 1000).round(1)
+    hex_layer(
+        candidates.loc[eligible],
+        f"Eligible candidates by planning score ({int(eligible.sum())})",
+        [("rank", "Shortlist rank"), ("planning_priority_score", "Planning score"),
+         ("municipality_name", "Area"), ("reason_codes", "Reasons"),
+         ("population_sum_5km", "People within 5 km"), ("nearest_site_km", "Nearest existing site (km)"),
+         ("dist_to_nearest_road_m", "Nearest road (m)"), ("h3_index", "H3 cell")],
+        lambda f: {"fillColor": color_for(f["properties"]["planning_priority_score"]),
+                   "color": "#475569", "weight": 0.4, "fillOpacity": 0.7},
+    )
+    hex_layer(
+        candidates.loc[~eligible],
+        f"Rejected candidates ({int((~eligible).sum())})",
+        [("municipality_name", "Area"), ("rejection_reasons", "Rejected because"),
+         ("nearest_site_km", "Nearest existing site (km)"), ("dist_to_nearest_road_m", "Nearest road (m)"),
+         ("h3_index", "H3 cell")],
+        lambda f: {"fillColor": "#cbd5e1", "color": "#94a3b8", "weight": 0.3, "fillOpacity": 0.35},
+    )
+
+    in_area = sites[
+        sites["canonical_latitude"].between(bbox["min_lat"], bbox["max_lat"])
+        & sites["canonical_longitude"].between(bbox["min_lon"], bbox["max_lon"])
+    ]
+    operator_groups = [
+        ("Libyana", in_area["has_libyana"] & ~in_area["has_almadar"], "#059669"),
+        ("Al-Madar", in_area["has_almadar"] & ~in_area["has_libyana"], "#1d4ed8"),
+        ("both operators", in_area["has_almadar"] & in_area["has_libyana"], "#7c3aed"),
+    ]
+    for label, mask, color in operator_groups:
+        group = folium.FeatureGroup(name=f"Existing sites: {label} ({int(mask.sum())})")
+        for _, row in in_area.loc[mask].iterrows():
+            conflict = " - location conflict in sources" if row["location_conflict"] else ""
+            folium.CircleMarker(
+                location=[row["canonical_latitude"], row["canonical_longitude"]],
+                radius=3, color=color, fill=True, fill_color=color, fill_opacity=0.9, weight=1,
+                tooltip=f"Existing site {row['physical_site_id']}: {label}, "
+                        f"{int(row['radio_tower_count'])} radio record(s){conflict}",
+            ).add_to(group)
+        group.add_to(m)
+
+    rooftops = run_dir / "rooftop_candidates.geojson"
+    if rooftops.exists():
+        footprints = folium.FeatureGroup(name="Building footprints for review", show=False)
+        folium.GeoJson(
+            rooftops.read_text(encoding="utf-8"),
+            style_function=lambda _: {"color": "#0f172a", "weight": 1, "fillColor": "#facc15", "fillOpacity": 0.8},
+        ).add_to(footprints)
+        footprints.add_to(m)
+
+    top = candidates.loc[candidates["rank"].notna()].sort_values("rank")
+    fg_top = folium.FeatureGroup(name=f"Shortlist: top {len(top)} for engineering review")
+    for _, row in top.iterrows():
+        folium.GeoJson(
+            row["geometry"].__geo_interface__,
+            style_function=lambda _: {"fillOpacity": 0, "color": "#111827", "weight": 2.5},
+        ).add_to(fg_top)
+        folium.Marker(
+            [row["canonical_latitude"], row["canonical_longitude"]],
+            icon=folium.DivIcon(
+                html=f'<div style="font:bold 11px Arial;color:#111827;background:white;'
+                     f'border:1px solid #111827;border-radius:8px;padding:0 4px;display:inline-block">#{int(row["rank"])}</div>',
+                icon_size=(30, 16), icon_anchor=(15, 8),
+            ),
+            tooltip=f"Rank #{int(row['rank'])} - {row['municipality_name']}: score "
+                    f"{row['planning_priority_score']:.1f} ({str(row['reason_codes']).replace(';', ', ')})",
+        ).add_to(fg_top)
+    fg_top.add_to(m)
+
+    legend_rows = "".join(
+        f'<div><span style="display:inline-block;width:14px;height:12px;background:{colors[i]};'
+        f'border:1px solid #94a3b8;margin-right:6px"></span>{bins[i]:.1f} - {bins[i + 1]:.1f}</div>'
+        for i in range(len(colors))
+    )
+    site_rows = "".join(
+        f'<div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;'
+        f'background:{color};margin-right:6px"></span>Existing site: {label}</div>'
+        for label, _, color in operator_groups
+    )
+    m.get_root().html.add_child(folium.Element(
+        f'<div style="position:fixed;top:10px;left:55px;z-index:9999;background:white;max-width:330px;'
+        f'padding:8px;font:12px Arial,sans-serif;border:1px solid #94a3b8">'
+        f'<b>{city}: full planning map</b><br>'
+        f'Run {run_dir.name} ({manifest["created_utc"][:10]}), inventory {sites["inventory_version"].iloc[0]}.<br>'
+        f'{len(candidates):,} candidates, {int(eligible.sum())} eligible, {len(top)} shortlisted; '
+        f'{len(in_area):,} existing sites in view.<br>'
+        f'Explainable planning score (40% demand, 30% gap to existing sites, 20% road access, '
+        f'10% terrain); no ML in the ranking. Not RF coverage. Building heights unavailable.<br>'
+        f'Eligible candidates, score bands:<br>{legend_rows}'
+        f'<div><span style="display:inline-block;width:14px;height:12px;background:#cbd5e1;'
+        f'border:1px solid #94a3b8;margin-right:6px"></span>Rejected (hover for the reason)</div>'
+        f'{site_rows}</div>'
+    ))
+    folium.LayerControl(collapsed=False).add_to(m)
+
+    out_path = Path(output_html)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    m.save(out_path)
+    return out_path
+
+
 if __name__ == "__main__":
     generate_interactive_map()

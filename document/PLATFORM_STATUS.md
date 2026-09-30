@@ -34,6 +34,12 @@ connected.
     over them left them byte-identical to what is committed.
   A health check re-fingerprints about 800 MB and takes a few seconds, so the shell
   waits up to 20 s for it.
+  The page's "Open full map" button opens `/full-map`: every candidate hexagon
+  (eligible by score, rejected with its reason), the 785 existing sites in the area by
+  operator, the 20 picks and the rooftop footprints, as switchable layers, offline. It is
+  built from the completed run by `tools/build_full_map.py` into
+  `eval_reports/tripoli_full_map_v3.html`; the older maps there and in `submission/` use
+  the pre-reconciliation inventory and should not be presented.
 - **Network KPI page** (`platform_app/views/2_Network_KPI.py`) covers every KPI the
   operator data holds - RRC setup, E-RAB establishment, E-RAB drop, intra-4G and
   overall handover, availability, DL/UL throughput, connected users, downtime - on

@@ -62,7 +62,18 @@ table["fill"] = table["planning_priority_score"].map(colour)
 table["rank_label"] = table["recommendation_rank"].astype(int).astype(str)
 table["score_label"] = table["planning_priority_score"].round(1)
 
-st.subheader("Shortlisted sites")
+heading, button = st.columns([3, 2], vertical_alignment="bottom")
+heading.subheader("Shortlisted sites")
+button.link_button(
+    "Open full map: all existing sites and candidates",
+    f"{GIS_API_URL}/full-map",
+    icon=":material/map:",
+    type="primary",
+    width="stretch",
+    help="Every candidate hexagon (eligible by score, rejected with its reason), the 785 "
+         "existing sites in the area by operator, the 20 picks and the rooftop footprints, "
+         "each as a layer you can switch on or off. Opens in a new tab.",
+)
 st.pydeck_chart(
     pdk.Deck(
         map_style=pdk.map_styles.CARTO_LIGHT,
