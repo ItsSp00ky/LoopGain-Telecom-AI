@@ -4,7 +4,7 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 from _shared import unavailable, empty_state
-from _shared import GIS_API_URL, configure, load_json as get_json, hero
+from _shared import GIS_API_URL, GIS_PUBLIC_URL, configure, load_json as get_json, hero
 
 configure("Site Planning", icon="cell_tower")
 
@@ -67,7 +67,7 @@ heading, button = st.columns([3, 2], vertical_alignment="bottom")
 heading.subheader("Shortlisted sites")
 button.link_button(
     "Open full planning map",
-    f"{GIS_API_URL}/full-map",
+    f"{GIS_PUBLIC_URL}/full-map",
     icon=":material/map:",
     type="primary",
     width="stretch",

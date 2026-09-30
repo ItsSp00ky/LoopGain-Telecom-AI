@@ -82,15 +82,15 @@ The server address appears only in Settings.
 
 ### Enable the summary feed
 
-Install the platform requirements in the Python environment used by the launcher:
+The launcher starts it, in its own uv environment built from `platform_app/requirements.txt`:
 
 ```powershell
-python -m pip install -r platform_app/requirements.txt
 python run_platform.py
 ```
 
 The launcher now starts `platform_app/mobile_summary.py` on port **8511**, alongside
-the existing web shell on **8510**. To start only the new feed from the repo root:
+the existing web shell on **8510**. To start only the new feed from the repo root, with
+the platform requirements installed (`python -m pip install -r platform_app/requirements.txt`):
 
 ```powershell
 python -m uvicorn mobile_summary:app --app-dir platform_app --host 0.0.0.0 --port 8511

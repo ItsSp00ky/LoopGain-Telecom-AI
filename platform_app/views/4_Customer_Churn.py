@@ -8,7 +8,7 @@ port, its code). The summary strip above it reads churn's own `/portfolio/summar
 
 import streamlit as st
 from _shared import unavailable
-from _shared import CHURN_APP_URL, app_available, churn_portfolio, configure, hero
+from _shared import CHURN_APP_PUBLIC_URL, CHURN_APP_URL, app_available, churn_portfolio, configure, hero
 
 configure("Churn & Retention", icon="group")
 
@@ -44,7 +44,7 @@ if not app_available(CHURN_APP_URL):
 else:
     head, link = st.columns([4, 1], vertical_alignment="bottom")
     head.subheader("Churn workbench")
-    link.link_button("Open full screen", CHURN_APP_URL, icon=":material/open_in_new:", width="stretch")
+    link.link_button("Open full screen", CHURN_APP_PUBLIC_URL, icon=":material/open_in_new:", width="stretch")
     st.caption("Loading the workbench below. If it stays blank, try Open full screen.")
-    st.iframe(f"{CHURN_APP_URL}/?embed=true&embed_options=light_theme", height=1150)
+    st.iframe(f"{CHURN_APP_PUBLIC_URL}/?embed=true&embed_options=light_theme", height=1150)
     st.caption("prepaid_churn's own app, embedded. Use its sidebar for subscribers, campaigns and approvals.")

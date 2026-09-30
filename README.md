@@ -106,12 +106,15 @@ One command starts every backend and the shared shell:
 python3 run_platform.py
 ```
 
+The launcher needs only Python and [uv](https://docs.astral.sh/uv/) on PATH: every service runs in its own uv environment, which uv builds the first time it starts.
+
 This starts, each in its own process on its own port:
 
 | Service | Port | Needs |
 |---|---|---|
 | GIS API | 8001 | nothing extra |
 | KPI API | 8002 | nothing extra |
+| Mobile summary API | 8511 | nothing extra (feeds the Android app) |
 | Platform shell | 8510 | nothing extra — **open this one** |
 | Churn API | 8000 | `PREPAID_CHURN_CHATBOT_KEY` + `PREPAID_CHURN_COPILOT_KEY` env vars |
 | Churn demo app | 8501 | same as above |
@@ -122,6 +125,22 @@ Without the two churn keys set, the launcher still starts GIS, KPI and the shell
 prints which services it skipped — nothing crashes for their absence. Set the keys
 (see [`assistants/README.md`](assistants/README.md)) to bring up the full seven-service
 platform. Press Ctrl+C to stop everything the launcher started.
+
+### On a server
+
+The shell calls every service at its `127.0.0.1` address, but the embedded churn workbench, chatbot and copilot, and the full planning map, are opened by the visitor's browser, where `127.0.0.1` is the visitor's own computer.
+On a server, serve those four through your reverse proxy, with HTTPS and a password, and tell the shell their public addresses:
+
+| Setting | What the browser opens | Local port |
+|---|---|---|
+| `PLATFORM_CHURN_APP_PUBLIC_URL` | the churn workbench | 8501 |
+| `PLATFORM_CHATBOT_APP_PUBLIC_URL` | the customer chatbot | 8503 |
+| `PLATFORM_COPILOT_APP_PUBLIC_URL` | the employee copilot | 8502 |
+| `PLATFORM_GIS_PUBLIC_URL` | the GIS API, for the full planning map | 8001 |
+
+Set them in the environment or in `assistants/.env`, which `run_platform.py` passes to every service.
+Each one left unset falls back to its `127.0.0.1` address, which works only on the machine running the platform.
+Close every port except the proxy's: the shell, the churn workbench and the mobile summary listen on all network interfaces.
 
 Working on one module only? Each module's own Quick Start still works standalone —
 see [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md),

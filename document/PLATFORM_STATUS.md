@@ -124,6 +124,7 @@ connected.
 - No production deployment, reverse proxy, HTTPS or process manager - `run_platform.py`
   is a local development launcher (subprocess, no Docker), matching that no module in
   this project currently uses Docker.
+  Behind a reverse proxy, the embedded apps and the full-map link take their public addresses from the four `PLATFORM_*_PUBLIC_URL` settings in the root README's "On a server"; without them a visitor's browser is sent to `127.0.0.1`, its own computer, and those parts stay blank.
 
 ## Superseded folders still in the repo
 

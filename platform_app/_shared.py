@@ -18,6 +18,14 @@ CHURN_API_URL = os.environ.get("PLATFORM_CHURN_API_URL", "http://127.0.0.1:8000"
 CHURN_APP_URL = os.environ.get("PLATFORM_CHURN_APP_URL", "http://127.0.0.1:8501")
 CHATBOT_APP_URL = os.environ.get("PLATFORM_CHATBOT_APP_URL", "http://127.0.0.1:8503")
 COPILOT_APP_URL = os.environ.get("PLATFORM_COPILOT_APP_URL", "http://127.0.0.1:8502")
+# The addresses above are what this shell calls from its own server. Embedded apps and
+# links are opened by the visitor's browser instead, where 127.0.0.1 is the visitor's
+# own computer, so on a server set these to the public addresses the reverse proxy
+# serves; on one machine they default to the same addresses.
+GIS_PUBLIC_URL = os.environ.get("PLATFORM_GIS_PUBLIC_URL", GIS_API_URL)
+CHURN_APP_PUBLIC_URL = os.environ.get("PLATFORM_CHURN_APP_PUBLIC_URL", CHURN_APP_URL)
+CHATBOT_APP_PUBLIC_URL = os.environ.get("PLATFORM_CHATBOT_APP_PUBLIC_URL", CHATBOT_APP_URL)
+COPILOT_APP_PUBLIC_URL = os.environ.get("PLATFORM_COPILOT_APP_PUBLIC_URL", COPILOT_APP_URL)
 ASSISTANTS_ENV = Path(__file__).resolve().parents[1] / "assistants" / ".env"
 
 

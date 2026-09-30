@@ -61,5 +61,43 @@ class UIStates(unittest.TestCase):
         self.assertTrue(any('No cluster' in x.value for x in at.info))
         self.assertTrue(any('No forecast' in x.value for x in at.info))
 
+    def test_embedded_apps_are_checked_here_but_opened_at_their_public_address(self):
+        public = {
+            'CHURN_APP_PUBLIC_URL': 'https://churn.example.test',
+            'CHATBOT_APP_PUBLIC_URL': 'https://chatbot.example.test',
+            'COPILOT_APP_PUBLIC_URL': 'https://copilot.example.test',
+        }
+        checked = []
+        with patch.multiple(_shared, **public), \
+                patch.object(_shared, 'app_available', side_effect=lambda url: checked.append(url) or True), \
+                patch.object(_shared, 'churn_portfolio', return_value=(None, 'offline')):
+            pages = [AppTest.from_file(str(APP / 'views' / f'{page}.py')).run(timeout=30)
+                     for page in ['4_Customer_Churn', '5_Assistants']]
+        for at in pages:
+            self.assertFalse(at.exception)
+        self.assertEqual(checked, [_shared.CHURN_APP_URL, _shared.CHATBOT_APP_URL, _shared.COPILOT_APP_URL])
+        frames = [frame.proto.src for at in pages for frame in at.get('iframe')]
+        self.assertEqual(frames, [f'{url}/?embed=true&embed_options=light_theme' for url in public.values()])
+        self.assertEqual([link.proto.url for at in pages for link in at.get('link_button')], list(public.values()))
+
+    def test_full_map_opens_at_the_public_gis_address(self):
+        site = {
+            'recommendation_rank': 1, 'planning_priority_score': 66.7, 'reason_codes': 'high_population;large_gap',
+            'dist_to_nearest_site_m': 3300.0, 'population_sum_5km': 30724.0, 'dist_to_nearest_road_m': 40.0,
+            'canonical_latitude': 32.8, 'canonical_longitude': 13.2, 'municipality_name': 'Tripoli Centre',
+            'candidate_status': 'recommended',
+        }
+        responses = {'/health': {'status': 'ok'}, '/shortlist': {'features': [{'properties': site}]}}
+        called = []
+        def response(base, path, **kwargs):
+            called.append(base)
+            return responses[path], None
+        with patch.object(_shared, 'GIS_PUBLIC_URL', 'https://gis.example.test'), \
+                patch.object(_shared, 'load_json', side_effect=response):
+            at = AppTest.from_file(str(APP / 'views/1_GIS_Planning.py')).run(timeout=30)
+        self.assertFalse(at.exception)
+        self.assertEqual(set(called), {_shared.GIS_API_URL})
+        self.assertEqual([link.proto.url for link in at.get('link_button')], ['https://gis.example.test/full-map'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

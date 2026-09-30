@@ -7,7 +7,16 @@ this page only frames their existing, already-running UI.
 
 import streamlit as st
 from _shared import unavailable
-from _shared import CHATBOT_APP_URL, COPILOT_APP_URL, app_available, configure, groq_key_configured, hero
+from _shared import (
+    CHATBOT_APP_PUBLIC_URL,
+    CHATBOT_APP_URL,
+    COPILOT_APP_PUBLIC_URL,
+    COPILOT_APP_URL,
+    app_available,
+    configure,
+    groq_key_configured,
+    hero,
+)
 
 configure("AI Assistants", icon="support_agent")
 
@@ -28,19 +37,20 @@ if not groq_key_configured():
     )
 
 
-def embed(url: str, name: str, command: str):
+def embed(url: str, public_url: str, name: str):
+    """Check the app at the shell's own address, then let the browser open its public one."""
     if not app_available(url):
         unavailable(f"The {name} is offline", name)
         return
-    st.link_button(f"Open the {name} full screen", url, icon=":material/open_in_new:")
+    st.link_button(f"Open the {name} full screen", public_url, icon=":material/open_in_new:")
     st.caption("Loading the assistant below. If it stays blank, try opening it full screen.")
-    st.iframe(f"{url}/?embed=true&embed_options=light_theme", height=900)
+    st.iframe(f"{public_url}/?embed=true&embed_options=light_theme", height=900)
 
 
 chatbot_tab, copilot_tab = st.tabs([":material/chat: Customer chatbot", ":material/engineering: Employee copilot"])
 
 with chatbot_tab:
-    embed(CHATBOT_APP_URL, "chatbot", "uv run streamlit run chatbot_app.py --server.port 8503")
+    embed(CHATBOT_APP_URL, CHATBOT_APP_PUBLIC_URL, "chatbot")
 
 with copilot_tab:
-    embed(COPILOT_APP_URL, "copilot", "uv run streamlit run copilot_app.py --server.port 8502")
+    embed(COPILOT_APP_URL, COPILOT_APP_PUBLIC_URL, "copilot")
