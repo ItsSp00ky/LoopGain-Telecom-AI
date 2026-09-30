@@ -203,18 +203,86 @@ def resolve_macro_kpis_file(macro_csv: str | Path | None = None) -> Path:
     return candidates[0]
 
 
+def resolve_carrier_kpis_file(carrier_csv: str | Path | None = None) -> Path:
+    """Dynamically resolves the per-band carrier KPI dataset path."""
+    if carrier_csv:
+        p = Path(carrier_csv)
+        if p.exists():
+            return p
+        if (_PKG_ROOT / carrier_csv).exists():
+            return _PKG_ROOT / carrier_csv
+
+    candidates = [
+        _PKG_ROOT.parent / "data" / "carrier_earfcndl_kpi_daily.csv",
+        _PKG_ROOT / "data" / "carrier_earfcndl_kpi_daily.csv",
+        Path("data/carrier_earfcndl_kpi_daily.csv"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]
+
+
+def aggregate_carrier_kpis_daily(carrier_csv: str | Path | None = None) -> pd.DataFrame:
+    """Collapses the per-band carrier export to one network-wide row per day.
+
+    `macro_network_kpis_daily.csv` (already merged elsewhere in this module) has no
+    availability, connected-user or downtime column at all - those only exist in the
+    per-band carrier export. A simple mean across the 6 bands is used, matching how
+    close a plain per-band mean already tracks the project's own pre-aggregated macro
+    file for the KPIs both files share (checked directly: same-day RRC Setup Success
+    Rate differs by 0.01 between a simple band mean and the macro file's own value).
+    `pmCellDowntimeMan` is a band-cluster total in cell-seconds (see
+    `cellular_kpi_forecast/src/kpi_config.py`), and bands have very different cell
+    counts (9 to 667), so a plain mean across bands is not a per-cell duration; it is
+    kept as a relative signal (`network_cell_downtime_raw`).
+    """
+    path = Path(carrier_csv) if carrier_csv else resolve_carrier_kpis_file()
+    if not path.exists():
+        raise FileNotFoundError(f"Carrier KPI dataset not found at: {path}")
+
+    carrier_df = pd.read_csv(path)
+    carrier_df = carrier_df.rename(columns={
+        "Date": "date",
+        "4G Cell Av. (%)": "network_availability_pct",
+        "Avg RRC Connected users": "network_avg_connected_users",
+        "pmCellDowntimeMan": "network_cell_downtime_raw",
+    })
+    daily = (
+        carrier_df.groupby("date")[
+            ["network_availability_pct", "network_avg_connected_users", "network_cell_downtime_raw"]
+        ]
+        .mean()
+        .reset_index()
+    )
+    daily["date"] = pd.to_datetime(daily["date"])
+    return daily
+
+
 def prepare_multivariate_datasets(
     clean_csv: str | Path | None = None,
     macro_csv: str | Path | None = None,
+    carrier_csv: str | Path | None = None,
     train_ratio: float = 0.70,
     val_ratio: float = 0.15,
     lags: list[int] | None = None,
     rolling_windows: list[int] | None = None,
+    exo_subset: list[str] | None = None,
 ) -> tuple[dict, StandardScaler, list[str]]:
-    """Merges traffic volume with macro radio KPIs to create multivariate exogenous features.
+    """Merges traffic volume with every network KPI this module has, as exogenous features.
 
-    Strictly uses shift(1) on all radio metrics (DL/UL throughput, drop rate, RRC SR, Handover SR)
-    to eliminate lookahead leakage while enriching traffic load modeling.
+    `exo_subset` restricts which exogenous KPIs become features (for ablation on the
+    exact same rows); by default all of them are used.
+
+    Strictly uses shift(1) (and a 7-day rolling mean of the shifted series) on every
+    radio metric to eliminate lookahead leakage while enriching traffic load modeling:
+    DL/UL throughput, E-RAB drop rate, E-RAB establishment success rate, RRC setup
+    success rate, handover success rate (from the daily macro export), plus network
+    availability, average connected users and cell downtime (aggregated from the
+    per-band carrier export - see `aggregate_carrier_kpis_daily`). The raw exogenous
+    columns are kept in the returned frames (needed to recursively forecast them
+    forward - see `forecast_future`'s `exo_cols`) but excluded from `feature_cols`,
+    so the model itself only ever sees the shifted, leakage-safe versions.
     """
     resolved_clean = resolve_clean_traffic_file(clean_csv)
     resolved_macro = resolve_macro_kpis_file(macro_csv)
@@ -235,36 +303,52 @@ def prepare_multivariate_datasets(
         "RRC Setup Success Rate": "macro_rrc_setup_sr",
         "E-RAB Establishment Success Rate": "macro_erab_estab_sr",
         "E-RAB Drop Rate": "macro_erab_drop_rate",
+        "Handover Success Rate ( 4G Intra System)": "macro_handover_sr_intra4g",
         "Handover Success Rate": "macro_handover_sr",
         "E-UTRAN IP Throughput UE DL": "macro_dl_throughput_mbps",
         "E-UTRAN IP Throughput UE UL": "macro_ul_throughput_mbps",
     })
     macro_df["date"] = pd.to_datetime(macro_df["date"])
 
-    merged_df = pd.merge(raw_df, macro_df, on="date", how="inner").sort_values("date").reset_index(drop=True)
+    merged_df = pd.merge(raw_df, macro_df, on="date", how="inner")
+
+    carrier_daily = aggregate_carrier_kpis_daily(carrier_csv)
+    merged_df = pd.merge(merged_df, carrier_daily, on="date", how="inner")
+    merged_df = merged_df.sort_values("date").reset_index(drop=True)
 
     # 1. Base Time & Target Lag Features
     featured_df = create_time_features(
         merged_df, target_col="kpi_volume_gb", lags=lags, rolling_windows=rolling_windows
     )
 
-    # 2. Exogenous Radio Features strictly on shift(1)
+    # 2. Exogenous Network Features strictly on shift(1)
     exo_cols = [
         "macro_dl_throughput_mbps", "macro_ul_throughput_mbps",
-        "macro_erab_drop_rate", "macro_rrc_setup_sr", "macro_handover_sr"
+        "macro_erab_drop_rate", "macro_erab_estab_sr",
+        "macro_rrc_setup_sr", "macro_handover_sr", "macro_handover_sr_intra4g",
+        "network_availability_pct", "network_avg_connected_users", "network_cell_downtime_raw",
     ]
+    if exo_subset is not None:
+        unknown = set(exo_subset) - set(exo_cols)
+        if unknown:
+            raise ValueError(f"Unknown exogenous KPIs: {sorted(unknown)}")
+        exo_cols = [c for c in exo_cols if c in exo_subset]
     for c in exo_cols:
         if c in featured_df.columns:
             s = featured_df[c].shift(1)
             featured_df[f"exo_{c}_lag1"] = s
             featured_df[f"exo_{c}_roll7"] = s.rolling(window=7, min_periods=3).mean()
 
-    # Drop raw unshifted radio features from feature matrix
-    drop_meta = exo_cols + [c for c in featured_df.columns if c.startswith("macro_") and not c.startswith("exo_")]
-    featured_df = featured_df.drop(columns=[c for c in drop_meta if c in featured_df.columns])
     featured_df = featured_df.dropna().reset_index(drop=True)
 
-    feature_cols = get_feature_columns(featured_df)
+    # Raw exogenous columns stay in the frame (forecast_future needs their history to
+    # recurse forward) but never enter the model's own feature list - only their
+    # shifted exo_*_lag1/roll7 versions do. Every raw column from either source file
+    # is excluded, not just the ones listed in exo_cols: an unrenamed same-day column
+    # ("Handover Success Rate ( 4G Intra System)") previously slipped through that
+    # way as an unshifted, lookahead-leaking feature.
+    raw_source_cols = (set(macro_df.columns) | set(carrier_daily.columns)) - {"date"}
+    feature_cols = [c for c in get_feature_columns(featured_df) if c not in raw_source_cols]
 
     n = len(featured_df)
     n_train = int(n * train_ratio)
@@ -305,9 +389,10 @@ def prepare_multivariate_datasets(
             "dates": test_data["date"].values,
         },
         "full_df": featured_df,
+        "exo_cols": exo_cols,
     }
 
-    print(f"[Multivariate] Datasets created with {len(feature_cols)} features (including exogenous radio indicators).")
+    print(f"[Multivariate] Datasets created with {len(feature_cols)} features (including {len(exo_cols)} exogenous network KPIs).")
     print(f"[Multivariate] Samples: Train={len(train_data)}, Val={len(val_data)}, Test={len(test_data)}")
 
     return datasets, scaler, feature_cols

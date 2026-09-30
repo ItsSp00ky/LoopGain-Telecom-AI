@@ -100,6 +100,14 @@ def run_predict(carrier: int, kpi: str, days: int = 7, live: bool = False):
     query_predictions(carrier=carrier, kpi=kpi, days=days, force_live=live)
 
 
+def run_tests() -> int:
+    print("[*] Running Automated Test Suite across all 3GPP modules...")
+    import unittest
+    loader = unittest.TestLoader()
+    suite = loader.discover(os.path.join(_REPO_ROOT, "tests"))
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    return 0 if result.wasSuccessful() else 1
 
 
 def main(argv=None) -> int:
@@ -142,6 +150,9 @@ def main(argv=None) -> int:
     pred_p.add_argument("--days", type=int, default=7, help="Number of days to forecast (default: 7)")
     pred_p.add_argument("--live", action="store_true", help="Force live model bundle inference")
 
+    # test
+    subparsers.add_parser("test", help="Execute all unit tests across config, clean, split, features, models, plots, export")
+
     args = parser.parse_args(argv)
 
     if args.command == "split":
@@ -173,6 +184,8 @@ def main(argv=None) -> int:
     elif args.command == "predict":
         run_predict(carrier=args.carrier, kpi=args.kpi, days=args.days, live=args.live)
         return 0
+    elif args.command == "test":
+        return run_tests()
     else:
         parser.print_help()
         return 0

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LoopGain Telecom AI</string>
+    <string name="default_server_host">http://10.0.2.2:8510</string>
+    <string name="live_tracking">Auto-refresh</string>
+    <string name="settings">Server settings</string>
+    <string name="server_host_label">Platform server address</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="page_overview_title">Overview</string>
+    <string name="page_overview_subtitle">Platform status at a glance</string>
+    <string name="page_network_title">Network KPIs</string>
+    <string name="page_network_subtitle">Live KPI forecasts &amp; alerts</string>
+    <string name="page_steering_title">Congestion &amp; Steering</string>
+    <string name="page_steering_subtitle">Traffic steering recommendations</string>
+    <string name="page_gis_title">Site Planning (GIS)</string>
+    <string name="page_gis_subtitle">Cell-site suitability map</string>
+    <string name="page_churn_title">Churn &amp; Retention</string>
+    <string name="page_churn_subtitle">At-risk customers &amp; retention</string>
+    <string name="page_assistants_title">AI Assistants</string>
+
+    <string name="dashboard_heading">Operations dashboard</string>
+    <string name="dashboard_intro">Your network, planning priorities and customer risks in one place.</string>
+    <string name="dashboard_modules">EXPLORE MODULES</string>
+    <string name="card_open_description">%1$s. %2$s. Open module.</string>
+    <string name="loading_title">Opening your workspace</string>
+    <string name="loading_body">Connecting to the platform. This may take a moment.</string>
+    <string name="page_loading">Loading page…</string>
+    <string name="page_loaded_at">Page loaded at %1$s</string>
+    <string name="page_unavailable">Page unavailable</string>
+    <string name="connection_error_title">Can’t reach the server</string>
+    <string name="connection_error_body">Check your connection and make sure the platform is running. If the server address has changed, update it in Server settings on the dashboard.</string>
+    <string name="http_error_title">This page is unavailable</string>
+    <string name="http_error_body">The server returned an error (HTTP %1$d). Please try again in a moment.</string>
+    <string name="timeout_error_title">The server is taking too long</string>
+    <string name="timeout_error_body">The page did not finish loading. Check your connection and try again.</string>
+    <string name="retry">Try again</string>
+    <string name="refresh_hint">Pull down to refresh · Auto-refresh every 20 seconds</string>
+    <string name="server_host_helper">Use your computer’s LAN address on a phone. The default 10.0.2.2 address is for the emulator.</string>
+    <string name="server_host_invalid">Enter a valid http:// or https:// server address.</string>
+    <string name="server_saved">Server address saved</string>
+    <string name="refresh_paused_hint">Auto-refresh is paused. Use Try again to reconnect.</string>
+    <string name="refresh_manual_hint">Auto-refresh is off · Pull down to refresh</string>
+    <string name="refresh_loading_hint">Waiting for the page to load…</string>
+    <string name="ask_ai">Ask AI</string>
+    <string name="open_ai_assistants">Open AI Assistants</string>
+
+    <string name="summary_heading">At a glance</string>
+    <string name="attention_heading">Needs attention</string>
+    <string name="refresh_summary">Refresh</string>
+    <string name="summary_loading">Checking the latest available data…</string>
+    <string name="summary_waiting">Waiting for data</string>
+    <string name="summary_dash">—</string>
+    <string name="summary_unavailable">Unavailable</string>
+    <string name="summary_error">Summary unavailable. Tap Refresh to try again.</string>
+    <string name="summary_partial">Sources available: %1$d/%2$d · Checked %3$s</string>
+    <string name="summary_no_notes">No priority notes in the available data.</string>
+    <string name="summary_missing_notes">Some sources are unavailable. Open a module for details.</string>
+    <string name="summary_evidence_note">Figures keep their source dates. Forecasts and planning priorities require review.</string>
+    <string name="summary_kpi">KPI SLA breaches</string>
+    <string name="summary_steering">Critical towers</string>
+    <string name="summary_traffic">4G traffic forecast</string>
+    <string name="summary_gis">Candidate sites</string>
+    <string name="summary_churn">Revenue at risk</string>
+    <string name="summary_api_label">Summary API address (optional)</string>
+    <string name="summary_api_helper">Leave blank to use the same computer on port 8511.</string>
+    <string name="page_assistants_subtitle">Chatbot &amp; employee copilot</string>
+</resources>

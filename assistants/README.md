@@ -50,6 +50,8 @@ Every reply is checked before it is shown:
 - A number that no tool returned and the customer did not write replaces the reply with a safe answer built only from the tool results (`grounding.py`).
 - A reply holding a Libyan phone number is replaced the same way, even when the customer typed it.
 - A tool error, an unreachable service, or Groq being down or rate-limited gives "not available right now", never a guess.
+- When Groq fails before any tool has returned data, the reply says so ("busy, try again in about a minute" for a rate limit), not "I can't answer that from the data I have", because nothing was looked up.
+- The free Groq plan allows 8,000 tokens a minute and one copilot question uses about 4,900, so a second question within the same minute can hit the limit.
 
 Under each reply, "What I looked up" shows every tool call and exactly what it returned.
 Tool results come in the customer's language only, detected from their message, and the model is told which language to reply in.

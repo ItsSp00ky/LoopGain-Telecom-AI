@@ -8,9 +8,6 @@
 
 An integrated suite of Artificial Intelligence systems engineered for telecommunications providers. Developed by **Team Loop Gain** as part of the **Samsung Innovation Campus (SIC) Capstone Project**, this platform addresses critical telecom operational challenges across customer retention, customer support automation, and infrastructure planning.
 
-The active prepaid customer module is [`prepaid_churn/`](prepaid_churn/).
-The `Ali_Branch` review delivery follows `tahaDev`; see [CODE_REVIEW.md](CODE_REVIEW.md) for implemented fixes, validation and the limitations of the historical subsystem claims below.
-
 ---
 
 ## 👥 Team Loop Gain
@@ -28,52 +25,51 @@ The `Ali_Branch` review delivery follows `tahaDev`; see [CODE_REVIEW.md](CODE_RE
 
 ## 🌐 Platform Architecture
 
-The repository is organized into four modular AI subsystems:
+Four modules, each built independently, now run behind one Streamlit shell
+(`platform_app/`) and are started together with one command
+(`python3 run_platform.py`). See [`document/PLATFORM_STATUS.md`](document/PLATFORM_STATUS.md)
+for exactly what's wired up versus still a standalone module.
 
 ```
-├── 1. customer_churn_prediction/     [✅ OPERATIONAL]
-│   └── Customer Churn Prediction & Retention Discount Engine
-│
-├── 2. assistants/                     [✅ BUILT]
-│   └── Customer Chatbot & Employee Copilot, grounded on the team's outputs
-│
-├── 3. antenna_cell_placement/         [✅ OPERATIONAL]
-│   └── Geospatial AI for Optimal Cellular Antenna Site Placement
-│
-└── 4. network_kpi_prediction/         [✅ OPERATIONAL]
-    └── 3GPP Rel-17 Cellular Telemetry & Network Traffic Forecasting Engine
+├── antenna_cell_placement/    [✅ OPERATIONAL] GIS antenna site planning, own FastAPI (api.py)
+├── network_kpi_prediction/    [✅ OPERATIONAL] Network KPI forecasting, own FastAPI (api.py)
+├── prepaid_churn/             [✅ OPERATIONAL] Customer churn/retention, own FastAPI + Streamlit
+├── assistants/                [✅ OPERATIONAL] Customer chatbot + employee copilot (call prepaid_churn's API)
+├── tower_kpi_forecast/        [✅ OPERATIONAL] Per-tower XGBoost KPI forecasts (1,067 towers)
+├── traffic_steering_son/      [✅ OPERATIONAL] Congestion alerts & CIO load balancing, fed by tower_kpi_forecast
+└── platform_app/              [✅ NEW] Shared Streamlit shell landing on all of the above
 ```
+
+> **Superseded, not deleted**: `customer_churn_prediction/`, `customer_support_chatbot/`
+> and `kpi_prediction/` are earlier, unreviewed precursors to `prepaid_churn/`,
+> `assistants/` and `network_kpi_prediction/` respectively (nothing in the platform
+> imports them - verified by grep before writing this). They're kept in git history
+> rather than removed in this pass; ask before relying on anything inside them.
 
 ---
 
 ## 🚀 Subsystems Overview
 
-### 1. [Customer Churn Prediction & Retention Discount Engine](customer_churn_prediction/)
-- **Status**: **Operational & Production Ready**
-- **Objective**: Predicts customer churn risk with **0.9280 Test ROC-AUC** and **0.8561 PR-AUC** using CUDA-accelerated gradient boosting on NVIDIA GPUs.
-- **Business Retention Engine**: Translates churn risk and account telemetry into margin-preserving marketing offers (`Offer A` through `Offer E`), contract lock-in agreements, and overage fee waivers, projecting **+$917,265.70** in net saved revenue.
-- **Documentation**: See [`customer_churn_prediction/README.md`](customer_churn_prediction/README.md) and the comprehensive [`Technical Report`](customer_churn_prediction/TECHNICAL_REPORT.md).
+### 1. [GIS Antenna Site Planning](antenna_cell_placement/)
+- **Status**: **Operational**, explainable scoring (not black-box ML) is the default and requires no ML dependencies.
+- **Objective**: Explainable priority scoring over corrected terrain, population, road and rooftop features for new cell site candidates in Libya, with a source-integrity check before every run (`antenna-placement doctor`).
+- **API**: `antenna_cell_placement/src/antenna_cell_placement/api.py` — `/health`, `/shortlist`, `/rooftops`, `/map`, `/assess`.
+- **Documentation**: See [`antenna_cell_placement/document/`](antenna_cell_placement/document/), especially `INTEGRATED_PLANNING.md`.
 
-### 2. [Customer Chatbot & Employee Copilot](assistants/)
-- **Status**: **Customer chatbot and employee copilot built**
-- **Objective**: Two assistants in one look. The customer chatbot answers which of the operator's packages fit a prepaid customer and whether the operator approved an offer for them; the employee copilot alerts on towers in trouble, answers about towers, the GIS shortlist and customers at risk with sources, and drafts work orders that only an employee can confirm.
-- **Grounding**: The language model only picks a tool and phrases what came back; code checks every reply, so no price, offer or figure appears that a tool did not return.
+### 2. [Network KPI Forecasting](network_kpi_prediction/)
+- **Status**: **Operational** for 4G traffic volume forecasting; two further pipelines (`cellular_kpi_forecast/`, `erbs_node_analytics/`) ship in this module but are not yet wired to the platform API.
+- **Objective**: Chronological (not random) train/val/test split, a real multi-model benchmark (Ridge, Random Forest, XGBoost, seasonal-naive baseline), and a forecast with 80%/95% intervals from the retrained champion.
+- **API**: `network_kpi_prediction/api.py` — `/health`, `/traffic/{horizon_days}day`.
+
+### 3. [Customer Churn & Retention](prepaid_churn/)
+- **Status**: **Operational**, the only module with its own pre-existing FastAPI + Streamlit + key-protected access control.
+- **Objective**: Prepaid subscriber churn risk, value tiers and named-reviewer-approved retention offers, in Libyan dinar.
+- **Documentation**: See [`prepaid_churn/README.md`](prepaid_churn/README.md) and [`prepaid_churn/docs/`](prepaid_churn/docs/).
+
+### 4. [Customer Chatbot & Employee Copilot](assistants/)
+- **Status**: **Operational**, calls `prepaid_churn`'s API only; no language model sets an offer, a price or a limit.
 - **Start it on your laptop**: [`assistants/TEAM_GUIDE.md`](assistants/TEAM_GUIDE.md), step by step for every team member.
 - **Documentation**: See [`assistants/README.md`](assistants/README.md).
-
-### 3. [AI Antenna Cell Site Placement Optimization](antenna_cell_placement/)
-- **Status**: **Operational & Production Ready**
-- **Objective**: Geospatial machine learning system predicting optimal geographic locations for deploying new cellular antenna towers across Libya with **0.9862 ROC-AUC** and **0.9794 PR-AUC**.
-- **Geospatial & Demographic Intelligence**: Fuses crowdsourced cellular radio telemetry with WorldPop 1km gridded population density, SRTM 250m Digital Elevation Model (topography/prominence), UN OCHA road transportation networks, and Libyan administrative boundaries.
-- **Optimization Engine**: Identifies unserved coverage gaps, ranks the Top 50 prioritized new site deployments, and recommends equipment tiers (`Urban_HighCapacity_Macro`, `Suburban_Standard_Macro`, `Rural_Coverage_Macro`).
-- **Documentation**: See [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md), the comprehensive [`Technical Report`](antenna_cell_placement/document/TECHNICAL_REPORT.md), and the [`Telecom GIS, RF & AI Planning Roadmap`](antenna_cell_placement/document/TELECOM_GIS_RF_AI_ROADMAP.md).
-
-### 4. [Network KPI & Traffic Prediction Engine](network_kpi_prediction/)
-- **Status**: **Operational & Production Ready**
-- **Objective**: 3GPP Rel-17 NWDAF and O-RAN compliant multi-band cellular KPI and 4G data volume time-series forecasting engine with **90.0% holdout benchmark outperformance ($R^2_{bench} > 0$)**.
-- **Multi-Band & KPI Scope**: 6 frequency tiers (350, 400, 1556, 1700, 3500, 6200 MHz) across 10 standardized 3GPP operational metrics (Accessibility, Retainability, Mobility, Capacity, Availability) plus 30-day network traffic volume projections.
-- **S-Tier ML Architecture**: Damped Fourier harmonics, residual gradient boosting ensembles, real heteroscedastic quantile prediction intervals (p05–p95), exponential boundary anchoring, and 100% physical domain boundary enforcement.
-- **Documentation**: See [`network_kpi_prediction/README.md`](network_kpi_prediction/README.md).
 
 ---
 
@@ -81,116 +77,78 @@ The repository is organized into four modular AI subsystems:
 
 ```
 LoopGain-Telecom-AI/
-├── README.md                          # Master Project Documentation & Team Directory
-├── .gitignore                         # Global exclusion rules
-│
-├── customer_churn_prediction/         # Module 1: Customer Churn & Retention Engine
-│   ├── README.md                      # Detailed Churn Module Documentation
-│   ├── TECHNICAL_REPORT.md            # Churn Modeling & Value Engine Specification
-│   ├── pyproject.toml                 # uv Package Config & CLI entry points
-│   ├── uv.lock                        # Deterministic dependency lockfile
-│   ├── churn_datasets/                # Telecom datasets (Maven Telecom, IBM, Cell2Cell)
-│   ├── models/                        # Serialized champion model artifacts
-│   ├── eval_reports/                  # ROC, PR, and feature importance charts
-│   └── src/customer_churn_prediction/ # Feature engineering, trainers & discount engine
-│
-├── assistants/                        # Module 2: Customer Chatbot & Employee Copilot
-│   ├── README.md                      # How to run them and what they may say
-│   ├── chatbot_app.py                 # Customer chatbot (Streamlit)
-│   └── src/assistants/                # Tool loop, reply checks, tools and shared look
-│
-├── antenna_cell_placement/            # Module 3: Antenna Placement AI
-│   ├── README.md                      # Detailed Antenna Module Documentation
-│   ├── TECHNICAL_REPORT.md            # Comprehensive Engineering & Decisioning Report
-│   ├── TELECOM_GIS_RF_AI_ROADMAP.md   # Telecom GIS, RF & AI Planning Roadmap
-│   ├── pyproject.toml                 # uv Package Config & CLI entry points
-│   ├── uv.lock                        # Deterministic dependency lockfile
-│   ├── Libyan_cells_dataset/          # Raw crowdsourced telecom datasets
-│   ├── data/                          # Geospatial data (DEM, WorldPop, Roads, Admin, Radar)
-│   ├── models/                        # Champion AI Models (LightGBM & RF)
-│   ├── eval_reports/                  # Coverage maps, ROC curves & recommendations
-│   └── src/antenna_cell_placement/    # Geospatial AI pipeline package
-│
-└── network_kpi_prediction/            # Module 4: Network KPI & Traffic Forecasting
-    ├── README.md                      # Detailed Subsystem Documentation
-    ├── run_pipeline.py                # Unified Subsystem CLI Launcher
-    ├── data_catalog.py                # Telemetry Catalog & Profiler
-    ├── requirements.txt               # Dependencies
-    ├── artifacts/                     # Standalone Visual Artifacts & Manifests
-    ├── cellular_kpi_forecast/         # 3GPP Cellular Telemetry Pipeline (60 series)
-    ├── traffic_volume_forecast/       # 4G Traffic Volume Pipeline
-    └── erbs_node_analytics/           # Physical ERBS Node Intelligence & ST-GNN
+├── README.md                    # This file
+├── run_platform.py              # Starts every backend + the shared shell with one command
+├── platform_app/                # Shared Streamlit shell: dashboard, GIS, Network KPI, embedded churn + assistants
+├── antenna_cell_placement/      # GIS module: pipeline, api.py, integrated_release_v3/, document/
+├── network_kpi_prediction/      # Network module: run_pipeline.py launcher, api.py, artifacts/ (plot manifest)
+│   ├── cellular_kpi_forecast/   #   10 KPIs x 6 bands, SLA thresholds, forecasts (60 series)
+│   ├── traffic_volume_forecast/ #   4G traffic volume forecast
+│   └── erbs_node_analytics/     #   per-tower ERBS intelligence and ST-GNN
+├── prepaid_churn/               # Churn module: pipeline, its own api.py + app/, docs/
+├── assistants/                  # Customer chatbot + employee copilot (read churn, GIS and network data)
+├── tower_kpi_forecast/          # Per-tower next-day KPI forecasts that feed traffic steering
+├── traffic_steering_son/        # Congestion detection & mobility load balancing
+├── final_presentation/          # The five-minute script for the final presentation
+├── KPI_forecasting/             # Mohamed's earlier per-band next-day forecasts, not part of the platform
+└── customer_churn_prediction/, customer_support_chatbot/, kpi_prediction/
+                                 # Superseded precursors, kept in history, not part of the platform
 ```
+
+Each module keeps its own `pyproject.toml`/`uv.lock` (or `requirements.txt` for
+`network_kpi_prediction/`) and its own tests; see each module's own README for how to
+work on it directly.
 
 ---
 
-## ⚡ Quick Start: Customer Churn System
+## ⚡ Run the platform
 
-To run the operational Customer Churn and Retention engine:
-
-```bash
-# Navigate to the churn module
-cd customer_churn_prediction
-
-# Sync dependencies using uv
-uv sync
-
-# Train the champion model using CUDA GPU acceleration:
-uv run customer-churn-prediction train
-
-# Evaluate model performance and generate visualization charts:
-uv run customer-churn-prediction evaluate
-
-# Score an individual customer and generate tailored retention offers:
-uv run customer-churn-prediction recommend --customer-id 0004-TLHLJ
-
-# Export full batch retention campaign targets to CSV:
-uv run customer-churn-prediction batch-recommend --output retention_campaign_targets.csv
-```
-
----
-
-## 📡 Quick Start: Antenna Cell Placement AI
-
-To run the geospatial cell placement optimization engine:
+One command starts every backend and the shared shell:
 
 ```bash
-# Navigate to the antenna placement module
-cd antenna_cell_placement
-
-# Sync dependencies using uv
-uv sync
-
-# Run the end-to-end data cleaning, feature engineering, and model training:
-uv run antenna-placement all
-
-# Predict placement suitability and recommended equipment for any custom coordinate:
-uv run antenna-placement predict --lat 32.88 --lon 13.18
+python3 run_platform.py
 ```
 
----
+The launcher needs only Python and [uv](https://docs.astral.sh/uv/) on PATH: every service runs in its own uv environment, which uv builds the first time it starts.
 
-## 📶 Quick Start: Network KPI & Traffic Prediction Engine
+This starts, each in its own process on its own port:
 
-To run the 3GPP cellular and 4G traffic forecasting pipelines:
+| Service | Port | Needs |
+|---|---|---|
+| GIS API | 8001 | nothing extra |
+| KPI API | 8002 | nothing extra |
+| Mobile summary API | 8511 | nothing extra (feeds the Android app) |
+| Platform shell | 8510 | nothing extra — **open this one** |
+| Churn API | 8000 | `PREPAID_CHURN_CHATBOT_KEY` + `PREPAID_CHURN_COPILOT_KEY` env vars |
+| Churn demo app | 8501 | same as above |
+| Customer chatbot | 8503 | same as above, plus its own `.env` (see `assistants/README.md`) |
+| Employee copilot | 8502 | same as above |
 
-```bash
-# Navigate to the network KPI prediction module
-cd network_kpi_prediction
+Without the two churn keys set, the launcher still starts GIS, KPI and the shell and
+prints which services it skipped — nothing crashes for their absence. Set the keys
+(see [`assistants/README.md`](assistants/README.md)) to bring up the full seven-service
+platform. Press Ctrl+C to stop everything the launcher started.
 
-# Install dependencies
-pip install -r requirements.txt
+### On a server
 
-# Run all automated unit tests (48 tests, 100% pass rate)
-python main.py test
-python -m unittest discover -s kpi_prediction_pipeline_traffic/tests -p "test_*.py" -v
+The shell calls every service at its `127.0.0.1` address, but the embedded churn workbench, chatbot and copilot, and the full planning map, are opened by the visitor's browser, where `127.0.0.1` is the visitor's own computer.
+On a server, serve those four through your reverse proxy, with HTTPS and a password, and tell the shell their public addresses:
 
-# Query real-time dynamic ML prediction with 90% confidence ribbons and SLA checks:
-python main.py predict --carrier 3500 --kpi dl_throughput_mbps --days 7 --live
+| Setting | What the browser opens | Local port |
+|---|---|---|
+| `PLATFORM_CHURN_APP_PUBLIC_URL` | the churn workbench | 8501 |
+| `PLATFORM_CHATBOT_APP_PUBLIC_URL` | the customer chatbot | 8503 |
+| `PLATFORM_COPILOT_APP_PUBLIC_URL` | the employee copilot | 8502 |
+| `PLATFORM_GIS_PUBLIC_URL` | the GIS API, for the full planning map | 8001 |
 
-# Execute the 4G network traffic volume pipeline:
-python main.py --pipeline traffic
-```
+Set them in the environment or in `assistants/.env`, which `run_platform.py` passes to every service.
+Each one left unset falls back to its `127.0.0.1` address, which works only on the machine running the platform.
+Close every port except the proxy's: the shell, the churn workbench and the mobile summary listen on all network interfaces.
+
+Working on one module only? Each module's own Quick Start still works standalone —
+see [`antenna_cell_placement/README.md`](antenna_cell_placement/README.md),
+[`network_kpi_prediction/README.md`](network_kpi_prediction/README.md) and
+[`prepaid_churn/README.md`](prepaid_churn/README.md).
 
 ---
 

@@ -217,10 +217,18 @@ def forecast_future(
     feature_cols: list[str],
     horizon_days: int = 30,
     residual_std: float = 25000.0,
+    exo_cols: list[str] | None = None,
 ) -> pd.DataFrame:
     """Recursively forecasts the next `horizon_days` (e.g., 30 days) beyond the latest date,
 
-    updating lag and rolling features dynamically at each step.
+    updating lag and rolling features dynamically at each step. When `exo_cols` names
+    exogenous network KPIs (from `prepare_multivariate_datasets`), each one's future
+    value is held at its own last real observation for the whole horizon - there is no
+    model here for the radio network's own future state, so a flat carry-forward is
+    the honest choice over inventing a trend. Their `exo_*_lag1`/`exo_*_roll7` features
+    are then rebuilt from that carried-forward series exactly like the target's own
+    lag/rolling features, so a 7-day-out roll7 gradually converges to the carried
+    constant instead of jumping to it immediately.
     """
     print(f"\nForecasting next {horizon_days} days into the future...")
     history_df = full_df.copy().sort_values("date").reset_index(drop=True)
@@ -232,6 +240,10 @@ def forecast_future(
     # Current working series of historical target values
     values_history = list(history_df["kpi_volume_gb"].values)
     dates_history = list(history_df["date"].values)
+
+    exo_cols = exo_cols or []
+    exo_history = {c: list(history_df[c].values) for c in exo_cols if c in history_df.columns}
+    exo_last_real = {c: series[-1] for c, series in exo_history.items()}
 
     for step in range(1, horizon_days + 1):
         next_date = pd.to_datetime(last_date) + pd.Timedelta(days=step)
@@ -307,6 +319,12 @@ def forecast_future(
             "ratio_7_28": ratio_7_28,
         }
 
+        for c, series in exo_history.items():
+            # shift(1): "yesterday" relative to next_date is series[-1] before today's
+            # carried-forward value is appended below.
+            feat_dict[f"exo_{c}_lag1"] = series[-1]
+            feat_dict[f"exo_{c}_roll7"] = float(np.mean(series[-7:]))
+
         X_step = pd.DataFrame([feat_dict])[feature_cols]
         pred_val = float(model.predict(X_step)[0])
 
@@ -327,6 +345,8 @@ def forecast_future(
         # Append to history to feed next step lags
         values_history.append(pred_val)
         dates_history.append(next_date)
+        for c in exo_history:
+            exo_history[c].append(exo_last_real[c])
 
     forecast_df = pd.DataFrame(forecast_records)
     print(f"Future forecast generated from {forecast_df['date'].min().strftime('%Y-%m-%d')} to {forecast_df['date'].max().strftime('%Y-%m-%d')}")

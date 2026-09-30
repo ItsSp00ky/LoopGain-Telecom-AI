@@ -1,0 +1,250 @@
+"""Every network KPI the operator's data holds: live SLA health, per-band forecasts,
+their held-out accuracy, and the 4G traffic volume forecast. Read-only."""
+
+import altair as alt
+import pandas as pd
+import streamlit as st
+from _shared import unavailable, empty_state, show_chart
+from _shared import KPI_API_URL, configure, load_json as get_json, hero
+
+configure("Network KPI", icon="monitoring")
+
+hero(
+    "Network KPIs",
+    "All 10 radio KPIs across the 6 carrier bands - live SLA status, per-band "
+    "forecasts with their own accuracy flag, and 4G traffic volume.",
+    badges=["Accessibility", "Retainability", "Mobility", "Capacity", "Availability"],
+)
+
+health, error = get_json(KPI_API_URL, "/health")
+if error:
+    unavailable('KPI API is unreachable', 'error')
+    st.stop()
+
+catalog, catalog_error = get_json(KPI_API_URL, "/kpis/catalog")
+if catalog_error:
+    unavailable('KPI catalogue unavailable', 'catalog_error')
+    st.stop()
+
+kpis = {k["key"]: k for k in catalog["kpis"]}
+bands = {b["band"]: b for b in catalog["bands"]}
+if not kpis or not bands:
+    empty_state("No KPI series or carrier bands are available yet.")
+    st.stop()
+
+health_tab, forecast_tab, scorecard_tab, traffic_tab = st.tabs([
+    ":material/health_and_safety: KPI health",
+    ":material/query_stats: KPI forecasts",
+    ":material/fact_check: Forecast accuracy",
+    ":material/data_usage: Traffic volume",
+])
+
+# ---------------------------------------------------------------------------
+with health_tab:
+    status, status_error = get_json(KPI_API_URL, "/kpis/status")
+    if status_error:
+        unavailable('KPI status unavailable', 'status_error')
+    elif not status.get("status"):
+        empty_state('No KPI observations are available for this run.')
+    else:
+        rows = pd.DataFrame(status["status"])
+        c1, c2, c3 = st.columns(3)
+        with c1.container(border=True):
+            st.metric("Latest observed day", status["as_of"])
+        with c2.container(border=True):
+            st.metric("KPI readings checked", status["checked"])
+        with c3.container(border=True):
+            st.metric("SLA breaches", status["breaches"])
+
+        rows["kpi_name"] = rows["kpi"].map(lambda k: kpis[k]["name"])
+        rows["band_label"] = rows["band"].map(lambda b: f"{b} MHz")
+        rows["result"] = rows["sla_met"].map({True: "Meets SLA", False: "Breach"}).fillna("No data")
+
+        grid = (
+            alt.Chart(rows)
+            .mark_rect(stroke="white", strokeWidth=2)
+            .encode(
+                x=alt.X("band_label:N", title=None, sort=[f"{b} MHz" for b in bands],
+                        axis=alt.Axis(orient="top", labelAngle=-45, labelOverlap=False, labelFontSize=11)),
+                y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis],
+                        axis=alt.Axis(labelLimit=125, labelOverlap=False, labelFontSize=12)),
+                color=alt.Color(
+                    "result:N",
+                    scale=alt.Scale(domain=["Meets SLA", "Breach", "No data"],
+                                    range=["#12b3a8", "#e0533d", "#c7cfdb"]),
+                    legend=alt.Legend(title=None, orient="top"),
+                ),
+                tooltip=[
+                    alt.Tooltip("kpi_name:N", title="KPI"),
+                    alt.Tooltip("band_label:N", title="Band"),
+                    alt.Tooltip("value:Q", title="Observed", format=",.3f"),
+                    alt.Tooltip("result:N", title="SLA"),
+                ],
+            )
+            .properties(height=36 * len(kpis))
+        )
+        show_chart(grid, width="stretch")
+
+        breaches = rows[rows["sla_met"] == False]  # noqa: E712
+        if not breaches.empty:
+            st.subheader("Breaches to review")
+            table = breaches.assign(
+                SLA=breaches["kpi"].map(lambda k: kpis[k]["sla_description"]),
+                note=breaches.apply(
+                    lambda r: f"{r['sla_value']:,.0f} cell-sec per cell" if r["kpi"] == "downtime_sec" else "",
+                    axis=1),
+            )[["band_label", "kpi_name", "value", "SLA", "note"]]
+            st.dataframe(
+                table,
+                column_config={
+                    "band_label": "Band",
+                    "kpi_name": "KPI",
+                    "value": st.column_config.NumberColumn("Observed", format="localized"),
+                    "SLA": "SLA target",
+                    "note": st.column_config.TextColumn(
+                        "Note", help="Downtime is a band-cluster total; its SLA is per cell."),
+                },
+                hide_index=True, width="stretch",
+            )
+        else:
+            st.success("All checked readings meet their SLA targets.", icon=":material/check_circle:")
+        st.caption(
+            "Straight from the per-band carrier export, no model involved. Cell downtime "
+            "is recorded per band cluster, so it is divided by the band's cell count "
+            "before comparing to its per-cell SLA."
+        )
+
+# ---------------------------------------------------------------------------
+with forecast_tab:
+    left, middle, right = st.columns([2, 2, 1])
+    kpi = left.selectbox("KPI", list(kpis), format_func=lambda k: kpis[k]["name"])
+    band = middle.selectbox("Band", list(bands), format_func=lambda b: bands[b]["name"])
+    days = right.selectbox("Days ahead", [14, 30, 90, 180, 365], index=1)
+
+    forecast, forecast_error = get_json(
+        KPI_API_URL, f"/kpis/forecast/{band}/{kpi}?days={days}&history_days=120", timeout=15.0
+    )
+    if forecast_error:
+        unavailable('No forecast available', 'forecast_error')
+    elif not forecast.get("forecast") or not forecast.get("history"):
+        empty_state('No forecast series is available for this selection.')
+    else:
+        meta = kpis[kpi]
+        if forecast["beats_naive"]:
+            st.success(
+                f"Beat the baseline: {forecast['model']} beat a naive baseline on held-out "
+                f"data (MASE {forecast['test_mase']:.2f}).",
+                icon=":material/verified:",
+            )
+        else:
+            st.warning(
+                f"Trend sketch only: {forecast['model']} did not beat a naive baseline on "
+                f"held-out data (MASE {forecast['test_mase']:.2f}). Treat the line as "
+                "direction, not a prediction.",
+                icon=":material/warning:",
+            )
+
+        m1, m2, m3 = st.columns(3)
+        with m1.container(border=True):
+            st.metric("SLA", meta["sla_description"])
+        with m2.container(border=True):
+            st.metric("Forecast days breaching SLA", f"{forecast['forecast_breach_days']} / {len(forecast['forecast'])}")
+        with m3.container(border=True):
+            st.metric("Held-out R²", f"{forecast['test_r2']:.2f}")
+
+        history = pd.DataFrame(forecast["history"]).assign(series="Observed")
+        future = pd.DataFrame(forecast["forecast"]).assign(series="Forecast")
+        for frame in (history, future):
+            frame["date"] = pd.to_datetime(frame["date"])
+        lines = pd.concat([history[["date", "value", "series"]], future[["date", "value", "series"]]])
+
+        ribbon = alt.Chart(future).mark_area(opacity=0.22, color="#1454a3").encode(
+            x="date:T", y=alt.Y("p05:Q", title=f"{meta['name']} ({meta['unit']})"), y2="p95:Q"
+        )
+        line = alt.Chart(lines).mark_line().encode(
+            x=alt.X("date:T", title=None),
+            y="value:Q",
+            color=alt.Color("series:N", scale=alt.Scale(domain=["Observed", "Forecast"],
+                                                        range=["#0b1f3a", "#1454a3"]),
+                            legend=alt.Legend(title=None, orient="top")),
+            strokeDash=alt.condition(alt.datum.series == "Forecast", alt.value([6, 3]), alt.value([1, 0])),
+        )
+        layers = [ribbon, line]
+        if kpi != "downtime_sec":
+            layers.append(alt.Chart(pd.DataFrame({"sla": [meta["sla_target"]]}))
+                          .mark_rule(color="#e0533d", strokeDash=[4, 4]).encode(y="sla:Q"))
+        show_chart(alt.layer(*layers).properties(height=360), width="stretch")
+        st.caption(
+            "Shaded band: the pipeline's 5th-95th percentile range. Red dashed line: SLA "
+            "target. The gap between the last observed day and the first forecast day "
+            "comes from the forecast run itself, not from this page."
+        )
+
+# ---------------------------------------------------------------------------
+with scorecard_tab:
+    scorecard, scorecard_error = get_json(KPI_API_URL, "/kpis/scorecard")
+    if scorecard_error:
+        unavailable('No forecast accuracy available', 'scorecard_error')
+    elif not scorecard.get("scorecard"):
+        empty_state('No forecast accuracy results are available yet.')
+    else:
+        frame = pd.DataFrame(scorecard["scorecard"])
+        s1, s2 = st.columns(2)
+        with s1.container(border=True):
+            st.metric("Band × KPI forecasts", scorecard["series"])
+        with s2.container(border=True):
+            st.metric("Beat a naive baseline on held-out data", f"{scorecard['beat_naive']} / {scorecard['series']}")
+
+        frame["kpi_name"] = frame["kpi"].map(lambda k: kpis[k]["name"])
+        frame["band_label"] = frame["carrier"].map(lambda b: f"{b} MHz")
+        frame["verdict"] = frame["beats_naive"].map({True: "Beats naive", False: "Trend only"})
+        chart = (
+            alt.Chart(frame)
+            .mark_rect(stroke="white", strokeWidth=2)
+            .encode(
+                x=alt.X("band_label:N", title=None, sort=[f"{b} MHz" for b in bands],
+                        axis=alt.Axis(orient="top", labelAngle=-45, labelOverlap=False, labelFontSize=11)),
+                y=alt.Y("kpi_name:N", title=None, sort=[kpis[k]["name"] for k in kpis],
+                        axis=alt.Axis(labelLimit=125, labelOverlap=False, labelFontSize=12)),
+                color=alt.Color("verdict:N", scale=alt.Scale(domain=["Beats naive", "Trend only"],
+                                                             range=["#12b3a8", "#f0a63c"]),
+                                legend=alt.Legend(title=None, orient="top")),
+                tooltip=["kpi_name", "band_label", "best_model",
+                         alt.Tooltip("test_mase:Q", format=".2f", title="Test MASE"),
+                         alt.Tooltip("test_r2_bench:Q", format=".2f", title="Test R²")],
+            )
+            .properties(height=36 * len(kpis))
+        )
+        show_chart(chart, width="stretch")
+        st.caption(
+            "MASE below 1 means the model's held-out error is smaller than a naive "
+            "baseline's. Availability, connected users and downtime don't beat it on any "
+            "band yet - their forecasts are shown, but labelled as trend sketches."
+        )
+
+# ---------------------------------------------------------------------------
+with traffic_tab:
+    horizon = st.selectbox("Forecast horizon (days)", [7, 14, 30, 60, 90], index=2)
+    result, traffic_error = get_json(KPI_API_URL, f"/traffic/{horizon}day", timeout=30.0)
+    if traffic_error:
+        unavailable('Traffic forecast unavailable', 'traffic_error')
+    elif not result.get("forecast"):
+        empty_state('No traffic forecast is available for this horizon.')
+    else:
+        st.subheader(f"Champion model: {result['champion_model']}")
+        metrics = list(result["test_metrics"].items())
+        for offset in range(0, len(metrics), 3):
+            for column, (name, value) in zip(st.columns(3), metrics[offset:offset + 3]):
+                with column.container(border=True):
+                    st.metric(name, f"{value:,.2f}")
+        st.caption(
+            "Held-out metrics from a chronological split. Uses traffic history only: "
+            "adding the other KPIs as inputs did not improve held-out accuracy."
+        )
+        traffic = pd.DataFrame(result["forecast"])
+        traffic["date"] = pd.to_datetime(traffic["date"])
+        band_area = alt.Chart(traffic).mark_area(opacity=0.22, color="#1454a3").encode(
+            x=alt.X("date:T", title=None), y=alt.Y("lower_95:Q", title="GB"), y2="upper_95:Q"
+        )
+        band_line = alt.Chart(traffic).mark_line(color="#1454a3").encode(x="date:T", y="predicted_kpi_volume_gb:Q")
+        show_chart((band_area + band_line).properties(height=340), width="stretch")

@@ -1,0 +1,19 @@
+[client]
+# Hides Streamlit's developer "Deploy" button and menu from end users.
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#1454a3"
+backgroundColor = "#f4f7fb"
+secondaryBackgroundColor = "#edf2f8"
+textColor = "#16233b"
+font = "sans serif"
+
+[theme.sidebar]
+backgroundColor = "#0b1f3a"
+textColor = "#dce6f5"
+primaryColor = "#12b3a8"
+
+[browser]
+gatherUsageStats = false

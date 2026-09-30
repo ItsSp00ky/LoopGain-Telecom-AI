@@ -61,5 +61,5 @@ network_kpi_prediction/**/models/
 network_kpi_prediction/**/data/splits/
 network_kpi_prediction/**/data/output/
 network_kpi_prediction/**/output/
-network_kpi_prediction/**/data/future_30d_forecast.csv
+network_kpi_prediction/**/data/future_*forecast.csv
 network_kpi_prediction/**/archive/
