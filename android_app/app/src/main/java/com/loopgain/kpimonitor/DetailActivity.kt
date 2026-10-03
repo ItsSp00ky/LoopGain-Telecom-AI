@@ -137,6 +137,8 @@ class DetailActivity : AppCompatActivity() {
         val host = prefs.getString(DashboardActivity.PREF_SERVER_HOST, getString(R.string.default_server_host))
             ?: getString(R.string.default_server_host)
         val urlPath = intent.getStringExtra(EXTRA_PATH).orEmpty()
+        // A reload wipes the chatbot or copilot conversation, so the assistants start with auto-refresh off.
+        if (urlPath == "assistants") liveTrackingSwitch.isChecked = false
         findViewById<View>(R.id.aiAssistantBar).visibility = if (urlPath == "assistants") View.GONE else View.VISIBLE
         findViewById<View>(R.id.aiAssistantButton).setOnClickListener {
             startActivity(Intent(this, DetailActivity::class.java)
