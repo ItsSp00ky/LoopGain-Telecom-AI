@@ -4,6 +4,7 @@ The script for Team Loop Gain's final SIC presentation: a live walk through the 
 It has about 630 spoken words, paced at about 130 words a minute with a few seconds left for each click.
 [`presentation_script.html`](presentation_script.html) is the same script as a rehearsal page with a 5-minute clock; download it and open it in any browser.
 The figures are what the running platform showed on 30 September 2026.
+[`LoopGain_demo_45s.mp4`](LoopGain_demo_45s.mp4) is the 45-second demo video shown with the talk, the laptop and the Android app side by side; [`demo_video/`](demo_video/) says how it was made.
 
 Under each part, "On screen" says what to show and click, and the quoted text is what you say.
 Lines marked "cut if long" can go without losing the story.
