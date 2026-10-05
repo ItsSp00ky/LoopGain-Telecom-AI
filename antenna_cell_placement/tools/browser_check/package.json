@@ -1,0 +1,7 @@
+{
+  "name": "loopgain-submission-browser-check",
+  "private": true,
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

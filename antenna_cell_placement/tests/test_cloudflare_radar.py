@@ -61,6 +61,21 @@ class CloudflareRadarTests(unittest.TestCase):
         self.assertFalse(result.loc[0, "cloudflare_data_available"])
         self.assertEqual(result.loc[0, "cloudflare_priority_factor"], 1.0)
 
+    def test_join_preserves_the_callers_index(self):
+        frame = pd.DataFrame({"municipality_name": ["Tripoli", "Unknown"]}, index=[8, 2])
+        with tempfile.TemporaryDirectory() as directory:
+            result = add_regional_features(frame, self.fixture(directory))
+        pd.testing.assert_index_equal(result.index, frame.index)
+
+    def test_non_finite_demand_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.fixture(directory)
+            frame = pd.read_csv(path)
+            frame.loc[0, "http_requests_share_52w_pct"] = float("inf")
+            frame.to_csv(path, index=False)
+            with self.assertRaisesRegex(ValueError, "non-finite"):
+                load_regional_features(path)
+
 
 if __name__ == "__main__":
     unittest.main()

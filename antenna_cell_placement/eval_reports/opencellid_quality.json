@@ -1,6 +1,6 @@
 {
-  "source": "/home/spooky/code/customer_churn_prediction/antenna_cell_placement/data/606.csv",
-  "as_of_utc": "2026-09-13T12:24:16.529223+00:00",
+  "source": "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\data\\606.csv",
+  "as_of_utc": "2026-09-22T10:05:17.347062+00:00",
   "input_rows": 1406,
   "rejected_rows": 0,
   "duplicate_identity_rows": 0,
@@ -23,5 +23,5 @@
   "cells_within_50m_of_existing_site": 37,
   "cells_over_3km_from_existing_site": 337,
   "recommendations_reviewed": 50,
-  "recommendations_near_recent_cells": 11
+  "recommendations_near_recent_cells": 12
 }

@@ -1,0 +1,3 @@
+Model Architecture,Features,Test-MAE,Test-RMSE,Test-WAPE (%),Test-R2
+Univariate Champion (Random Forest),29,23127.45,31527.03,2.22,0.5109
+Multivariate Champion (XGBoost Regressor),49,24105.88,28664.88,2.34,0.2791

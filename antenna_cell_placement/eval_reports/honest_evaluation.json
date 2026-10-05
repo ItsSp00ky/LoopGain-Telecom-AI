@@ -1,0 +1,77 @@
+{
+  "suitability_model": {
+    "n_samples": 4615,
+    "n_sites": 2115,
+    "random_cv": {
+      "roc_auc": 0.9859402364066193,
+      "average_precision": 0.9776709138179548,
+      "accuracy": 0.952546045503792,
+      "f1": 0.9488676161568994,
+      "n": 4615,
+      "n_positive": 2115
+    },
+    "municipality_grouped_cv": {
+      "roc_auc": 0.9827640661938534,
+      "average_precision": 0.9696305404574308,
+      "accuracy": 0.9495124593716143,
+      "f1": 0.9457761228764254,
+      "n": 4615,
+      "n_positive": 2115,
+      "fold_roc_auc": [
+        0.9596974700601644,
+        0.9847815557492977,
+        0.9887460110651636,
+        0.981640494410632,
+        0.9830077862298807
+      ]
+    },
+    "held_out_test": {
+      "municipalities": [
+        "Wadi Ashshati",
+        "Almarj",
+        "Derna",
+        "Ejdabia",
+        "Sebha",
+        "Nalut",
+        "Al Jabal Al Akhdar",
+        "Tobruk",
+        "Aljfara"
+      ],
+      "roc_auc": 0.9844130201463251,
+      "average_precision": 0.9713086326470588,
+      "accuracy": 0.9447895100069013,
+      "f1": 0.9267399267399268,
+      "n": 1449,
+      "n_positive": 533,
+      "population_only_baseline_roc_auc": 0.9588634818158729
+    },
+    "hard_negative_stress_test": {
+      "n_real_sites": 533,
+      "n_hard_negatives": 1500,
+      "roc_auc": 0.7238449030644153,
+      "population_only_roc_auc": 0.5674715447154471,
+      "mean_score_real_sites": 0.9223210960035695,
+      "mean_score_hard_negatives": 0.8585523664625097,
+      "hard_negatives_scored_above_0_5": 0.926
+    }
+  },
+  "equipment_model": {
+    "class_counts": {
+      "Urban_HighCapacity_Macro": 1145,
+      "Suburban_Standard_Macro": 719,
+      "Micro_Cell_Hotspot": 188,
+      "Rural_Coverage_Macro": 63
+    },
+    "majority_class_baseline_accuracy": 0.541371158392435,
+    "feature_side_rules_only_accuracy": 0.7867612293144208,
+    "in_sample_accuracy_as_shipped": 0.8955082742316784,
+    "random_cv": {
+      "accuracy": 0.7957446808510639,
+      "macro_f1": 0.7443232244957505
+    },
+    "municipality_grouped_cv": {
+      "accuracy": 0.7839243498817967,
+      "macro_f1": 0.7297101198027863
+    }
+  }
+}

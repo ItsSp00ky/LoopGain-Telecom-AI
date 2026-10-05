@@ -1,0 +1,440 @@
+{
+  "policy": "CellMapper explicit site IDs join site references. Phone measurements and BeaconDB are review context only. Duplicate derived exports are not additional evidence.",
+  "sources": {
+    "cellmapper": {
+      "input_rows": 2528,
+      "retained_rows": 2494,
+      "rejected_rows": 34,
+      "duplicate_rows": 0,
+      "rejections": [
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 325,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 326,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 471,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 472,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 915,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 916,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 917,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 918,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 919,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 920,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 929,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 930,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 931,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 932,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 933,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 934,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1547,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1548,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1549,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1550,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1551,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1573,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1574,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1575,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1576,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1577,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1578,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1579,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1827,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1828,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1829,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 1830,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 2387,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "source_row": 2388,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        }
+      ],
+      "files": [
+        {
+          "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\cellmapper\\cellmapper_libya_antennas.csv",
+          "sha256": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134"
+        }
+      ],
+      "explicit_site_identities": 538,
+      "source_verified_rows": 1005
+    },
+    "phone_measurements": {
+      "input_rows": 11335,
+      "retained_rows": 7713,
+      "rejected_rows": 0,
+      "duplicate_rows": 3622,
+      "rejections": [],
+      "files": [
+        {
+          "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\2026-09-26-17-13-40.csv",
+          "sha256": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e"
+        },
+        {
+          "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\2026-09-26-17-13-48.csv",
+          "sha256": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d"
+        },
+        {
+          "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\2026-09-28-15-41-22.csv",
+          "sha256": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a"
+        }
+      ],
+      "review_eligible_rows": 4874,
+      "radio_counts": {
+        "UMTS": 5379,
+        "LTE": 2254,
+        "GSM": 80
+      },
+      "operator_counts": {
+        "0": 4520,
+        "1": 3184,
+        "3": 9
+      }
+    },
+    "beacondb": {
+      "input_rows": 534,
+      "retained_rows": 531,
+      "rejected_rows": 3,
+      "duplicate_rows": 0,
+      "rejections": [
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\beacondb\\beacondb_libya_antennas.csv",
+          "source_row": 20,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\beacondb\\beacondb_libya_antennas.csv",
+          "source_row": 21,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        },
+        {
+          "source_file": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\beacondb\\beacondb_libya_antennas.csv",
+          "source_row": 22,
+          "rejection_reason": "invalid_or_outside_libya_coordinate;"
+        }
+      ],
+      "files": [
+        {
+          "path": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_collected_antennas\\beacondb\\beacondb_libya_antennas.csv",
+          "sha256": "655ac05f80f3cb53d31e53d223d6d3233b578764b93262aee49f1d80292ed210"
+        }
+      ]
+    }
+  },
+  "opencellid": {
+    "source": "Merged declared OpenCellID exports",
+    "as_of_utc": "2026-09-29T19:27:11.767169+00:00",
+    "input_rows": 2887,
+    "rejected_rows": 13,
+    "duplicate_identity_rows": 1400,
+    "retained_cells": 1474,
+    "operator_counts": {
+      "Libyana": 977,
+      "Al-Madar": 494,
+      "Unknown": 3
+    },
+    "radio_counts": {
+      "UMTS": 722,
+      "LTE": 495,
+      "GSM": 257
+    },
+    "invalid_timestamp_cells": 0,
+    "review_eligible_cells": 1285,
+    "unexpected_changeable_values": 0,
+    "unexpected_average_signal_values": 0,
+    "review_policy": "At least 2 samples, valid timestamps, updated within 730 days; proximity is not proof of coverage.",
+    "column_semantics": {
+      "unit": "PSC for UMTS, PCI for LTE; empty/not applicable for GSM and CDMA.",
+      "range": "Estimated cell range in meters; not a coverage radius or positional accuracy.",
+      "changeable": "Deprecated and excluded from decisions.",
+      "averageSignal": "Deprecated and excluded from decisions."
+    },
+    "spatial_scope": "Supplied OCHA Libya admin-0 boundary.",
+    "attribution": "OpenCellID https://opencellid.org/; https://docs.opencellid.org/docs/downloads/database-format",
+    "sources": [
+      {
+        "source": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\606.csv",
+        "as_of_utc": "2026-09-29T19:27:11.531136+00:00",
+        "input_rows": 1406,
+        "rejected_rows": 6,
+        "duplicate_identity_rows": 0,
+        "retained_cells": 1400,
+        "operator_counts": {
+          "Libyana": 903,
+          "Al-Madar": 494,
+          "Unknown": 3
+        },
+        "radio_counts": {
+          "UMTS": 722,
+          "LTE": 422,
+          "GSM": 256
+        },
+        "invalid_timestamp_cells": 0,
+        "review_eligible_cells": 1217,
+        "unexpected_changeable_values": 0,
+        "unexpected_average_signal_values": 0,
+        "review_policy": "At least 2 samples, valid timestamps, updated within 730 days; proximity is not proof of coverage.",
+        "column_semantics": {
+          "unit": "PSC for UMTS, PCI for LTE; empty/not applicable for GSM and CDMA.",
+          "range": "Estimated cell range in meters; not a coverage radius or positional accuracy.",
+          "changeable": "Deprecated and excluded from decisions.",
+          "averageSignal": "Deprecated and excluded from decisions."
+        },
+        "spatial_scope": "Supplied OCHA Libya admin-0 boundary.",
+        "attribution": "OpenCellID https://opencellid.org/; https://docs.opencellid.org/docs/downloads/database-format"
+      },
+      {
+        "source": "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\data\\new_data\\libya_antennas\\opencellid_libya.csv",
+        "as_of_utc": "2026-09-29T19:27:11.628180+00:00",
+        "input_rows": 1481,
+        "rejected_rows": 7,
+        "duplicate_identity_rows": 0,
+        "retained_cells": 1474,
+        "operator_counts": {
+          "Libyana": 977,
+          "Al-Madar": 494,
+          "Unknown": 3
+        },
+        "radio_counts": {
+          "UMTS": 722,
+          "LTE": 495,
+          "GSM": 257
+        },
+        "invalid_timestamp_cells": 0,
+        "review_eligible_cells": 1285,
+        "unexpected_changeable_values": 0,
+        "unexpected_average_signal_values": 0,
+        "review_policy": "At least 2 samples, valid timestamps, updated within 730 days; proximity is not proof of coverage.",
+        "column_semantics": {
+          "unit": "PSC for UMTS, PCI for LTE; empty/not applicable for GSM and CDMA.",
+          "range": "Estimated cell range in meters; not a coverage radius or positional accuracy.",
+          "changeable": "Deprecated and excluded from decisions.",
+          "averageSignal": "Deprecated and excluded from decisions."
+        },
+        "spatial_scope": "Supplied OCHA Libya admin-0 boundary.",
+        "attribution": "OpenCellID https://opencellid.org/; https://docs.opencellid.org/docs/downloads/database-format"
+      }
+    ],
+    "rejected_preview": [
+      {
+        "radio": "GSM",
+        "mcc": "606",
+        "net": "1",
+        "area": "1112",
+        "cell": "10881",
+        "unit": "-1",
+        "lon": "20.0711",
+        "lat": "32.108",
+        "range": "1000",
+        "samples": "7",
+        "changeable": "1",
+        "created": "1743397458",
+        "updated": "1743481322",
+        "averageSignal": "0",
+        "rejection_reason": "Invalid identity, non-606 MCC, invalid coordinate, or outside supplied Libya boundary"
+      },
+      {
+        "radio": "GSM",
+        "mcc": "606",
+        "net": "1",
+        "area": "1112",
+        "cell": "10723",
+        "unit": "-1",
+        "lon": "20.0717",
+        "lat": "32.107",
+        "range": "1000",
+        "samples": "6",
+        "changeable": "1",
+        "created": "1743397518",
+        "updated": "1743481321",
+        "averageSignal": "0",
+        "rejection_reason": "Invalid identity, non-606 MCC, invalid coordinate, or outside supplied Libya boundary"
+      },
+      {
+        "radio": "GSM",
+        "mcc": "606",
+        "net": "1",
+        "area": "1112",
+        "cell": "19604",
+        "unit": "-1",
+        "lon": "20.0671",
+        "lat": "32.1106",
+        "range": "1000",
+        "samples": "11",
+        "changeable": "1",
+        "created": "1743397538",
+        "updated": "1743481322",
+        "averageSignal": "0",
+        "rejection_reason": "Invalid identity, non-606 MCC, invalid coordinate, or outside supplied Libya boundary"
+      },
+      {
+        "radio": "GSM",
+        "mcc": "606",
+        "net": "0",
+        "area": "4310",
+        "cell": "10073",
+        "unit": "-1",
+        "lon": "20.0623",
+        "lat": "32.1114",
+        "range": "1000",
+        "samples": "7",
+        "changeable": "1",
+        "created": "1743397588",
+        "updated": "1743481322",
+        "averageSignal": "0",
+        "rejection_reason": "Invalid identity, non-606 MCC, invalid coordinate, or outside supplied Libya boundary"
+      },
+      {
+        "radio": "GSM",
+        "mcc": "606",
+        "net": "1",
+        "area": "1112",
+        "cell": "11331",
+        "unit": "-1",
+        "lon": "20.0602",
+        "lat": "32.1088",
+        "range": "1000",
+        "samples": "10",
+        "changeable": "1",
+        "created": "1743397749",
+        "updated": "1743481322",
+        "averageSignal": "0",
+        "rejection_reason": "Invalid identity, non-606 MCC, invalid coordinate, or outside supplied Libya boundary"
+      }
+    ]
+  },
+  "limitations": [
+    "Boundary exclusions include coastal points outside the supplied polygon; they do not prove a false source record.",
+    "CellMapper contributor verification is not an independent engineering survey.",
+    "Phone dBm summaries are separated by RAT; generic dbm is not assumed to be RSRP.",
+    "BeaconDB and OpenCellID may share upstream observations and are not independent confirmations."
+  ]
+}

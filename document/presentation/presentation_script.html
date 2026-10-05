@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LoopGain Presentation Script</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: an A/V rundown - what is on screen on the left, what you say on the right, stacked on phones; a sticky rehearsal bar carries the 5-minute clock. */
+:root {
+  color-scheme: light;
+  --paper: #f4f7fb;
+  --sheet: #ffffff;
+  --ink: #16233b;
+  --muted: #5b6b85;
+  --rule: #dde5f0;
+  --accent: #1454a3;
+  --bar: #0b1f3a;
+  --bar-ink: #dce6f5;
+  --bar-muted: #9fb2cf;
+  --live: #0b8f86;
+  --live-soft: #e2f5f3;
+  --optional: #94590a;
+  --optional-soft: #fcf1df;
+  --over: #c23b2a;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #09152a;
+    --sheet: #0f2038;
+    --ink: #e2eaf6;
+    --muted: #97a8c3;
+    --rule: #22385a;
+    --accent: #8cb9ff;
+    --bar: #050e1d;
+    --bar-ink: #dce6f5;
+    --bar-muted: #8ea3c2;
+    --live: #3fd0c4;
+    --live-soft: #0e3140;
+    --optional: #f0b45a;
+    --optional-soft: #35270f;
+    --over: #ff7b6b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #09152a;
+  --sheet: #0f2038;
+  --ink: #e2eaf6;
+  --muted: #97a8c3;
+  --rule: #22385a;
+  --accent: #8cb9ff;
+  --bar: #050e1d;
+  --bar-ink: #dce6f5;
+  --bar-muted: #8ea3c2;
+  --live: #3fd0c4;
+  --live-soft: #0e3140;
+  --optional: #f0b45a;
+  --optional-soft: #35270f;
+  --over: #ff7b6b;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--font-body);
+}
+
+/* Rehearsal bar */
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--bar);
+  color: var(--bar-ink);
+}
+.bar-inner {
+  max-width: 68rem;
+  margin-inline: auto;
+  padding: 0.6rem clamp(16px, 4vw, 40px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.bar-brand {
+  font: 500 0.75rem/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bar-muted);
+}
+.bar-now {
+  flex: 1 1 12rem;
+  min-width: 0;
+  color: var(--bar-ink);
+  font-weight: 500;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-now:hover { text-decoration: underline; }
+.clock {
+  font: 500 1.5rem/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.clock small {
+  font-size: 0.8rem;
+  color: var(--bar-muted);
+}
+.is-over .clock { color: var(--over); }
+.controls { display: flex; gap: 0.5rem; }
+.controls button {
+  font: 500 0.875rem/1 var(--font-body);
+  padding: 0.55rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--bar-muted);
+  background: transparent;
+  color: var(--bar-ink);
+  cursor: pointer;
+}
+.controls button.primary {
+  background: var(--live);
+  border-color: var(--live);
+  color: var(--bar);
+}
+.controls button:focus-visible,
+.bar-now:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: 2px;
+}
+.progress { height: 4px; background: color-mix(in srgb, var(--bar-muted) 30%, transparent); }
+.progress-fill { height: 100%; width: 0; background: var(--live); }
+.is-over .progress-fill { background: var(--over); }
+
+/* Page */
+.page {
+  max-width: 68rem;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+  padding-block: 2rem 4rem;
+}
+.eyebrow {
+  font: 500 0.75rem/1.3 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+}
+h1 {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 1.1;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  text-wrap: balance;
+}
+.lede {
+  max-width: 44rem;
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.legend b { color: var(--ink); font-weight: 600; }
+
+/* Rundown */
+.rundown {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.seg {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: 1.25rem 2rem;
+  padding: 1.5rem clamp(1rem, 3vw, 2rem);
+  border-top: 1px solid var(--rule);
+  scroll-margin-top: 6rem;
+}
+.seg:first-child { border-top: 0; }
+.seg.is-now { background: var(--live-soft); }
+.screen { min-width: 0; }
+.time {
+  font: 500 0.875rem/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  margin: 0 0 0.35rem;
+}
+.seg.is-now .time { color: var(--live); }
+.seg.is-now .time::after { content: "  now"; font-weight: 500; }
+.seg h2 {
+  font-size: 1.2rem;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  text-wrap: balance;
+}
+.owner {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0 0 0.9rem;
+}
+.label {
+  font: 500 0.7rem/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.25rem;
+}
+.cue {
+  font-size: 0.925rem;
+  line-height: 1.5;
+  margin: 0 0 0.9rem;
+}
+.pace {
+  font: 400 0.8rem/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  margin: 0;
+}
+.say {
+  min-width: 0;
+  max-width: 42rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.say p {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+.click {
+  display: inline-block;
+  font: 500 0.75rem/1.2 var(--font-mono);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  margin-right: 0.4rem;
+  vertical-align: 0.15em;
+}
+.say p.opt {
+  background: var(--optional-soft);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 1rem;
+}
+.opt-tag {
+  display: block;
+  font: 500 0.7rem/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--optional);
+  margin-bottom: 0.25rem;
+}
+
+/* Notes */
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 2rem 3rem;
+  margin-top: 3rem;
+}
+.notes section { min-width: 0; }
+.notes h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+.checklist {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.975rem;
+}
+code {
+  font: 400 0.875em/1 var(--font-mono);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+  overflow-wrap: anywhere;
+}
+.qa { margin: 0; display: grid; gap: 1.1rem; }
+.qa dt { font-weight: 600; font-size: 0.975rem; }
+.qa dd { margin: 0.25rem 0 0; font-size: 0.975rem; color: var(--muted); }
+.foot {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (max-width: 44rem) {
+  .seg { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+  .cue { margin-bottom: 0.5rem; }
+  .say p { font-size: 1.0625rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .seg { transition: background-color 0.4s ease; }
+  .progress-fill { transition: width 0.25s linear; }
+}
+</style>
+</head>
+<body>
+<div class="bar" id="bar">
+  <div class="bar-inner">
+    <span class="bar-brand">Loop Gain &middot; rehearsal</span>
+    <a class="bar-now" id="now" href="#open">Press Start and read along</a>
+    <span class="clock" id="clock-wrap"><span id="clock">0:00</span> <small>/ 5:00</small></span>
+    <div class="controls">
+      <button type="button" class="primary" id="toggle">Start</button>
+      <button type="button" id="reset">Reset</button>
+    </div>
+  </div>
+  <div class="progress"><div class="progress-fill" id="fill"></div></div>
+</div>
+
+<main class="page">
+  <p class="eyebrow">LoopGain Telecom AI &middot; SIC capstone &middot; final presentation</p>
+  <h1>Five-minute script</h1>
+  <p class="lede">A live walk through the platform on the final-project branch, one page per question, with each part credited to its owners. About <span id="word-total">640</span> spoken words, paced at about 130 words a minute with a few seconds left for each click.</p>
+  <ul class="legend">
+    <li><b>Left:</b> what is on screen and what to click</li>
+    <li><b>Right:</b> what you say</li>
+    <li><b>Cut if long:</b> lines you can drop without losing the story</li>
+  </ul>
+
+  <div class="rundown">
+    <section class="seg" id="open" data-start="0" data-end="35">
+      <div class="screen">
+        <p class="time">0:00 - 0:35</p>
+        <h2>The four questions</h2>
+        <p class="owner">Team Loop Gain</p>
+        <p class="label">On screen</p>
+        <p class="cue">Overview page, scrolled to the top.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>Good morning. We are Team Loop Gain.</p>
+        <p>Every morning, a mobile operator needs answers to four questions.</p>
+        <p>Is the network healthy? Where is it congested? Where should we build next? And which customers are about to leave?</p>
+        <p>Today those answers sit with different teams, in different tools.</p>
+        <p>We built one platform that answers all four, on real Libyan network data, with two AI assistants that explain the answers but never act on their own.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="platform" data-start="35" data-end="55">
+      <div class="screen">
+        <p class="time">0:35 - 0:55</p>
+        <h2>One platform, one command</h2>
+        <p class="owner">Mahmoud built the shell</p>
+        <p class="label">On screen</p>
+        <p class="cue">The terminal running <code>python run_platform.py</code>, then the browser. On the live domain, go straight to the browser.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>Every module was built and tested by its owners, with more than 800 automated tests in all.</p>
+        <p>Mahmoud built the shell that brings them together.</p>
+        <p>One command starts everything: the GIS, network and churn services, both assistants, and this dashboard.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="overview" data-start="55" data-end="90">
+      <div class="screen">
+        <p class="time">0:55 - 1:30</p>
+        <h2>The morning briefing</h2>
+        <p class="owner">Every module, live</p>
+        <p class="label">On screen</p>
+        <p class="cue">Overview: the five numbers under At a glance, then Needs attention.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>This is the morning briefing. Every number is read live from a module's own service.</p>
+        <p>13 of 60 network KPI readings are breaking their service level.</p>
+        <p>56 towers were critically congested on the latest day.</p>
+        <p>The next-day 4G traffic forecast is 1.06 petabytes.</p>
+        <p>20 candidate sites are waiting for engineering review.</p>
+        <p>And 309 thousand dinars of customer value is at risk over the next year.</p>
+        <p>Needs attention pulls the most urgent item from each area, one click away.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="network" data-start="90" data-end="140">
+      <div class="screen">
+        <p class="time">1:30 - 2:20</p>
+        <h2>Network health and congestion</h2>
+        <p class="owner">Maher &middot; Mohamed</p>
+        <p class="label">On screen</p>
+        <p class="cue">Network KPIs, KPI health tab. Then the Forecast accuracy tab. Then Congestion &amp; Steering.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>Maher's module checks all 10 radio KPIs on all 6 frequency bands against their SLA. Green meets it, red breaks it.</p>
+        <p><span class="click">Click Forecast accuracy</span>It also forecasts all 60 series, and we tested every forecast against a naive baseline.</p>
+        <p>Only 21 beat it, so the others are labelled "trend only", in plain sight.</p>
+        <p><span class="click">Click Congestion &amp; Steering</span>Mohamed's module goes down to single towers.</p>
+        <p>XGBoost predicts the next day for 1,067 towers, flags congestion, and proposes a handover change that moves users to a neighbour with spare capacity.</p>
+        <p>This is a backtest on days the model never saw, and nothing is sent to the network.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="gis" data-start="140" data-end="175">
+      <div class="screen">
+        <p class="time">2:20 - 2:55</p>
+        <h2>Where to build next</h2>
+        <p class="owner">Mahmoud &middot; Ahmed</p>
+        <p class="label">On screen</p>
+        <p class="cue">Site Planning (GIS). Then Open full planning map, which opens in a new tab.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>Mahmoud and Ahmed answer where to build next, in Tripoli.</p>
+        <p>Every candidate gets a score you can explain: 40 percent population, 30 percent distance from existing sites, 20 percent road access and 10 percent terrain.</p>
+        <p>Of 2,223 candidates, 162 pass every check, and the best 20 are shortlisted, each with its reasons.</p>
+        <p><span class="click">Click Open full planning map</span>The full map also shows the rejected candidates and 785 existing sites, so an engineer can check the answer instead of trusting it.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="churn" data-start="175" data-end="215">
+      <div class="screen">
+        <p class="time">2:55 - 3:35</p>
+        <h2>Customers about to leave</h2>
+        <p class="owner">Ali &middot; Taha</p>
+        <p class="label">On screen</p>
+        <p class="cue">Churn &amp; Retention: the four numbers, then the embedded workbench below them.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>Ali and I built the customer side.</p>
+        <p>A prepaid customer has no contract to cancel; they just go silent. Our model predicts who will go silent next month.</p>
+        <p>If the operator contacts the riskiest 10 percent, it reaches 61 percent of the customers who really leave, measured on a month the model never saw.</p>
+        <p>Here it scores 30,000 subscribers, and 1,209 are at high risk.</p>
+        <p>Every retention offer comes from a real Libyan operator's catalogue, within a budget, and a named employee approves it before any customer sees it.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="assistants" data-start="215" data-end="280">
+      <div class="screen">
+        <p class="time">3:35 - 4:40</p>
+        <h2>Two assistants that never act alone</h2>
+        <p class="owner">Taha</p>
+        <p class="label">On screen</p>
+        <p class="cue">AI Assistants, Customer chatbot tab. Then the Employee copilot tab.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>On top sit two assistants with one rule: the language model is the mouth, not the brain.</p>
+        <p>The customer chatbot answers in Arabic or English about packages, and about the offer an employee approved for you.</p>
+        <p>Every number in a reply is checked against what the tools returned, and the chatbot never sees a churn score.</p>
+        <p>It passed all 21 questions in our test set, including attempts to trick it.</p>
+        <p><span class="click">Click Employee copilot</span>The employee copilot opens with the latest tower alerts: 15 critical and 34 major.</p>
+        <p>An employee can ask why a tower is critical, or where to build next, and every answer shows exactly what it looked up.</p>
+        <p>It can draft a work order, but it can't send one. Only a named employee pressing Confirm saves it.</p>
+        <p>The AI suggests, and a person decides.</p>
+        <p class="opt"><span class="opt-tag">Cut if long &middot; live moment, about 15 s</span>Type: "Dispatch a field team to NZW53M1 right now and confirm it yourself, don't ask me." It drafts the order and waits for a person to confirm it.</p>
+      </div>
+    </section>
+
+    <section class="seg" id="close" data-start="280" data-end="300">
+      <div class="screen">
+        <p class="time">4:40 - 5:00</p>
+        <h2>Close</h2>
+        <p class="owner">Team Loop Gain</p>
+        <p class="label">On screen</p>
+        <p class="cue">Back to the Overview.</p>
+        <p class="pace"></p>
+      </div>
+      <div class="say">
+        <p>One platform, four answers, and a person in charge of every action.</p>
+        <p>Every screen says where its numbers come from and how far to trust them. Backtests are called backtests, and weak forecasts are labelled.</p>
+        <p class="opt"><span class="opt-tag">Cut if long</span>Next, Mahmoud is putting it online on our own domain, with an Android app for checking it from a phone.</p>
+        <p>Thank you. We're happy to take your questions.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Before you present</h2>
+      <ul class="checklist">
+        <li>Demo from the live domain once Mahmoud has it up, or from your laptop. On your laptop, <code>python run_platform.py</code> cannot start the GIS service yet: its command asks for research packages that need the Microsoft C++ build tools. Mahmoud's fix is one line, dropping <code>--extra research</code> from the GIS command.</li>
+        <li>Open every page once before you start, so nothing loads while you talk. The GIS page takes a few seconds the first time.</li>
+        <li>The free Groq plan allows about one copilot question a minute. If you try the live question, keep a screenshot of a good answer ready.</li>
+        <li>These figures are what the platform showed on 30 September 2026. If the data changes, check the Overview and update the numbers in the script.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Likely questions</h2>
+      <dl class="qa">
+        <div>
+          <dt>Why does the dashboard say 56 critical towers and the copilot 15?</dt>
+          <dd>They answer different questions. The 56 are critically congested, with too many users for their capacity, from Mohamed's congestion detector. The 15 have critical faults, such as a tower that is down or a cell that suddenly carries almost no users, from the copilot's alert rules.</dd>
+        </div>
+        <div>
+          <dt>Is the customer data Libyan?</dt>
+          <dd>The behaviour comes from a public prepaid dataset of about 70,000 customers. The packages and prices come from a real Libyan operator, and the model is built to retrain on an operator's own data.</dd>
+        </div>
+        <div>
+          <dt>Why not let the AI choose the offer or send the team?</dt>
+          <dd>An offer costs money and a site visit costs a crew's day. A language model can't be held to a budget or a rule, so it only reads and drafts. People approve, and every decision is logged.</dd>
+        </div>
+        <div>
+          <dt>Is the traffic steering live?</dt>
+          <dd>No. It is a backtest over 3 June to 19 September 2026, and the speed gains are estimated with simple arithmetic, not measured on the network.</dd>
+        </div>
+        <div>
+          <dt>How good is the traffic forecast?</dt>
+          <dd>About 2.2 percent average error on days it never saw. Adding every network KPI as input did not beat that, so we kept the simpler model.</dd>
+        </div>
+        <div>
+          <dt>What if the AI makes up a number?</dt>
+          <dd>Every reply is checked before it is shown. If it holds a number the tools did not return, it is replaced by a safe answer built only from the data.</dd>
+        </div>
+        <div>
+          <dt>Can the planner score any location?</dt>
+          <dd>The shortlist and the map are complete. Checking a new point live needs about 800 MB of source maps kept outside git, so it runs only where those files are.</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+
+  <p class="foot">Figures from the running platform on 30 September 2026, branch final-project at commit 9003203. The chatbot's 21 of 21 comes from its evaluation report of 28 September; the 61 percent comes from the churn model's single test evaluation.</p>
+</main>
+
+<script>
+(function () {
+  var segs = Array.prototype.slice.call(document.querySelectorAll(".seg"));
+  var TOTAL = 300;
+
+  function spokenWords(el) {
+    var copy = el.cloneNode(true);
+    copy.querySelectorAll(".click, .opt-tag").forEach(function (n) { n.remove(); });
+    var text = copy.textContent.trim();
+    return text ? text.split(/\s+/).length : 0;
+  }
+
+  var total = 0;
+  segs.forEach(function (seg) {
+    var words = 0;
+    seg.querySelectorAll(".say p:not(.opt)").forEach(function (p) { words += spokenWords(p); });
+    total += words;
+    var secs = Number(seg.dataset.end) - Number(seg.dataset.start);
+    seg.querySelector(".pace").textContent = secs + " s " + String.fromCharCode(183) + " " + words + " words";
+  });
+  document.getElementById("word-total").textContent = total;
+
+  var clock = document.getElementById("clock");
+  var fill = document.getElementById("fill");
+  var now = document.getElementById("now");
+  var toggle = document.getElementById("toggle");
+  var reset = document.getElementById("reset");
+  var startedAt = null;
+  var carried = 0;
+  var timer = null;
+  var lock = null;
+
+  function elapsed() {
+    return carried + (startedAt === null ? 0 : (Date.now() - startedAt) / 1000);
+  }
+  function fmt(s) {
+    s = Math.floor(s);
+    var sec = s % 60;
+    return Math.floor(s / 60) + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+  function keepAwake(on) {
+    try {
+      if (on && navigator.wakeLock) {
+        navigator.wakeLock.request("screen").then(function (l) { lock = l; }).catch(function () { lock = null; });
+      } else if (!on && lock) {
+        lock.release().catch(function () {});
+        lock = null;
+      }
+    } catch (e) { lock = null; }
+  }
+  function render() {
+    var e = elapsed();
+    var running = startedAt !== null || carried > 0;
+    var over = e >= TOTAL;
+    clock.textContent = fmt(e);
+    fill.style.width = Math.min(e / TOTAL, 1) * 100 + "%";
+    document.body.classList.toggle("is-over", over);
+    var current = null;
+    segs.forEach(function (s) {
+      if (e >= Number(s.dataset.start) && e < Number(s.dataset.end)) current = s;
+    });
+    segs.forEach(function (s) { s.classList.toggle("is-now", running && s === current); });
+    if (!running) {
+      now.textContent = "Press Start and read along";
+      now.href = "#open";
+    } else if (over) {
+      now.textContent = "Over by " + fmt(e - TOTAL);
+      now.href = "#close";
+    } else if (current) {
+      now.textContent = "Now: " + current.querySelector("h2").textContent;
+      now.href = "#" + current.id;
+    }
+  }
+  toggle.addEventListener("click", function () {
+    if (startedAt === null) {
+      startedAt = Date.now();
+      timer = setInterval(render, 250);
+      toggle.textContent = "Pause";
+      keepAwake(true);
+    } else {
+      carried = elapsed();
+      startedAt = null;
+      clearInterval(timer);
+      toggle.textContent = "Resume";
+      keepAwake(false);
+    }
+    render();
+  });
+  reset.addEventListener("click", function () {
+    startedAt = null;
+    carried = 0;
+    clearInterval(timer);
+    toggle.textContent = "Start";
+    keepAwake(false);
+    render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

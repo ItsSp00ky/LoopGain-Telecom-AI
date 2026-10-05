@@ -6,6 +6,7 @@ imputes operators, and clusters antennas into Physical Sites.
 
 import json
 import sqlite3
+from collections import deque
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
@@ -28,10 +29,25 @@ from antenna_cell_placement.config import (
 
 def load_raw_records_from_sqlite(db_path: Path = RAW_SQLITE_PATH) -> pd.DataFrame:
     """Load and parse all raw source records from SQLite database."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
     cur = conn.cursor()
     cur.execute("SELECT source_record_id, mcc, mnc, rat, raw_json FROM source_records")
     rows = cur.fetchall()
+    confirmed_ids = set()
+    tables = {r[0] for r in cur.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if {"imports", "source_responses"} <= tables:
+        confirmed_ids = {r[0] for r in cur.execute(
+            """SELECT r.source_record_id FROM source_records r
+               JOIN source_responses s ON r.response_id = s.response_id
+               JOIN imports i ON s.import_id = i.import_id
+               WHERE i.import_id = 1 AND i.source_name = 'cells.json'
+               AND i.source_sha256 = ? AND r.rat = 'LTE'
+               AND r.mcc IS NULL AND r.mnc IS NULL""",
+            ("a099aa826f11a80e7f4dc23405f70dff7bac9327fb82e129acb61fef0d1c2b2a",),
+        )}
+        if confirmed_ids and len(confirmed_ids) != 645:
+            conn.close()
+            raise ValueError("Historical Al-Madar import changed: expected 645 records")
     conn.close()
 
     records = []
@@ -54,6 +70,7 @@ def load_raw_records_from_sqlite(db_path: Path = RAW_SQLITE_PATH) -> pd.DataFram
             "mcc": str(raw_mcc) if raw_mcc is not None else None,
             "mnc": str(raw_mnc) if raw_mnc is not None else None,
             "operator": raw_operator,
+            "owner_confirmed_almadar": rid in confirmed_ids,
             "rat": rat,
             "rat_subtype": data.get("RATSubType", rat),
             "site_id": site_id,
@@ -123,6 +140,9 @@ def deduplicate_radio_towers(df_raw: pd.DataFrame) -> pd.DataFrame:
             "mcc": mcc_val,
             "mnc": mnc_val,
             "raw_operator": op_val,
+            "owner_confirmed_almadar": bool(group.get(
+                "owner_confirmed_almadar", pd.Series(False, index=group.index)
+            ).all()),
             "latitude": group["latitude"].median(),
             "longitude": group["longitude"].median(),
             "visible": bool(group["visible"].any()),
@@ -176,6 +196,11 @@ def impute_operators(df_towers: pd.DataFrame) -> pd.DataFrame:
     almadar_region_ids = {"0", "1", "2", "3", "4", "5", "6", "8", "10", "14"}
 
     for idx, row in df.iterrows():
+        # Dataset-owner confirmation of the fingerprinted 645-row historical import.
+        if row.get("owner_confirmed_almadar", False) == True:
+            operator_list.append("Al-Madar")
+            attribution_method.append("owner_confirmed_import_1_a099aa826f11")
+            continue
         # Case 1: Explicitly given
         if row["raw_operator"] in ["Libyana", "Al-Madar"]:
             operator_list.append(row["raw_operator"])
@@ -256,11 +281,11 @@ def consolidate_physical_sites(
             continue
         # Find all points within distance
         cluster = []
-        queue = [i]
+        queue = deque([i])
         visited.add(i)
 
         while queue:
-            curr = queue.pop(0)
+            curr = queue.popleft()
             cluster.append(curr)
             neighbors = tree.query_ball_point(coords[curr], threshold_m)
             for n in neighbors:
@@ -275,7 +300,7 @@ def consolidate_physical_sites(
 
     sites = []
     for site_idx, cluster in enumerate(site_clusters, start=1):
-        indices = cluster
+        indices = towers.index.take(cluster)
         towers.loc[indices, "physical_site_id"] = site_idx
 
         site_towers = towers.loc[indices]
@@ -283,9 +308,10 @@ def consolidate_physical_sites(
         centroid_lon = site_towers["longitude"].mean()
 
         # Compute distances to centroid
-        for idx in indices:
-            d_x = coords[idx, 0] - coords[cluster[0], 0]
-            d_y = coords[idx, 1] - coords[cluster[0], 1]
+        centroid = coords[cluster].mean(axis=0)
+        for position, idx in zip(cluster, indices):
+            d_x = coords[position, 0] - centroid[0]
+            d_y = coords[position, 1] - centroid[1]
             towers.loc[idx, "collocated_distance_m"] = round(float(np.sqrt(d_x**2 + d_y**2)), 2)
 
         rats = sorted(list(site_towers["rat"].unique()))

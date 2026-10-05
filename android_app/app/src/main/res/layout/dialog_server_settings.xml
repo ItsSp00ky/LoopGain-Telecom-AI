@@ -1,0 +1,24 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<com.google.android.material.textfield.TextInputLayout android:id="@+id/serverHostField"
+    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="8dp"
+    android:hint="@string/server_host_label" app:helperText="@string/server_host_helper">
+    <com.google.android.material.textfield.TextInputEditText android:id="@+id/serverHostInput"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:minHeight="56dp" android:inputType="textUri" android:singleLine="true" />
+</com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout android:id="@+id/summaryApiField"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="16dp"
+            android:hint="@string/summary_api_label" app:helperText="@string/summary_api_helper">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/summaryApiInput"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp"
+                android:inputType="textUri" android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+</ScrollView>

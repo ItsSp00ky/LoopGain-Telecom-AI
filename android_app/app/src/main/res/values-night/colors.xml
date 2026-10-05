@@ -1,0 +1,19 @@
+<resources>
+    <color name="brand_blue">#A9CBFF</color>
+    <color name="brand_teal">#73D8CC</color>
+    <color name="surface">#17283E</color>
+    <color name="background">#0E1B2C</color>
+    <color name="text_primary">#EDF3FC</color>
+    <color name="text_secondary">#B8C7DA</color>
+    <color name="outline">#34465D</color>
+    <color name="icon_background">#243951</color>
+    <color name="card_ripple">#33A9CBFF</color>
+    <color name="error">#FFB4AB</color>
+    <color name="card_overview">#A9CBFF</color>
+    <color name="card_network">#73D8CC</color>
+    <color name="card_steering">#D2B9FF</color>
+    <color name="card_gis">#FFC08D</color>
+    <color name="card_churn">#FFB1C0</color>
+    <color name="on_primary">#0B1F3A</color>
+    <color name="card_assistants">#96DBAC</color>
+</resources>

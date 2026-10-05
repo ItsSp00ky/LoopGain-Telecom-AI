@@ -1,0 +1,29 @@
+{
+  "attribution": "OpenStreetMap contributors",
+  "building_feature_count": 1268052,
+  "building_layer": "gis_osm_buildings_a_free",
+  "crs": "GEOGCS[\"WGS 84 (CRS84)\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Longitude\",EAST],AXIS[\"Latitude\",NORTH],AUTHORITY[\"OGC\",\"CRS84\"]]",
+  "dataset": "OpenStreetMap Libya building outlines via Geofabrik",
+  "files": [
+    {
+      "bytes": 187184805,
+      "filename": "libya-260919-free.gpkg.zip",
+      "sha256": "b20e45df66e7c810fbc88879f3adba57e13b85fb5ff02150ff6c6126b8754568"
+    },
+    {
+      "bytes": 401502208,
+      "filename": "libya-260919-free.gpkg",
+      "sha256": "79a2bb39ed9189bb8757f9553e5807de111b9b443117b0fb5df81fe9729c4bf5"
+    }
+  ],
+  "format_documentation": "https://download.geofabrik.de/osm-data-in-gis-formats-free.pdf",
+  "http": {
+    "etag": "b2836a5-65be24e555967",
+    "last_modified": "Sun, 20 Sep 2026 04:09:55 GMT"
+  },
+  "license": "ODbL-1.0",
+  "license_url": "https://www.openstreetmap.org/copyright",
+  "retrieved_utc": "2026-09-20T17:04:02.681517+00:00",
+  "snapshot_date": "2026-09-19",
+  "source_url": "https://download.geofabrik.de/africa/libya-260919-free.gpkg.zip"
+}

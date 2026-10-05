@@ -1,0 +1,4 @@
+KPI,MAE,RMSE,MAPE (%),R2
+E-RAB Drop Rate,0.0217,0.0351,6.51,0.9795
+4G Cell Av. (%),3.9759,5.7742,4.69,0.3441
+Avg RRC Connected users,0.4392,0.9379,2.51,0.9891

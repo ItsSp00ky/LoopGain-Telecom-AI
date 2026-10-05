@@ -1,0 +1,13 @@
+# Raw data in data/raw/ is committed on purpose (docs/decisions.md, decision 9).
+# Processed data is rebuilt from it by the pipeline.
+data/processed/*
+!data/processed/.gitkeep
+
+# Trained model bundles
+artifacts/
+
+# Third-party downloads, if any, stay out of git.
+data/external/
+
+# Taha's personal study guide: kept on his laptop only, never committed.
+docs/study_guide.md

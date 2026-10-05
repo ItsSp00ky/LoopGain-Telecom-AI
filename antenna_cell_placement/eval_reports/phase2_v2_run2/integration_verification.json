@@ -1,0 +1,29 @@
+{
+  "frozen_rows_coordinates_labels_splits_preserved": true,
+  "geographic_groups_disjoint": true,
+  "reloaded_model_matches_saved_predictions": true,
+  "legacy_features_rejected": true,
+  "raw_and_serving_model_hashes_unchanged": true,
+  "ranked_hexes": 2216,
+  "rooftop_candidates": 100,
+  "shortlist_areas_with_buildings": 20,
+  "rooftop_points_inside_footprints": true,
+  "building_heights_unknown": true,
+  "missing_population_5km_by_kind": {
+    "observed_site": {
+      "sum": 742,
+      "count": 2115,
+      "mean": 0.3508274231678487
+    },
+    "synthetic_background_corridor": {
+      "sum": 234,
+      "count": 1500,
+      "mean": 0.156
+    },
+    "synthetic_hard": {
+      "sum": 731,
+      "count": 3000,
+      "mean": 0.24366666666666667
+    }
+  }
+}

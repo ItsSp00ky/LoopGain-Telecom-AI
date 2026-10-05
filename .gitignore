@@ -40,6 +40,29 @@ Thumbs.db
 dataset_profiles.txt
 *.zip
 
+# Generated document builds at repository root
+/*.docx
+/*.html
+
 # Heavy raw geospatial tiles and elevation archives (>100MB)
 *.hgt
 Libya_SRTM/
+
+# Local demo folder of NTFS junctions/hardlinks pointing at the real datasets
+Project_Datasets_Showcase/
+
+# SQLite runtime journal files (transient, regenerated on open)
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Machine Learning pipeline runtime outputs
+network_kpi_prediction/**/plots/
+network_kpi_prediction/**/models/
+network_kpi_prediction/**/data/splits/
+network_kpi_prediction/**/data/output/
+network_kpi_prediction/**/output/
+network_kpi_prediction/**/data/future_*forecast.csv
+network_kpi_prediction/**/archive/
+
+# Local AI agent settings
+.claude/

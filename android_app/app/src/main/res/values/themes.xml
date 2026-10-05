@@ -1,0 +1,20 @@
+<resources>
+    <style name="Theme.KpiMonitor" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_blue</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryVariant">@color/brand_navy</item>
+        <item name="colorPrimaryDark">@color/brand_navy</item>
+        <item name="colorSecondary">@color/brand_teal</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/brand_navy</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/brand_navy</item>
+        <item name="android:fontFamily">sans</item>
+    </style>
+    <style name="ThemeOverlay.KpiMonitor.Toolbar" parent="ThemeOverlay.MaterialComponents.Dark.ActionBar">
+        <item name="colorControlNormal">@color/on_brand</item>
+    </style>
+</resources>

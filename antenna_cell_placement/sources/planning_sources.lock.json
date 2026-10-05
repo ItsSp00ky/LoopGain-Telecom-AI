@@ -1,0 +1,445 @@
+{
+  "schema_version": 1,
+  "reviewed_utc": "2026-09-29",
+  "baseline_commit": "2eca2dd45c1e8ac0dba496f5825d350dba088368",
+  "ahmed_commit": "2c48a27494545988561acc4782e6b23530d33af0",
+  "policy": "Changed required sources block runtime; optional failures disable context. GIS measurement and score formulas are unchanged; inventory changes have a separate explicit version and matched comparison.",
+  "population_unit_note": "Density interpretation is explicit; exact UN adjustment of the local file is unresolved.",
+  "sources": [
+    {
+      "path": "Libyan_cells_dataset/cells.sqlite3",
+      "sha256": "1825877b0310369925209e01283670eb591af5156be7da1a07998700f04bce06",
+      "group": "inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/cleaned/cleaned_physical_sites.csv",
+      "sha256": "58b895819e8e92d48c52411b01a27f7e514d0ba4c04ae3090c930789553de879",
+      "group": "inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/cleaned/cleaned_radio_towers.csv",
+      "sha256": "b592f853411d650ec012b132f4026a8e9fadc079e002eda05ad3da69dd0c76ed",
+      "group": "inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/lby_pd_2020_1km.tif",
+      "sha256": "0c814253b963898a4ca698f167bae1d1a6b8a45b7fc6d0203721f01b3b7c9eda",
+      "group": "population",
+      "required": true,
+      "units": "people_per_km2"
+    },
+    {
+      "path": "data/external/dem/DEM",
+      "sha256": "766e7847ddc4de755e9e47726ac048396d8881c3c2056408417819120ca2caa1",
+      "group": "terrain",
+      "required": true,
+      "units": "metres_ground_elevation"
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.dbf",
+      "sha256": "332aec9479bd510f7927dadbecada11d6e65016f9acdfa91e7a8cce528a8fbe8",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.prj",
+      "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.sbn",
+      "sha256": "14bd36ea30b8322266909fbd6537429ca2fd0112d40d8a8239fef6afdfa2b6c1",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.sbx",
+      "sha256": "a1caab50de9f51aaa2939cf2f5cc2d29c44bf17d12a7bdbe28b28c47b7180809",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.shp",
+      "sha256": "77886c1f70f71e97045231b2c5567cbff6b87d66b4bc7ea9c71d3374844667ca",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.shp.xml",
+      "sha256": "72d7519d6b2bfc1be1e16daca9a923ef0356da8b4eb565b08eb4dd10340a3cc1",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/roads/LYB_Roads.shx",
+      "sha256": "9aec34f64cf47311a10ee5af3cda01b4feb4d8d9ff34a02eab8a625bc8fea838",
+      "group": "roads",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/admin_boundaries/lby_admin0.geojson",
+      "sha256": "3050191416f1256c946891aca69357bda522bea1fdb8d257e0532ebec1867c45",
+      "group": "boundaries_places",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/admin_boundaries/lby_admin1.geojson",
+      "sha256": "dc80ecdadaa460f2826819feb4db8937c53c61da73a249af77812cfd5dff7f08",
+      "group": "boundaries_places",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/admin_boundaries/lby_admin2.geojson",
+      "sha256": "264db16a633c9c335599af28e81f5aa33c972585ddfe4d19fec707eb485fd1a1",
+      "group": "boundaries_places",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/admin_boundaries/lby_populatedplaces.geojson",
+      "sha256": "688ce4435151f74b626e4b0901eab1ba9b7293fa1060787338c76f7b1281b4f2",
+      "group": "boundaries_places",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N18E021_Map.tif",
+      "sha256": "7ee5c3302505df5428269d28f60bc7ac7df6e29abe52ecefe3956d60e1f4d49c",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N18E024_Map.tif",
+      "sha256": "60ee77726309ea41f9a8be21a5f419c2422a5f3836af5316ae44033b46a846e1",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N21E009_Map.tif",
+      "sha256": "fef9e7552117582af9aa83c14fbcc5c9a481b4ba8d70db3430bb01aaca98a2c5",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N21E012_Map.tif",
+      "sha256": "2c07a884ed9619d7a24ee70557441c8bebd477e9fbb944cebd3770628fb678f7",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N21E015_Map.tif",
+      "sha256": "1871d90e1849be9865d469b200f8459716846a2674872cf05480a7d72b47ee6e",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N21E018_Map.tif",
+      "sha256": "7fe20522413214f2dffb7bebdeedf34d66c2a8ee6a34fbe00a6b374d6fd874c0",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N21E021_Map.tif",
+      "sha256": "22a797248259312024c60be3993ee34bead822dfe8ce4dd3062ce4706baa78a3",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N21E024_Map.tif",
+      "sha256": "73772c2d70dba17e54f3b7e50695acef29bed86a8d895c29af06bd5b0a119d89",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N24E009_Map.tif",
+      "sha256": "a22af15ba8bd8b15e64f6b0247bde046b522318e4aa7794cec0b47f6a658049c",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N24E012_Map.tif",
+      "sha256": "4a37eec64198a9639a1a866607457e2815fd32e78f0d35c51799cbbe2a639143",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N24E015_Map.tif",
+      "sha256": "d3ff0452040fdee0fb1cfe42affe0893bc8fec15ae52427e739614d692461179",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N24E018_Map.tif",
+      "sha256": "7dc54d524c35d5874c51b933dcb7dd65f7cda3467a02fe9f2851c15f6c8785bf",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N24E021_Map.tif",
+      "sha256": "1f5a9756dfbb4f9b9c97a7ea66c00dd4cb9506933118e3813a2d3ec884714051",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N24E024_Map.tif",
+      "sha256": "64c62a7e6b61ea9da7945d8de23e9a35723c6720fd8ec6ffa55ea304f2e27e31",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N27E009_Map.tif",
+      "sha256": "aef8081e8a4c03eb981915483aa205f86207c80ed6c6dba56c2fdce6fe60ad29",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N27E012_Map.tif",
+      "sha256": "fd0321e5afa73238a739520c613c3bc8dd07fdf2c48a657a313a1cd216037659",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N27E015_Map.tif",
+      "sha256": "c7c42e0cc5944e116629cc91e3a86d608fad562a8e4bb696be520d9fd3a943a5",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N27E018_Map.tif",
+      "sha256": "9b2c5a15a4d647265a2de8d879acd3f9b61d077a1638c7ced77e2ba4ee170cd1",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N27E021_Map.tif",
+      "sha256": "4488341ae4d29f08f143825e1a6a514070bf04e9f997a816b1c82cb6c4384cff",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N27E024_Map.tif",
+      "sha256": "4b64c3ce51ee7cdabebb9c394b092bfeb7f8d254cde72e08e9c2433649cbeba6",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N30E009_Map.tif",
+      "sha256": "99e18cc08817a9b904d475672aa570a843556667166a415907ab81a54017fb25",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N30E012_Map.tif",
+      "sha256": "46ef1f435ffe0555e64400e433e9f82858249e3ece209dec74e7fe8f8ddf9ed9",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N30E015_Map.tif",
+      "sha256": "91d10f336c4db152bbb65d949248459a2d08897e4b087f7d2e1277fd4f712f51",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N30E018_Map.tif",
+      "sha256": "62189700d3be564980595c96fb25c99807b8f4060e4b779c1a080163d7ecfb4a",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N30E021_Map.tif",
+      "sha256": "263dbc1d15cbc1789d501fc60bd8e7f1a68bc3cc3ce438d8502521d4a6ad2aa7",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N30E024_Map.tif",
+      "sha256": "61b56625a26162974d35512f0c78aaea8e2c6ce834c66cc52a1eaa77f87ce026",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/worldcover_2021/ESA_WorldCover_10m_2021_v200_N33E009_Map.tif",
+      "sha256": "e8f0191fca3b0d1bab98e25137a033eb85cfa4d95978ae99b84ef1331df61534",
+      "group": "worldcover",
+      "required": true,
+      "units": "ESA_class_code"
+    },
+    {
+      "path": "data/external/osm_libya_2026_09_19/libya-260919-free.gpkg",
+      "sha256": "79a2bb39ed9189bb8757f9553e5807de111b9b443117b0fb5df81fe9729c4bf5",
+      "group": "osm",
+      "required": false,
+      "units": null
+    },
+    {
+      "path": "data/external/osm_libya_2026_09_19/libya-260919-free.gpkg.zip",
+      "sha256": "b20e45df66e7c810fbc88879f3adba57e13b85fb5ff02150ff6c6126b8754568",
+      "group": "osm",
+      "required": false,
+      "units": null
+    },
+    {
+      "path": "data/external/buildings/libya_122012230.csv.gz",
+      "sha256": "090de8e4475f049c43e0377ba6a3e8f1c273b7ecf44c346d01dd27217899d9c9",
+      "group": "footprints",
+      "required": false,
+      "units": null
+    },
+    {
+      "path": "data/external/buildings/libya_122012231.csv.gz",
+      "sha256": "f1528b6cf8ea1698ed12f55660ad5b01fa187c5694947efd7efbefb800f4a414",
+      "group": "footprints",
+      "required": false,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/inventory_manifest.json",
+      "sha256": "ff64c65c99d44d42c632044a911fef54d2debe8ed70d3436c7bf6e9605e8f061",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/physical_sites.csv",
+      "sha256": "b4ea6bb3383bd1aa48895ed20ec6f6a68c4bc1ddeb5585ab259924e8dea9d042",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/radio_references.csv",
+      "sha256": "1cf43d932f5617d6b6e1b3aecc840d740c1d7f4bafc490b8392ec6e698b11f2d",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/reconciliation.json",
+      "sha256": "a90b818db26795cfcc925006bcb9a086200dd1aff712b76722f25c8f1ee25b21",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/rejected_records.csv",
+      "sha256": "16ef7ac13610acaccd2dd28da5ff1c86cccc3fe01a4899a7b60588deb35ca82a",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/inventory_v3/source_crosswalk.csv",
+      "sha256": "a17c77e05e810f2b25f83bf7ab2ef22ba06b7fe84aacd7a9c2aae130d0eecc21",
+      "group": "reconciled_inventory",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "sources/collected_sources.lock.json",
+      "sha256": "5c25dd18649e821d94accf4e1516b7e2433c5d413b438120e18cf7cc0563ab3d",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "pilot_snapshot.json",
+      "sha256": "93af8a09147467a98478c6afaef510e02cb2ce889bce8b6d853105d0e2935bc1",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/2026-09-26-17-13-40.csv",
+      "sha256": "637f963ecf61357025b1eab7792e3c40f32bc3ffaf4a5afd7a20854f290b4d9e",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/2026-09-26-17-13-48.csv",
+      "sha256": "a43127c15f3e829f25515ed7069de0acb616a2e43dd4066117f4062039e1f92d",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/2026-09-28-15-41-22.csv",
+      "sha256": "dcb10c8fad297ba828be8999bab31b1abb2c1ea60a45773bae1a220249ec7e1a",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/libya_antennas/opencellid_libya.csv",
+      "sha256": "f5ca5e20da533bcfd2350fca435e6284365b4fa8769a664aa42fd522c8d4da67",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/libya_collected_antennas/beacondb/beacondb_libya_antennas.csv",
+      "sha256": "655ac05f80f3cb53d31e53d223d6d3233b578764b93262aee49f1d80292ed210",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    },
+    {
+      "path": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv",
+      "sha256": "0c8615567e41d9cc4124425e003f469dffde9397a116084693ef787c18cdd134",
+      "group": "collected_evidence",
+      "required": true,
+      "units": null
+    }
+  ],
+  "inventory_version": "reconciled-geodesic-20260929-v1"
+}

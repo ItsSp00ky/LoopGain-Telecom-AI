@@ -1,0 +1,200 @@
+{
+  "conflicted_identities": 6,
+  "preferred_for_review": 0,
+  "survey_resolved_identities": 0,
+  "runtime_policy": "Retain all conflicting references for conservative screening; exclude them from reliable pilot anchors.",
+  "decisions": [
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "1610",
+      "site_id": "1169",
+      "status": "unresolved",
+      "preferred_location_group": null,
+      "reason": "insufficient_independent_location_evidence",
+      "maximum_separation_m": 5797.6,
+      "alternatives": [
+        {
+          "location_group": 1,
+          "latitude": 32.82758856,
+          "longitude": 13.12972132,
+          "source_verified": false,
+          "last_seen_utc": "2026-09-07T07:46:31+00:00",
+          "timestamp_valid": true,
+          "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+        },
+        {
+          "location_group": 2,
+          "latitude": 32.83740098832827,
+          "longitude": 13.068900723036386,
+          "source_verified": false,
+          "last_seen_utc": "2026-08-24T00:00:00+00:00",
+          "timestamp_valid": true,
+          "source_files": "Libyan_cells_dataset/cells.sqlite3"
+        }
+      ],
+      "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "2120",
+      "site_id": "1130",
+      "status": "unresolved",
+      "preferred_location_group": null,
+      "reason": "insufficient_independent_location_evidence",
+      "maximum_separation_m": 634871.6,
+      "alternatives": [
+        {
+          "location_group": 1,
+          "latitude": 31.96910285949707,
+          "longitude": 20.032306671142575,
+          "source_verified": false,
+          "last_seen_utc": "2026-09-22T20:19:12+00:00",
+          "timestamp_valid": true,
+          "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+        },
+        {
+          "location_group": 2,
+          "latitude": 32.88610054219486,
+          "longitude": 13.368000266956205,
+          "source_verified": false,
+          "last_seen_utc": "2026-08-27T00:00:00+00:00",
+          "timestamp_valid": true,
+          "source_files": "Libyan_cells_dataset/cells.sqlite3"
+        }
+      ],
+      "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6390",
+      "site_id": "1138",
+      "status": "unresolved",
+      "preferred_location_group": null,
+      "reason": "insufficient_independent_location_evidence",
+      "maximum_separation_m": 3313.8,
+      "alternatives": [
+        {
+          "location_group": 1,
+          "latitude": 32.23550022123307,
+          "longitude": 20.18570025250913,
+          "source_verified": false,
+          "last_seen_utc": "2026-08-24T00:00:00+00:00",
+          "timestamp_valid": true,
+          "source_files": "Libyan_cells_dataset/cells.sqlite3"
+        },
+        {
+          "location_group": 2,
+          "latitude": 32.25914764404297,
+          "longitude": 20.207199096679688,
+          "source_verified": false,
+          "last_seen_utc": "2026-08-30T18:56:16+00:00",
+          "timestamp_valid": true,
+          "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+        }
+      ],
+      "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6390",
+      "site_id": "1196",
+      "status": "unresolved",
+      "preferred_location_group": null,
+      "reason": "insufficient_independent_location_evidence",
+      "maximum_separation_m": 1085.3,
+      "alternatives": [
+        {
+          "location_group": 1,
+          "latitude": 32.09150091717926,
+          "longitude": 20.15980097583546,
+          "source_verified": false,
+          "last_seen_utc": "2026-08-13T00:00:00+00:00",
+          "timestamp_valid": true,
+          "source_files": "Libyan_cells_dataset/cells.sqlite3"
+        },
+        {
+          "location_group": 2,
+          "latitude": 32.09576416015625,
+          "longitude": 20.149452209472656,
+          "source_verified": false,
+          "last_seen_utc": "2026-09-20T13:29:24+00:00",
+          "timestamp_valid": true,
+          "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+        }
+      ],
+      "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+    },
+    {
+      "mcc": "606",
+      "mnc": "0",
+      "rat": "LTE",
+      "region_id": "6410",
+      "site_id": "2003",
+      "status": "unresolved",
+      "preferred_location_group": null,
+      "reason": "insufficient_independent_location_evidence",
+      "maximum_separation_m": 844584.3,
+      "alternatives": [
+        {
+          "location_group": 1,
+          "latitude": 32.757200943796256,
+          "longitude": 21.74974200600072,
+          "source_verified": false,
+          "last_seen_utc": "2026-09-07T02:35:52+00:00",
+          "timestamp_valid": true,
+          "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+        },
+        {
+          "location_group": 2,
+          "latitude": 32.75740031018911,
+          "longitude": 12.73410038389652,
+          "source_verified": false,
+          "last_seen_utc": "2026-06-06T00:00:00+00:00",
+          "timestamp_valid": true,
+          "source_files": "Libyan_cells_dataset/cells.sqlite3"
+        }
+      ],
+      "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+    },
+    {
+      "mcc": "606",
+      "mnc": "1",
+      "rat": "GSM",
+      "region_id": "1114",
+      "site_id": "1649",
+      "status": "unresolved",
+      "preferred_location_group": null,
+      "reason": "insufficient_independent_location_evidence",
+      "maximum_separation_m": 1095.8,
+      "alternatives": [
+        {
+          "location_group": 1,
+          "latitude": 32.02070018607912,
+          "longitude": 20.162200638263545,
+          "source_verified": false,
+          "last_seen_utc": "2026-03-15T00:00:00+00:00",
+          "timestamp_valid": true,
+          "source_files": "Libyan_cells_dataset/cells.sqlite3"
+        },
+        {
+          "location_group": 2,
+          "latitude": 32.02819084398674,
+          "longitude": 20.169767090768524,
+          "source_verified": false,
+          "last_seen_utc": "2026-09-12T19:24:17+00:00",
+          "timestamp_valid": true,
+          "source_files": "data/new_data/libya_collected_antennas/cellmapper/cellmapper_libya_antennas.csv"
+        }
+      ],
+      "required_action": "Obtain independently surveyed coordinates or an operator asset record with location provenance."
+    }
+  ]
+}

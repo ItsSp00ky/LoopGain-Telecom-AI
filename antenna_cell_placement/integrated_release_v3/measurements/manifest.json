@@ -1,0 +1,177 @@
+{
+  "status": "completed",
+  "source_lock_sha256": "5c25dd18649e821d94accf4e1516b7e2433c5d413b438120e18cf7cc0563ab3d",
+  "ahmed_commit": "2c48a27494545988561acc4782e6b23530d33af0",
+  "primary_ranking_modified": false,
+  "eligible_measurements": 4874,
+  "planning_support": {
+    "shortlist_count": 20,
+    "measurement_source_available": true,
+    "with_observations_1km": 0,
+    "with_observations_5km": 0,
+    "interpretation": "Observed support only; proximity is not validation of the planning point or a coverage radius.",
+    "rows": [
+      {
+        "candidate_id": "candidate-0380ac960cab",
+        "nearest_measurement_m": 8034.971549547602,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-64581136f4df",
+        "nearest_measurement_m": 18642.4683703271,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-c3950471aa65",
+        "nearest_measurement_m": 7101.392815982066,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-ccfe3893535f",
+        "nearest_measurement_m": 15814.685212621154,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-6be36134271d",
+        "nearest_measurement_m": 18797.500083616178,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-19eb32a24d1e",
+        "nearest_measurement_m": 26678.903160505954,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-22f81c181380",
+        "nearest_measurement_m": 35687.343799349204,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-2bbb3561ef05",
+        "nearest_measurement_m": 6952.444081363253,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-479d4b6f0fa4",
+        "nearest_measurement_m": 10539.857071924784,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-22ae66fbdb6d",
+        "nearest_measurement_m": 16430.777744139028,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-106242330329",
+        "nearest_measurement_m": 20974.888342869395,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-1d8a5c39b11a",
+        "nearest_measurement_m": 20953.165665167482,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-c5037f11e1c2",
+        "nearest_measurement_m": 33215.36129458387,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-6d9c7b03ec7b",
+        "nearest_measurement_m": 26832.151822263542,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-d4dd7dc1283f",
+        "nearest_measurement_m": 24413.776394251225,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-5d8ea8b9e3fd",
+        "nearest_measurement_m": 27512.40376296053,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-79151bc2c1e9",
+        "nearest_measurement_m": 27235.3446652606,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-b3b6ac714454",
+        "nearest_measurement_m": 20147.266835791805,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-8657a0f31d4e",
+        "nearest_measurement_m": 26779.979291355634,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      },
+      {
+        "candidate_id": "candidate-36a5779089a2",
+        "nearest_measurement_m": 9585.251449959731,
+        "observations_within_1km": 0,
+        "observations_within_5km": 0
+      }
+    ]
+  },
+  "artifacts": {
+    "collections.json": "869a440a971f8c7bf5bb691df3134ba6093dcdc1d71e7cc9106d3a894aac3abb",
+    "index.html": "28a3700d0ee0a0099b2d24070bf1d36e306291f86c5e2ad41400cb5b68f16c03",
+    "measured_service_areas.geojson": "672e173ebd154dec366081eaf367e1ab4ddf9673c16639a22b01031b0b7ecedd",
+    "measured_service_map.html": "77b1e9e1b90dd06ee22e63b3bcc923f2fd4afdb898fc88664cec4a2744f35a0b",
+    "measured_service_summary.csv": "866fc8b422f64de12674e3b4bf172d55b2997fd90f93e04e82fdec40ae0e471f",
+    "pilot_data_request.json": "a5310e98974824cc088e2a72e78339b6b09900e1c87130fd1555551ba8e085fc",
+    "pilot_review.json": "dbec6629359eb187ad4857772aac407b0c371a3e9863ae3c9fdc6b90f23c98c7",
+    "pilot_review.md": "22e7ffb25432bb0e95f2bcfcf1f3a5a47dc43731d472f59a9c0cb04cafc93753",
+    "planning_measurement_support.json": "7e8c577b74bd149661566ca3f0416f5c2b4e27d3dd6c3b166052e6e40db2bbe9",
+    "vendor/04ffb5e7ecd0_glyphicons-halflings-regular.ttf": "cb18b8d11f9698fc8cb3341cb5c882af1103ef8927d34e1602015b5f82eb234f",
+    "vendor/07fd072cd096_glyphicons-halflings-regular.svg": "3a9760d706275d9ffe85a0042f3ee73f8425e3011cac1fa8a3c15a59e4053ffa",
+    "vendor/0853c55c8954_markers-soft.png": "5599e53a50fef90f4afc5104dc085ac50ae3bb7ed5472d6598d2103780e6a237",
+    "vendor/0aa5cf45f8da_markers-shadow.png": "1159e47a3dcfe16dc6c421cc9d46db607364f4b51855d50cb46fd23f084e7baa",
+    "vendor/0bca74d9b8bb_marker-icon.png": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437",
+    "vendor/1bd8c4bfe936_leaflet.awesome.rotate.min.css": "82e3e005f8befbe54638c81c106e1eaa7fae2bd12284b39c5ad7dad51eaa45f8",
+    "vendor/1cbb901b88c3_glyphicons-halflings-regular.woff": "71c12656535e99119c2a952c10554cd6f47c6923d2d96155a7833276e68992af",
+    "vendor/252ac8291f4c_bootstrap-glyphicons.css": "cd86b603c9a1e72532872487d3274d5094f9d695fbaf3966559f23928dec1822",
+    "vendor/26ac4b4d0040_all.min.css": "ba1b1a24562f007f87e50ef1d2d382affb62e4658fc29b4c92840d1e1fc89b39",
+    "vendor/354011164261_fa-brands-400.ttf": "c7ae37d35b8edd322f5c85b8f54f8cb76f5e8446581ae20da5e7e3a9bdee900b",
+    "vendor/37c38033d691_bootstrap.min.css": "2143941c03dacda8b4f1016ced6e0c6f34e5c04585a3bcffe33c3c626c448a4a",
+    "vendor/59d28e5bacf9_leaflet.js": "5819285cec137b229c94e1ee5ad73e8b6b84345a4367d60f75fe477fe0fb7b03",
+    "vendor/6b984debe411_fa-solid-900.ttf": "6d53c706f3b7178ccfc82c94d3fc7968828dacd351717f27c757a65cfd853147",
+    "vendor/7860277a672d_fa-solid-900.woff2": "d27bc752105c079f8a516e9142406a9fc12cbb409f9bf8681f2ddfe0360b52a6",
+    "vendor/8b33346a3e69_markers-shadow@2x.png": "78a93823e3f74accd4eb58c4b74de577c3918bedb73148eedca085faab9703ab",
+    "vendor/8b3524aec43a_fa-v4compatibility.ttf": "4d73f280597014ae892270cee177513ad329955de91ad9d2a45a1f5760a32ffa",
+    "vendor/8c616cf01259_jquery-3.7.1.min.js": "fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a",
+    "vendor/91396ae8dabc_layers.png": "1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6",
+    "vendor/93a6dfd29ae6_fa-v4compatibility.woff2": "7d1c2ce5f34e1b3567536e8d3039c6c34f8257742982c5ff5a5b47a82e5a67d7",
+    "vendor/9dac73048fc6_layers-2x.png": "066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf",
+    "vendor/9f26cbce87ae_markers-soft@2x.png": "add594ef1def7cb88797526b7a41b3a2ce60284cd1235e811305b36779f21e5c",
+    "vendor/a1fcebfb1dd1_fa-brands-400.woff2": "3fe890d088ecf0cc9bc1b9069201e52972dbad6237865524090e15982d0de718",
+    "vendor/a58114980cde_leaflet.css": "6764fb5d7bc3cd3434a2e99dccc2b480fa4c9ca97a75ed5b7de8cbfb0e23b9c3",
+    "vendor/ab4f4c0b1fa9_glyphicons-halflings-regular.eot": "5ff7c239555476e939e86d457bb78424b945b733b2c23791d9807c2357259d43",
+    "vendor/b18ec09255c5_fa-regular-400.ttf": "fdc1f7533021117d87697715eac26ba3d4eef9225c7eedbbfb1b0d0cfff0ab8c",
+    "vendor/b2e43b1d8201_leaflet.awesome-markers.css": "07034ba2ecd7702c9ed00570fb928daf20a18df330523f0732442d8f70782b30",
+    "vendor/cd3ff5a40338_leaflet.awesome-markers.js": "8b0382d98ee76b3706729ebfb2c088b99be258aa30f6054de67b527602348d07",
+    "vendor/f155f3d071cf_bootstrap.bundle.min.js": "c4b2394a30fa0e4a23c6b308541353e20872a6fd765ed8fb70e6b402029deb00",
+    "vendor/f5671f51e0e9_fa-regular-400.woff2": "fe69d94841462d397faeff253ee09a6dc7941be931f942a55e6b9def8f3b048d",
+    "vendor_manifest.json": "cf86e0d0f0b679bd7e9a0b6d10011bcb18b1623a1e86c717429a305ce147cd4f"
+  }
+}

@@ -1,0 +1,25 @@
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="6dp"
+    android:clickable="true" android:focusable="true" android:importantForAccessibility="yes"
+    app:cardBackgroundColor="@color/surface" app:cardCornerRadius="20dp" app:cardElevation="1dp"
+    app:strokeWidth="1dp" app:strokeColor="@color/outline" app:rippleColor="@color/card_ripple">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="18dp" android:minHeight="190dp"
+        android:importantForAccessibility="noHideDescendants">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <androidx.appcompat.widget.AppCompatImageView android:id="@+id/cardIcon"
+                android:layout_width="48dp" android:layout_height="48dp" android:padding="12dp"
+                android:background="@drawable/bg_icon" android:importantForAccessibility="no" />
+            <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+            <androidx.appcompat.widget.AppCompatImageView android:layout_width="20dp" android:layout_height="20dp"
+                app:srcCompat="@drawable/ic_arrow_forward" app:tint="@color/text_secondary" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <TextView android:id="@+id/cardTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:textColor="@color/text_primary" android:textSize="17sp"
+            android:fontFamily="sans-serif-medium" tools:text="Network KPIs" />
+        <TextView android:id="@+id/cardSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:textColor="@color/text_secondary" android:textSize="13sp"
+            android:lineSpacingExtra="2dp" tools:text="Live KPI forecasts and alerts" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

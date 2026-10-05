@@ -1,0 +1,1 @@
+sector_id,site_id,antenna_id,radio,mcc,mnc,area,cell,frequency_mhz,bandwidth_mhz,azimuth_deg,mechanical_tilt_deg,electrical_tilt_deg,height_m,tx_power_dbm,feeder_loss_db

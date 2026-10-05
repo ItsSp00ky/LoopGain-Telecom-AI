@@ -1,0 +1,129 @@
+{
+  "commands": [
+    {
+      "command": [
+        "uv",
+        "lock",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "seconds": 0.69
+    },
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--locked"
+      ],
+      "exit_code": 0,
+      "seconds": 0.87
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-c",
+        "import importlib.util; assert importlib.util.find_spec(\"lightgbm\") is None; assert importlib.util.find_spec(\"sklearn\") is None; print(\"Planning environment has no LightGBM or scikit-learn\")"
+      ],
+      "exit_code": 0,
+      "seconds": 0.12
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "doctor"
+      ],
+      "exit_code": 0,
+      "seconds": 20.96
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "tools/download_worldcover.py"
+      ],
+      "exit_code": 0,
+      "seconds": 2.82
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "tools/download_osm_buildings.py"
+      ],
+      "exit_code": 0,
+      "seconds": 3.71
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "seconds": 71.23
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "recommend",
+        "--output-dir",
+        "integrated_release"
+      ],
+      "exit_code": 0,
+      "seconds": 426.8
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "tools/verify_integrated_run.py",
+        "integrated_release"
+      ],
+      "exit_code": 0,
+      "seconds": 10.75
+    },
+    {
+      "command": [
+        "C:\\Users\\LED\\Desktop\\samsung competion\\LoopGain-Telecom-AI\\antenna_cell_placement\\.venv\\Scripts\\python.exe",
+        "-m",
+        "antenna_cell_placement.cli",
+        "experimental",
+        "compare",
+        "--run-dir",
+        "integrated_release",
+        "--model",
+        "eval_reports/phase2_v2_run2/suitability_gis_v2.joblib",
+        "--output-dir",
+        "eval_reports/integrated_ml_comparison"
+      ],
+      "exit_code": 0,
+      "seconds": 10.47
+    },
+    {
+      "command": [
+        "node",
+        "C:\\Users\\LED\\Desktop\\GIS\\submission_browser\\verify_integration.mjs",
+        "C:\\Users\\LED\\Desktop\\GIS\\antenna_integration\\antenna_cell_placement\\integrated_release"
+      ],
+      "exit_code": 0,
+      "seconds": 8.83
+    },
+    {
+      "command": [
+        ".venv/Scripts/python.exe",
+        "tools/validate_planning_sensitivity.py",
+        "integrated_release"
+      ],
+      "exit_code": 0,
+      "completed_utc": "2026-09-25T14:25:30.672856+00:00"
+    }
+  ],
+  "unit_tests_passed": 96,
+  "planning_environment_has_ml": false,
+  "rejected_candidate_explanations_corrected": true
+}

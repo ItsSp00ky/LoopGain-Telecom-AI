@@ -1,0 +1,61 @@
+carrier_id,kpi_name,kpi_title,latest_value,sla_target,latest_status,best_model,holdout_mase,file_path
+350,rrc_setup_sr,RRC Setup Success Rate,99.662,Target: >= 99.00%,COMPLIANT,AdaptiveBaseline,3.788,artifacts/plots/individual/carrier_350/rrc_setup_sr.png
+350,erab_estab_sr,E-RAB Establishment Rate,99.635,Target: >= 99.00%,COMPLIANT,HybridEnsemble,0.855,artifacts/plots/individual/carrier_350/erab_estab_sr.png
+350,erab_drop_rate,E-RAB Drop Rate,0.2395,Target: <= 0.500%,COMPLIANT,HybridEnsemble,0.745,artifacts/plots/individual/carrier_350/erab_drop_rate.png
+350,handover_intra_sr,Intra-Freq Handover Success,0.9867,Target: >= 0.9800,COMPLIANT,HybridEnsemble,0.731,artifacts/plots/individual/carrier_350/handover_intra_sr.png
+350,handover_sr,Overall Handover Success Rate,98.7508,Target: >= 98.00%,COMPLIANT,HybridEnsemble,0.751,artifacts/plots/individual/carrier_350/handover_sr.png
+350,availability_pct,Cell Operational Availability,97.6743,Target: >= 99.50%,BREACH,AdaptiveBaseline,9.368,artifacts/plots/individual/carrier_350/availability_pct.png
+350,dl_throughput_mbps,Downlink User Throughput,9.7097,Nominal: >= 5.00 Mbps,COMPLIANT,AdaptiveBaseline,3.107,artifacts/plots/individual/carrier_350/dl_throughput_mbps.png
+350,ul_throughput_mbps,Uplink User Throughput,1.6748,Nominal: >= 1.00 Mbps,COMPLIANT,HybridEnsemble,0.780,artifacts/plots/individual/carrier_350/ul_throughput_mbps.png
+350,connected_users,Active Connected Users,15.6024,Traffic active,COMPLIANT,AdaptiveBaseline,2.220,artifacts/plots/individual/carrier_350/connected_users.png
+350,downtime_sec,Cluster Cell Downtime,1330231.68,"Nominal: <= 3,600 cell-sec / sector",BREACH,AdaptiveBaseline,9.415,artifacts/plots/individual/carrier_350/downtime_sec.png
+400,rrc_setup_sr,RRC Setup Success Rate,99.6271,Target: >= 99.00%,COMPLIANT,AdaptiveBaseline,2.479,artifacts/plots/individual/carrier_400/rrc_setup_sr.png
+400,erab_estab_sr,E-RAB Establishment Rate,99.61,Target: >= 99.00%,COMPLIANT,HybridEnsemble,0.877,artifacts/plots/individual/carrier_400/erab_estab_sr.png
+400,erab_drop_rate,E-RAB Drop Rate,0.2157,Target: <= 0.500%,COMPLIANT,AdaptiveBaseline,4.345,artifacts/plots/individual/carrier_400/erab_drop_rate.png
+400,handover_intra_sr,Intra-Freq Handover Success,0.9843,Target: >= 0.9800,COMPLIANT,AdaptiveBaseline,0.495,artifacts/plots/individual/carrier_400/handover_intra_sr.png
+400,handover_sr,Overall Handover Success Rate,98.5114,Target: >= 98.00%,COMPLIANT,AdaptiveBaseline,0.516,artifacts/plots/individual/carrier_400/handover_sr.png
+400,availability_pct,Cell Operational Availability,89.4271,Target: >= 99.50%,BREACH,FourierRidge,2.208,artifacts/plots/individual/carrier_400/availability_pct.png
+400,dl_throughput_mbps,Downlink User Throughput,11.2186,Nominal: >= 5.00 Mbps,COMPLIANT,AdaptiveBaseline,1.977,artifacts/plots/individual/carrier_400/dl_throughput_mbps.png
+400,ul_throughput_mbps,Uplink User Throughput,1.9471,Nominal: >= 1.00 Mbps,COMPLIANT,FourierRidge,0.821,artifacts/plots/individual/carrier_400/ul_throughput_mbps.png
+400,connected_users,Active Connected Users,17.3971,Traffic active,COMPLIANT,AdaptiveBaseline,7.420,artifacts/plots/individual/carrier_400/connected_users.png
+400,downtime_sec,Cluster Cell Downtime,63944.64,"Nominal: <= 3,600 cell-sec / sector",BREACH,AdaptiveBaseline,3.569,artifacts/plots/individual/carrier_400/downtime_sec.png
+1556,rrc_setup_sr,RRC Setup Success Rate,99.7394,Target: >= 99.00%,COMPLIANT,AdaptiveBaseline,4.257,artifacts/plots/individual/carrier_1556/rrc_setup_sr.png
+1556,erab_estab_sr,E-RAB Establishment Rate,99.6342,Target: >= 99.00%,COMPLIANT,HybridEnsemble,1.035,artifacts/plots/individual/carrier_1556/erab_estab_sr.png
+1556,erab_drop_rate,E-RAB Drop Rate,0.2375,Target: <= 0.500%,COMPLIANT,HybridEnsemble,2.642,artifacts/plots/individual/carrier_1556/erab_drop_rate.png
+1556,handover_intra_sr,Intra-Freq Handover Success,0.99,Target: >= 0.9800,COMPLIANT,FourierRidge,1.156,artifacts/plots/individual/carrier_1556/handover_intra_sr.png
+1556,handover_sr,Overall Handover Success Rate,99.0803,Target: >= 98.00%,COMPLIANT,FourierRidge,1.150,artifacts/plots/individual/carrier_1556/handover_sr.png
+1556,availability_pct,Cell Operational Availability,99.298,Target: >= 99.50%,BREACH,AdaptiveBaseline,5.816,artifacts/plots/individual/carrier_1556/availability_pct.png
+1556,dl_throughput_mbps,Downlink User Throughput,9.8894,Nominal: >= 5.00 Mbps,COMPLIANT,FourierRidge,1.492,artifacts/plots/individual/carrier_1556/dl_throughput_mbps.png
+1556,ul_throughput_mbps,Uplink User Throughput,1.4917,Nominal: >= 1.00 Mbps,COMPLIANT,FourierRidge,0.761,artifacts/plots/individual/carrier_1556/ul_throughput_mbps.png
+1556,connected_users,Active Connected Users,16.8874,Traffic active,COMPLIANT,AdaptiveBaseline,4.496,artifacts/plots/individual/carrier_1556/connected_users.png
+1556,downtime_sec,Cluster Cell Downtime,48522.24,"Nominal: <= 3,600 cell-sec / sector",BREACH,AdaptiveBaseline,5.687,artifacts/plots/individual/carrier_1556/downtime_sec.png
+1700,rrc_setup_sr,RRC Setup Success Rate,99.6515,Target: >= 99.00%,COMPLIANT,HybridEnsemble,3.009,artifacts/plots/individual/carrier_1700/rrc_setup_sr.png
+1700,erab_estab_sr,E-RAB Establishment Rate,99.6322,Target: >= 99.00%,COMPLIANT,HybridEnsemble,0.903,artifacts/plots/individual/carrier_1700/erab_estab_sr.png
+1700,erab_drop_rate,E-RAB Drop Rate,0.2589,Target: <= 0.500%,COMPLIANT,HybridEnsemble,0.837,artifacts/plots/individual/carrier_1700/erab_drop_rate.png
+1700,handover_intra_sr,Intra-Freq Handover Success,0.9793,Target: >= 0.9800,BREACH,FourierRidge,1.017,artifacts/plots/individual/carrier_1700/handover_intra_sr.png
+1700,handover_sr,Overall Handover Success Rate,97.9844,Target: >= 98.00%,BREACH,FourierRidge,1.037,artifacts/plots/individual/carrier_1700/handover_sr.png
+1700,availability_pct,Cell Operational Availability,99.9867,Target: >= 99.50%,COMPLIANT,AdaptiveBaseline,2.830,artifacts/plots/individual/carrier_1700/availability_pct.png
+1700,dl_throughput_mbps,Downlink User Throughput,9.0963,Nominal: >= 5.00 Mbps,COMPLIANT,HybridEnsemble,1.466,artifacts/plots/individual/carrier_1700/dl_throughput_mbps.png
+1700,ul_throughput_mbps,Uplink User Throughput,1.3863,Nominal: >= 1.00 Mbps,COMPLIANT,HybridEnsemble,0.935,artifacts/plots/individual/carrier_1700/ul_throughput_mbps.png
+1700,connected_users,Active Connected Users,18.5389,Traffic active,COMPLIANT,HybridEnsemble,2.238,artifacts/plots/individual/carrier_1700/connected_users.png
+1700,downtime_sec,Cluster Cell Downtime,311.04,"Nominal: <= 3,600 cell-sec / sector",COMPLIANT,FourierRidge,1.753,artifacts/plots/individual/carrier_1700/downtime_sec.png
+3500,rrc_setup_sr,RRC Setup Success Rate,99.6727,Target: >= 99.00%,COMPLIANT,FourierRidge,1.203,artifacts/plots/individual/carrier_3500/rrc_setup_sr.png
+3500,erab_estab_sr,E-RAB Establishment Rate,99.6465,Target: >= 99.00%,COMPLIANT,FourierRidge,0.571,artifacts/plots/individual/carrier_3500/erab_estab_sr.png
+3500,erab_drop_rate,E-RAB Drop Rate,0.2292,Target: <= 0.500%,COMPLIANT,FourierRidge,0.473,artifacts/plots/individual/carrier_3500/erab_drop_rate.png
+3500,handover_intra_sr,Intra-Freq Handover Success,0.9884,Target: >= 0.9800,COMPLIANT,FourierRidge,0.841,artifacts/plots/individual/carrier_3500/handover_intra_sr.png
+3500,handover_sr,Overall Handover Success Rate,98.9104,Target: >= 98.00%,COMPLIANT,FourierRidge,0.836,artifacts/plots/individual/carrier_3500/handover_sr.png
+3500,availability_pct,Cell Operational Availability,98.4047,Target: >= 99.50%,BREACH,FourierRidge,2.944,artifacts/plots/individual/carrier_3500/availability_pct.png
+3500,dl_throughput_mbps,Downlink User Throughput,10.2439,Nominal: >= 5.00 Mbps,COMPLIANT,AdaptiveBaseline,3.597,artifacts/plots/individual/carrier_3500/dl_throughput_mbps.png
+3500,ul_throughput_mbps,Uplink User Throughput,1.5869,Nominal: >= 1.00 Mbps,COMPLIANT,HybridEnsemble,0.904,artifacts/plots/individual/carrier_3500/ul_throughput_mbps.png
+3500,connected_users,Active Connected Users,15.6725,Traffic active,COMPLIANT,FourierRidge,1.540,artifacts/plots/individual/carrier_3500/connected_users.png
+3500,downtime_sec,Cluster Cell Downtime,343206.72,"Nominal: <= 3,600 cell-sec / sector",BREACH,FourierRidge,2.444,artifacts/plots/individual/carrier_3500/downtime_sec.png
+6200,rrc_setup_sr,RRC Setup Success Rate,99.5223,Target: >= 99.00%,COMPLIANT,FourierRidge,0.676,artifacts/plots/individual/carrier_6200/rrc_setup_sr.png
+6200,erab_estab_sr,E-RAB Establishment Rate,99.7919,Target: >= 99.00%,COMPLIANT,AdaptiveBaseline,1.170,artifacts/plots/individual/carrier_6200/erab_estab_sr.png
+6200,erab_drop_rate,E-RAB Drop Rate,0.2942,Target: <= 0.500%,COMPLIANT,AdaptiveBaseline,3.220,artifacts/plots/individual/carrier_6200/erab_drop_rate.png
+6200,handover_intra_sr,Intra-Freq Handover Success,0.9856,Target: >= 0.9800,COMPLIANT,AdaptiveBaseline,1.636,artifacts/plots/individual/carrier_6200/handover_intra_sr.png
+6200,handover_sr,Overall Handover Success Rate,98.5484,Target: >= 98.00%,COMPLIANT,AdaptiveBaseline,1.695,artifacts/plots/individual/carrier_6200/handover_sr.png
+6200,availability_pct,Cell Operational Availability,85.5881,Target: >= 99.50%,BREACH,FourierRidge,1.704,artifacts/plots/individual/carrier_6200/availability_pct.png
+6200,dl_throughput_mbps,Downlink User Throughput,29.3958,Nominal: >= 5.00 Mbps,COMPLIANT,FourierRidge,0.937,artifacts/plots/individual/carrier_6200/dl_throughput_mbps.png
+6200,ul_throughput_mbps,Uplink User Throughput,3.9377,Nominal: >= 1.00 Mbps,COMPLIANT,FourierRidge,0.895,artifacts/plots/individual/carrier_6200/ul_throughput_mbps.png
+6200,connected_users,Active Connected Users,2.7611,Traffic active,COMPLIANT,AdaptiveBaseline,1.017,artifacts/plots/individual/carrier_6200/connected_users.png
+6200,downtime_sec,Cluster Cell Downtime,336199.68,"Nominal: <= 3,600 cell-sec / sector",BREACH,FourierRidge,1.744,artifacts/plots/individual/carrier_6200/downtime_sec.png

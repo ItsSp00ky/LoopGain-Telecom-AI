@@ -1,0 +1,10 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/aiAssistantBar" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="end|center_vertical" android:paddingStart="20dp" android:paddingEnd="20dp"
+    android:paddingTop="8dp" android:paddingBottom="12dp">
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/aiAssistantButton" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:minHeight="56dp" android:text="@string/ask_ai" android:contentDescription="@string/open_ai_assistants"
+        android:textAllCaps="false" android:textColor="@color/on_primary" app:iconTint="@color/on_primary"
+        app:backgroundTint="@color/brand_blue" app:elevation="2dp" app:icon="@drawable/ic_assistants" />
+</LinearLayout>
