@@ -1,7 +1,7 @@
 # Session log (Taha + Claude)
 
 The long working sessions, written down so the next session can start without the chat; the newest comes first.
-The sources of truth stay where they were: [../CLAUDE.md](../CLAUDE.md), the Handoff at the top of [../TICKETS.md](../TICKETS.md), and [decisions.md](decisions.md).
+The sources of truth stay where they were: [../CLAUDE.md](prepaid_churn_CLAUDE.md), the Handoff at the top of [../TICKETS.md](prepaid_churn_TICKETS.md), and [decisions.md](../../prepaid_churn/docs/decisions.md).
 This file is the narrative that connects them: what happened, in what order, what went wrong, and what is still open.
 
 # Session 3: 2026-09-28 to 2026-09-30 (the copilot, the report, GIS release 3)
@@ -255,7 +255,7 @@ Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
 - `Ali_Branch` at `06890f6` was an orphan branch: a separate "CVM suite" project whose churn labels came from Ali's own hazard formula on a generated population.
 - Taha's direction: take the best of both into one module, built around a real Libyan mobile operator, and keep the team platform (chatbot, copilot, network ML, GIS) as the real goal.
 - Decisions 15 (one module from two efforts, ported by hand), 16 (a real Libyan mobile operator's catalogue; real customers shown in its terms, and since decision 45 the operator is not named) and 17 (customer MVP first, built to plug into the platform).
-- Commit `3942926`; every step of combining the two efforts is logged in [ali_branch_merge.md](ali_branch_merge.md).
+- Commit `3942926`; every step of combining the two efforts is logged in [ali_branch_merge.md](prepaid_churn_ali_branch_merge.md).
 
 ### 2. T16, T8, T18 and the first handover (2026-09-19)
 
@@ -295,7 +295,7 @@ Open Claude Code in `D:\capstone project (SIC)\LoopGain-Telecom-AI` and paste:
 ### 7. Mentoring session preparation (2026-09-23)
 
 - Taha had a Samsung mentoring session and wanted to talk about the data and the plan, not claim the project was finished.
-- The script, the chatbot and RAG wording, how to describe the results chart, likely questions and an Arabic summary are in [presentation/talking_points.md](presentation/talking_points.md); the chart is [presentation/churn_results.png](presentation/churn_results.png).
+- The script, the chatbot and RAG wording, how to describe the results chart, likely questions and an Arabic summary are in [presentation/talking_points.md](../presentation/prepaid_churn/talking_points.md); the chart is [presentation/churn_results.png](../presentation/prepaid_churn/churn_results.png).
 
 ### 8. The final report draft (2026-09-23)
 

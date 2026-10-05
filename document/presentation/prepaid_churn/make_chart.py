@@ -2,7 +2,7 @@
 
 Every number is copied from `reports/evaluation_all.md` (the frozen T7 test month), so
 the chart needs no model and no data: run it with
-`uv run python docs/presentation/make_chart.py` from `prepaid_churn/`.
+`uv run python ../document/presentation/prepaid_churn/make_chart.py` from `prepaid_churn/`.
 If a number in that report ever changes, change it here too.
 """
 

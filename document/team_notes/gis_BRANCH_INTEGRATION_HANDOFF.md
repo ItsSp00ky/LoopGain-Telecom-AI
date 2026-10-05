@@ -1,12 +1,12 @@
 # Antenna cell placement: completed work and integration handoff
 
-**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
+**Integration update (23 September 2026):** The public `recommend`, `all`, `assess`/`predict` and `map` workflow now uses GIS v2 and Ahmed’s explainable heuristic. ML is excluded from primary ranking; old model-based commands are under `experimental`. See [the current integration guide](../../antenna_cell_placement/document/INTEGRATED_PLANNING.md) for the shared contract, source checks, runnable commands and validation. Historical results and implementation descriptions below retain their original scope.
 
 Updated: 23 September 2026. Comparison and validation runs: 22 September 2026.
 
-**Historical handoff:** The plan below records the pre-integration audit. Its implemented replacement is described in [INTEGRATED_PLANNING.md](INTEGRATED_PLANNING.md).
+**Historical handoff:** The plan below records the pre-integration audit. Its implemented replacement is described in [INTEGRATED_PLANNING.md](../../antenna_cell_placement/document/INTEGRATED_PLANNING.md).
 
-**Submission follow-up (23 September):** The public output/wording cleanup and portable demo have now been implemented and verified. See [submission readiness](SUBMISSION_READINESS.md). The findings below record the earlier audited state; see the integration update above for current behavior.
+**Submission follow-up (23 September):** The public output/wording cleanup and portable demo have now been implemented and verified. See [submission readiness](gis_SUBMISSION_READINESS.md). The findings below record the earlier audited state; see the integration update above for current behavior.
 
 
 This document explains what has been built and checked, what the results mean, and how to combine `mahalm_antenna_cell_placement` with `ahmed_cell_placement`. It is a handoff for the team or the next implementation session. Proposed modules, commands and acceptance checks below are plans, not claims of completed work.
@@ -84,7 +84,7 @@ The corrected path includes:
 
 The WorldPop file is treated as a population-density product; its exact local provenance still needs care because the shortened filename alone does not establish every upstream variant. Keep the recorded hash, units and metadata when reusing it.
 
-See [Phase 2 GIS and rooftops](PHASE2_GIS_AND_ROOFTOPS.md) and [the v2 extractor](../src/antenna_cell_placement/gis_v2.py).
+See [Phase 2 GIS and rooftops](../../antenna_cell_placement/document/PHASE2_GIS_AND_ROOFTOPS.md) and [the v2 extractor](../../antenna_cell_placement/src/antenna_cell_placement/gis_v2.py).
 
 ### 3.3 Separate ML experiment and honest evaluation
 
@@ -96,7 +96,7 @@ The geographic test examples have already been inspected. They are a diagnostic 
 
 **Important operational boundary:** the corrected phase-2 model was not automatically promoted. Legacy `train`, `recommend`, `predict` and `h3-all` paths still require deliberate migration. Passing phase-2 tests does not mean every public command uses v2 features.
 
-See [ML models and data](ML_MODELS_AND_DATA.md), [the evaluation module](../src/antenna_cell_placement/evaluation.py) and [the phase-2 runner](../src/antenna_cell_placement/phase2_pipeline.py).
+See [ML models and data](../../antenna_cell_placement/document/ML_MODELS_AND_DATA.md), [the evaluation module](../../antenna_cell_placement/src/antenna_cell_placement/evaluation.py) and [the phase-2 runner](../../antenna_cell_placement/src/antenna_cell_placement/phase2_pipeline.py).
 
 ### 3.4 Tripoli and building-footprint review
 
@@ -360,11 +360,11 @@ These local paths are not a promise that another teammate's Git clone contains t
 
 Existing project references:
 
-- [ML models and data](ML_MODELS_AND_DATA.md)
-- [Pilot plan and validation](PILOT_PLAN_AND_VALIDATION.md)
-- [Phase 2 GIS and rooftops](PHASE2_GIS_AND_ROOFTOPS.md)
-- [Dataset overview](DATASETS_OVERVIEW.md)
-- [Improvement plan](IMPROVEMENT_PLAN.md)
+- [ML models and data](../../antenna_cell_placement/document/ML_MODELS_AND_DATA.md)
+- [Pilot plan and validation](../../antenna_cell_placement/document/PILOT_PLAN_AND_VALIDATION.md)
+- [Phase 2 GIS and rooftops](../../antenna_cell_placement/document/PHASE2_GIS_AND_ROOFTOPS.md)
+- [Dataset overview](../../antenna_cell_placement/document/DATASETS_OVERVIEW.md)
+- [Improvement plan](../../antenna_cell_placement/document/IMPROVEMENT_PLAN.md)
 
 ## 12. Immediate next action
 

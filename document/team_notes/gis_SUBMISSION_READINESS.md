@@ -4,7 +4,7 @@ Prepared 23 September 2026. Scope: wording/output corrections, portable artifact
 
 ## Open and present
 
-Open [the entry page](../submission/index.html) locally in Chrome or Edge. GitHub displays HTML source rather than running it. Alternatively, from `antenna_cell_placement/`:
+Open [the entry page](../../antenna_cell_placement/submission/index.html) locally in Chrome or Edge. GitHub displays HTML source rather than running it. Alternatively, from `antenna_cell_placement/`:
 
 ```powershell
 uv run python -m http.server 8765 --bind 127.0.0.1 --directory submission
@@ -78,7 +78,7 @@ Fresh release results are recorded with the generated artifacts. The original 62
 
 The connected native browser tool was unavailable during preparation. Local browser automation uses an installed Chromium browser through Playwright. Offline checks block external HTTP requests and verify Leaflet features and controls; HTML generation alone does not count as rendering verification.
 
-After this submission, follow [the integration handoff](BRANCH_INTEGRATION_HANDOFF.md): preserve the working release, establish the shared GIS/provenance contract, then integrate Ahmed's explainable score and source checks. Keep ML experimental until matched baselines and independent planning/RF evidence support it.
+After this submission, follow [the integration handoff](gis_BRANCH_INTEGRATION_HANDOFF.md): preserve the working release, establish the shared GIS/provenance contract, then integrate Ahmed's explainable score and source checks. Keep ML experimental until matched baselines and independent planning/RF evidence support it.
 
 
 ### Verified release result
@@ -91,7 +91,7 @@ After this submission, follow [the integration handoff](BRANCH_INTEGRATION_HANDO
 - 2,216 scored hexes, 20 shortlisted areas and 100 footprint candidates were checked. All review coordinates are inside their footprints; usable local building heights: zero.
 - Raw SQLite and both serving model artifacts match their pre-change Git blobs.
 
-See [release evidence](../submission/release_verification.json) and [browser evidence](../submission/browser_verification.json).
+See [release evidence](../../antenna_cell_placement/submission/release_verification.json) and [browser evidence](../../antenna_cell_placement/submission/browser_verification.json).
 
 To reproduce the browser checks with Microsoft Edge installed:
 

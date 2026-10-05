@@ -3,7 +3,7 @@
 Work plan for the prepaid churn module.
 Pick a ticket by writing your name in its **Owner** field.
 A ticket is done only when its acceptance criteria pass and `ruff check`, `ruff format --check` and `pytest` are green.
-The reasons behind every decision are in [docs/decisions.md](docs/decisions.md).
+The reasons behind every decision are in [docs/decisions.md](../../prepaid_churn/docs/decisions.md).
 
 ## Handoff
 
@@ -11,7 +11,7 @@ Update this section at the end of every working session.
 
 **Last updated:** 2026-09-30 by Taha + Claude (session 3 written up in full in the session log; the copilot reads GIS release 3; the report's copilot part updated as `_v2`; a new `final-project` branch appeared and is not read yet).
 
-**New session? Read these, in order:** this Handoff, then [docs/session_log.md](docs/session_log.md) (session 3 first), then ticket T25 below.
+**New session? Read these, in order:** this Handoff, then [docs/session_log.md](prepaid_churn_session_log.md) (session 3 first), then ticket T25 below.
 Taha keeps a personal study guide of the module and the chatbot on his laptop (`docs/study_guide.md`, git-ignored).
 
 **Where things stand on 2026-09-30**
@@ -126,7 +126,7 @@ Taha keeps a personal study guide of the module and the chatbot on his laptop (`
   Third-party test adapter and Keras/Torch deprecation warnings remain.
 - Ready for a local demo and HTTP consumer testing with the available data; operator performance and campaign effectiveness remain unvalidated.
   The operator source links remain open, and no new operator data is required for the completed fixes.
-- [The acceptance report](reports/end_to_end.md) records evidence, limitations and exact startup commands for this checkout.
+- [The acceptance report](../../prepaid_churn/reports/end_to_end.md) records evidence, limitations and exact startup commands for this checkout.
 - Delivery stays on `Ali_Branch` under Ali's explicit instruction in this task; no commit or push targets `tahaDev`.
   Earlier branch directions below are historical and do not supersede that instruction.
 
@@ -155,7 +155,7 @@ Taha keeps a personal study guide of the module and the chatbot on his laptop (`
   His review of our files (identifiers read as text, stricter export and bundle checks, one calibration prediction instead of three) moves no model, feature or threshold, which that rebuild proves.
 - **The MVP is complete end to end**: T16, T8, T18, T10, T11, T15, T14, T9, T19 and now T20.
 - **T20 is done.**
-  [docs/integration.md](docs/integration.md) is the guide for the chatbot, copilot, network ML and antenna owners; `src/prepaid_churn/client.py` is the example client they copy; `churn check-integration` runs it against a live service and checks five refusals.
+  [docs/integration.md](../../prepaid_churn/docs/integration.md) is the guide for the chatbot, copilot, network ML and antenna owners; `src/prepaid_churn/client.py` is the example client they copy; `churn check-integration` runs it against a live service and checks five refusals.
   Its walkthrough found one real gap and closed it: the copilot can now look up one subscriber (`GET /subscribers/{id}/risk`, decision 26), which it needs to help an employee with a customer on the phone.
   Four questions are deliberately not served, each written in the guide with its reason.
 - **Validation of T20 here**: 390 prepaid tests, lint and formatting pass; 11 of them are T20's, and no dependency was added.
@@ -175,7 +175,7 @@ Taha keeps a personal study guide of the module and the chatbot on his laptop (`
    Nothing of yours was dropped, rewritten or renamed.
 2. We took T20, the last MVP item, because the action plan gives Taha the chatbot, the copilot and the integration.
    New files: `docs/integration.md`, `src/prepaid_churn/client.py`, `tests/test_client.py`, and the `churn check-integration` command.
-   Your `docs/INTEGRATION.md` at `06890f6` is where the shape came from, and your six grounding rules are kept nearly word for word; step 14 of [docs/ali_branch_merge.md](docs/ali_branch_merge.md) lists what was adapted and what was not.
+   Your `docs/INTEGRATION.md` at `06890f6` is where the shape came from, and your six grounding rules are kept nearly word for word; step 14 of [docs/ali_branch_merge.md](prepaid_churn_ali_branch_merge.md) lists what was adapted and what was not.
 3. Two things we found while using your work, neither of them a bug in it:
    - `churn decide` overwrites the committed `reports/decisions.md`, so running the documented command dirties a tracked file that records your readiness run.
      We restored it with `git checkout` rather than committing the new one.
@@ -201,7 +201,7 @@ Taha keeps a personal study guide of the module and the chatbot on his laptop (`
 - Both raw exports pass validation, and their model features are unchanged in both windows.
 - The frozen model and the spent test window are unchanged.
 - Rebuild old bundles with `uv run churn bundle` using the existing champion and gate, because the input contract fingerprint and bundle integrity checks changed.
-- Findings and remaining work are in [../CODE_REVIEW.md](../CODE_REVIEW.md).
+- Findings and remaining work are in [../CODE_REVIEW.md](CODE_REVIEW.md).
 - T11 is implemented: catalogue bonuses, spend and cannibalisation guards, deterministic holdout, equal-spend comparisons and named approve/reject commands.
 - T11 validation: 247 prepaid tests, lint and formatting pass; the 30,000-row readiness run creates no offers without a gated churn bundle.
 - The readiness report records 27,582 active rows with unavailable risk, 2,418 silent rows and 2,965 holdout assignments; all proposals and releases remain empty.
@@ -224,7 +224,7 @@ Taha keeps a personal study guide of the module and the chatbot on his laptop (`
 - Approving on screen writes through the same locked, audited path as `churn approve`, and only approved rows reach `released.csv`.
 - **For T11 to consider:** the approved Arabic message is 102 characters, so it sends and bills as two SMS parts; one part is 70 characters once any Arabic is present.
 - T10, T11, T14 and T15 are complete; the next product work is T20 integration checks, which needs Taha and the chatbot and copilot owners rather than code alone.
-- T9 is done: [docs/model_card.md](docs/model_card.md) covers intended and out-of-scope use, the data, the frozen metrics and thresholds, calibration, explanations, the approval step, the operator's assumptions, limitations, ethics, selection bias and maintenance.
+- T9 is done: [docs/model_card.md](../../prepaid_churn/docs/model_card.md) covers intended and out-of-scope use, the data, the frozen metrics and thresholds, calibration, explanations, the approval step, the operator's assumptions, limitations, ethics, selection bias and maintenance.
 - T9 validation: 341 prepaid tests, lint and formatting pass; 16 of those tests compare the card's figures against the reports they cite.
 - **The fresh-clone check was rerun on 2026-09-21 and passed:** the README pipeline rebuilt bundle `lightgbm-2026-09-19-ef9430fb` and tier artifact `tiers-v1-cd15525cb3ef`, and `git status` showed no changed report.
 - That confirms T21, T15, T14 and the four new dependencies did not move the frozen champion or any committed number.
@@ -238,7 +238,7 @@ Taha keeps a personal study guide of the module and the chatbot on his laptop (`
 - T9, T10, T11, T14, T15 and T19 are complete.
 - T20 is the last MVP item and needs Taha and the chatbot and copilot owners rather than code alone.
 
-The rebuild commands and the fresh-clone check that used to sit here are in [README.md](README.md); the branch instructions above replace the 2026-09-19 ones.
+The rebuild commands and the fresh-clone check that used to sit here are in [README.md](../../prepaid_churn/README.md); the branch instructions above replace the 2026-09-19 ones.
 
 **Status**
 - T0 to T7 are done: the churn model is trained, calibrated and evaluated once on the test month (`reports/evaluation_all.md`).
@@ -250,7 +250,7 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 - The instructor reviewed the SIC action plan on 2026-09-19: success thresholds (decision 13) and a human approval step for retention actions (decision 14) are now part of the plan (T7 result, T8, T9, T11, T14, T15).
   The current champion passes all four thresholds.
 - Ali's parallel work on `Ali_Branch` was reviewed and is being combined into this module (decisions 15, 16 and 17).
-  Every step is logged in [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
+  Every step is logged in [docs/ali_branch_merge.md](prepaid_churn_ali_branch_merge.md).
 - The target is a real Libyan mobile operator, not named in this project (decisions 16 and 45), and the customer MVP comes first, built to plug into the team platform (decision 17).
 - T16 is done: `data/operator/` holds the 37 operator packages still sold and the market facts, each with a status; the 20 Mix packages the operator retired are recorded in `excluded.csv` (`docs/operator.md`).
 - T8 is done: `churn score` writes the subscriber output contract (`docs/output_contract.md`) from the gated bundle `lightgbm-2026-09-19-ef9430fb`; it is the integration point for the chatbot, the copilot and T11.
@@ -294,7 +294,7 @@ The rebuild commands and the fresh-clone check that used to sit here are in [REA
 ## Decisions already made
 
 These are settled and every ticket must respect them.
-Reasons are in [docs/decisions.md](docs/decisions.md).
+Reasons are in [docs/decisions.md](../../prepaid_churn/docs/decisions.md).
 
 - **Dataset:** upGrad "Telecom Churn Case Study" prepaid data, Kaggle `train.csv` (69,999 customers, months 6, 7, 8 plus a month 9 churn label in `churn_probability`).
   Kaggle's `test.csv` has no labels and is not used for evaluation.
@@ -665,7 +665,7 @@ Acceptance:
 - A teammate reproduces the evaluation report from a fresh clone by following the README only.
 
 Findings (2026-09-21):
-- [docs/model_card.md](docs/model_card.md) is written, adapted from `Ali_Branch`'s template (port log step 11).
+- [docs/model_card.md](../../prepaid_churn/docs/model_card.md) is written, adapted from `Ali_Branch`'s template (port log step 11).
 - Every figure in it is copied from a committed report and names that report, because the copilot indexes the document (decision 17).
 - It states what the model may not be used for first: no pricing, no credit or limits, no decision without a named reviewer, nothing sellable, and no language model in any path that sets an offer or a price.
 - Limitations are explicit: another market, undocumented provenance, four months of history, an educational licence, a spent test window, no causal claim and no network-quality features.
@@ -1052,7 +1052,7 @@ Acceptance:
 - The chatbot and copilot owners confirm in this ticket's Findings that the responses give them what they need.
 
 Findings (2026-09-21):
-- [docs/integration.md](docs/integration.md) is written for four owners at once: it says why the seam is HTTP rather than an import, how to start the service, what each endpoint answers with real captured responses, the six grounding rules for components that use a language model, which files a retriever may index and which it may never touch, and what this module would need from network ML.
+- [docs/integration.md](../../prepaid_churn/docs/integration.md) is written for four owners at once: it says why the seam is HTTP rather than an import, how to start the service, what each endpoint answers with real captured responses, the six grounding rules for components that use a language model, which files a retriever may index and which it may never touch, and what this module would need from network ML.
 - Every example in it was captured from a running service, not written by hand; the guide is checked against the live OpenAPI document by a test, so a route or a key it misses fails the suite.
 - `src/prepaid_churn/client.py` is the example, written to be copied rather than imported: standard library only, keys and base URL as arguments, no dependency added on either side (decision 25).
 - `churn check-integration --url <url> --subscriber-id <id>` runs it and prints what each consumer sees, including the four refusals: the copilot's endpoint with the chatbot key (403), a chatbot endpoint with the copilot key (403), no key at all (401) and an ID shaped like a Libyan phone number (422).
@@ -1103,7 +1103,7 @@ Acceptance:
 - Lint, format checks and the full prepaid test suite pass.
 - GIS tests pass, and batched density queries match the original counts.
 - Valid real exports retain the same model features in both windows.
-- Findings, benchmark limits and bundle migration steps are documented in [../CODE_REVIEW.md](../CODE_REVIEW.md).
+- Findings, benchmark limits and bundle migration steps are documented in [../CODE_REVIEW.md](CODE_REVIEW.md).
 
 Findings:
 - 170 prepaid tests and 21 GIS tests pass; lint and formatting are green.
@@ -1111,7 +1111,7 @@ Findings:
 - Calibration uses two model prediction calls instead of five; the focused density benchmark is 4.00 times faster.
 - The frozen champion choices and real-data test results are unchanged.
 - No new infrastructure, dependencies or business logic were introduced.
-- The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](reports/end_to_end.md).
+- The 2026-09-22 serving and dashboard acceptance review fixed the issues in decision 33 and added the live-run evidence in [reports/end_to_end.md](../../prepaid_churn/reports/end_to_end.md).
   Validation now passes 420 tests with none skipped; the frozen model and prior research results are unchanged.
 
 Recap (Ali, 2026-09-27):

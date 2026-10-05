@@ -1,7 +1,7 @@
 # Instructions for Claude sessions on the prepaid churn module
 
-Read this first, then [TICKETS.md](TICKETS.md) (start with its Handoff section), then [docs/session_log.md](docs/session_log.md) (the last long session, and how to run things on Taha's machine), then [docs/decisions.md](docs/decisions.md).
-When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.md](docs/ali_branch_merge.md).
+Read this first, then [TICKETS.md](prepaid_churn_TICKETS.md) (start with its Handoff section), then [docs/session_log.md](prepaid_churn_session_log.md) (the last long session, and how to run things on Taha's machine), then [docs/decisions.md](../../prepaid_churn/docs/decisions.md).
+When porting anything from Ali's `Ali_Branch`, also read [docs/ali_branch_merge.md](prepaid_churn_ali_branch_merge.md).
 
 ## Context
 

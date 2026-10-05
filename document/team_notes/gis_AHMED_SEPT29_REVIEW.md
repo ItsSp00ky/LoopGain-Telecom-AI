@@ -192,7 +192,7 @@ Local review evidence (outside the repository):
 
 Source references:
 
-- [Current integrated GIS](../src/antenna_cell_placement/gis_v2.py), [inventory audit](../src/antenna_cell_placement/inventory_audit_v2.py), [pipeline](../src/antenna_cell_placement/planning_pipeline.py).
+- [Current integrated GIS](../../antenna_cell_placement/src/antenna_cell_placement/gis_v2.py), [inventory audit](../../antenna_cell_placement/src/antenna_cell_placement/inventory_audit_v2.py), [pipeline](../../antenna_cell_placement/src/antenna_cell_placement/planning_pipeline.py).
 - [Ahmed's reviewed commit](https://github.com/ItsSp00ky/LoopGain-Telecom-AI/commit/2c48a27494545988561acc4782e6b23530d33af0).
 - At that commit: `src/antenna_cell_placement/{terrain,collected_data,reconciliation,pilot,public_evidence,fabdem,foreign_rf,operator_assets}.py`, their tests, `pilot_snapshot.json`, and the matching `eval_reports` artifacts.
 

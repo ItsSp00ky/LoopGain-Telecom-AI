@@ -1,7 +1,7 @@
 """Pseudonymous identifiers and the raw phone number check (ticket T15, decision 17).
 
 Ported by hand from `Ali_Branch`'s `src/cvm/ingest/hashing.py` at commit `06890f6`
-(port log step 9 in `docs/ali_branch_merge.md`).
+(port log step 9 in `document/team_notes/prepaid_churn_ali_branch_merge.md`).
 Ali's module hashed whole frames at the ingestion boundary and read its salt from a
 settings object; this module keeps only the two things the service needs and takes the
 salt as an argument, so every function here stays pure and testable.

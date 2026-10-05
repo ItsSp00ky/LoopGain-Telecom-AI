@@ -78,7 +78,7 @@ The historical [September 25 integration](integrated_release/index.html) remains
 - [Model targets, baselines and limitations](document/ML_MODELS_AND_DATA.md)
 - [GIS corrections and footprint review](document/PHASE2_GIS_AND_ROOFTOPS.md)
 - [Data inventory and provenance](document/DATASETS_OVERVIEW.md)
-- [Original comparison and integration handoff](document/BRANCH_INTEGRATION_HANDOFF.md)
-- [Historical submission guide](document/SUBMISSION_READINESS.md)
+- [Original comparison and integration handoff](../document/team_notes/gis_BRANCH_INTEGRATION_HANDOFF.md)
+- [Historical submission guide](../document/team_notes/gis_SUBMISSION_READINESS.md)
 
 The source-scoped attribution of 645 records to Al-Madar is preserved, including the original raw observations. RF/KPI measurements and engineering feasibility evidence are still needed before deployment decisions.

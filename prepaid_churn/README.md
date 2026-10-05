@@ -5,12 +5,9 @@ Churn means a subscriber goes inactive: no incoming or outgoing calls and no mob
 The model learns from real prepaid customers (upGrad data); prices, packages and money are the operator's (decision 16).
 The team's chatbot and copilot use its outputs (decision 17).
 
-**New here (for example Ali):** read the Handoff section of [TICKETS.md](TICKETS.md) first; it says how to rebuild everything and what comes next.
-
-- Plan, status and handoff notes: [TICKETS.md](TICKETS.md).
 - What the model is, what it may not be used for, and its limits: [docs/model_card.md](docs/model_card.md).
 - Why things are the way they are: [docs/decisions.md](docs/decisions.md).
-- Working with Claude on this module: [CLAUDE.md](CLAUDE.md).
+- The team's working notes (plan and tickets, session logs, the instructions the AI agents worked from) are kept in [`document/team_notes/`](../document/team_notes/).
 
 ## Setup
 

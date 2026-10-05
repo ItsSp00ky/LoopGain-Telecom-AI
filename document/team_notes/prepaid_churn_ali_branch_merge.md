@@ -1,7 +1,7 @@
 # Merging Ali's `Ali_Branch` into this module
 
 This file records every step of combining Ali Marghem's work on `Ali_Branch` with this module.
-The decision behind it is decision 15 in [decisions.md](decisions.md); decisions 16 and 17 follow from it.
+The decision behind it is decision 15 in [decisions.md](../../prepaid_churn/docs/decisions.md); decisions 16 and 17 follow from it.
 Add a dated entry to the step log for every step, and keep the port table current.
 
 ## Source

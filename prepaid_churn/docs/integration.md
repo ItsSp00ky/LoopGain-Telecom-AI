@@ -374,7 +374,7 @@ Missing risk is printed as unavailable, and redirected output uses UTF-8 to pres
 
 A field added to a response is not a breaking change; a field removed or renamed is, and so is a status code that changes meaning.
 If you need a field that is not here, ask before building around the gap.
-Write it in the T20 ticket in [../TICKETS.md](../TICKETS.md), or tell Taha or Ali.
+Write it in the T20 ticket in [../TICKETS.md](../../document/team_notes/prepaid_churn_TICKETS.md), or tell Taha or Ali.
 
 Include the endpoint, what you sent, what came back and what you expected.
 Two components assuming different meanings for the same number is the failure this document exists to prevent, and it is much cheaper to catch now than in the integration week.

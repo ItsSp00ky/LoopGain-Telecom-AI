@@ -269,7 +269,7 @@ Date: 2026-09-19.
 
 Ali Marghem built the "AI CVM Suite" in parallel on the remote branch `Ali_Branch` (commit `06890f6`).
 Taha asked to take the best of both into one module on `tahaDev`.
-The full review and every ported piece are logged in [ali_branch_merge.md](ali_branch_merge.md).
+The full review and every ported piece are logged in [ali_branch_merge.md](../../document/team_notes/prepaid_churn_ali_branch_merge.md).
 
 What the review found:
 - `Ali_Branch` shares no history with `main` or `tahaDev`: it is a separate repository pushed as a branch, with its own files at the repo root.
@@ -363,7 +363,7 @@ This supersedes decision 15's instruction to leave that destination branch untou
 The old CVM work remains in Git history; it is not ported into this tree.
 The source reviewed is `tahaDev` commit `bfb28ab`.
 
-T21 records this review; [../../CODE_REVIEW.md](../../CODE_REVIEW.md) records the findings and validation.
+T21 records this review; [../../CODE_REVIEW.md](../../document/team_notes/CODE_REVIEW.md) records the findings and validation.
 The changes preserve the model families, features, split policy, calibration selection, risk thresholds and business assumptions.
 No model choice was made from test outcomes and no real-data test evaluation was repeated.
 The stricter export checks preserve all model features for valid existing exports.
@@ -631,7 +631,7 @@ Checked before taking it, on Taha's machine:
 - The full pipeline rebuilds from the committed data in about a minute and reproduces the frozen champion: bundle `lightgbm-2026-09-19-ef9430fb`, tiers `tiers-v1-cd15525cb3ef`, and `git status` clean afterwards, so no committed report moved.
 
 So `tahaDev` was fast-forwarded to `Ali_Branch` instead of re-typing 9,000 verified lines by hand.
-Hand-porting still governs anything from Ali's original CVM tree at `06890f6` and earlier, which remains unrelated history; the port table in [ali_branch_merge.md](ali_branch_merge.md) is still the record for that.
+Hand-porting still governs anything from Ali's original CVM tree at `06890f6` and earlier, which remains unrelated history; the port table in [ali_branch_merge.md](../../document/team_notes/prepaid_churn_ali_branch_merge.md) is still the record for that.
 
 From here there is one branch.
 Both of us work on `tahaDev`, claim a ticket by writing a name in its Owner field, and pull before starting.
@@ -1310,7 +1310,7 @@ Merged with git, one merge commit per branch, because these histories are relate
 The GIS integration branch already carries his audited work, and merging his raw branch would conflict in six files and bring back what that integration replaced.
 Every teammate branch contains `main`'s documentation commit `a4368a0`, so it arrived too; nothing else from `main` did.
 
-This replaces two hard rules in [../CLAUDE.md](../CLAUDE.md):
+This replaces two hard rules in [../CLAUDE.md](../../document/team_notes/prepaid_churn_CLAUDE.md):
 
 - "Push only what this module owns" becomes: `tahaDev` carries the teammates' merged work, but their folders stay theirs.
   We do not edit `antenna_cell_placement/`, `network_kpi_prediction/` or `KPI_forecasting/` except to resolve a merge, and anything wrong in them is reported to the owner rather than fixed here.
@@ -1325,7 +1325,7 @@ Both sides had fixed the same self-exclusion bug, so Mahmoud's version was kept.
 Ali's `tests/test_site_optimizer.py` was removed because it tested an optimizer API that moved to `legacy_site_optimizer.py`; its guarantees are tested on the public planner.
 Each merge commit records its resolution and the test runs: 105 GIS tests, 48 of Maher's, and Mohamed's files loaded, since he has no tests.
 
-Found while merging, for the owners (listed in the Handoff of [../TICKETS.md](../TICKETS.md)):
+Found while merging, for the owners (listed in the Handoff of [../TICKETS.md](../../document/team_notes/prepaid_churn_TICKETS.md)):
 
 - Maher's README says every series beats the naive baseline (MASE at most 1), but his own `model_metrics.csv` shows 17 of 60 do.
 - Mohamed's model uses the test set for early stopping (`eval_set=[(X_test, y_test)]`), so his test metrics are optimistic.

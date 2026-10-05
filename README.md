@@ -89,7 +89,7 @@ LoopGain-Telecom-AI/
 ├── assistants/                  # Customer chatbot + employee copilot (read churn, GIS and network data)
 ├── tower_kpi_forecast/          # Per-tower next-day KPI forecasts that feed traffic steering
 ├── traffic_steering_son/        # Congestion detection & mobility load balancing
-├── final_presentation/          # The five-minute script for the final presentation
+├── document/                    # Platform status, presentation, report and the team's working notes
 ├── KPI_forecasting/             # Mohamed's earlier per-band next-day forecasts, not part of the platform
 └── customer_churn_prediction/, customer_support_chatbot/, kpi_prediction/
                                  # Superseded precursors, kept in history, not part of the platform
@@ -98,6 +98,21 @@ LoopGain-Telecom-AI/
 Each module keeps its own `pyproject.toml`/`uv.lock` (or `requirements.txt` for
 `network_kpi_prediction/`) and its own tests; see each module's own README for how to
 work on it directly.
+
+---
+
+## 📂 Documents
+
+Everything that is not code is in [`document/`](document/):
+
+| Folder | What |
+|---|---|
+| [`document/PLATFORM_STATUS.md`](document/PLATFORM_STATUS.md) | What the platform runs, what each page relies on, and what is not connected yet |
+| [`document/presentation/`](document/presentation/) | The five-minute presentation script, the 45-second demo video (laptop and Android side by side) and how it was made |
+| [`document/report/`](document/report/) | The capstone report and the action plan |
+| [`document/team_notes/`](document/team_notes/) | The team's working notes: tickets and handoffs, session logs, code reviews and the instructions the AI coding agents worked from |
+
+Each module's own documentation stays next to its code, for example [`prepaid_churn/docs/`](prepaid_churn/docs/) and [`antenna_cell_placement/document/`](antenna_cell_placement/document/).
 
 ---
 

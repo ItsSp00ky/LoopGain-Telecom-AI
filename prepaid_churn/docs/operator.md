@@ -3,7 +3,7 @@
 The module targets a real Libyan mobile operator, not named in this project (decisions 16 and 45).
 Ali Marghem collected its packages, tariffs and emergency credit services from the operator's website on 2026-09-18.
 This page explains the files in `data/operator/` (ticket T16).
-They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](ali_branch_merge.md)).
+They were ported from Ali Marghem's `Ali_Branch` (see [ali_branch_merge.md](../../document/team_notes/prepaid_churn_ali_branch_merge.md)).
 
 | File | What it is | Who uses it |
 |---|---|---|

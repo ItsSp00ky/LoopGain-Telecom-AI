@@ -97,7 +97,7 @@ flowchart TD
 
 # Part I: Data Forensics, Cleaning & Mast Consolidation
 
-The primary raw dataset provided was a crowdsourced telecommunications snapshot of Libyan cellular towers ([`cells.sqlite3`](Libyan_cells_dataset/cells.sqlite3)) accompanied by raw LTE API extracts ([`cells.json`](Libyan_cells_dataset/cells.json)).
+The primary raw dataset provided was a crowdsourced telecommunications snapshot of Libyan cellular towers ([`cells.sqlite3`](../Libyan_cells_dataset/cells.sqlite3)) accompanied by raw LTE API extracts ([`cells.json`](../Libyan_cells_dataset/cells.json)).
 
 ### 1.1 Discovery of the 812 km Regional Scoping Bug
 
@@ -145,7 +145,7 @@ Using spatial nearest-neighbor clustering in projected UTM Zone 33N coordinates 
 - **2,338 Radio Antennas** $\rightarrow$ **2,115 Physical Cellular Sites**.
 - **Multi-Technology Sites**: **109 sites** host collocated 2G, 3G, and 4G equipment.
 - **Multi-Operator Infrastructure Sharing**: **45 sites** host equipment for both Libyana and Al-Madar on the same tower structure.
-- Exported cleaned files: [`cleaned_radio_towers.csv`](data/cleaned/cleaned_radio_towers.csv), [`cleaned_physical_sites.csv`](data/cleaned/cleaned_physical_sites.csv), and [`cleaned_physical_sites.geojson`](data/cleaned/cleaned_physical_sites.geojson).
+- Exported cleaned files: [`cleaned_radio_towers.csv`](../data/cleaned/cleaned_radio_towers.csv), [`cleaned_physical_sites.csv`](../data/cleaned/cleaned_physical_sites.csv), and [`cleaned_physical_sites.geojson`](../data/cleaned/cleaned_physical_sites.geojson).
 
 ---
 
@@ -211,14 +211,14 @@ suitability. The fields are therefore excluded from the 12-feature classifier.
 Annual HTTP request share remains useful as an independent demand signal for final
 ranking. Its percentile multiplier is bounded to ±10%, and both the original
 geospatial score and adjusted deployment score are exported for audit. See
-[`cloudflare_radar_assessment.json`](eval_reports/cloudflare_radar_assessment.json)
+[`cloudflare_radar_assessment.json`](../eval_reports/cloudflare_radar_assessment.json)
 for the complete ablation result.
 
 ---
 
 # Part III: Mathematical Formulation & Feature Engineering
 
-The feature engineering pipeline in [`feature_engineering.py`](src/antenna_cell_placement/feature_engineering.py) constructs a **59-attribute enriched dataset** stored in [`cleaned_cells_combined.parquet`](data/cleaned/cleaned_cells_combined.parquet). The suitability classifier deliberately uses only its 12 validated geospatial features; the Cloudflare fields remain independent ranking context.
+The feature engineering pipeline in [`feature_engineering.py`](../src/antenna_cell_placement/feature_engineering.py) constructs a **59-attribute enriched dataset** stored in [`cleaned_cells_combined.parquet`](../data/cleaned/cleaned_cells_combined.parquet). The suitability classifier deliberately uses only its 12 validated geospatial features; the Cloudflare fields remain independent ranking context.
 
 ### 3.1 Feature Catalog
 
@@ -285,7 +285,7 @@ Models were evaluated using **5-Fold Stratified Cross-Validation** with fixed ra
 > **Champion Model Choice**:  
 > While XGBoost and LightGBM performed within $0.05\%$ of each other on ROC-AUC, **LightGBM** was selected as the operational champion due to its significantly lower inference latency ($<15\text{ms}$ per batch) and superior handling of continuous geographic features without requiring explicit normalization scaling.
 
-All benchmark results and metrics are persisted in [`model_benchmark.json`](eval_reports/model_benchmark.json).
+All benchmark results and metrics are persisted in [`model_benchmark.json`](../eval_reports/model_benchmark.json).
 
 ---
 
@@ -312,10 +312,10 @@ Top Geospatial Feature Importances:
 - **`elevation_prominence_3km`**: Quantifies RF line-of-sight; antennas situated on local topographic crests maximize geographic coverage.
 
 Evaluation charts:
-- ROC Curve: [`suitability_roc_curve.png`](eval_reports/suitability_roc_curve.png)
-- Feature Importance: [`suitability_feature_importance.png`](eval_reports/suitability_feature_importance.png)
-- Confusion Matrix: [`suitability_confusion_matrix.png`](eval_reports/suitability_confusion_matrix.png)
-- Cloudflare ablation and integration decision: [`cloudflare_radar_assessment.json`](eval_reports/cloudflare_radar_assessment.json)
+- ROC Curve: [`suitability_roc_curve.png`](../eval_reports/suitability_roc_curve.png)
+- Feature Importance: [`suitability_feature_importance.png`](../eval_reports/suitability_feature_importance.png)
+- Confusion Matrix: [`suitability_confusion_matrix.png`](../eval_reports/suitability_confusion_matrix.png)
+- Cloudflare ablation and integration decision: [`cloudflare_radar_assessment.json`](../eval_reports/cloudflare_radar_assessment.json)
 
 ---
 
@@ -334,7 +334,7 @@ Once a candidate site location is verified as viable, the equipment recommendati
 
 # Part V: Coverage Gap Optimization & Deployment Roadmap
 
-The optimization engine in [`site_optimizer.py`](src/antenna_cell_placement/site_optimizer.py) executes a systematic geospatial scan across Libya:
+The optimization engine in [`site_optimizer.py`](../src/antenna_cell_placement/site_optimizer.py) executes a systematic geospatial scan across Libya:
 
 ```
 Total Candidate Search Points: 22,605
@@ -374,7 +374,7 @@ To enforce a minimum spacing between proposed locations (without proving non-ove
 
 ### 5.3 Top 10 High-Priority Recommended Deployments
 
-Extracted from [`recommended_cell_placements.csv`](eval_reports/recommended_cell_placements.csv):
+Extracted from [`recommended_cell_placements.csv`](../eval_reports/recommended_cell_placements.csv):
 
 | Rank | Municipality | Nearest Settlement | Coordinates | Suitability | Priority | Recommended Equipment Tier | 5km Population | Gap to Nearest Cell |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- | :---: | :---: |
@@ -393,7 +393,7 @@ Extracted from [`recommended_cell_placements.csv`](eval_reports/recommended_cell
 
 # Part VI: CLI Execution and Production Verification
 
-The platform provides a comprehensive Command Line Interface (CLI) implemented in [`cli.py`](src/antenna_cell_placement/cli.py).
+The platform provides a comprehensive Command Line Interface (CLI) implemented in [`cli.py`](../src/antenna_cell_placement/cli.py).
 
 ### 6.1 Running the End-to-End Pipeline
 
@@ -480,10 +480,10 @@ Output:
 ## 🗺️ Interactive Maps & Visual Artifacts
 
 The system automatically generates standalone, interactive Leaflet/Folium web applications:
-- **Master Coverage & Recommendation Map**: [`libya_cell_coverage_map.html`](eval_reports/libya_cell_coverage_map.html)
+- **Master Coverage & Recommendation Map**: [`libya_cell_coverage_map.html`](../eval_reports/libya_cell_coverage_map.html)
   - Color-coded layers for existing 4G LTE, 3G UMTS, 2G GSM, and collocated multi-technology masts.
   - Pulsing red markers for the **Top 50 AI Recommended Placements**, with municipal district, suitability score, population catchment, nearest cell gap, Radar demand context, OpenCellID review evidence, and suggested multi-band equipment configuration.
-- **Cleaned Existing Sites Map**: [`cleaned_cells_map.html`](data/cleaned/cleaned_cells_map.html)
+- **Cleaned Existing Sites Map**: [`cleaned_cells_map.html`](../data/cleaned/cleaned_cells_map.html)
 
 ---
 
